@@ -59,12 +59,6 @@ const distributorSchema = new mongoose.Schema({
             required: true,
         }
     },
-    wallet: {
-        balance: { 
-            type: Number, 
-            default: 0 
-        }
-    },
     isActive: { 
         type: Boolean, 
         default: true 
@@ -72,7 +66,15 @@ const distributorSchema = new mongoose.Schema({
     role:{
         type: String,
         default: 'distributor'
-    }
+    },
+    retailers:[{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Retailer'
+    }],
+    bank:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'BankAccount'
+    },
 }, { timestamps: true });
 
 

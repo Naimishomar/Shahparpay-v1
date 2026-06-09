@@ -42,7 +42,16 @@ const adminSchema = new mongoose.Schema({
     role:{
         type: String,
         default: 'admin'
-    }
+    },
+    distributors:[{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Distributor'
+    }],
+    bank:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'BankAccount'
+    },
+    
 },{timestamps:true})
 
 adminSchema.pre('save', async function(next) {

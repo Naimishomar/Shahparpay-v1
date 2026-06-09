@@ -16,7 +16,7 @@ const Dashboard = () => {
     ];
 
     const bottomStats2 = [
-        { title: "Total Customer", value: "₹ 1500", icon: Users },
+        { title: "Total Customer", value: "1500 Customer", icon: Users },
         { title: "Total Transactions", value: "₹ 1700", icon: Wallet },
         { title: "Total Commission", value: "₹ 1000", icon: IndianRupee },
     ];

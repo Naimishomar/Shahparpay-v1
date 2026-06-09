@@ -64,12 +64,6 @@ const retailerSchema = new mongoose.Schema({
             required: true,
         }
     },
-    wallet: {
-        balance: { 
-            type: Number, 
-            default: 0 
-        }
-    },
     isActive: { 
         type: Boolean, 
         default: true 
@@ -77,7 +71,15 @@ const retailerSchema = new mongoose.Schema({
     role:{
         type: String,
         default: 'retailer'
-    }
+    },
+    customers:[{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Customer'
+    }],
+    bank:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'BankAccount'
+    },
 }, { timestamps: true });
 
 

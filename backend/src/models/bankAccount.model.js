@@ -36,6 +36,10 @@ const bankAccountSchema = new mongoose.Schema({
         type: String,
         enum: ['PENDING', 'VERIFIED', 'REJECTED'],
         default: 'PENDING'
+    },
+    balance:{
+        type: Number,
+        default: 0
     }
 }, { timestamps: true });
 

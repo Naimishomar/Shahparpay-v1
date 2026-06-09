@@ -14,6 +14,12 @@ const AepsWalletSchema = new mongoose.Schema({
     balance: {
         type: Number,
         default: 0
+    },
+    pin:{
+        type: Number,
+        required: true,
+        minLength:[4 , "Pin must be of 4 digits"],
+        maxLength:[4 , "Pin must be of 4 digits"]
     }
 }, { timestamps: true })
 

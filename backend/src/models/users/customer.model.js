@@ -70,11 +70,13 @@ const customerSchema = new mongoose.Schema({
         unique: true,
         trim: true
     },
-    userType:{
+    role:{
         type: String,
-        enum: ['CUSTOMER'],
-        required: true,
-        default: 'CUSTOMER'
+        default: 'customer'
+    },
+    bank:{
+        type: mongoose.ObjectId.Schema.ObjectId,
+        ref: 'BankAccount'
     }
 }, {timestamps: true})
 
