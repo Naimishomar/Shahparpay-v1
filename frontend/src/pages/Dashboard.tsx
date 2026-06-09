@@ -1,18 +1,24 @@
-import { Banknote, Smartphone, Fingerprint, Building2, Receipt, Wallet, IndianRupee } from "lucide-react";
+import { Banknote, Smartphone, Fingerprint, Building2, Receipt, Wallet, IndianRupee, Users } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const Dashboard = () => {
     const topStats = [
-        { title: "Total Success DMT", value: "₹ 0.00", icon: Banknote },
-        { title: "Total Success Recharge", value: "₹ 0.00", icon: Smartphone },
-        { title: "Total Success AEPS", value: "₹ 0.00", icon: Fingerprint },
-        { title: "Total Success Payout", value: "₹ 0.00", icon: Building2 },
+        { title: "Total Success DMT", value: "₹ 1300.00", icon: Banknote },
+        { title: "Total Success Recharge", value: "₹ 1230.00", icon: Smartphone },
+        { title: "Total Success AEPS", value: "₹ 1360.00", icon: Fingerprint },
+        { title: "Total Success Payout", value: "₹ 11000.00", icon: Building2 },
     ];
 
     const bottomStats = [
-        { title: "Total Success BBPS", value: "₹ 0.00", icon: Receipt },
-        { title: "Total Success UPI", value: "₹ 0.00", icon: Wallet },
-        { title: "Total Earnings", value: "₹ 0.00", icon: IndianRupee },
+        { title: "Total Success BBPS", value: "₹ 1500.00", icon: Receipt },
+        { title: "Total Success UPI", value: "₹ 1700.00", icon: Wallet },
+        { title: "Total Earnings", value: "₹ 100.00", icon: IndianRupee },
+    ];
+
+    const bottomStats2 = [
+        { title: "Total Customer", value: "₹ 1500", icon: Users },
+        { title: "Total Transactions", value: "₹ 1700", icon: Wallet },
+        { title: "Total Commission", value: "₹ 1000", icon: IndianRupee },
     ];
 
     const renderCard = (stat: any, index: number) => {
@@ -75,6 +81,10 @@ const Dashboard = () => {
             {/* Bottom Row Cards */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {bottomStats.map(renderCard)}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {bottomStats2.map(renderCard)}
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-8">
