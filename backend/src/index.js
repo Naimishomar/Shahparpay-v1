@@ -17,6 +17,9 @@ app.get('/', (req,res)=>{
     return res.send("Hello World");
 })
 
+import aepsRoutes from './routes/aeps.route.js';
+app.use('/api/aeps', aepsRoutes);
+
 const startServer = async () => {
     try {
         await connectDB();

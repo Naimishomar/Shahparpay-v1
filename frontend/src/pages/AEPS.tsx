@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Fingerprint, Clock, CheckCircle2, XCircle } from "lucide-react";
 import logo from "../assets/logo.png";
 
@@ -43,6 +43,23 @@ const AEPS = () => {
         setBankName(bank.toLowerCase()); 
     };
 
+    const [dynamicBanks, setDynamicBanks] = useState<any[]>([]);
+
+    useEffect(() => {
+        const fetchBanks = async () => {
+            try {
+                const res = await fetch('http://localhost:5000/api/aeps/banks');
+                const data = await res.json();
+                if (data.success && data.data) {
+                    setDynamicBanks(data.data);
+                }
+            } catch(err) {
+                console.error("Failed to fetch bank list", err);
+            }
+        };
+        fetchBanks();
+    }, []);
+
     // Load transaction data into form
     const loadTransactionToForm = (tx: typeof mockRecentTransactions[0]) => {
         setName(tx.name);
@@ -51,20 +68,104 @@ const AEPS = () => {
         handleGridBankSelect(tx.bankName);
     };
 
-    const handleSubmit = () => {
-        // Mock data generation for the modal
-        const data = {
-            dateTime: new Date().toLocaleString(),
-            bankName: bankName ? bankName.toUpperCase() : 'BANK OF INDIA',
-            agentName: 'WAHAJUL HAQUE', // In a real app, fetch from auth context
-            aadhaarNo: '********' + (aadhaarNo.slice(-4) || '1820'),
-            rrn: '616020792528',
-            stan: 'DIGIFINWITHDRAWP673e26257a9016069',
-            txnStatus: 'SUCCESS',
-            amount: amount || '300'
-        };
-        setReceiptData(data);
-        setShowReceiptModal(true);
+    const [loading, setLoading] = useState(false);
+
+    const captureFingerprint = async () => {
+        try {
+            // This is a standard XML for RD service capture
+            const captureXml = `<PidOptions ver="1.0"><Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" otp="" wadh="" posh=""/></PidOptions>`;
+            
+            // Default Mantra port is 11100. Morpho/Startek can vary (e.g., 11101)
+            let port = 11100;
+            if (selectedDevice === 'morpho') port = 11101;
+            else if (selectedDevice === 'startek') port = 11101; // can be 11102
+
+            const response = await fetch(`http://127.0.0.1:${port}/rd/capture`, {
+                method: 'POST',
+                body: captureXml,
+                headers: { 'Content-Type': 'text/xml' }
+            });
+            const pidData = await response.text();
+
+            if (pidData.includes('errCode="0"')) {
+                return pidData;
+            } else {
+                alert("Fingerprint capture failed. Please try again.");
+                return null;
+            }
+        } catch (error) {
+            console.error("RD Service Error:", error);
+            alert(`Make sure your ${selectedDevice} biometric device is connected and RD service is running.`);
+            return null;
+        }
+    };
+
+    const handleSubmit = async () => {
+        if (!aadhaarNo || !bankName || !mobileNo) {
+            alert("Please fill all required fields.");
+            return;
+        }
+        if (!consent) {
+            alert("Please check the consent box.");
+            return;
+        }
+
+        setLoading(true);
+        const pidData = await captureFingerprint();
+        if (!pidData) {
+            setLoading(false);
+            return;
+        }
+
+        try {
+            // Find the selected bank from dynamic list to get the actual IIN, fallback to 607152 if not found
+            const selectedBankObj = dynamicBanks.find((b: any) => 
+                (b.bankName || "").toLowerCase() === bankName.toLowerCase() || 
+                (b.bank_name || "").toLowerCase() === bankName.toLowerCase()
+            );
+            const actualIIN = selectedBankObj?.iinno || selectedBankObj?.bank_iin || '607152';
+
+            const apiPayload = {
+                mobileNumber: mobileNo,
+                aadhaarNumber: aadhaarNo,
+                bankIIN: actualIIN,
+                pidData: pidData
+            };
+
+            const endpoint = activeTab === 'balance_enquiry' 
+                ? 'http://localhost:5000/api/aeps/balance-enquiry'
+                : 'http://localhost:5000/api/aeps/other'; // placeholder
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(apiPayload)
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                const data = {
+                    dateTime: new Date().toLocaleString(),
+                    bankName: bankName ? bankName.toUpperCase() : 'BANK',
+                    agentName: 'RETAILER', 
+                    aadhaarNo: '********' + (aadhaarNo.slice(-4) || ''),
+                    rrn: result.data?.data?.rrn || 'N/A',
+                    stan: result.data?.data?.stan || 'N/A',
+                    txnStatus: 'SUCCESS',
+                    amount: result.data?.data?.balanceamount || '0.00'
+                };
+                setReceiptData(data);
+                setShowReceiptModal(true);
+            } else {
+                alert("Transaction Failed: " + (result.message || "Unknown error"));
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Failed to connect to the server.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -139,9 +240,14 @@ const AEPS = () => {
                                     className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
                                 >
                                     <option value="">Choose Your Bank</option>
-                                    {banks.map((b) => (
-                                        <option key={b.name} value={b.name.toLowerCase()}>{b.name}</option>
-                                    ))}
+                                    {(dynamicBanks.length > 0 ? dynamicBanks : banks).map((b: any) => {
+                                        const bName = b.name || b.bankName || b.bank_name;
+                                        return (
+                                            <option key={bName} value={bName.toLowerCase()}>
+                                                {bName}
+                                            </option>
+                                        );
+                                    })}
                                 </select>
                             </div>
 
@@ -253,8 +359,8 @@ const AEPS = () => {
                             <Fingerprint size={20} />
                             Scan Finger Print
                         </button>
-                        <button onClick={handleSubmit} className="px-10 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-bold shadow-[0_0_15px_rgba(139,92,246,0.4)] hover:shadow-[0_0_20px_rgba(139,92,246,0.6)] transition-all duration-300">
-                            Submit
+                        <button onClick={handleSubmit} disabled={loading} className="px-10 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-bold shadow-[0_0_15px_rgba(139,92,246,0.4)] hover:shadow-[0_0_20px_rgba(139,92,246,0.6)] transition-all duration-300 disabled:opacity-50">
+                            {loading ? "Processing..." : "Submit"}
                         </button>
                     </div>
 
