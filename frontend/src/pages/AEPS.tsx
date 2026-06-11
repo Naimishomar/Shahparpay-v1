@@ -82,7 +82,7 @@ const AEPS = () => {
             const captureXml = `<PidOptions ver="1.0"><Opts fCount="1" fType="0" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" wadh="" posh="UNKNOWN"/></PidOptions>`;
             
             // Common ports used by RD Services
-            const portsToTry = [11100, 11101, 11102, 11103, 11104, 11105];
+            const portsToTry = Array.from({length: 21}, (_, i) => 11100 + i); // 11100 to 11120
             const protocols = window.location.protocol === 'https:' ? ['https', 'http'] : ['http', 'https'];
             let capturedData = null;
             let successPort = null;
@@ -94,9 +94,9 @@ const AEPS = () => {
                     if (capturedData) break; // Stop if already found
                     try {
                         const response = await fetch(`${protocol}://127.0.0.1:${port}/rd/capture`, {
-                            method: 'POST',
+                            method: 'CAPTURE', // UIDAI strict specification verb
                             body: captureXml,
-                            headers: { 'Content-Type': 'text/xml' }
+                            headers: { 'Content-Type': 'text/xml', 'Accept': 'text/xml' }
                         });
                         
                         if (response.ok) {
