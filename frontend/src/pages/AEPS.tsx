@@ -84,30 +84,33 @@ const AEPS = () => {
             // Common ports used by RD Services
             const portsToTry = Array.from({length: 21}, (_, i) => 11100 + i); // 11100 to 11120
             const protocols = window.location.protocol === 'https:' ? ['https', 'http'] : ['http', 'https'];
+            const hosts = ['127.0.0.1', 'localhost'];
             
             let activeUrl = null;
             let successPort = null;
             let successProtocol = null;
 
             // Step 1: Discover the active RD Service port
-            for (const protocol of protocols) {
-                for (const port of portsToTry) {
-                    if (activeUrl) break;
-                    try {
-                        const testUrl = `${protocol}://127.0.0.1:${port}`;
-                        // UIDAI specifies RDSERVICE method to check status
-                        const response = await fetch(`${testUrl}`, { method: 'RDSERVICE' });
-                        
-                        if (response.ok) {
-                            const text = await response.text();
-                            if (text && text.includes('status="READY"')) {
-                                activeUrl = testUrl;
-                                successPort = port;
-                                successProtocol = protocol;
+            for (const host of hosts) {
+                for (const protocol of protocols) {
+                    for (const port of portsToTry) {
+                        if (activeUrl) break;
+                        try {
+                            const testUrl = `${protocol}://${host}:${port}`;
+                            // UIDAI specifies RDSERVICE method to check status
+                            const response = await fetch(`${testUrl}`, { method: 'RDSERVICE' });
+                            
+                            if (response.ok) {
+                                const text = await response.text();
+                                if (text && text.includes('status="READY"')) {
+                                    activeUrl = testUrl;
+                                    successPort = port;
+                                    successProtocol = protocol;
+                                }
                             }
+                        } catch (e) {
+                            // ignore and try next port
                         }
-                    } catch (e) {
-                        // ignore and try next port
                     }
                 }
             }
