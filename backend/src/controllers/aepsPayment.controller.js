@@ -27,6 +27,7 @@ export const balanceEnquiry = async (req, res) => {
         };
 
         const token = generatePaySprintToken();
+        const encryptedData = encryptPayload(JSON.stringify(payload));
         
         const headers = {
             'Token': token,
@@ -34,7 +35,7 @@ export const balanceEnquiry = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const response = await axios.post(`${baseUrl}/service/aeps/balanceenquiry/index`, payload, { headers });
+        const response = await axios.post(`${baseUrl}/service/aeps/balanceenquiry/index`, { body: encryptedData }, { headers });
 
         if (response.data && response.data.status) {
             return res.status(200).json({
@@ -121,6 +122,7 @@ export const cashWithdrawal = async (req, res) => {
         };
 
         const token = generatePaySprintToken();
+        const encryptedData = encryptPayload(JSON.stringify(payload));
         
         const headers = {
             'Token': token,
@@ -128,7 +130,7 @@ export const cashWithdrawal = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const response = await axios.post(`${baseUrl}/service/aeps/cashwithdrawal/index`, payload, { headers });
+        const response = await axios.post(`${baseUrl}/service/aeps/cashwithdrawal/index`, { body: encryptedData }, { headers });
 
         if (response.data && response.data.status) {
             return res.status(200).json({
