@@ -84,53 +84,65 @@ const AEPS = () => {
             // Common ports used by RD Services
             const portsToTry = Array.from({length: 21}, (_, i) => 11100 + i); // 11100 to 11120
             const protocols = window.location.protocol === 'https:' ? ['https', 'http'] : ['http', 'https'];
-            let capturedData = null;
+            
+            let activeUrl = null;
             let successPort = null;
             let successProtocol = null;
 
-            // Try each protocol and port until one responds
+            // Step 1: Discover the active RD Service port
             for (const protocol of protocols) {
                 for (const port of portsToTry) {
-                    if (capturedData) break; // Stop if already found
+                    if (activeUrl) break;
                     try {
-                        const response = await fetch(`${protocol}://127.0.0.1:${port}/rd/capture`, {
-                            method: 'CAPTURE', // UIDAI strict specification verb
-                            body: captureXml,
-                            headers: { 'Content-Type': 'text/xml', 'Accept': 'text/xml' }
-                        });
+                        const testUrl = `${protocol}://127.0.0.1:${port}`;
+                        // UIDAI specifies RDSERVICE method to check status
+                        const response = await fetch(`${testUrl}`, { method: 'RDSERVICE' });
                         
                         if (response.ok) {
                             const text = await response.text();
-                            if (text && text.includes('<PidData')) {
-                                capturedData = text;
+                            if (text && text.includes('status="READY"')) {
+                                activeUrl = testUrl;
                                 successPort = port;
                                 successProtocol = protocol;
                             }
                         }
                     } catch (e) {
-                        // Fetch failed for this port/protocol combination
+                        // ignore and try next port
                     }
                 }
             }
+
+            if (!activeUrl) {
+                throw new Error("Could not find any READY RD Service on any port.");
+            }
+
+            // Step 2: Capture Biometrics on the discovered port
+            const captureResponse = await fetch(`${activeUrl}/rd/capture`, {
+                method: 'CAPTURE', // UIDAI strict specification verb
+                body: captureXml,
+                headers: { 'Content-Type': 'text/xml', 'Accept': 'text/xml' }
+            });
+            
+            const capturedData = await captureResponse.text();
 
             if (capturedData && capturedData.includes('errCode="0"')) {
                 setPidData(capturedData);
                 alert(`Fingerprint captured successfully! (${successProtocol} Port: ${successPort})`);
             } else if (capturedData && !capturedData.includes('errCode="0"')) {
-                // Extract errInfo if possible
                 const errMatch = capturedData.match(/errInfo="([^"]+)"/);
                 const errMsg = errMatch ? errMatch[1] : 'Unknown error';
                 alert(`Device connected on port ${successPort}, but capture failed.\nError: ${errMsg}\nPlease wipe the scanner and try again.`);
                 setPidData(null);
             } else {
-                throw new Error("No RD service found on any port.");
+                throw new Error("No valid data returned from capture endpoint.");
             }
         } catch (error) {
             console.error("RD Service Error:", error);
             alert(`Could not connect to ${selectedDevice}.
             
 1. Ensure the RD Service app is running in Windows Services.
-2. If you are on an HTTPS website, your browser might be blocking the connection. You may need to enable 'allow-insecure-localhost' in your browser flags.`);
+2. Turn off ALL Ad-Blockers (uBlock, AdBlock, Brave Shields) as they block connections to the scanner.
+3. If on an HTTPS site, enable 'allow-insecure-localhost' in chrome://flags.`);
             setPidData(null);
         } finally {
             setIsScanning(false);
