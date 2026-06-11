@@ -6,10 +6,12 @@ export const generatePaySprintToken = () => {
     const secret = Buffer.from(jwtKeyBase64, 'base64').toString('utf8');
     const partnerId = secret.substring(0, 8); 
 
+    const currentUnixTime = Math.floor(Date.now() / 1000);
     const payload = {
-        timestamp: Math.floor(Date.now() / 1000),
+        timestamp: currentUnixTime, // PaySprint requires Unix seconds
         partnerId: partnerId,
-        reqid: Math.floor(Math.random() * 1000000).toString()
+        reqid: Math.floor(Math.random() * 1000000).toString(),
+        iat: currentUnixTime - 60 // Backdate by 60s to fix clock drift 'Cannot handle token prior to' errors
     };
 
     const token = jwt.sign(payload, jwtKeyBase64, { algorithm: 'HS256' });

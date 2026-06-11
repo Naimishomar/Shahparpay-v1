@@ -36,6 +36,10 @@ const AEPS = () => {
     // Modal State
     const [showReceiptModal, setShowReceiptModal] = useState(false);
     const [receiptData, setReceiptData] = useState<any>(null);
+    
+    // Biometric Capture State
+    const [pidData, setPidData] = useState<string | null>(null);
+    const [isScanning, setIsScanning] = useState(false);
 
     // Sync dropdown with grid selection if desired
     const handleGridBankSelect = (bank: string) => {
@@ -48,7 +52,7 @@ const AEPS = () => {
     useEffect(() => {
         const fetchBanks = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/aeps/banks');
+                const res = await fetch('http://localhost:3000/api/aeps/banks');
                 const data = await res.json();
                 if (data.success && data.data) {
                     setDynamicBanks(data.data);
@@ -71,6 +75,8 @@ const AEPS = () => {
     const [loading, setLoading] = useState(false);
 
     const captureFingerprint = async () => {
+        if (isScanning) return;
+        setIsScanning(true);
         try {
             // This is a standard XML for RD service capture
             const captureXml = `<PidOptions ver="1.0"><Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" otp="" wadh="" posh=""/></PidOptions>`;
@@ -85,18 +91,21 @@ const AEPS = () => {
                 body: captureXml,
                 headers: { 'Content-Type': 'text/xml' }
             });
-            const pidData = await response.text();
+            const capturedData = await response.text();
 
-            if (pidData.includes('errCode="0"')) {
-                return pidData;
+            if (capturedData.includes('errCode="0"')) {
+                setPidData(capturedData);
+                alert("Fingerprint captured successfully!");
             } else {
                 alert("Fingerprint capture failed. Please try again.");
-                return null;
+                setPidData(null);
             }
         } catch (error) {
             console.error("RD Service Error:", error);
             alert(`Make sure your ${selectedDevice} biometric device is connected and RD service is running.`);
-            return null;
+            setPidData(null);
+        } finally {
+            setIsScanning(false);
         }
     };
 
@@ -109,13 +118,12 @@ const AEPS = () => {
             alert("Please check the consent box.");
             return;
         }
-
-        setLoading(true);
-        const pidData = await captureFingerprint();
         if (!pidData) {
-            setLoading(false);
+            alert("Please scan fingerprint first!");
             return;
         }
+
+        setLoading(true);
 
         try {
             // Find the selected bank from dynamic list to get the actual IIN, fallback to 607152 if not found
@@ -125,16 +133,28 @@ const AEPS = () => {
             );
             const actualIIN = selectedBankObj?.iinno || selectedBankObj?.bank_iin || '607152';
 
-            const apiPayload = {
+            const apiPayload: any = {
                 mobileNumber: mobileNo,
                 aadhaarNumber: aadhaarNo,
                 bankIIN: actualIIN,
                 pidData: pidData
             };
 
-            const endpoint = activeTab === 'balance_enquiry' 
-                ? 'http://localhost:5000/api/aeps/balance-enquiry'
-                : 'http://localhost:5000/api/aeps/other'; // placeholder
+            let endpoint = '';
+            if (activeTab === 'balance_enquiry') {
+                endpoint = 'http://localhost:3000/api/aeps/balance-enquiry';
+            } else if (activeTab === 'cash_withdrawal') {
+                endpoint = 'http://localhost:3000/api/aeps/cash-withdrawal';
+                apiPayload.amount = amount;
+                
+                if (!amount) {
+                    alert("Please enter the amount to withdraw.");
+                    setLoading(false);
+                    return;
+                }
+            } else {
+                endpoint = 'http://localhost:3000/api/aeps/other'; // Mini statement fallback
+            }
 
             const response = await fetch(endpoint, {
                 method: 'POST',
@@ -160,6 +180,7 @@ const AEPS = () => {
             } else {
                 alert("Transaction Failed: " + (result.message || "Unknown error"));
             }
+            setPidData(null); // Reset fingerprint after successful submission
         } catch (error) {
             console.error(error);
             alert("Failed to connect to the server.");
@@ -355,11 +376,19 @@ const AEPS = () => {
 
                     {/* Actions */}
                     <div className="flex flex-col md:flex-row justify-center gap-4 mt-4">
-                        <button className="flex items-center justify-center gap-2 px-6 py-2.5 bg-background border border-emerald-500/50 text-emerald-500 rounded-lg font-bold hover:bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)] hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all duration-300">
-                            <Fingerprint size={20} />
-                            Scan Finger Print
+                        <button 
+                            onClick={(e) => { e.preventDefault(); captureFingerprint(); }}
+                            disabled={isScanning}
+                            className={`flex items-center justify-center gap-2 px-6 py-2.5 bg-background border rounded-lg font-bold transition-all duration-300 ${
+                                pidData 
+                                    ? 'border-primary text-primary shadow-[0_0_15px_rgba(139,92,246,0.15)] hover:bg-primary/5' 
+                                    : 'border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)] hover:shadow-[0_0_20px_rgba(16,185,129,0.3)]'
+                            }`}
+                        >
+                            {pidData ? <CheckCircle2 size={20} /> : <Fingerprint size={20} />}
+                            {isScanning ? "Scanning..." : pidData ? "Fingerprint Scanned" : "Scan Finger Print"}
                         </button>
-                        <button onClick={handleSubmit} disabled={loading} className="px-10 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-bold shadow-[0_0_15px_rgba(139,92,246,0.4)] hover:shadow-[0_0_20px_rgba(139,92,246,0.6)] transition-all duration-300 disabled:opacity-50">
+                        <button onClick={handleSubmit} disabled={loading || !pidData} className="px-10 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-bold shadow-[0_0_15px_rgba(139,92,246,0.4)] hover:shadow-[0_0_20px_rgba(139,92,246,0.6)] transition-all duration-300 disabled:opacity-50">
                             {loading ? "Processing..." : "Submit"}
                         </button>
                     </div>
