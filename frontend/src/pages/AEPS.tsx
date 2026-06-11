@@ -80,46 +80,53 @@ const AEPS = () => {
         try {
             const captureXml = `<PidOptions ver="1.0"><Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" otp="" wadh="" posh=""/></PidOptions>`;
             
-            // Common ports used by RD Services (Mantra, Morpho, Startek, etc.)
+            // Common ports used by RD Services
             const portsToTry = [11100, 11101, 11102, 11103, 11104, 11105];
+            const protocols = window.location.protocol === 'https:' ? ['https', 'http'] : ['http', 'https'];
             let capturedData = null;
             let successPort = null;
+            let successProtocol = null;
 
-            // Try each port until one responds
-            for (const port of portsToTry) {
-                try {
-                    const response = await fetch(`http://127.0.0.1:${port}/rd/capture`, {
-                        method: 'POST',
-                        body: captureXml,
-                        headers: { 'Content-Type': 'text/xml' }
-                    });
-                    
-                    if (response.ok) {
-                        const text = await response.text();
-                        if (text && text.includes('<PidData')) {
-                            capturedData = text;
-                            successPort = port;
-                            break; // Stop trying ports if we got a successful response
+            // Try each protocol and port until one responds
+            for (const protocol of protocols) {
+                for (const port of portsToTry) {
+                    if (capturedData) break; // Stop if already found
+                    try {
+                        const response = await fetch(`${protocol}://127.0.0.1:${port}/rd/capture`, {
+                            method: 'POST',
+                            body: captureXml,
+                            headers: { 'Content-Type': 'text/xml' }
+                        });
+                        
+                        if (response.ok) {
+                            const text = await response.text();
+                            if (text && text.includes('<PidData')) {
+                                capturedData = text;
+                                successPort = port;
+                                successProtocol = protocol;
+                            }
                         }
+                    } catch (e) {
+                        // Fetch failed for this port/protocol combination
                     }
-                } catch (e) {
-                    // Fetch failed for this port, continue to the next one
-                    console.log(`Port ${port} failed, trying next...`);
                 }
             }
 
             if (capturedData && capturedData.includes('errCode="0"')) {
                 setPidData(capturedData);
-                alert(`Fingerprint captured successfully! (Port: ${successPort})`);
+                alert(`Fingerprint captured successfully! (${successProtocol} Port: ${successPort})`);
             } else if (capturedData && !capturedData.includes('errCode="0"')) {
-                alert(`Device found on port ${successPort}, but capture failed or timed out. Please wipe the scanner and try again.`);
+                alert(`Device found on ${successProtocol} port ${successPort}, but capture failed. Please wipe the scanner and try again.`);
                 setPidData(null);
             } else {
                 throw new Error("No RD service found on any port.");
             }
         } catch (error) {
             console.error("RD Service Error:", error);
-            alert(`Make sure your ${selectedDevice} biometric device is connected, the cable is secure, and the background RD Service app is actively running on your PC.`);
+            alert(`Could not connect to ${selectedDevice}.
+            
+1. Ensure the RD Service app is running in Windows Services.
+2. If you are on an HTTPS website, your browser might be blocking the connection. You may need to enable 'allow-insecure-localhost' in your browser flags.`);
             setPidData(null);
         } finally {
             setIsScanning(false);
