@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Fingerprint, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { Fingerprint, Clock, CheckCircle2, XCircle, RefreshCcw } from "lucide-react";
 import logo from "../assets/logo.png";
 
 const banks = [
@@ -12,6 +12,28 @@ const banks = [
     { name: 'Bank of India', logo: 'https://www.google.com/s2/favicons?domain=bankofindia.co.in&sz=128' },
     { name: 'BoB', logo: 'https://www.google.com/s2/favicons?domain=bankofbaroda.in&sz=128' },
 ];
+
+const numberToWords = (num: string | number) => {
+    const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    
+    let nNum = parseInt(num.toString(), 10);
+    if (isNaN(nNum) || nNum <= 0) return '';
+    if (nNum.toString().length > 9) return 'Amount too large';
+    
+    const n = ('000000000' + nNum).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+    if (!n) return '';
+    
+    let str = '';
+    str += (n[1] != '00') ? (a[Number(n[1])] || b[Number(n[1][0])] + ' ' + a[Number(n[1][1])]) + 'Crore ' : '';
+    str += (n[2] != '00') ? (a[Number(n[2])] || b[Number(n[2][0])] + ' ' + a[Number(n[2][1])]) + 'Lakh ' : '';
+    str += (n[3] != '00') ? (a[Number(n[3])] || b[Number(n[3][0])] + ' ' + a[Number(n[3][1])]) + 'Thousand ' : '';
+    str += (n[4] != '0') ? (a[Number(n[4])] || b[Number(n[4][0])] + ' ' + a[Number(n[4][1])]) + 'Hundred ' : '';
+    str += (n[5] != '00') ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[Number(n[5][0])] + ' ' + a[Number(n[5][1])]) + 'Only' : 'Only';
+    
+    return str.replace(/Only$/, 'Only').trim();
+};
+
 
 const mockRecentTransactions = [
     { id: 1, name: 'Rahul Kumar', aadhaarNo: '123456789012', bankName: 'SBI', mobileNo: '9876543210', date: '2026-06-08 14:30', status: 'Success', amount: '₹ 500.00' },
@@ -47,6 +69,17 @@ const AEPS = () => {
         setBankName(bank.toLowerCase()); 
     };
 
+    const handleReset = () => {
+        setName("");
+        setAadhaarNo("");
+        setBankName("");
+        setMobileNo("");
+        setAmount("");
+        setSelectedBank("");
+        setConsent(false);
+        setPidData(null);
+    };
+
     const [dynamicBanks, setDynamicBanks] = useState<any[]>([]);
 
     useEffect(() => {
@@ -75,6 +108,10 @@ const AEPS = () => {
     const [loading, setLoading] = useState(false);
 
     const captureFingerprint = async () => {
+        if (!aadhaarNo || !bankName) {
+            alert("Please fill Aadhaar Number and Bank Name before scanning your fingerprint.");
+            return;
+        }
         if (isScanning) return;
         setIsScanning(true);
         try {
@@ -238,7 +275,15 @@ const AEPS = () => {
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex items-center gap-8">
                     <h1 className="text-2xl font-bold text-glow">AEPS</h1>
-                    <div className="flex items-center gap-6 border-b border-border">
+                    <button 
+                        onClick={handleReset} 
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 border border-red-200 transition-all text-sm font-semibold shadow-sm"
+                        title="Reset all fields"
+                    >
+                        <RefreshCcw size={16} />
+                        Reset
+                    </button>
+                    <div className="flex items-center gap-6 border-b border-border hidden md:flex">
                         <button 
                             onClick={() => setActiveTab('balance_enquiry')}
                             className={`pb-2 font-medium transition-colors ${activeTab === 'balance_enquiry' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
@@ -329,13 +374,23 @@ const AEPS = () => {
                             {activeTab === 'cash_withdrawal' && (
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-sm font-medium text-foreground">Amount</label>
-                                    <input 
-                                        type="number" 
-                                        value={amount}
-                                        onChange={(e) => setAmount(e.target.value)}
-                                        placeholder="Enter amount to withdraw" 
-                                        className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors" 
-                                    />
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                            <span className="text-muted-foreground font-semibold">₹</span>
+                                        </div>
+                                        <input 
+                                            type="number" 
+                                            value={amount}
+                                            onChange={(e) => setAmount(e.target.value)}
+                                            placeholder="Enter amount to withdraw" 
+                                            className="w-full pl-8 p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors" 
+                                        />
+                                    </div>
+                                    {amount && Number(amount) > 0 && (
+                                        <span className="text-xs font-semibold text-emerald-600 mt-0.5 ml-1 animate-in fade-in slide-in-from-top-1">
+                                            {numberToWords(amount)}
+                                        </span>
+                                    )}
                                 </div>
                             )}
                         </div>
