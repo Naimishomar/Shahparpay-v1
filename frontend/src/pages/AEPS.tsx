@@ -78,31 +78,48 @@ const AEPS = () => {
         if (isScanning) return;
         setIsScanning(true);
         try {
-            // This is a standard XML for RD service capture
             const captureXml = `<PidOptions ver="1.0"><Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" otp="" wadh="" posh=""/></PidOptions>`;
             
-            // Default Mantra port is 11100. Morpho/Startek can vary (e.g., 11101)
-            let port = 11100;
-            if (selectedDevice === 'morpho') port = 11101;
-            else if (selectedDevice === 'startek') port = 11101; // can be 11102
+            // Common ports used by RD Services (Mantra, Morpho, Startek, etc.)
+            const portsToTry = [11100, 11101, 11102, 11103, 11104, 11105];
+            let capturedData = null;
+            let successPort = null;
 
-            const response = await fetch(`http://127.0.0.1:${port}/rd/capture`, {
-                method: 'POST',
-                body: captureXml,
-                headers: { 'Content-Type': 'text/xml' }
-            });
-            const capturedData = await response.text();
+            // Try each port until one responds
+            for (const port of portsToTry) {
+                try {
+                    const response = await fetch(`http://127.0.0.1:${port}/rd/capture`, {
+                        method: 'POST',
+                        body: captureXml,
+                        headers: { 'Content-Type': 'text/xml' }
+                    });
+                    
+                    if (response.ok) {
+                        const text = await response.text();
+                        if (text && text.includes('<PidData')) {
+                            capturedData = text;
+                            successPort = port;
+                            break; // Stop trying ports if we got a successful response
+                        }
+                    }
+                } catch (e) {
+                    // Fetch failed for this port, continue to the next one
+                    console.log(`Port ${port} failed, trying next...`);
+                }
+            }
 
-            if (capturedData.includes('errCode="0"')) {
+            if (capturedData && capturedData.includes('errCode="0"')) {
                 setPidData(capturedData);
-                alert("Fingerprint captured successfully!");
-            } else {
-                alert("Fingerprint capture failed. Please try again.");
+                alert(`Fingerprint captured successfully! (Port: ${successPort})`);
+            } else if (capturedData && !capturedData.includes('errCode="0"')) {
+                alert(`Device found on port ${successPort}, but capture failed or timed out. Please wipe the scanner and try again.`);
                 setPidData(null);
+            } else {
+                throw new Error("No RD service found on any port.");
             }
         } catch (error) {
             console.error("RD Service Error:", error);
-            alert(`Make sure your ${selectedDevice} biometric device is connected and RD service is running.`);
+            alert(`Make sure your ${selectedDevice} biometric device is connected, the cable is secure, and the background RD Service app is actively running on your PC.`);
             setPidData(null);
         } finally {
             setIsScanning(false);
