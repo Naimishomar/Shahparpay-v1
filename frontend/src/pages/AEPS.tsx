@@ -78,7 +78,8 @@ const AEPS = () => {
         if (isScanning) return;
         setIsScanning(true);
         try {
-            const captureXml = `<PidOptions ver="1.0"><Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" otp="" wadh="" posh=""/></PidOptions>`;
+            // Standard UIDAI Registered Device PidOptions XML
+            const captureXml = `<PidOptions ver="1.0"><Opts fCount="1" fType="0" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" wadh="" posh="UNKNOWN"/></PidOptions>`;
             
             // Common ports used by RD Services
             const portsToTry = [11100, 11101, 11102, 11103, 11104, 11105];
@@ -116,7 +117,10 @@ const AEPS = () => {
                 setPidData(capturedData);
                 alert(`Fingerprint captured successfully! (${successProtocol} Port: ${successPort})`);
             } else if (capturedData && !capturedData.includes('errCode="0"')) {
-                alert(`Device found on ${successProtocol} port ${successPort}, but capture failed. Please wipe the scanner and try again.`);
+                // Extract errInfo if possible
+                const errMatch = capturedData.match(/errInfo="([^"]+)"/);
+                const errMsg = errMatch ? errMatch[1] : 'Unknown error';
+                alert(`Device connected on port ${successPort}, but capture failed.\nError: ${errMsg}\nPlease wipe the scanner and try again.`);
                 setPidData(null);
             } else {
                 throw new Error("No RD service found on any port.");
