@@ -95,7 +95,7 @@ export function AppSidebar() {
                     to={project.url} 
                     className={`flex items-center gap-3 py-3 px-4 w-full rounded-xl transition-all duration-300 ${
                         isActive 
-                        ? 'bg-primary/10 dark:bg-primary/20 text-primary shadow-[inset_0_0_20px_rgba(139,92,246,0.1)] dark:shadow-[inset_0_0_20px_rgba(139,92,246,0.2)] border border-primary/20 dark:border-primary/30' 
+                        ? 'bg-gray-500/20 text-white border border-white' 
                         : 'text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground border border-transparent'
                     }`}
                   >

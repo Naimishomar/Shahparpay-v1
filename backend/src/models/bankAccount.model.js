@@ -40,6 +40,10 @@ const bankAccountSchema = new mongoose.Schema({
     balance:{
         type: Number,
         default: 0
+    },
+    beneId: {
+        type: String,
+        trim: true
     }
 }, { timestamps: true });
 

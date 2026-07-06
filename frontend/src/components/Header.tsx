@@ -1,33 +1,67 @@
+import axios from "axios";
 import { Bell, Search, User, Wallet, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useAuth } from "../context/AuthContext";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 const Header = () => {
     const { theme, setTheme } = useTheme();
+    const { user, token } = useAuth();
+    const [balances, setBalances] = useState({ aepsBalance: 0, mainBalance: 0 });
+
+    useEffect(() => {
+        const fetchBalances = async () => {
+            try {
+                if (user && user.role === 'retailer' && token) {
+                    const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/wallet/balance`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.data.success) {
+                        setBalances(res.data.data);
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching balances:", error);
+            }
+        };
+        fetchBalances();
+        
+        // Listen to custom event for balance updates
+        const handleBalanceUpdate = () => fetchBalances();
+        window.addEventListener('wallet-updated', handleBalanceUpdate);
+        
+        return () => {
+            window.removeEventListener('wallet-updated', handleBalanceUpdate);
+        };
+    }, [user]);
 
     return (
         <div className="flex items-center gap-6 w-full justify-end">
             {/* Wallet Balances */}
-            <div className="hidden lg:flex items-center gap-6 mr-auto pl-4">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg border border-primary/20">
-                        <Wallet className="w-5 h-5 text-primary" />
+            {user?.role === 'retailer' && (
+                <div className="hidden lg:flex items-center gap-6 mr-auto pl-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary/10 rounded-lg border border-primary/20">
+                            <Wallet className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                            <p className="text-xs font-medium text-muted-foreground">AEPS Wallet</p>
+                            <p className="text-sm font-bold text-foreground">₹ {balances.aepsBalance.toFixed(2)}</p>
+                        </div>
                     </div>
-                    <div>
-                        <p className="text-xs font-medium text-muted-foreground">AEPS Wallet</p>
-                        <p className="text-sm font-bold text-foreground">₹ 79.77</p>
+                    <div className="w-px h-8 bg-black/10 dark:bg-white/10"></div>
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                            <Wallet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                            <p className="text-xs font-medium text-muted-foreground">Main Wallet</p>
+                            <p className="text-sm font-bold text-foreground">₹ {balances.mainBalance.toFixed(2)}</p>
+                        </div>
                     </div>
                 </div>
-                <div className="w-px h-8 bg-black/10 dark:bg-white/10"></div>
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-                        <Wallet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div>
-                        <p className="text-xs font-medium text-muted-foreground">Main Wallet</p>
-                        <p className="text-sm font-bold text-foreground">₹ 1,036.03</p>
-                    </div>
-                </div>
-            </div>
+            )}
 
             {/* Search Bar */}
             <div className="relative hidden md:flex items-center">
@@ -56,17 +90,21 @@ const Header = () => {
             </button>
 
             {/* User Profile */}
-            <div className="flex items-center gap-3 cursor-pointer group">
+            <Link to="/profile" className="flex items-center gap-3 cursor-pointer group">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-purple-400 p-[2px] shadow-[0_0_10px_rgba(139,92,246,0.3)] group-hover:shadow-[0_0_15px_rgba(139,92,246,0.6)] transition-shadow">
-                    <div className="w-full h-full bg-background rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-foreground" />
+                    <div className="w-full h-full bg-background rounded-full flex items-center justify-center overflow-hidden">
+                        {user?.profilePicture ? (
+                            <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                            <User className="w-5 h-5 text-foreground" />
+                        )}
                     </div>
                 </div>
                 <div className="hidden md:block">
-                    <p className="text-sm font-medium text-foreground leading-none">Admin User</p>
-                    <p className="text-xs text-muted-foreground mt-1">Superadmin</p>
+                    <p className="text-sm font-medium text-foreground leading-none">{user?.name || "Admin User"}</p>
+                    <p className="text-xs text-white mt-1 capitalize">{user?.role || "Superadmin"} Portal</p>
                 </div>
-            </div>
+            </Link>
         </div>
     );
 };

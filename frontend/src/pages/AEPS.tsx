@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
-import { Fingerprint, Clock, CheckCircle2, XCircle, RefreshCcw } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Fingerprint, Clock, CheckCircle2, XCircle, RefreshCcw, ShieldCheck, KeyRound } from "lucide-react";
 import logo from "../assets/logo.png";
+import MerchantKycModal from "../components/MerchantKycModal";
+import DailyAuthModal from "../components/DailyAuthModal";
+import { useAuth } from "../context/AuthContext";
+import axios from "axios";
+import { toast } from "sonner";
 
 const banks = [
     { name: 'ICICI Bank', logo: 'https://www.google.com/s2/favicons?domain=icicibank.com&sz=128' },
@@ -35,13 +41,11 @@ const numberToWords = (num: string | number) => {
 };
 
 
-const mockRecentTransactions = [
-    { id: 1, name: 'Rahul Kumar', aadhaarNo: '123456789012', bankName: 'SBI', mobileNo: '9876543210', date: '2026-06-08 14:30', status: 'Success', amount: '₹ 500.00' },
-    { id: 2, name: 'Anjali Sharma', aadhaarNo: '987654321098', bankName: 'HDFC BANK', mobileNo: '8765432109', date: '2026-06-08 11:15', status: 'Success', amount: '₹ 2,000.00' },
-    { id: 3, name: 'Vikram Singh', aadhaarNo: '567890123456', bankName: 'ICICI Bank', mobileNo: '7654321098', date: '2026-06-07 09:45', status: 'Failed', amount: '₹ 1,500.00' },
-];
+// Removed mock transactions
 
 const AEPS = () => {
+    const { user } = useAuth();
+    const actualMerchantCode = user?.retailerId || user?.distributorId || user?.adminId || "";
     // UI State
     const [activeTab, setActiveTab] = useState("cash_withdrawal");
     const [selectedDevice, setSelectedDevice] = useState("mantra");
@@ -57,9 +61,33 @@ const AEPS = () => {
 
     // Modal State
     const [showReceiptModal, setShowReceiptModal] = useState(false);
+    const [showKycModal, setShowKycModal] = useState(false);
+    const [showDailyAuthModal, setShowDailyAuthModal] = useState(false);
     const [receiptData, setReceiptData] = useState<any>(null);
+
+    // Merchant DB Tracker State
+    const [merchantCode, setMerchantCode] = useState(actualMerchantCode);
+    const [merchantStatus, setMerchantStatus] = useState({
+        isMerchantKycComplete: false,
+        isDailyAuthDoneToday: false,
+        lastDailyAuthDate: null
+    });
+
+    // Fetch Merchant Status on Load
+    useEffect(() => {
+        if (!merchantCode) return;
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/merchant-status?merchantcode=${merchantCode}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.data) {
+                    setMerchantStatus(data.data);
+                }
+            })
+            .catch(err => console.error("Failed to fetch merchant status", err));
+    }, [merchantCode]);
     
     // Biometric Capture State
+    const [merchantPidData, setMerchantPidData] = useState<string | null>(null);
     const [pidData, setPidData] = useState<string | null>(null);
     const [isScanning, setIsScanning] = useState(false);
 
@@ -85,7 +113,7 @@ const AEPS = () => {
     useEffect(() => {
         const fetchBanks = async () => {
             try {
-                const res = await fetch('http://localhost:3000/api/aeps/banks');
+                const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/banks`);
                 const data = await res.json();
                 if (data.success && data.data) {
                     setDynamicBanks(data.data);
@@ -97,12 +125,35 @@ const AEPS = () => {
         fetchBanks();
     }, []);
 
+    const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+    useEffect(() => {
+        if (!user) return;
+        const fetchRecentTxns = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) return;
+                const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/dashboard/recent-transactions?type=AEPS&limit=6`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success && data.data) {
+                    setRecentTransactions(data.data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch recent txns:", err);
+            }
+        };
+        fetchRecentTxns();
+    }, [user]);
+
     // Load transaction data into form
-    const loadTransactionToForm = (tx: typeof mockRecentTransactions[0]) => {
-        setName(tx.name);
-        setAadhaarNo(tx.aadhaarNo);
-        setMobileNo(tx.mobileNo);
-        handleGridBankSelect(tx.bankName);
+    const loadTransactionToForm = (tx: any) => {
+        setName(tx.metadata?.name || "");
+        setAadhaarNo(tx.metadata?.aadhaar || "");
+        setMobileNo(tx.metadata?.mobile || "");
+        if (tx.metadata?.bankName) {
+            handleGridBankSelect(tx.metadata.bankName);
+        }
     };
 
     const [loading, setLoading] = useState(false);
@@ -112,6 +163,19 @@ const AEPS = () => {
             alert("Please fill Aadhaar Number and Bank Name before scanning your fingerprint.");
             return;
         }
+        
+        // For cash withdrawal and cash deposit, we need Merchant first, then Customer
+        const isCashTxn = activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit';
+        const isCapturingMerchant = isCashTxn && !merchantPidData;
+        
+        if (isCapturingMerchant) {
+            const proceed = window.confirm(`NPCI Guideline: RETAILER must scan their fingerprint first for ${activeTab === 'cash_withdrawal' ? 'Cash Withdrawal' : 'Cash Deposit'}. Please place YOUR finger on the scanner.`);
+            if (!proceed) return;
+        } else {
+            const proceed = window.confirm("CUSTOMER must now place their finger on the scanner.");
+            if (!proceed) return;
+        }
+
         if (isScanning) return;
         setIsScanning(true);
         try {
@@ -124,8 +188,6 @@ const AEPS = () => {
             const hosts = ['127.0.0.1', 'localhost'];
             
             let activeUrl = null;
-            let successPort = null;
-            let successProtocol = null;
 
             // Step 1: Discover the active RD Service port
             for (const host of hosts) {
@@ -141,8 +203,6 @@ const AEPS = () => {
                                 const text = await response.text();
                                 if (text && text.includes('status="READY"')) {
                                     activeUrl = testUrl;
-                                    successPort = port;
-                                    successProtocol = protocol;
                                 }
                             }
                         } catch (e) {
@@ -160,19 +220,25 @@ const AEPS = () => {
             const captureResponse = await fetch(`${activeUrl}/rd/capture`, {
                 method: 'CAPTURE', // UIDAI strict specification verb
                 body: captureXml,
-                headers: { 'Content-Type': 'text/xml', 'Accept': 'text/xml' }
+                headers: { 'Content-Type': 'application/xml', 'Accept': 'application/xml' }
             });
             
             const capturedData = await captureResponse.text();
 
             if (capturedData && capturedData.includes('errCode="0"')) {
-                setPidData(capturedData);
-                alert(`Fingerprint captured successfully! (${successProtocol} Port: ${successPort})`);
+                if (isCapturingMerchant) {
+                    setMerchantPidData(capturedData);
+                    alert(`Retailer Fingerprint captured successfully! Now click scan again for Customer.`);
+                } else {
+                    setPidData(capturedData);
+                    alert(`Customer Fingerprint captured successfully!`);
+                }
             } else if (capturedData && !capturedData.includes('errCode="0"')) {
                 const errMatch = capturedData.match(/errInfo="([^"]+)"/);
                 const errMsg = errMatch ? errMatch[1] : 'Unknown error';
-                alert(`Device connected on port ${successPort}, but capture failed.\nError: ${errMsg}\nPlease wipe the scanner and try again.`);
-                setPidData(null);
+                alert(`Capture failed.\nError: ${errMsg}\nPlease wipe the scanner and try again.`);
+                if (isCapturingMerchant) setMerchantPidData(null);
+                else setPidData(null);
             } else {
                 throw new Error("No valid data returned from capture endpoint.");
             }
@@ -198,8 +264,14 @@ const AEPS = () => {
             alert("Please check the consent box.");
             return;
         }
-        if (!pidData) {
-            alert("Please scan fingerprint first!");
+        
+        // Validate inputs based on active tab
+        if ((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') && (!merchantPidData || !pidData)) {
+            toast.error("Please capture both Retailer and Customer fingerprints.");
+            return;
+        }
+        if (activeTab !== 'cash_withdrawal' && activeTab !== 'cash_deposit' && !pidData) {
+            toast.error("Please capture Customer fingerprint.");
             return;
         }
 
@@ -217,32 +289,44 @@ const AEPS = () => {
                 mobileNumber: mobileNo,
                 aadhaarNumber: aadhaarNo,
                 bankIIN: actualIIN,
-                pidData: pidData
+                pidData: pidData,
+                merchantPidData: (activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') ? merchantPidData : undefined,
+                bankName: bankName,
+                customerName: name
             };
 
-            let endpoint = '';
+            let res;
+            const token = localStorage.getItem('token');
+            const config = { headers: { Authorization: `Bearer ${token}` } };
+
             if (activeTab === 'balance_enquiry') {
-                endpoint = 'http://localhost:3000/api/aeps/balance-enquiry';
+                res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/balance-enquiry`, apiPayload, config);
             } else if (activeTab === 'cash_withdrawal') {
-                endpoint = 'http://localhost:3000/api/aeps/cash-withdrawal';
-                apiPayload.amount = amount;
-                
-                if (!amount) {
-                    alert("Please enter the amount to withdraw.");
+                // Intercept logic for DB tracker
+                if (!merchantStatus.isMerchantKycComplete) {
+                    alert("Mandatory eKYC is incomplete. Please complete it first.");
+                    setShowKycModal(true);
                     setLoading(false);
                     return;
                 }
+                if (!merchantStatus.isDailyAuthDoneToday) {
+                    alert("Daily Biometric Authentication is required. Please complete it now.");
+                    setShowDailyAuthModal(true);
+                    setLoading(false);
+                    return;
+                }
+                apiPayload.amount = amount;
+                res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/cash-withdrawal`, apiPayload, config);
+            } else if (activeTab === 'cash_deposit') {
+                apiPayload.amount = amount;
+                res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/cash-deposit`, apiPayload, config);
+            } else if (activeTab === 'mini_statement') {
+                res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/mini-statement`, apiPayload, config);
             } else {
-                endpoint = 'http://localhost:3000/api/aeps/other'; // Mini statement fallback
+                res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/balance-enquiry`, apiPayload, config);
             }
 
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(apiPayload)
-            });
-
-            const result = await response.json();
+            const result = res.data;
             
             if (result.success) {
                 const data = {
@@ -253,14 +337,15 @@ const AEPS = () => {
                     rrn: result.data?.data?.rrn || 'N/A',
                     stan: result.data?.data?.stan || 'N/A',
                     txnStatus: 'SUCCESS',
-                    amount: result.data?.data?.balanceamount || '0.00'
+                    amount: result.data?.data?.balanceamount || result.data?.amount || '0.00'
                 };
                 setReceiptData(data);
                 setShowReceiptModal(true);
             } else {
                 alert("Transaction Failed: " + (result.message || "Unknown error"));
             }
-            setPidData(null); // Reset fingerprint after successful submission
+            setPidData(null);
+            setMerchantPidData(null);
         } catch (error) {
             console.error(error);
             alert("Failed to connect to the server.");
@@ -283,6 +368,35 @@ const AEPS = () => {
                         <RefreshCcw size={16} />
                         Reset
                     </button>
+                    <div className="flex gap-2">
+                        {/* Tracker UI logic: Hides KYC if complete, changes Daily Auth appearance if done */}
+                        {!merchantStatus.isDailyAuthDoneToday ? (
+                            <button 
+                                onClick={() => setShowDailyAuthModal(true)} 
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 transition-all text-sm font-semibold shadow-sm animate-pulse"
+                                title="Daily 2FA Authentication Needed"
+                            >
+                                <KeyRound size={16} />
+                                Pending Daily Auth
+                            </button>
+                        ) : (
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 text-green-600 border border-green-200 text-sm font-semibold shadow-sm">
+                                <CheckCircle2 size={16} />
+                                Auth Done
+                            </div>
+                        )}
+
+                        {!merchantStatus.isMerchantKycComplete && (
+                            <button 
+                                onClick={() => setShowKycModal(true)} 
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 border border-emerald-200 transition-all text-sm font-semibold shadow-sm animate-pulse"
+                                title="Complete Mandatory KYC"
+                            >
+                                <ShieldCheck size={16} />
+                                Complete eKYC
+                            </button>
+                        )}
+                    </div>
                     <div className="flex items-center gap-6 border-b border-border hidden md:flex">
                         <button 
                             onClick={() => setActiveTab('balance_enquiry')}
@@ -302,6 +416,12 @@ const AEPS = () => {
                         >
                             Cash Withdrawal
                         </button>
+                        <button 
+                            onClick={() => setActiveTab('cash_deposit')}
+                            className={`pb-2 font-medium transition-colors ${activeTab === 'cash_deposit' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                        >
+                            Cash Deposit
+                        </button>
                     </div>
                 </div>
             </div>
@@ -315,7 +435,7 @@ const AEPS = () => {
                     {/* Inputs Row */}
                     <div className="flex flex-col gap-4 bg-primary/5 p-5 border-l-4 border-primary rounded-lg">
                         <h2 className="text-lg font-bold text-foreground border-b border-border/50 pb-2">
-                            {activeTab === 'balance_enquiry' ? 'Balance Enquiry' : activeTab === 'mini_statement' ? 'Mini Statement' : 'Cash Withdrawal'}
+                            {activeTab === 'balance_enquiry' ? 'Balance Enquiry' : activeTab === 'mini_statement' ? 'Mini Statement' : activeTab === 'cash_deposit' ? 'Cash Deposit' : 'Cash Withdrawal'}
                         </h2>
                         
                         <div className="flex flex-col gap-4 mt-2">
@@ -371,7 +491,7 @@ const AEPS = () => {
                                 />
                             </div>
 
-                            {activeTab === 'cash_withdrawal' && (
+                            {(activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') && (
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-sm font-medium text-foreground">Amount</label>
                                     <div className="relative">
@@ -382,7 +502,7 @@ const AEPS = () => {
                                             type="number" 
                                             value={amount}
                                             onChange={(e) => setAmount(e.target.value)}
-                                            placeholder="Enter amount to withdraw" 
+                                            placeholder="Enter amount" 
                                             className="w-full pl-8 p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors" 
                                         />
                                     </div>
@@ -447,7 +567,6 @@ const AEPS = () => {
                                     />
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 bg-white/50 dark:bg-black/20 rounded-md flex items-center justify-center shadow-sm overflow-hidden border border-border/50 p-1 text-primary">
-                                            {/* Replace this icon with your local <img> asset when available */}
                                             <Fingerprint className="w-6 h-6 opacity-80" />
                                         </div>
                                         <span className={`font-medium transition-colors ${selectedDevice === device.name.toLowerCase() ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`}>
@@ -475,19 +594,49 @@ const AEPS = () => {
                     {/* Actions */}
                     <div className="flex flex-col md:flex-row justify-center gap-4 mt-4">
                         <button 
-                            onClick={(e) => { e.preventDefault(); captureFingerprint(); }}
-                            disabled={isScanning}
-                            className={`flex items-center justify-center gap-2 px-6 py-2.5 bg-background border rounded-lg font-bold transition-all duration-300 ${
-                                pidData 
-                                    ? 'border-primary text-primary shadow-[0_0_15px_rgba(139,92,246,0.15)] hover:bg-primary/5' 
-                                    : 'border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)] hover:shadow-[0_0_20px_rgba(16,185,129,0.3)]'
-                            }`}
+                            onClick={captureFingerprint} 
+                            disabled={isScanning || !!((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') ? (merchantPidData && pidData) : pidData)}
+                            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-xl border-2 transition-all 
+                                ${((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') ? (merchantPidData && pidData) : pidData) 
+                                    ? 'border-green-500 bg-green-50 dark:bg-green-500/10' 
+                                    : 'border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 cursor-pointer bg-background'}`}
                         >
-                            {pidData ? <CheckCircle2 size={20} /> : <Fingerprint size={20} />}
-                            {isScanning ? "Scanning..." : pidData ? "Fingerprint Scanned" : "Scan Finger Print"}
+                            <div className="relative">
+                                <Fingerprint className={`w-12 h-12 ${((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') ? (merchantPidData && pidData) : pidData) ? 'text-green-500' : 'text-primary'} ${isScanning ? 'animate-pulse' : ''}`} />
+                                {isScanning && (
+                                    <div className="absolute inset-0 bg-primary/20 animate-ping rounded-full"></div>
+                                )}
+                            </div>
+                            <div className="text-center">
+                                <h3 className={`font-semibold ${((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') ? (merchantPidData && pidData) : pidData) ? 'text-green-600 dark:text-green-400' : 'text-foreground'}`}>
+                                    {isScanning ? 'Scanning...' : 
+                                        ((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') ?
+                                            (merchantPidData && pidData ? 'Both Fingerprints Captured' : (merchantPidData ? 'Retailer Captured. Scan Customer Now.' : 'Scan Retailer First.'))
+                                            : (pidData ? 'Fingerprint Captured' : 'Scan Fingerprint'))
+                                    }
+                                </h3>
+                                {!((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') ? (merchantPidData && pidData) : pidData) && !isScanning && (
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        Click to capture {activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit' ? 'merchant/customer' : 'customer'} biometric
+                                    </p>
+                                )}
+                            </div>
                         </button>
-                        <button onClick={handleSubmit} disabled={loading || !pidData} className="px-10 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-bold shadow-[0_0_15px_rgba(139,92,246,0.4)] hover:shadow-[0_0_20px_rgba(139,92,246,0.6)] transition-all duration-300 disabled:opacity-50">
-                            {loading ? "Processing..." : "Submit"}
+                    </div>
+
+                    <div className="flex gap-4">
+                        <button onClick={() => {
+                            setAadhaarNo('');
+                            setMobileNo('');
+                            setAmount('');
+                            setPidData(null);
+                            setMerchantPidData(null);
+                            setBankName('');
+                        }} className="px-6 py-2.5 rounded-lg border border-border hover:bg-muted font-medium transition-colors">
+                            Clear
+                        </button>
+                        <button onClick={handleSubmit} disabled={loading || ((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') ? (!merchantPidData || !pidData) : !pidData)} className="px-10 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-bold shadow-[0_0_15px_rgba(139,92,246,0.4)] hover:shadow-[0_0_20px_rgba(139,92,246,0.6)] transition-all duration-300 disabled:opacity-50">
+                            {loading ? <RefreshCcw className="animate-spin mx-auto" size={20} /> : "Submit"}
                         </button>
                     </div>
 
@@ -496,22 +645,27 @@ const AEPS = () => {
                         <div className="flex items-center gap-2 mb-4">
                             <Clock className="w-5 h-5 text-primary" />
                             <h3 className="text-lg font-bold text-foreground">Recent Transactions</h3>
+                            <Link to="/reports" className="ml-auto text-sm text-primary hover:underline bg-primary/10 px-3 py-1 rounded-full font-medium transition-colors">
+                                View More
+                            </Link>
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {mockRecentTransactions.map((tx) => (
+                            {recentTransactions.map((tx) => (
                                 <div 
-                                    key={tx.id} 
+                                    key={tx._id} 
                                     onClick={() => loadTransactionToForm(tx)}
                                     className="flex flex-col p-4 rounded-xl border border-border bg-background/30 hover:bg-background/80 hover:border-primary/50 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-lg group"
                                 >
                                     <div className="flex justify-between items-start mb-3">
                                         <div>
-                                            <p className="font-semibold text-foreground group-hover:text-primary transition-colors">{tx.name}</p>
-                                            <p className="text-xs text-muted-foreground">{tx.date}</p>
+                                            <p className="font-semibold text-foreground group-hover:text-primary transition-colors">{tx.metadata?.name || 'Customer'}</p>
+                                            <p className="text-xs text-muted-foreground">{new Date(tx.createdAt).toLocaleString()}</p>
                                         </div>
-                                        {tx.status === 'Success' ? (
+                                        {tx.status === 'SUCCESS' ? (
                                             <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                                        ) : tx.status === 'PENDING' ? (
+                                            <RefreshCcw className="w-5 h-5 text-yellow-500 animate-spin" />
                                         ) : (
                                             <XCircle className="w-5 h-5 text-red-500" />
                                         )}
@@ -521,24 +675,24 @@ const AEPS = () => {
                                         <div className="flex flex-col gap-1.5">
                                             <div className="flex items-center gap-2">
                                                 <img 
-                                                    src={banks.find(b => b.name.toLowerCase() === tx.bankName.toLowerCase())?.logo || 'https://www.google.com/s2/favicons?domain=bank.com&sz=128'} 
-                                                    alt={tx.bankName} 
+                                                    src={banks.find(b => b.name.toLowerCase() === (tx.metadata?.bankName || '').toLowerCase())?.logo || 'https://www.google.com/s2/favicons?domain=bank.com&sz=128'} 
+                                                    alt={tx.metadata?.bankName || 'Bank'} 
                                                     className="w-5 h-5 object-contain rounded-sm"
                                                     onError={(e) => {
                                                         (e.target as HTMLImageElement).style.display = 'none';
                                                     }}
                                                 />
                                                 <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded w-max">
-                                                    {tx.bankName}
+                                                    {tx.metadata?.bankName || 'AEPS'}
                                                 </span>
                                             </div>
                                             <span className="text-xs text-muted-foreground tracking-wider">
-                                                **** {tx.aadhaarNo.slice(-4)}
+                                                **** {(tx.metadata?.aadhaar || 'XXXX').slice(-4)}
                                             </span>
                                         </div>
                                         <div className="text-right">
-                                            <p className="font-bold text-sm text-foreground">{tx.amount}</p>
-                                            <p className={`text-[10px] font-bold ${tx.status === 'Success' ? 'text-emerald-500' : 'text-red-500'}`}>{tx.status}</p>
+                                            <p className="font-bold text-sm text-foreground">₹ {tx.amount.toFixed(2)}</p>
+                                            <p className={`text-[10px] font-bold ${tx.status === 'SUCCESS' ? 'text-emerald-500' : tx.status === 'PENDING' ? 'text-yellow-500' : 'text-red-500'}`}>{tx.status}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -555,7 +709,9 @@ const AEPS = () => {
                         <div className="p-4 border-b border-border flex justify-between items-start bg-muted/30">
                             <div className="flex flex-col gap-2">
                                 <img src={logo} alt="Shahparpay Logo" className="h-14 object-contain w-max dark:brightness-0 dark:invert" />
-                                <h3 className="font-semibold text-lg text-foreground">Customer Copy - Cash Withdrawal</h3>
+                                <h3 className="font-semibold text-lg text-foreground">
+                                    Customer Copy - {receiptData.ministatementlist && receiptData.ministatementlist.length > 0 ? 'Mini Statement' : (activeTab === 'cash_withdrawal' ? 'Cash Withdrawal' : activeTab === 'cash_deposit' ? 'Cash Deposit' : 'Balance Enquiry')}
+                                </h3>
                             </div>
                             <button onClick={() => setShowReceiptModal(false)} className="text-muted-foreground hover:text-foreground transition-colors mt-1">
                                 <XCircle className="w-5 h-5" />
@@ -572,8 +728,8 @@ const AEPS = () => {
                                         { label: 'RRN', value: receiptData.rrn },
                                         { label: 'STAN', value: receiptData.stan },
                                         { label: 'Txn Status', value: receiptData.txnStatus },
-                                        { label: 'Amount', value: receiptData.amount },
-                                    ].map((row, idx) => (
+                                        { label: 'Balance Amount', value: receiptData.amount },
+                                    ].map((row) => (
                                         <tr key={row.label} className="border-b border-border last:border-0 hover:bg-muted/10 transition-colors">
                                             <td className="p-3 font-medium text-muted-foreground border-r border-border w-[40%] bg-muted/5">{row.label}</td>
                                             <td className="p-3 text-foreground break-all">{row.value}</td>
@@ -581,6 +737,33 @@ const AEPS = () => {
                                     ))}
                                 </tbody>
                             </table>
+                            {receiptData.ministatementlist && receiptData.ministatementlist.length > 0 && (
+                                <div className="mt-4">
+                                    <h4 className="font-semibold text-sm mb-2 text-foreground border-b pb-1">Mini Statement Details</h4>
+                                    <div className="max-h-48 overflow-y-auto">
+                                        <table className="w-full text-xs border-collapse">
+                                            <thead className="bg-muted/50 sticky top-0">
+                                                <tr>
+                                                    <th className="p-2 border text-left font-medium">Date</th>
+                                                    <th className="p-2 border text-left font-medium">Txn Type</th>
+                                                    <th className="p-2 border text-left font-medium">Amount</th>
+                                                    <th className="p-2 border text-left font-medium">Narration</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {receiptData.ministatementlist.map((item: any, i: number) => (
+                                                    <tr key={i} className="border-b hover:bg-muted/10">
+                                                        <td className="p-2 border">{item.date}</td>
+                                                        <td className={`p-2 border font-bold ${item.txnType === 'Cr' ? 'text-green-600' : 'text-red-600'}`}>{item.txnType}</td>
+                                                        <td className="p-2 border">{item.amount}</td>
+                                                        <td className="p-2 border max-w-[120px] truncate" title={item.narration}>{item.narration}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div className="p-4 bg-muted/30 flex justify-end gap-3 border-t border-border">
                             <button onClick={() => setShowReceiptModal(false)} className="px-4 py-2 rounded-md border border-border hover:bg-muted transition-colors text-sm font-medium">Close</button>
@@ -588,6 +771,26 @@ const AEPS = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Merchant KYC Modal */}
+            {showKycModal && (
+                <MerchantKycModal onClose={() => {
+                    setShowKycModal(false);
+                    // Force refresh status
+                    setMerchantCode(prev => prev + " ");
+                    setTimeout(() => setMerchantCode(prev => prev.trim()), 100);
+                }} />
+            )}
+
+            {/* Daily 2FA Auth Modal */}
+            {showDailyAuthModal && (
+                <DailyAuthModal onClose={() => {
+                    setShowDailyAuthModal(false);
+                    // Force refresh status
+                    setMerchantCode(prev => prev + " ");
+                    setTimeout(() => setMerchantCode(prev => prev.trim()), 100);
+                }} />
             )}
         </div>
     )

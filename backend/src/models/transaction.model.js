@@ -13,7 +13,7 @@ const transactionSchema = new mongoose.Schema({
     }, // Retailer who did it
     type: { 
         type: String, 
-        enum: ['AEPS_WITHDRAWAL', 'BILL_PAYMENT', 'WALLET_TOPUP'], 
+        enum: ['AEPS_WITHDRAWAL', 'BILL_PAYMENT', 'WALLET_TOPUP', 'RECHARGE', 'AEPSTOMAIN', 'AEPS_SETTLEMENT', 'DMT'], 
         required: true 
     },
     amount: { 

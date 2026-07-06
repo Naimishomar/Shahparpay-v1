@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Search, Download, RotateCcw } from "lucide-react";
 
 // Mock Data representing the table structure
@@ -12,7 +12,7 @@ const mockReports = [
 ];
 
 const AEPS_Settlement = () => {
-    const [reports, setReports] = useState(mockReports);
+    const [reports] = useState(mockReports);
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [status, setStatus] = useState("");

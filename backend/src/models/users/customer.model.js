@@ -75,7 +75,7 @@ const customerSchema = new mongoose.Schema({
         default: 'customer'
     },
     bank:{
-        type: mongoose.ObjectId.Schema.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'BankAccount'
     }
 }, {timestamps: true})

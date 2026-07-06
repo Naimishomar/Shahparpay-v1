@@ -6,6 +6,11 @@ import MainWallet from "../models/mainWallet.model.js";
 import jwt from "jsonwebtoken";
 import { customAlphabet } from "nanoid";
 import Admin from "../models/users/admin.model.js";
+import { uploadOnR2 } from "../utils/r2.js";
+import bcrypt from "bcrypt";
+import Otp from "../models/otp.model.js";
+import { sendEmailOTP } from "../utils/email.js";
+import { onboardMerchant, sendAadhaarOtp, verifyAadhaarOtp as verifyAadhaarOtpApi, verifyPanDetails, getWebOnboardingUrl } from "../utils/paysprint.util.js";
 
 export const registerAdmin = async(req,res)=>{
     try {
@@ -32,86 +37,436 @@ export const registerAdmin = async(req,res)=>{
     }
 }
 
-export const registerRetailer = async (req, res) => {
-    try{
-        const { username, email, contactNumber, password, panNumber, aadharNumber, gstNumber, businessName } = req.body;
-        if(!username || !email || !contactNumber || !password || !panNumber || !aadharNumber || !gstNumber || !businessName){
-            return res.status(400).json({success: false, message: "All fields are required"});
+// Unified login for all roles
+export const loginUser = async (req, res) => {
+    try {
+        const { identifier, password } = req.body;
+        if (!identifier || !password) {
+            return res.status(400).json({ success: false, message: "Identifier and password are required." });
         }
-        const isRetailerExist = await Retailer.findOne({$or:[{email}, {username}, {contactNumber}]});
-        if(isRetailerExist){
-            return res.status(400).json({success: false, message: "Retailer already exists"});
+
+        let user = await Admin.findOne({ $or: [{ adminId: identifier }, { email: identifier }, { contactNumber: identifier }] });
+        let role = "admin";
+
+        if (!user) {
+            user = await Distributor.findOne({ $or: [{ distributorId: identifier }, { email: identifier }, { contactNumber: identifier }] });
+            role = "distributor";
         }
-        const distributor = await Distributor.findById(req.user.id);
-        if(!distributor){
-            return res.status(401).json({success: false, message: "You are not authorized to create retailer"});
+
+        if (!user) {
+            user = await Retailer.findOne({ $or: [{ retailerId: identifier }, { email: identifier }, { contactNumber: identifier }] }).populate('distributorId', 'distributorId name');
+            role = "retailer";
         }
-        const retailerId = `RTR-${customAlphabet('0123456789', 7)}`;
-        const createRetailer = await Retailer.create({
-            retailerId,
-            username,
-            email,
-            contactNumber,
-            password,
-            kyc:{
-                panNumber,
-                aadharNumber,
-                gstNumber,
-                businessName
-            }
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        if (!user.isActive) return res.status(403).json({ success: false, message: "Account is inactive." });
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) return res.status(401).json({ success: false, message: "Invalid credentials." });
+
+        // Generate OTP
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        await Otp.findOneAndUpdate(
+            { email: user.email },
+            { otp: otpCode, createdAt: Date.now() },
+            { upsert: true, returnDocument: 'after' }
+        );
+
+        const emailSent = await sendEmailOTP(user.email, user.name || "User", otpCode);
+        if (!emailSent) {
+            return res.status(500).json({ success: false, message: "Failed to send OTP email." });
+        }
+
+        return res.status(200).json({ 
+            success: true, 
+            message: "OTP sent to your email", 
+            email: user.email,
+            requireOtp: true 
+        });
+    } catch (error) {
+        console.error("Login Error:", error);
+        return res.status(500).json({ success: false, message: "Internal server error", error: error.message });
+    }
+};
+
+export const verifyLoginOtp = async (req, res) => {
+    try {
+        const { identifier, otp } = req.body;
+        if (!identifier || !otp) {
+            return res.status(400).json({ success: false, message: "Identifier and OTP are required." });
+        }
+
+        let user = await Admin.findOne({ $or: [{ adminId: identifier }, { email: identifier }, { contactNumber: identifier }] });
+        let role = "admin";
+
+        if (!user) {
+            user = await Distributor.findOne({ $or: [{ distributorId: identifier }, { email: identifier }, { contactNumber: identifier }] });
+            role = "distributor";
+        }
+
+        if (!user) {
+            user = await Retailer.findOne({ $or: [{ retailerId: identifier }, { email: identifier }, { contactNumber: identifier }] }).populate('distributorId', 'distributorId name');
+            role = "retailer";
+        }
+
+        if (!user) return res.status(404).json({ success: false, message: "User not found." });
+
+        const otpRecord = await Otp.findOne({ email: user.email });
+        if (!otpRecord || otpRecord.otp !== otp) {
+            return res.status(400).json({ success: false, message: "Invalid or expired OTP." });
+        }
+
+        await Otp.deleteOne({ email: user.email });
+
+        const accessToken = jwt.sign(
+            { id: user._id, role: role, code: user.adminId || user.retailerId || (user.distributorId && user.distributorId._id ? user.distributorId.distributorId : user.distributorId) },
+            process.env.JWT_SECRET || "default_secret",
+            { expiresIn: "15m" }
+        );
+
+        const refreshToken = jwt.sign(
+            { id: user._id, role: role },
+            process.env.JWT_REFRESH_SECRET || "default_refresh_secret",
+            { expiresIn: "7d" }
+        );
+
+        const userObj = user.toObject();
+        delete userObj.password;
+
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
-        distributor.retailers.push(createRetailer._id);
-        await distributor.save();
-
-        const token = await jwt.sign({ id: createRetailer._id}, process.env.RETAILER_JWT_SECRET, {expiresIn: '1d'})
-        return res.status(201).json({success: true, message: "Retailer registered successfully", createRetailer, token});
+        return res.status(200).json({ success: true, message: "Login successful", token: accessToken, role, user: userObj });
+    } catch (error) {
+        console.error("Verify OTP Error:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
-    catch(err){
-        return res.status(500).json({success: false, message: err.message});
+};
+
+export const sendVerificationOtp = async (req, res) => {
+    try {
+        const { email, name } = req.body;
+        if (!email) return res.status(400).json({ success: false, message: "Email is required" });
+
+        const adminExist = await Admin.findOne({ email });
+        const distExist = await Distributor.findOne({ email });
+        const retExist = await Retailer.findOne({ email });
+        
+        if (adminExist || distExist || retExist) {
+            return res.status(400).json({ success: false, message: "Email is already registered." });
+        }
+
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        await Otp.findOneAndUpdate(
+            { email },
+            { otp: otpCode, createdAt: Date.now() },
+            { upsert: true, returnDocument: 'after' }
+        );
+
+        const emailSent = await sendEmailOTP(email, name || 'User', otpCode);
+        if (!emailSent) {
+            return res.status(500).json({ success: false, message: "Failed to send OTP." });
+        }
+
+        return res.status(200).json({ success: true, message: "OTP sent successfully." });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
-}
+};
 
-export const registerDistributor = async (req, res) => {
-    try{
-        const { username, email, contactNumber, password, panNumber, aadharNumber, gstNumber, businessName } = req.body;
-        if(!username || !email || !contactNumber || !password || !panNumber || !aadharNumber || !gstNumber || !businessName){
-            return res.status(400).json({success: false, message: "All fields are required"});
-        }
-        const isDistributorExist = await Distributor.findOne({$or:[{email}, {username}, {contactNumber}]});
-        if(isDistributorExist){
-            return res.status(400).json({success: false, message: "Distributor already exists"});
-        }
-        const admin = await Admin.findById(req.user.id);
-        if(!admin){
-            return res.status(401).json({success: false, message: "You are not authorized to create distributor"});
+export const refreshAccessToken = async (req, res) => {
+    try {
+        const incomingRefreshToken = req.cookies.refreshToken;
+        if (!incomingRefreshToken) {
+            return res.status(401).json({ success: false, message: "Refresh token is missing" });
         }
 
-        const distributorId = `DTR-${customAlphabet('0123456789', 7)}`;
-        const createDistributor = await Distributor.create({
-            distributorId,
-            username,
-            email,
-            contactNumber,
-            password,
-            kyc:{
-                panNumber,
-                aadharNumber,
-                gstNumber,
-                businessName
-            }
+        const decoded = jwt.verify(incomingRefreshToken, process.env.JWT_REFRESH_SECRET || "default_refresh_secret");
+
+        let user;
+        if (decoded.role === 'admin') user = await Admin.findById(decoded.id);
+        else if (decoded.role === 'distributor') user = await Distributor.findById(decoded.id);
+        else if (decoded.role === 'retailer') user = await Retailer.findById(decoded.id).populate('distributorId', 'distributorId name');
+
+        if (!user) {
+            return res.status(401).json({ success: false, message: "User not found" });
+        }
+
+        const newAccessToken = jwt.sign(
+            { id: user._id, role: decoded.role, code: user.adminId || user.retailerId || (user.distributorId && user.distributorId._id ? user.distributorId.distributorId : user.distributorId) },
+            process.env.JWT_SECRET || "default_secret",
+            { expiresIn: "15m" }
+        );
+
+        const userObj = user.toObject();
+        delete userObj.password;
+
+        return res.status(200).json({ 
+            success: true, 
+            token: newAccessToken, 
+            role: decoded.role, 
+            user: userObj 
         });
 
-        admin.distributors.push(createDistributor._id);
-        await admin.save();
+    } catch (error) {
+        return res.status(401).json({ success: false, message: "Invalid or expired refresh token" });
+    }
+};
 
-        const token = await jwt.sign({ id: createDistributor._id}, process.env.DISTRIBUTOR_JWT_SECRET, {expiresIn: '1d'})
-        return res.status(201).json({success: true, message: "Distributor registered successfully", createDistributor, token});
+export const logoutUser = async (req, res) => {
+    try {
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax'
+        });
+        return res.status(200).json({ success: true, message: "Logged out successfully" });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: "Error during logout" });
     }
-    catch(err){
-        return res.status(500).json({success: false, message: err.message});
+};
+
+export const verifyEmailOtp = async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+        if (!email || !otp) {
+            return res.status(400).json({ success: false, message: "Email and OTP are required" });
+        }
+
+        const otpRecord = await Otp.findOne({ email });
+        if (!otpRecord || otpRecord.otp !== otp) {
+            return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+        }
+
+        return res.status(200).json({ success: true, message: "Email verified successfully" });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: "Error verifying email OTP", error: error.message });
     }
-}
+};
+
+export const generateAadhaarOtp = async (req, res) => {
+    try {
+        const { merchantcode, aadhaar, latitude, longitude, formData } = req.body;
+        if (!merchantcode || !aadhaar) {
+            return res.status(400).json({ success: false, message: "merchantcode and aadhaar are required" });
+        }
+
+
+        const response = await sendAadhaarOtp(merchantcode, aadhaar, latitude, longitude);
+        if (response.success) {
+            return res.status(200).json(response);
+        } else {
+            return res.status(400).json(response);
+        }
+    } catch (error) {
+        return res.status(500).json({ success: false, message: "Server error", error: error.message });
+    }
+};
+
+export const verifyAadhaarOtp = async (req, res) => {
+    try {
+        const { merchantcode, aadhaar, otp, stateresp, ekyc_id, latitude, longitude } = req.body;
+        if (!merchantcode || !aadhaar || !otp || !stateresp || !ekyc_id) {
+            return res.status(400).json({ success: false, message: "Missing required fields for Aadhaar verification" });
+        }
+
+        const response = await verifyAadhaarOtpApi(merchantcode, aadhaar, otp, stateresp, ekyc_id, latitude, longitude);
+        if (response.success) {
+            return res.status(200).json(response);
+        } else {
+            return res.status(400).json(response);
+        }
+    } catch (error) {
+        return res.status(500).json({ success: false, message: "Server error", error: error.message });
+    }
+};
+
+export const verifyPan = async (req, res) => {
+    try {
+        const { merchantcode, name, pan, dob, formData } = req.body;
+        if (!merchantcode || !name || !pan || !dob) {
+            return res.status(400).json({ success: false, message: "Missing required fields for PAN verification" });
+        }
+
+
+        const response = await verifyPanDetails(merchantcode, name, pan, dob);
+        if (response.success) {
+            return res.status(200).json(response);
+        } else {
+            return res.status(400).json(response);
+        }
+    } catch (error) {
+        return res.status(500).json({ success: false, message: "Server error", error: error.message });
+    }
+};
+
+export const createDistributor = async (req, res) => {
+    try {
+        if (req.user.role !== "admin") return res.status(403).json({ success: false, message: "Only Admins can create Distributors." });
+
+        const { 
+            prefix, firstName, lastName, email, contactNumber, password, address, 
+            businessName, businessAddress, aadhaarNumber, panNumber, hasGst, gstNumber,
+            dob, dmtPackage, rechargePackage, aepsPackage, bbpsPackage, payoutPackage,
+            cmsPackage, ccpayPackage, payinPackage, upiPackage, website, brandName,
+            companyRegisterName, supportEmail, supportMobile
+        } = req.body;
+        
+        const name = `${firstName} ${lastName}`;
+        const profilePictureLocalPath = req.files?.profilePicture?.[0]?.path;
+        const aadhaarPictureLocalPath = req.files?.aadhaarPicture?.[0]?.path;
+        const panPictureLocalPath = req.files?.panPicture?.[0]?.path;
+
+        if (!aadhaarPictureLocalPath || !panPictureLocalPath) return res.status(400).json({ success: false, message: "Aadhaar and PAN pictures are required." });
+
+
+        const profilePic = profilePictureLocalPath ? await uploadOnR2(profilePictureLocalPath) : null;
+        const aadhaarPic = await uploadOnR2(aadhaarPictureLocalPath);
+        const panPic = await uploadOnR2(panPictureLocalPath);
+
+        let parsedAddress = typeof address === 'string' ? JSON.parse(address) : address;
+
+        const distributorId = req.body.merchantCode || `DST-${customAlphabet('0123456789', 7)()}`;
+
+        // Paysprint Merchant Onboarding / Verification
+        const paysprintResponse = await onboardMerchant({
+            merchantcode: distributorId,
+            mobile: contactNumber,
+            email,
+            name,
+            businessName,
+            panNumber,
+            panPictureUrl: panPic?.url,
+            aadhaarNumber,
+            aadhaarPictureUrl: aadhaarPic?.url,
+            dob,
+            address: parsedAddress,
+            pincode: parsedAddress?.pincode || "110001"
+        });
+
+        // Strict rejection: If PaySprint fails, do not create the user in DB
+        if (!paysprintResponse.success) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "PaySprint Onboarding Failed: " + (paysprintResponse.message || "Unknown error") 
+            });
+        }
+        
+        const isMerchantKycComplete = false; // They still need to do Web KYC
+        
+        const newDistributor = new Distributor({
+            adminId: req.user.id,
+            distributorId, name, prefix, firstName, lastName, email, contactNumber, password, address: parsedAddress,
+            businessName, businessAddress, aadhaarNumber, aadhaarPicture: aadhaarPic?.url,
+            panNumber, panPicture: panPic?.url, hasGst: hasGst === 'true' || hasGst === true, gstNumber,
+            isMerchantKycComplete,
+            profilePicture: profilePic?.url || null,
+            dob, dmtPackage, rechargePackage, aepsPackage, bbpsPackage, payoutPackage,
+            cmsPackage, ccpayPackage, payinPackage, upiPackage, website, brandName,
+            companyRegisterName, supportEmail, supportMobile
+        });
+
+        await newDistributor.save();
+
+        await Admin.findByIdAndUpdate(req.user.id, { $push: { distributors: newDistributor._id } });
+
+        await Otp.deleteOne({ email });
+
+        return res.status(201).json({ success: true, message: "Distributor created successfully.", data: newDistributor });
+    } catch (error) {
+        console.error("Create Distributor Error:", error);
+        return res.status(500).json({ success: false, message: "Error creating distributor", error: error.message });
+    }
+};
+
+export const createRetailer = async (req, res) => {
+    try {
+        if (req.user.role !== "distributor") return res.status(403).json({ success: false, message: "Only Distributors can create Retailers." });
+
+        const { 
+            prefix, firstName, lastName, email, contactNumber, password, address, 
+            businessName, businessAddress, aadhaarNumber, panNumber, hasGst, gstNumber,
+            dob, dmtPackage, rechargePackage, aepsPackage, bbpsPackage, payoutPackage,
+            cmsPackage, ccpayPackage, payinPackage, upiPackage, website, brandName,
+            companyRegisterName, supportEmail, supportMobile
+        } = req.body;
+
+        const name = `${firstName} ${lastName}`;
+
+        const profilePictureLocalPath = req.files?.profilePicture?.[0]?.path;
+        const aadhaarPictureLocalPath = req.files?.aadhaarPicture?.[0]?.path;
+        const panPictureLocalPath = req.files?.panPicture?.[0]?.path;
+
+        if (!aadhaarPictureLocalPath || !panPictureLocalPath) return res.status(400).json({ success: false, message: "Aadhaar and PAN pictures are required." });
+
+
+        const profilePic = profilePictureLocalPath ? await uploadOnR2(profilePictureLocalPath) : null;
+        const aadhaarPic = await uploadOnR2(aadhaarPictureLocalPath);
+        const panPic = await uploadOnR2(panPictureLocalPath);
+
+        let parsedAddress = typeof address === 'string' ? JSON.parse(address) : address;
+
+        const retailerId = req.body.merchantCode || `RTR-${customAlphabet('0123456789', 7)()}`;
+
+        // Paysprint Merchant Onboarding / Verification
+        const paysprintResponse = await onboardMerchant({
+            merchantcode: retailerId,
+            mobile: contactNumber,
+            email,
+            name,
+            businessName,
+            panNumber,
+            panPictureUrl: panPic?.url,
+            aadhaarNumber,
+            aadhaarPictureUrl: aadhaarPic?.url,
+            dob,
+            address: parsedAddress,
+            pincode: parsedAddress?.pincode || "110001"
+        });
+
+        // Strict rejection: If PaySprint fails, do not create the user in DB
+        if (!paysprintResponse.success) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "PaySprint Onboarding Failed: " + (paysprintResponse.message || "Unknown error") 
+            });
+        }
+        
+        const isMerchantKycComplete = false; // They still need to do Web KYC
+
+        const newRetailer = new Retailer({
+            distributorId: req.user.id,
+            retailerId, name, prefix, firstName, lastName, email, contactNumber, password, address: parsedAddress,
+            businessName, businessAddress, aadhaarNumber, aadhaarPicture: aadhaarPic?.url,
+            panNumber, panPicture: panPic?.url, hasGst: hasGst === 'true' || hasGst === true, gstNumber,
+            isMerchantKycComplete,
+            profilePicture: profilePic?.url || null,
+            dob, dmtPackage, rechargePackage, aepsPackage, bbpsPackage, payoutPackage,
+            cmsPackage, ccpayPackage, payinPackage, upiPackage, website, brandName,
+            companyRegisterName, supportEmail, supportMobile
+        });
+
+        await newRetailer.save();
+
+        await Distributor.findByIdAndUpdate(req.user.id, { $push: { retailers: newRetailer._id } });
+
+        await Otp.deleteOne({ email });
+
+        return res.status(201).json({ success: true, message: "Retailer created successfully.", data: newRetailer });
+    } catch (error) {
+        console.error("Create Retailer Error:", error);
+        return res.status(500).json({ success: false, message: "Error creating retailer", error: error.message });
+    }
+};
 
 export const registerCustomer = async (req, res) => {
     try{
@@ -186,3 +541,131 @@ export const createMainWallet = async(req,res)=>{
         return res.status(500).json({success: false, message: err.message});
     }
 }
+export const generateOnboardUrl = async (req, res) => {
+    try {
+        const { merchantId, isNew, callbackUrl } = req.body;
+        if (!merchantId) return res.status(400).json({ success: false, message: "merchantId is required" });
+
+        let user = await Distributor.findById(merchantId) || await Retailer.findById(merchantId);
+        
+        if (!user) {
+            return res.status(404).json({ success: false, message: "Merchant not found." });
+        }
+
+        const merchantData = {
+            merchantcode: user.distributorId || user.retailerId,
+            mobile: user.contactNumber,
+            is_new: isNew,
+            email: user.email,
+            businessName: user.businessName,
+            name: user.name,
+            callbackUrl: callbackUrl || "http://localhost:5173/kyc-status"
+        };
+
+        const result = await getWebOnboardingUrl(merchantData);
+        if (result.success) {
+            return res.status(200).json({ success: true, url: result.url });
+        } else {
+            return res.status(400).json({ success: false, message: result.message });
+        }
+    } catch (error) {
+        console.error("Generate Onboard URL error:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
+export const updateProfile = async (req, res) => {
+    try {
+        const { name, contactNumber, businessName, address } = req.body;
+        const userId = req.user.id;
+        const role = req.user.role;
+
+        let Model;
+        if (role === 'admin') Model = Admin;
+        else if (role === 'distributor') Model = Distributor;
+        else if (role === 'retailer') Model = Retailer;
+        else return res.status(400).json({ success: false, message: "Invalid role" });
+
+        const updateData = {};
+        if (name) updateData.name = name;
+        if (contactNumber) updateData.contactNumber = contactNumber;
+        if (businessName) updateData.businessName = businessName;
+        if (address) {
+            try {
+                updateData.address = typeof address === 'string' ? JSON.parse(address) : address;
+            } catch (e) {
+                updateData.address = address;
+            }
+        }
+
+        if (req.file) {
+            const profilePicturePath = req.file.path;
+            const profilePictureUrl = await uploadOnR2(profilePicturePath);
+            if (profilePictureUrl) {
+                updateData.profilePicture = profilePictureUrl.url || profilePictureUrl;
+            }
+        }
+
+        const updatedUser = await Model.findByIdAndUpdate(userId, { $set: updateData }, { returnDocument: 'after' });
+
+        if (!updatedUser) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        res.status(200).json({ success: true, message: "Profile updated successfully", user: updatedUser });
+    } catch (error) {
+        console.error("Update profile error:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
+export const changePassword = async (req, res) => {
+    try {
+        const { email, otp, newPassword } = req.body;
+        const userId = req.user.id;
+        const role = req.user.role;
+
+        if (!email || !otp || !newPassword) {
+            return res.status(400).json({ success: false, message: "Email, OTP, and new password are required." });
+        }
+
+        let Model;
+        if (role === 'admin') Model = Admin;
+        else if (role === 'distributor') Model = Distributor;
+        else if (role === 'retailer') Model = Retailer;
+        else return res.status(400).json({ success: false, message: "Invalid role" });
+
+        const user = await Model.findById(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        if (user.email !== email) {
+            return res.status(400).json({ success: false, message: "Email does not match our records." });
+        }
+
+        // Verify OTP
+        const otpRecord = await Otp.findOne({ email });
+        if (!otpRecord) {
+            return res.status(400).json({ success: false, message: "OTP not found or expired." });
+        }
+
+        const isOtpValid = await bcrypt.compare(otp.toString(), otpRecord.otp);
+        if (!isOtpValid) {
+            return res.status(400).json({ success: false, message: "Invalid OTP." });
+        }
+
+        // Hash new password and save
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashedPassword;
+        await user.save();
+
+        // Delete OTP
+        await Otp.deleteOne({ email });
+
+        res.status(200).json({ success: true, message: "Password changed successfully." });
+    } catch (error) {
+        console.error("Change password error:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
