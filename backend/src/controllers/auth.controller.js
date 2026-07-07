@@ -22,7 +22,7 @@ export const registerAdmin = async(req,res)=>{
        if(isAdminExist){
             return res.status(400).json({success: false, message: "Admin already exists"});
        }
-       const adminId = `ADM-${customAlphabet('0123456789', 7)}`;
+       const adminId = customAlphabet('0123456789', 8)();
        const createAdmin = await Admin.create({
            adminId,
            username,
@@ -335,7 +335,7 @@ export const createDistributor = async (req, res) => {
 
         let parsedAddress = typeof address === 'string' ? JSON.parse(address) : address;
 
-        const distributorId = req.body.merchantCode || `DST-${customAlphabet('0123456789', 7)()}`;
+        const distributorId = req.body.merchantCode || customAlphabet('0123456789', 8)();
 
         // Paysprint Merchant Onboarding / Verification
         const paysprintResponse = await onboardMerchant({
@@ -415,7 +415,7 @@ export const createRetailer = async (req, res) => {
 
         let parsedAddress = typeof address === 'string' ? JSON.parse(address) : address;
 
-        const retailerId = req.body.merchantCode || `RTR-${customAlphabet('0123456789', 7)()}`;
+        const retailerId = req.body.merchantCode || customAlphabet('0123456789', 8)();
 
         // Paysprint Merchant Onboarding / Verification
         // (Skipping this backend auto-onboarding because the endpoint returns HTML/404. 
@@ -487,7 +487,7 @@ export const registerCustomer = async (req, res) => {
             return res.status(401).json({success: false, message: "You are not authorized to create customer"});
         }
 
-        const customerId = `CST-${customAlphabet('0123456789', 7)}`;
+        const customerId = customAlphabet('0123456789', 8)();
         const createCustomer = await Customer.create({
             customerId,
             username,
