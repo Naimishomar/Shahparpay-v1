@@ -67,7 +67,9 @@ export const onboardMerchant = async (merchantData) => {
         const headers = {
             'Token': token,
             'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Accept': 'application/json'
         };
 
         // Note: The endpoint path might be different based on your exact API access
@@ -233,7 +235,9 @@ export const getWebOnboardingUrl = async (merchantData) => {
         const headers = {
             'Token': token,
             'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Accept': 'application/json'
         };
 
         const response = await fetch(`${baseUrl}/service/onboard/onboardnew/getonboardurl`, {
