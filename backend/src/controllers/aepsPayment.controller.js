@@ -14,6 +14,11 @@ export const balanceEnquiry = async (req, res) => {
             });
         }
 
+        const retailer = await Retailer.findById(req.user.id);
+        if (!retailer) {
+            return res.status(404).json({ success: false, message: "Retailer not found" });
+        }
+
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
         const payload = {
             latitude: latitude || "28.7041",
@@ -25,7 +30,9 @@ export const balanceEnquiry = async (req, res) => {
             accessmodetype: "SITE",
             nationalbankidentificationnumber: bankIIN,
             requestremarks: "Balance Enquiry",
-            data: pidData
+            data: pidData,
+            submerchantid: retailer.retailerId,
+            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
         };
 
         const token = generatePaySprintToken();
