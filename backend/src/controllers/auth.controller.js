@@ -557,6 +557,7 @@ export const generateOnboardUrl = async (req, res) => {
         }
 
         let merchantCode = user.distributorId || user.retailerId;
+        if (merchantCode) merchantCode = merchantCode.toString();
         
         // Auto-fix for old test accounts that accidentally saved 24-character MongoDB IDs
         if (!merchantCode || merchantCode.length > 12) {
