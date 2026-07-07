@@ -20,7 +20,7 @@ const router = express.Router();
 router.get('/merchant-status', getMerchantStatus);
 
 // Core AEPS Services
-router.get('/banks', authMiddlewares, getBankList);
+router.get('/banks', getBankList);
 router.post('/balance-enquiry', authMiddlewares, balanceEnquiry);
 router.post('/cash-withdrawal', authMiddlewares, cashWithdrawal);
 router.post('/cash-deposit', authMiddlewares, cashDeposit);
@@ -28,9 +28,9 @@ router.post('/mini-statement', authMiddlewares, miniStatement);
 router.post('/txn-status', authMiddlewares, cashWithdrawalTxnStatus);
 
 // Merchant eKYC & Auth
-router.post('/kyc/send-otp', authMiddlewares, sendMerchantOtp);
-router.post('/kyc/resend-otp', authMiddlewares, resendMerchantOtp);
-router.post('/kyc/verify-otp', authMiddlewares, verifyMerchantOtp);
-router.post('/daily-auth', authMiddlewares, dailyAuth);
+router.post('/kyc/send-otp', sendMerchantOtp);
+router.post('/kyc/resend-otp', resendMerchantOtp);
+router.post('/kyc/verify-otp', verifyMerchantOtp);
+router.post('/daily-auth', dailyAuth);
 
 export default router;
