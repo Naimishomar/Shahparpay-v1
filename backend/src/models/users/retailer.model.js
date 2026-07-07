@@ -122,9 +122,10 @@ const retailerSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 
-retailerSchema.pre('save', async function() {
-    if (!this.isModified('password')) return;
+retailerSchema.pre('save', async function(next) {
+    if (!this.isModified('password')) return next();
     this.password = await bcrypt.hash(this.password, 10);
+    next();
 });
 
 const Retailer = mongoose.model("Retailer", retailerSchema);

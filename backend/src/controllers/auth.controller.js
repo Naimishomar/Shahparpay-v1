@@ -556,24 +556,18 @@ export const generateOnboardUrl = async (req, res) => {
             return res.status(404).json({ success: false, message: "Merchant not found." });
         }
 
-        let merchantCode = user.role === 'distributor' ? user.distributorId : user.retailerId;
-        if (merchantCode) merchantCode = merchantCode.toString();
+        let merchantCode = "";
+        let role = "";
         
-        // Auto-fix for old test accounts that accidentally saved 24-character MongoDB IDs
-        if (!merchantCode || merchantCode.length > 12) {
-            const prefix = user.role === 'distributor' ? 'DT' : 'RT';
-            const randomDigits = Math.floor(100000 + Math.random() * 900000).toString();
-            merchantCode = `${prefix}${randomDigits}`;
-            
-            // Save it back to the database so it stays consistent
-            if (user.role === 'distributor') {
-                user.distributorId = merchantCode;
-            } else {
-                user.retailerId = merchantCode;
-            }
-            await user.save();
-            console.log(`Auto-fixed invalid merchantCode for ${user.email}. New Code: ${merchantCode}`);
+        if (user.retailerId) {
+            merchantCode = user.retailerId;
+            role = "retailer";
+        } else if (user.distributorId) {
+            merchantCode = user.distributorId;
+            role = "distributor";
         }
+        
+        if (merchantCode) merchantCode = merchantCode.toString();
 
         const merchantData = {
             merchantcode: merchantCode,
@@ -582,7 +576,7 @@ export const generateOnboardUrl = async (req, res) => {
             email: user.email,
             businessName: user.businessName,
             name: user.name,
-            callbackUrl: callbackUrl || "http://localhost:5173/kyc-status"
+            callbackUrl: callbackUrl || "http://shahparpay-v1.vercel.app/kyc-status"
         };
 
         const result = await getWebOnboardingUrl(merchantData);
