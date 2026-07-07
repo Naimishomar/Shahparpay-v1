@@ -79,7 +79,14 @@ export const onboardMerchant = async (merchantData) => {
             body: JSON.stringify({ body: encryptedData })
         });
 
-        const data = await response.json();
+        const responseText = await response.text();
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            console.error("Non-JSON response from PaySprint onboarding:", responseText.substring(0, 200));
+            return { success: false, message: "PaySprint API returned an invalid response (HTML/404)." };
+        }
         
         if (data.status) {
             return { success: true, message: "Onboarding successful", data };

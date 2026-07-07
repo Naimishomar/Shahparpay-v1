@@ -418,6 +418,9 @@ export const createRetailer = async (req, res) => {
         const retailerId = req.body.merchantCode || `RTR-${customAlphabet('0123456789', 7)()}`;
 
         // Paysprint Merchant Onboarding / Verification
+        // (Skipping this backend auto-onboarding because the endpoint returns HTML/404. 
+        // Retailers will use the Web Onboarding API flow from their dashboard instead.)
+        /*
         const paysprintResponse = await onboardMerchant({
             merchantcode: retailerId,
             mobile: contactNumber,
@@ -433,13 +436,13 @@ export const createRetailer = async (req, res) => {
             pincode: parsedAddress?.pincode || "110001"
         });
 
-        // Strict rejection: If PaySprint fails, do not create the user in DB
         if (!paysprintResponse.success) {
             return res.status(400).json({ 
                 success: false, 
                 message: "PaySprint Onboarding Failed: " + (paysprintResponse.message || "Unknown error") 
             });
         }
+        */
         
         const isMerchantKycComplete = false; // They still need to do Web KYC
 
