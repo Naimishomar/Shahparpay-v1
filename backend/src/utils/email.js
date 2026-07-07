@@ -29,6 +29,9 @@ export const sendEmailOTP = async (toEmail, toName, otp) => {
             `
         };
 
+        console.log(`\n🔑 OTP GENERATED: [ ${otp} ]`);
+        console.log(`✉️  SENT TO: ${toEmail}\n`);
+
         await transporter.sendMail(mailOptions);
         return true;
     } catch (error) {

@@ -228,7 +228,7 @@ export const getWebOnboardingUrl = async (merchantData) => {
             register_type: merchantData.is_new ? "1" : "0",
             email: merchantData.email,
             firm: merchantData.businessName || merchantData.name,
-            callback: merchantData.callbackUrl || "http://localhost:5173/kyc-status"
+            callback: merchantData.callbackUrl || process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/kyc-status` : "https://your-production-url.com/kyc-status"
         };
 
         const token = generatePaySprintToken();
@@ -240,10 +240,19 @@ export const getWebOnboardingUrl = async (merchantData) => {
             'Accept': 'application/json'
         };
 
-        const response = await fetch(`${baseUrl}/service/onboard/v2/onboard/getonboardurl`, {
+        const requestUrl = `${baseUrl}/service/onboard/onboard/getonboardurl`;
+        const requestBody = JSON.stringify(payload);
+
+        console.log("========== PAYSPRINT REQUEST LOGS ==========");
+        console.log("ENDPOINT URL:", requestUrl);
+        console.log("HEADERS:", JSON.stringify(headers, null, 2));
+        console.log("PAYLOAD:", requestBody);
+        console.log("============================================");
+
+        const response = await fetch(requestUrl, {
             method: 'POST',
             headers,
-            body: JSON.stringify(payload)
+            body: requestBody
         });
 
         const responseText = await response.text();
