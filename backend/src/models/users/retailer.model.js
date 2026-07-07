@@ -114,6 +114,10 @@ const retailerSchema = new mongoose.Schema({
     isMerchantKycComplete: {
         type: Boolean,
         default: false
+    },
+    isExistingMerchant: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 

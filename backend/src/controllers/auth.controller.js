@@ -397,7 +397,7 @@ export const createRetailer = async (req, res) => {
             businessName, businessAddress, aadhaarNumber, panNumber, hasGst, gstNumber,
             dob, dmtPackage, rechargePackage, aepsPackage, bbpsPackage, payoutPackage,
             cmsPackage, ccpayPackage, payinPackage, upiPackage, website, brandName,
-            companyRegisterName, supportEmail, supportMobile
+            companyRegisterName, supportEmail, supportMobile, isExistingMerchant
         } = req.body;
 
         const name = `${firstName} ${lastName}`;
@@ -455,7 +455,8 @@ export const createRetailer = async (req, res) => {
             profilePicture: profilePic?.url || null,
             dob, dmtPackage, rechargePackage, aepsPackage, bbpsPackage, payoutPackage,
             cmsPackage, ccpayPackage, payinPackage, upiPackage, website, brandName,
-            companyRegisterName, supportEmail, supportMobile
+            companyRegisterName, supportEmail, supportMobile,
+            isExistingMerchant: isExistingMerchant === 'true' || isExistingMerchant === true
         });
 
         await newRetailer.save();
@@ -558,7 +559,7 @@ export const generateOnboardUrl = async (req, res) => {
         const merchantData = {
             merchantcode: user.distributorId || user.retailerId,
             mobile: user.contactNumber,
-            is_new: isNew,
+            is_new: user.isExistingMerchant ? false : true,
             email: user.email,
             businessName: user.businessName,
             name: user.name,

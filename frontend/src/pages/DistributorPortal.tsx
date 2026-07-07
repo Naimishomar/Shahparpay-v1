@@ -28,6 +28,8 @@ const DistributorPortal = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('dashboard');
     
+    const [isExistingMerchant, setIsExistingMerchant] = useState(false);
+    
     // Data states
     const [stats, setStats] = useState({ totalRetailers: 0, totalCommissions: 0, activeUsers: 0, totalTransactions: 0 });
     const [retailers, setRetailers] = useState<any[]>([]);
@@ -252,6 +254,7 @@ const DistributorPortal = () => {
         if (profilePicture) data.append('profilePicture', profilePicture);
         if (formData.otp) data.append('otp', formData.otp);
         data.append('merchantCode', merchantCode);
+        data.append('isExistingMerchant', String(isExistingMerchant));
 
         try {
             const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/create-retailer`, {
@@ -956,10 +959,33 @@ const DistributorPortal = () => {
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-semibold text-muted-foreground">Assign Role *</label>
                                                     <input value="Retailer" disabled className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none text-muted-foreground cursor-not-allowed" />
+                                                    
+                                                    <label className="flex items-center gap-2 mt-4 cursor-pointer text-sm font-semibold text-green-500">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={isExistingMerchant} 
+                                                            onChange={(e) => setIsExistingMerchant(e.target.checked)} 
+                                                            className="w-4 h-4 rounded text-primary focus:ring-primary border-border bg-background" 
+                                                        />
+                                                        Existing PaySprint Merchant?
+                                                    </label>
+                                                    <p className="text-xs text-muted-foreground pl-6">Check this if the merchant is already registered with PaySprint to migrate them without uploading PAN/Aadhar again.</p>
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-semibold text-muted-foreground">Retailer ID (Auto-Generated) *</label>
-                                                    <input value={merchantCode} disabled className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none font-mono text-muted-foreground cursor-not-allowed" />
+                                                    <input 
+                                                        value={merchantCode} 
+                                                        onChange={(e) => setMerchantCode(e.target.value.toUpperCase())}
+                                                        disabled={!isExistingMerchant} 
+                                                        className={`w-full p-3 rounded-xl border outline-none font-mono transition-colors ${
+                                                            isExistingMerchant 
+                                                                ? 'bg-background border-green-500 focus:border-green-400 text-white' 
+                                                                : 'bg-background border-border text-muted-foreground cursor-not-allowed'
+                                                        }`} 
+                                                    />
+                                                    {isExistingMerchant && (
+                                                        <p className="text-xs text-green-500">Enter the EXACT Merchant ID from your old system here!</p>
+                                                    )}
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-semibold text-muted-foreground">Parent *</label>
