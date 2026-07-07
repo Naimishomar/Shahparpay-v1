@@ -12,7 +12,7 @@ import {
     dailyAuth,
     getMerchantStatus
 } from '../controllers/aepsPayment.controller.js';
-import { verifyToken } from '../middlewares/auth.middleware.js';
+import { authMiddlewares } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
@@ -20,17 +20,17 @@ const router = express.Router();
 router.get('/merchant-status', getMerchantStatus);
 
 // Core AEPS Services
-router.get('/banks', verifyToken, getBankList);
-router.post('/balance-enquiry', verifyToken, balanceEnquiry);
-router.post('/cash-withdrawal', verifyToken, cashWithdrawal);
-router.post('/cash-deposit', verifyToken, cashDeposit);
-router.post('/mini-statement', verifyToken, miniStatement);
-router.post('/txn-status', verifyToken, cashWithdrawalTxnStatus);
+router.get('/banks', authMiddlewares, getBankList);
+router.post('/balance-enquiry', authMiddlewares, balanceEnquiry);
+router.post('/cash-withdrawal', authMiddlewares, cashWithdrawal);
+router.post('/cash-deposit', authMiddlewares, cashDeposit);
+router.post('/mini-statement', authMiddlewares, miniStatement);
+router.post('/txn-status', authMiddlewares, cashWithdrawalTxnStatus);
 
 // Merchant eKYC & Auth
-router.post('/kyc/send-otp', verifyToken, sendMerchantOtp);
-router.post('/kyc/resend-otp', verifyToken, resendMerchantOtp);
-router.post('/kyc/verify-otp', verifyToken, verifyMerchantOtp);
-router.post('/daily-auth', verifyToken, dailyAuth);
+router.post('/kyc/send-otp', authMiddlewares, sendMerchantOtp);
+router.post('/kyc/resend-otp', authMiddlewares, resendMerchantOtp);
+router.post('/kyc/verify-otp', authMiddlewares, verifyMerchantOtp);
+router.post('/daily-auth', authMiddlewares, dailyAuth);
 
 export default router;
