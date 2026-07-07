@@ -240,12 +240,10 @@ export const getWebOnboardingUrl = async (merchantData) => {
             'Accept': 'application/json'
         };
 
-        const encryptedData = encryptPayload(JSON.stringify(payload));
-
-        const response = await fetch(`${baseUrl}/service/onboard/onboardnew/getonboardurl`, {
+        const response = await fetch(`${baseUrl}/service/onboard/onboard/getonboardurl`, {
             method: 'POST',
             headers,
-            body: JSON.stringify({ body: encryptedData })
+            body: JSON.stringify(payload)
         });
 
         const responseText = await response.text();
