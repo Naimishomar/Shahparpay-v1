@@ -38,7 +38,7 @@ export const balanceEnquiry = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const response = await axios.post(`${baseUrl}/service/aeps/v3/balanceenquiry/bank1`, { body: encryptedData }, { headers });
+        const response = await axios.post(`${baseUrl}/service/aeps/v3/balanceenquiry/bank3`, { body: encryptedData }, { headers });
 
         if (response.data && response.data.status) {
             return res.status(200).json({
@@ -169,7 +169,7 @@ export const cashWithdrawal = async (req, res) => {
                 'Content-Type': 'application/json'
             };
 
-            const twfResponse = await axios.post(`${baseUrl}/service/aeps/v3/twfauth/bank1`, { body: twfEncrypted }, { headers: twfHeaders });
+            const twfResponse = await axios.post(`${baseUrl}/service/aeps/v3/twfauth/bank3`, { body: twfEncrypted }, { headers: twfHeaders });
             if (!twfResponse.data || !twfResponse.data.status) {
                 return res.status(400).json({ success: false, message: twfResponse.data.message || "Merchant Auth Failed" });
             }
@@ -218,7 +218,7 @@ export const cashWithdrawal = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const response = await axios.post(`${baseUrl}/service/aeps/v3/cashwithdraw/bank1`, { body: encryptedData }, { headers });
+        const response = await axios.post(`${baseUrl}/service/aeps/v3/cashwithdraw/bank3`, { body: encryptedData }, { headers });
 
         let txnStatus = (response.data && response.data.status) ? 'SUCCESS' : 'FAILED';
         let paysprintRef = response.data?.data?.ackno || response.data?.data?.rrn || null;
@@ -315,7 +315,7 @@ export const miniStatement = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const response = await axios.post(`${baseUrl}/service/aeps/v3/ministatement/bank1`, { body: encryptedData }, { headers });
+        const response = await axios.post(`${baseUrl}/service/aeps/v3/ministatement/bank3`, { body: encryptedData }, { headers });
 
         if (response.data && response.data.status) {
             return res.status(200).json({ success: true, message: "Mini Statement fetched", data: response.data });
@@ -368,7 +368,7 @@ export const cashDeposit = async (req, res) => {
                 'Content-Type': 'application/json'
             };
 
-            const twfResponse = await axios.post(`${baseUrl}/service/aeps/v3/twfauth/bank1`, { body: twfEncrypted }, { headers: twfHeaders });
+            const twfResponse = await axios.post(`${baseUrl}/service/aeps/v3/twfauth/bank3`, { body: twfEncrypted }, { headers: twfHeaders });
             if (!twfResponse.data || !twfResponse.data.status) {
                 return res.status(400).json({ success: false, message: twfResponse.data.message || "Merchant Auth Failed" });
             }
@@ -431,7 +431,7 @@ export const cashDeposit = async (req, res) => {
         let apiMessage = "Transaction failed";
 
         try {
-            response = await axios.post(`${baseUrl}/service/aeps/v3/cashdeposit/bank1`, { body: encryptedData }, { headers });
+            response = await axios.post(`${baseUrl}/service/aeps/v3/cashdeposit/bank3`, { body: encryptedData }, { headers });
             if (response.data && response.data.status) {
                 txnStatus = 'SUCCESS';
             }
@@ -501,7 +501,7 @@ export const cashWithdrawalTxnStatus = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const response = await axios.post(`${baseUrl}/service/aeps/v3/aepsquery/bank1`, { body: encryptedData }, { headers });
+        const response = await axios.post(`${baseUrl}/service/aeps/v3/aepsquery/bank3`, { body: encryptedData }, { headers });
 
         return res.status(200).json({ success: true, data: response.data });
     } catch (error) {
@@ -641,6 +641,10 @@ export const dailyAuth = async (req, res) => {
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
         };
 
+        console.log("========== DAILY AUTH PAYLOAD ==========");
+        console.log(JSON.stringify(payload, null, 2));
+        console.log("========================================");
+
         const token = generatePaySprintToken();
         const encryptedData = encryptPayload(JSON.stringify(payload));
         
@@ -650,7 +654,7 @@ export const dailyAuth = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const response = await axios.post(`${baseUrl}/service/aeps/v3/authenticate/bank1`, { body: encryptedData }, { headers });
+        const response = await axios.post(`${baseUrl}/service/aeps/v3/authenticate/bank3`, { body: encryptedData }, { headers });
 
         if (response.data && response.data.status) {
             // Update the Retailer's last daily auth date tracker
