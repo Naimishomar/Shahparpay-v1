@@ -14,25 +14,18 @@ export const balanceEnquiry = async (req, res) => {
             });
         }
 
-        const retailer = await Retailer.findById(req.user.id);
-        if (!retailer) {
-            return res.status(404).json({ success: false, message: "Retailer not found" });
-        }
-
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
+        const retailer = await Retailer.findById(req.user.id);
         const payload = {
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025",
             mobilenumber: mobileNumber || "9999999999",
             referenceno: `REF${Date.now()}`,
-            ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
             adhaarnumber: aadhaarNumber,
             accessmodetype: "SITE",
-            nationalbankidentificationnumber: bankIIN,
-            requestremarks: "Balance Enquiry",
+            nationalbankidentification: bankIIN,
             data: pidData,
-            submerchantid: retailer.retailerId,
-            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+            submerchantid: retailer.retailerId
         };
 
         const token = generatePaySprintToken();
@@ -205,10 +198,14 @@ export const cashWithdrawal = async (req, res) => {
             ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
             adhaarnumber: aadhaarNumber,
             accessmodetype: "SITE",
-            nationalbankidentificationnumber: bankIIN,
+            nationalbankidentification: bankIIN,
             requestremarks: "Cash Withdrawal",
             data: pidData,
-            amount: amount
+            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            transactiontype: "CW",
+            submerchantid: retailer.retailerId,
+            amount: amount,
+            is_iris: "No"
         };
 
         const token = generatePaySprintToken();
@@ -291,6 +288,7 @@ export const miniStatement = async (req, res) => {
         }
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
+        const retailer = await Retailer.findById(req.user.id);
         const payload = {
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025",
@@ -299,10 +297,12 @@ export const miniStatement = async (req, res) => {
             ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
             adhaarnumber: aadhaarNumber,
             accessmodetype: "SITE",
-            nationalbankidentificationnumber: bankIIN,
+            nationalbankidentification: bankIIN,
             requestremarks: "Mini Statement",
             data: pidData,
-            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            submerchantid: retailer.retailerId,
+            is_iris: "No"
         };
 
         const token = generatePaySprintToken();
@@ -405,10 +405,14 @@ export const cashDeposit = async (req, res) => {
             ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
             adhaarnumber: aadhaarNumber,
             accessmodetype: "SITE",
-            nationalbankidentificationnumber: bankIIN,
+            nationalbankidentification: bankIIN,
             requestremarks: "Cash Deposit",
             data: pidData,
-            amount: amount
+            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            transactiontype: "CD",
+            submerchantid: retailer.retailerId,
+            amount: amount,
+            is_iris: "No"
         };
 
         const token = generatePaySprintToken();
