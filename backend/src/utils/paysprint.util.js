@@ -242,7 +242,14 @@ export const getWebOnboardingUrl = async (merchantData) => {
             body: JSON.stringify(payload)
         });
 
-        const data = await response.json();
+        const responseText = await response.text();
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            console.error("Non-JSON response from PaySprint Web Onboarding:", responseText);
+            return { success: false, message: "PaySprint Web Onboarding API is currently unavailable." };
+        }
         
         if (data.status) {
             return { success: true, message: data.message, url: data.redirecturl || data.url };
