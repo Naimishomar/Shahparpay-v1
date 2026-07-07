@@ -122,8 +122,8 @@ const retailerSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 
-retailerSchema.pre('save', async function(next) {
-    if (!this.isModified('password')) return next();
+retailerSchema.pre('save', async function() {
+    if (!this.isModified('password')) return;
     this.password = await bcrypt.hash(this.password, 10);
 });
 
