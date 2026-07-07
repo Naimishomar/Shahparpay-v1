@@ -17,15 +17,15 @@ export const balanceEnquiry = async (req, res) => {
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
         const retailer = await Retailer.findById(req.user.id);
         const payload = {
-            latitude: latitude || "28.7041",
-            longitude: longitude || "77.1025",
-            mobilenumber: mobileNumber || "9999999999",
+            latitude: String(latitude || "28.7041"),
+            longitude: String(longitude || "77.1025"),
+            mobilenumber: String(mobileNumber || "9999999999"),
             referenceno: `REF${Date.now()}`,
-            adhaarnumber: aadhaarNumber,
+            adhaarnumber: String(aadhaarNumber),
             accessmodetype: "SITE",
-            nationalbankidentification: bankIIN,
+            nationalbankidentification: Number(bankIIN),
             data: pidData,
-            submerchantid: retailer.retailerId
+            submerchantid: String(retailer.retailerId)
         };
 
         const token = generatePaySprintToken();
@@ -191,20 +191,20 @@ export const cashWithdrawal = async (req, res) => {
         });
 
         const payload = {
-            latitude: latitude || "28.7041",
-            longitude: longitude || "77.1025",
-            mobilenumber: mobileNumber || "9999999999",
+            latitude: String(latitude || "28.7041"),
+            longitude: String(longitude || "77.1025"),
+            mobilenumber: String(mobileNumber || "9999999999"),
             referenceno: referenceNo,
             ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
-            adhaarnumber: aadhaarNumber,
+            adhaarnumber: String(aadhaarNumber),
             accessmodetype: "SITE",
-            nationalbankidentification: bankIIN,
+            nationalbankidentification: Number(bankIIN),
             requestremarks: "Cash Withdrawal",
             data: pidData,
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
             transactiontype: "CW",
-            submerchantid: retailer.retailerId,
-            amount: amount,
+            submerchantid: String(retailer.retailerId),
+            amount: Number(amount),
             is_iris: "No"
         };
 
@@ -290,18 +290,18 @@ export const miniStatement = async (req, res) => {
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
         const retailer = await Retailer.findById(req.user.id);
         const payload = {
-            latitude: latitude || "28.7041",
-            longitude: longitude || "77.1025",
-            mobilenumber: mobileNumber || "9999999999",
+            latitude: String(latitude || "28.7041"),
+            longitude: String(longitude || "77.1025"),
+            mobilenumber: String(mobileNumber || "9999999999"),
             referenceno: `MS${Date.now()}`,
             ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
-            adhaarnumber: aadhaarNumber,
+            adhaarnumber: String(aadhaarNumber),
             accessmodetype: "SITE",
-            nationalbankidentification: bankIIN,
+            nationalbankidentification: Number(bankIIN),
             requestremarks: "Mini Statement",
             data: pidData,
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-            submerchantid: retailer.retailerId,
+            submerchantid: String(retailer.retailerId),
             is_iris: "No"
         };
 
@@ -398,20 +398,20 @@ export const cashDeposit = async (req, res) => {
 
         // 3. Make the API Call to PaySprint
         const payload = {
-            latitude: latitude || "28.7041",
-            longitude: longitude || "77.1025",
-            mobilenumber: mobileNumber || "9999999999",
+            latitude: String(latitude || "28.7041"),
+            longitude: String(longitude || "77.1025"),
+            mobilenumber: String(mobileNumber || "9999999999"),
             referenceno: referenceNo,
             ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
-            adhaarnumber: aadhaarNumber,
+            adhaarnumber: String(aadhaarNumber),
             accessmodetype: "SITE",
-            nationalbankidentification: bankIIN,
+            nationalbankidentification: Number(bankIIN),
             requestremarks: "Cash Deposit",
             data: pidData,
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
             transactiontype: "CD",
-            submerchantid: retailer.retailerId,
-            amount: amount,
+            submerchantid: String(retailer.retailerId),
+            amount: Number(amount),
             is_iris: "No"
         };
 
