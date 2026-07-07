@@ -240,7 +240,7 @@ export const getWebOnboardingUrl = async (merchantData) => {
             'Accept': 'application/json'
         };
 
-        const response = await fetch(`${baseUrl}/service/onboard/onboard/getonboardurl`, {
+        const response = await fetch(`${baseUrl}/service/onboard/v2/onboard/getonboardurl`, {
             method: 'POST',
             headers,
             body: JSON.stringify(payload)
