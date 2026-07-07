@@ -556,8 +556,26 @@ export const generateOnboardUrl = async (req, res) => {
             return res.status(404).json({ success: false, message: "Merchant not found." });
         }
 
+        let merchantCode = user.distributorId || user.retailerId;
+        
+        // Auto-fix for old test accounts that accidentally saved 24-character MongoDB IDs
+        if (!merchantCode || merchantCode.length > 12) {
+            const prefix = user.role === 'distributor' ? 'DT' : 'RT';
+            const randomDigits = Math.floor(100000 + Math.random() * 900000).toString();
+            merchantCode = `${prefix}${randomDigits}`;
+            
+            // Save it back to the database so it stays consistent
+            if (user.role === 'distributor') {
+                user.distributorId = merchantCode;
+            } else {
+                user.retailerId = merchantCode;
+            }
+            await user.save();
+            console.log(`Auto-fixed invalid merchantCode for ${user.email}. New Code: ${merchantCode}`);
+        }
+
         const merchantData = {
-            merchantcode: user.distributorId || user.retailerId,
+            merchantcode: merchantCode,
             mobile: user.contactNumber,
             is_new: user.isExistingMerchant ? false : true,
             email: user.email,
