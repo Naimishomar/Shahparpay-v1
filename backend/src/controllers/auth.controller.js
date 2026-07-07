@@ -556,7 +556,7 @@ export const generateOnboardUrl = async (req, res) => {
             return res.status(404).json({ success: false, message: "Merchant not found." });
         }
 
-        let merchantCode = user.distributorId || user.retailerId;
+        let merchantCode = user.role === 'distributor' ? user.distributorId : user.retailerId;
         if (merchantCode) merchantCode = merchantCode.toString();
         
         // Auto-fix for old test accounts that accidentally saved 24-character MongoDB IDs
