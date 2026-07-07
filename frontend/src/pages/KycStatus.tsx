@@ -9,16 +9,30 @@ const KycStatus = () => {
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
 
     useEffect(() => {
-        // PaySprint usually sends some query parameters back, but regardless, 
-        // we'll just check if the session is updated on our backend.
         const verifyStatus = async () => {
             try {
+                // Get the JWT token from PaySprint from the URL
+                const params = new URLSearchParams(window.location.search);
+                const jwtData = params.get('data');
+                
+                if (jwtData) {
+                    const tokenLocal = localStorage.getItem('token');
+                    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/paysprint/update-kyc-status`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${tokenLocal}`
+                        },
+                        body: JSON.stringify({ jwt: jwtData })
+                    });
+                    
+                    const resData = await res.json();
+                    if (!resData.success) throw new Error("Backend verification failed");
+                }
+
                 // Refresh the user session to pull the latest isMerchantKycComplete from the DB
                 await checkSession();
                 
-                // We'll just assume success for now and redirect them to dashboard.
-                // The actual backend webhook might take a few seconds to process, 
-                // but this provides immediate feedback.
                 setStatus('success');
                 
                 // Redirect back to dashboard after a short delay

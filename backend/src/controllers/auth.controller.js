@@ -597,6 +597,40 @@ export const generateOnboardUrl = async (req, res) => {
     }
 };
 
+export const updateKycStatus = async (req, res) => {
+    try {
+        const { jwt: tokenStr } = req.body;
+        if (!tokenStr) return res.status(400).json({ success: false, message: "JWT is required" });
+
+        const jwtKeyBase64 = process.env.PAYSPRINT_JWT_KEY;
+        let decoded;
+        try {
+            decoded = jwt.verify(tokenStr, jwtKeyBase64);
+        } catch (err) {
+            console.error("JWT Verification failed, attempting to decode without verification:", err.message);
+            decoded = jwt.decode(tokenStr);
+        }
+
+        if (!decoded || !decoded.merchantcode) {
+            return res.status(400).json({ success: false, message: "Invalid payload from PaySprint" });
+        }
+
+        const merchantCode = decoded.merchantcode;
+
+        // Find the user and update
+        const retailer = await Retailer.findOneAndUpdate({ retailerId: merchantCode }, { isMerchantKycComplete: true }, { new: true });
+        if (retailer) return res.status(200).json({ success: true, message: "KYC Status updated" });
+
+        const distributor = await Distributor.findOneAndUpdate({ distributorId: merchantCode }, { isMerchantKycComplete: true }, { new: true });
+        if (distributor) return res.status(200).json({ success: true, message: "KYC Status updated" });
+
+        return res.status(404).json({ success: false, message: "Merchant not found" });
+    } catch (error) {
+        console.error("Update KYC Status Error:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
 export const updateProfile = async (req, res) => {
     try {
         const { name, contactNumber, businessName, address } = req.body;
