@@ -25,6 +25,7 @@ export const balanceEnquiry = async (req, res) => {
             accessmodetype: "SITE",
             nationalbankidentification: Number(bankIIN),
             data: pidData,
+            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
             submerchantid: String(retailer.retailerId)
         };
 
