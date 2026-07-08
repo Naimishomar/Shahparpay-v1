@@ -748,7 +748,12 @@ export const dailyAuth = async (req, res) => {
         // Auto-Register if 2FA registration is pending
         if (resultData && (resultData.response_code === 2 || resultData.response_code === 24 || (resultData.message && resultData.message.toLowerCase().includes('registration is pending')))) {
             console.log(`Registration pending detected (code ${resultData.response_code}). Attempting auto-registration for ${payload.pipe}...`);
-            const regResponse = await axios.post(`${baseUrl}/service/aeps/kyc/Twofactorkyc/register_agent`, { body: encryptedData }, { headers });
+            
+            // We must generate a NEW referenceno to avoid "Duplicate Request ID Found" (code 10)
+            const regPayload = { ...payload, referenceno: `REG${Date.now()}` };
+            const regEncryptedData = encryptPayload(JSON.stringify(regPayload));
+            
+            const regResponse = await axios.post(`${baseUrl}/service/aeps/kyc/Twofactorkyc/register_agent`, { body: regEncryptedData }, { headers });
             
             if (regResponse.data && regResponse.data.response_code === 1) {
                 return res.status(400).json({ 
