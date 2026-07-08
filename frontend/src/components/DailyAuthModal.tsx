@@ -89,6 +89,9 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose }) => {
                 const errorMsg = result.data?.message || result.message;
                 if (errorMsg.includes('Registration Successful')) {
                     alert(errorMsg);
+                } else if (errorMsg.includes('reset your status') || errorMsg.includes('pending')) {
+                    toast.error("Bank 3 KYC pending. Redirecting to KYC completion...");
+                    setTimeout(() => window.location.reload(), 1500);
                 } else {
                     alert("Daily Auth Failed: " + errorMsg);
                 }
