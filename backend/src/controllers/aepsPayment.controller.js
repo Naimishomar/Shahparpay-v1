@@ -8,7 +8,7 @@ import Transaction from "../models/transaction.model.js";
 // Helper function to resolve which bank pipe is verified for the merchant
 const getVerifiedPipe = async (merchantcode, mobile) => {
     // Temporarily removed 'bank2' because PaySprint UAT has a deadlock bug for A2ZB1004 on bank2
-    const pipes = ['bank3', 'bank5', 'bank1'];
+    const pipes = ['bank3', 'bank5', 'bank1', 'bank2'];
     const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
     
     console.log(`[getVerifiedPipe] Checking pipes for merchant: ${merchantcode}`);
