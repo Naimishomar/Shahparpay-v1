@@ -760,7 +760,7 @@ export const dailyAuth = async (req, res) => {
                 'Content-Type': 'application/json'
             };
             
-            const regResponse = await axios.post(`${baseUrl}/service/aeps/kyc/Twofactorkyc/register_agent`, { body: regEncryptedData }, { headers: regHeaders });
+            const regResponse = await axios.post(`${baseUrl}/service/aeps/kyc/Twofactorkyc/register_agent`, { body: regEncryptedData }, { headers: regHeaders, validateStatus: () => true });
             
             if (regResponse.data && regResponse.data.response_code === 1) {
                 return res.status(400).json({ 
