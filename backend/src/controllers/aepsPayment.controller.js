@@ -7,7 +7,7 @@ import Transaction from "../models/transaction.model.js";
 
 // Helper function to resolve which bank pipe is verified for the merchant
 const getVerifiedPipe = async (merchantcode, mobile) => {
-    const pipes = ['bank1', 'bank2', 'bank3', 'bank5'];
+    const pipes = ['bank3', 'bank2', 'bank1', 'bank5'];
     const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
     const token = generatePaySprintToken();
     const headers = {
