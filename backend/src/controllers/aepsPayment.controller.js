@@ -31,7 +31,10 @@ const getVerifiedPipe = async (merchantcode, mobile) => {
                 pipe: pipe
             }, { headers: currentHeaders });
             
-            if (res.data && res.data.response_code === 1 && res.data.is_approved === 'Accepted') {
+            console.log(`[getVerifiedPipe] Response for ${pipe}:`, res.data);
+            
+            // Sometimes PaySprint returns is_approved differently, so we check response_code === 1
+            if (res.data && res.data.response_code === 1 && (res.data.status === true || res.data.is_approved)) {
                 return pipe;
             }
         } catch (e) {
