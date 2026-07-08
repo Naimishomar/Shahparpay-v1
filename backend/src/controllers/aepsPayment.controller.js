@@ -666,6 +666,18 @@ export const dailyAuth = async (req, res) => {
 
         let resultData = response.data;
 
+        if (resultData && resultData.response_code === 24) {
+            console.log("Merchant onboarding is pending. Resetting KYC status in DB...");
+            
+            await Retailer.findOneAndUpdate({ retailerId: merchantcode }, { isMerchantKycComplete: false });
+            await Distributor.findOneAndUpdate({ distributorId: merchantcode }, { isMerchantKycComplete: false });
+            
+            return res.status(400).json({ 
+                success: false, 
+                message: "Your Bank 3 KYC is pending. We have reset your status. Please click 'Complete KYC' again to onboard for Bank 3." 
+            });
+        }
+
         // Auto-Register if 2FA registration is pending
         if (resultData && (resultData.response_code === 2 || (resultData.message && resultData.message.toLowerCase().includes('registration is pending')))) {
             console.log("Registration pending detected. Attempting auto-registration for Bank 3...");
