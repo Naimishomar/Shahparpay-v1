@@ -8,11 +8,13 @@ import { useEffect, useState } from "react"
 import axios from "axios"
 import toast from "react-hot-toast"
 import { ShieldCheck, LogOut } from "lucide-react"
+import MerchantKycModal from "../components/MerchantKycModal"
 
 const Layout = () => {
     const { user, token, logout } = useAuth();
     const [showKyc, setShowKyc] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [showMerchantKyc, setShowMerchantKyc] = useState(false);
 
     useEffect(() => {
         if (user && user.role === 'retailer' && user.isMerchantKycComplete === false) {
@@ -34,7 +36,16 @@ const Layout = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data.success) {
-                window.location.href = res.data.url;
+                if (res.data.alreadyOnboarded) {
+                    setShowMerchantKyc(true);
+                    setShowKyc(false);
+                    setIsGenerating(false);
+                } else if (res.data.url) {
+                    window.location.href = res.data.url;
+                } else {
+                    toast.error("Invalid KYC link received.");
+                    setIsGenerating(false);
+                }
             } else {
                 toast.error(res.data.message || "Failed to generate KYC link.");
                 setIsGenerating(false);
@@ -98,6 +109,11 @@ const Layout = () => {
                             </div>
                         </div>
                     </div>
+                )}
+                
+                {/* Bank 3 Aeps / Biometric KYC Modal */}
+                {showMerchantKyc && (
+                    <MerchantKycModal onClose={() => setShowMerchantKyc(false)} />
                 )}
             </main>
         </SidebarProvider>

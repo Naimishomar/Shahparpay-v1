@@ -22,6 +22,7 @@ import {
     Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
+import MerchantKycModal from '../components/MerchantKycModal';
 
 const DistributorPortal = () => {
     const { user, token, logout, isInitializing } = useAuth();
@@ -40,6 +41,7 @@ const DistributorPortal = () => {
     const [showAddFrModal, setShowAddFrModal] = useState(false);
     const [frFormData, setFrFormData] = useState({ transactionMode: '', amount: '', bankUtr: '', depositDate: '', remarks: '' });
     const [frDepositSlip, setFrDepositSlip] = useState<File | null>(null);
+    const [showMerchantKycModal, setShowMerchantKycModal] = useState(false);
     
     // Form states
     const [formData, setFormData] = useState({
@@ -104,7 +106,16 @@ const DistributorPortal = () => {
             });
             const data = await res.json();
             if (data.success) {
-                window.location.href = data.url;
+                if (data.alreadyOnboarded) {
+                    setShowMerchantKycModal(true);
+                    setShowKyc(false);
+                    setIsGeneratingSelf(false);
+                } else if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    toast.error("Invalid KYC link received.");
+                    setIsGeneratingSelf(false);
+                }
             } else {
                 toast.error(data.message || "Failed to generate KYC link.");
                 setIsGeneratingSelf(false);
@@ -340,8 +351,12 @@ const DistributorPortal = () => {
                 body: JSON.stringify({ merchantId, isNew: true })
             });
             const data = await res.json();
-            if (data.success && data.url) {
-                window.open(data.url, '_blank');
+            if (data.success) {
+                if (data.alreadyOnboarded) {
+                    setShowMerchantKycModal(true);
+                } else if (data.url) {
+                    window.open(data.url, '_blank');
+                }
             } else {
                 toast.error(data.message || 'Failed to generate KYC link');
             }
@@ -1433,6 +1448,11 @@ const DistributorPortal = () => {
                             </div>
                         </div>
                     </div>
+                )}
+                
+                {/* Bank 3 Aeps / Biometric KYC Modal */}
+                {showMerchantKycModal && (
+                    <MerchantKycModal onClose={() => setShowMerchantKycModal(false)} />
                 )}
 
             </main>

@@ -3,6 +3,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import MerchantKycModal from '../components/MerchantKycModal';
 
 const Dashboard = () => {
     const { token, user } = useAuth();
@@ -15,6 +16,7 @@ const Dashboard = () => {
     const [customStart, setCustomStart] = useState('');
     const [customEnd, setCustomEnd] = useState('');
     const [kycLoading, setKycLoading] = useState(false);
+    const [showMerchantKycModal, setShowMerchantKycModal] = useState(false);
 
     const fetchStats = async (start?: string, end?: string) => {
         if (!token) return;
@@ -91,8 +93,14 @@ const Dashboard = () => {
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            if (res.data.success && res.data.url) {
-                window.location.href = res.data.url;
+            if (res.data.success) {
+                if (res.data.alreadyOnboarded) {
+                    setShowMerchantKycModal(true);
+                } else if (res.data.url) {
+                    window.location.href = res.data.url;
+                } else {
+                    alert("Invalid KYC URL returned.");
+                }
             } else {
                 alert(res.data.message || "Failed to fetch KYC URL");
             }
@@ -267,6 +275,10 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+            {/* Bank 3 Aeps / Biometric KYC Modal */}
+            {showMerchantKycModal && (
+                <MerchantKycModal onClose={() => setShowMerchantKycModal(false)} />
+            )}
         </div>
     );
 };
