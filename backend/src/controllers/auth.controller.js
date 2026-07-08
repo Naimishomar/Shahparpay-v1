@@ -550,45 +550,55 @@ export const generateOnboardUrl = async (req, res) => {
         const { merchantId, isNew, callbackUrl } = req.body;
         if (!merchantId) return res.status(400).json({ success: false, message: "merchantId is required" });
 
-        let user = await Distributor.findById(merchantId) || await Retailer.findById(merchantId);
+        let user;
+        let merchantCode = merchantId; // Assume it's already the code
+        
+        // Try to find by retailerId or distributorId first
+        user = await Retailer.findOne({ retailerId: merchantId });
+        if (!user) {
+            user = await Distributor.findOne({ distributorId: merchantId });
+        }
+        
+        // If not found by code, try by ID
+        if (!user) {
+            // First check if it's a valid ObjectId to prevent Mongoose cast errors
+            if (mongoose.Types.ObjectId.isValid(merchantId)) {
+                user = await Retailer.findById(merchantId);
+                if (!user) {
+                    user = await Distributor.findById(merchantId);
+                }
+            }
+        }
         
         if (!user) {
             return res.status(404).json({ success: false, message: "Merchant not found." });
         }
 
-        let merchantCode = "";
-        let role = "";
-        
-        if (user.retailerId) {
-            merchantCode = user.retailerId;
-            role = "retailer";
-        } else if (user.distributorId) {
-            merchantCode = user.distributorId;
-            role = "distributor";
+        let merchantCodeFinal = user.retailerId || user.distributorId;
+        if (!merchantCodeFinal) {
+            merchantCodeFinal = merchantId;
         }
-        
-        if (merchantCode) merchantCode = merchantCode.toString();
 
         const merchantData = {
-            merchantcode: merchantCode,
+            merchantcode: merchantCodeFinal.toString(),
             mobile: user.contactNumber,
             is_new: user.isExistingMerchant ? false : true,
             email: user.email,
-            businessName: user.businessName,
+            businessName: user.businessName || user.name,
             name: user.name,
-            callbackUrl: callbackUrl || "http://shahparpay-v1.vercel.app/kyc-status"
+            callbackUrl: callbackUrl || `${process.env.FRONTEND_URL || 'http://localhost:5173'}/kyc-status`
         };
 
         const result = await getWebOnboardingUrl(merchantData);
         if (result.success) {
             if (result.alreadyOnboarded) {
                 // Update DB since PaySprint says they are already onboarded
-                if (role === "retailer") {
-                    await Retailer.findOneAndUpdate({ retailerId: merchantCode }, { isMerchantKycComplete: true });
-                } else if (role === "distributor") {
-                    await Distributor.findOneAndUpdate({ distributorId: merchantCode }, { isMerchantKycComplete: true });
+                if (user.retailerId) {
+                    await Retailer.findOneAndUpdate({ retailerId: merchantCodeFinal }, { isMerchantKycComplete: true });
+                } else if (user.distributorId) {
+                    await Distributor.findOneAndUpdate({ distributorId: merchantCodeFinal }, { isMerchantKycComplete: true });
                 }
-                // Return callback URL so frontend redirects back gracefully without crashing
+                // Return callback URL so frontend redirects back gracefully
                 return res.status(200).json({ success: true, url: merchantData.callbackUrl });
             }
             return res.status(200).json({ success: true, url: result.url });
