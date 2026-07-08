@@ -99,7 +99,7 @@ const DistributorPortal = () => {
                 body: JSON.stringify({
                     merchantId: user._id,
                     isNew: true,
-                    callbackUrl: 'http://localhost:5173/kyc-status'
+                    callbackUrl: window.location.origin + '/kyc-status'
                 })
             });
             const data = await res.json();

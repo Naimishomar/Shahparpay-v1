@@ -29,7 +29,7 @@ const Layout = () => {
             const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/paysprint/get-onboard-url`, {
                 merchantId: user._id,
                 isNew: true,
-                callbackUrl: 'http://localhost:5173/kyc-status'
+                callbackUrl: window.location.origin + '/kyc-status'
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
