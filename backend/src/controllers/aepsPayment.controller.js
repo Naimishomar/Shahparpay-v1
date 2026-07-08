@@ -524,12 +524,20 @@ export const sendMerchantOtp = async (req, res) => {
         if (!merchantcode || !aadhaar) return res.status(400).json({ success: false, message: "merchantcode and aadhaar required" });
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
+        let mobile = "9999999999";
+        const user = await Retailer.findOne({ retailerId: merchantcode }) || await Distributor.findOne({ distributorId: merchantcode });
+        if (user && user.contactNumber) mobile = user.contactNumber;
+
         const payload = {
             merchantcode,
+            submerchantid: merchantcode,
+            mobile,
+            mobilenumber: mobile,
             accessmode: "SITE",
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025",
-            aadhaar
+            aadhaar,
+            adhaarnumber: aadhaar
         };
 
         const token = generatePaySprintToken();
@@ -554,9 +562,17 @@ export const resendMerchantOtp = async (req, res) => {
         if (!merchantcode || !ekyc_id) return res.status(400).json({ success: false, message: "Required fields missing" });
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
+        let mobile = "9999999999";
+        const user = await Retailer.findOne({ retailerId: merchantcode }) || await Distributor.findOne({ distributorId: merchantcode });
+        if (user && user.contactNumber) mobile = user.contactNumber;
+
         const payload = {
             merchantcode,
+            submerchantid: merchantcode,
+            mobile,
+            mobilenumber: mobile,
             aadhaar,
+            adhaarnumber: aadhaar,
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025",
             stateresp,
@@ -590,9 +606,17 @@ export const verifyMerchantOtp = async (req, res) => {
         // pidData needs to be AES encrypted for this specific endpoint.
         const encryptedPidData = encryptPayload(pidData);
 
+        let mobile = "9999999999";
+        const user = await Retailer.findOne({ retailerId: merchantcode }) || await Distributor.findOne({ distributorId: merchantcode });
+        if (user && user.contactNumber) mobile = user.contactNumber;
+
         const payload = {
             merchantcode,
+            submerchantid: merchantcode,
+            mobile,
+            mobilenumber: mobile,
             aadhaar,
+            adhaarnumber: aadhaar,
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025",
             otp,
