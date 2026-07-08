@@ -5,6 +5,37 @@ import Retailer from "../models/users/retailer.model.js";
 import Distributor from "../models/users/distributor.model.js";
 import Transaction from "../models/transaction.model.js";
 
+// Helper function to resolve which bank pipe is verified for the merchant
+const getVerifiedPipe = async (merchantcode, mobile) => {
+    const pipes = ['bank1', 'bank2', 'bank3', 'bank5'];
+    const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+    const token = generatePaySprintToken();
+    const headers = {
+        'Token': token,
+        'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+        'Content-Type': 'application/json'
+    };
+
+    // Run sequentially to prioritize bank1 > bank2 > bank3 > bank5
+    for (const pipe of pipes) {
+        try {
+            const res = await axios.post(`${baseUrl}/service/onboard/onboard/getonboardstatus`, {
+                merchantcode: merchantcode,
+                mobile: String(mobile),
+                pipe: pipe
+            }, { headers });
+            
+            if (res.data && res.data.response_code === 1 && res.data.is_approved === 'Accepted') {
+                return pipe;
+            }
+        } catch (e) {
+            console.error(`Error checking pipe status for ${pipe}:`, e.message);
+        }
+    }
+    // Fallback if none are accepted or API fails
+    return 'bank3';
+};
+
 export const balanceEnquiry = async (req, res) => {
     try {
         const { mobileNumber, aadhaarNumber, bankIIN, pidData, latitude, longitude, pipe } = req.body;
@@ -15,7 +46,7 @@ export const balanceEnquiry = async (req, res) => {
             });
         }
 
-        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         const retailer = await Retailer.findById(req.user.id);
         const payload = {
             latitude: String(latitude || "28.7041"),
@@ -28,7 +59,7 @@ export const balanceEnquiry = async (req, res) => {
             data: pidData,
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
             submerchantid: String(retailer.retailerId),
-            pipe: pipe || "bank3",
+            pipe: pipe || await getVerifiedPipe(retailer.retailerId, mobileNumber || retailer.contactNumber),
             is_iris: "No"
         };
 
@@ -81,7 +112,7 @@ export const getBankList = async (req, res) => {
             });
         }
 
-        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         const token = generatePaySprintToken();
         
         const headers = {
@@ -146,7 +177,7 @@ export const cashWithdrawal = async (req, res) => {
             return res.status(404).json({ success: false, message: "Retailer not found" });
         }
 
-        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         const referenceNo = `CW${Date.now()}`;
 
         // 1. Merchant 2FA (Txn Auth)
@@ -211,7 +242,7 @@ export const cashWithdrawal = async (req, res) => {
             submerchantid: String(retailer.retailerId),
             amount: Number(amount),
             is_iris: "No",
-            pipe: pipe || "bank3"
+            pipe: pipe || await getVerifiedPipe(retailer.retailerId, mobileNumber || retailer.contactNumber)
         };
 
         const token = generatePaySprintToken();
@@ -293,7 +324,7 @@ export const miniStatement = async (req, res) => {
             return res.status(400).json({ success: false, message: "Required fields missing." });
         }
 
-        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         const retailer = await Retailer.findById(req.user.id);
         const payload = {
             latitude: String(latitude || "28.7041"),
@@ -309,7 +340,7 @@ export const miniStatement = async (req, res) => {
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
             submerchantid: String(retailer.retailerId),
             is_iris: "No",
-            pipe: pipe || "bank3"
+            pipe: pipe || await getVerifiedPipe(retailer.retailerId, mobileNumber || retailer.contactNumber)
         };
 
         const token = generatePaySprintToken();
@@ -348,7 +379,7 @@ export const cashDeposit = async (req, res) => {
             return res.status(404).json({ success: false, message: "Retailer not found" });
         }
 
-        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         const referenceNo = `CD${Date.now()}`;
 
         // 1. Merchant 2FA (Txn Auth)
@@ -421,7 +452,7 @@ export const cashDeposit = async (req, res) => {
             submerchantid: String(retailer.retailerId),
             amount: Number(amount),
             is_iris: "No",
-            pipe: pipe || "bank3"
+            pipe: pipe || await getVerifiedPipe(retailer.retailerId, mobileNumber || retailer.contactNumber)
         };
 
         const token = generatePaySprintToken();
@@ -497,7 +528,7 @@ export const cashWithdrawalTxnStatus = async (req, res) => {
         const { reference } = req.body;
         if (!reference) return res.status(400).json({ success: false, message: "reference is required" });
 
-        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         const payload = { reference };
 
         const token = generatePaySprintToken();
@@ -523,7 +554,7 @@ export const sendMerchantOtp = async (req, res) => {
         const { merchantcode, aadhaar, latitude, longitude } = req.body;
         if (!merchantcode || !aadhaar) return res.status(400).json({ success: false, message: "merchantcode and aadhaar required" });
 
-        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         let mobile = "9999999999";
         const user = await Retailer.findOne({ retailerId: merchantcode }) || await Distributor.findOne({ distributorId: merchantcode });
         if (user && user.contactNumber) mobile = user.contactNumber;
@@ -538,7 +569,7 @@ export const sendMerchantOtp = async (req, res) => {
             longitude: longitude || "77.1025",
             aadhaar,
             adhaarnumber: aadhaar,
-            pipe: "bank3"
+            pipe: await getVerifiedPipe(merchantcode, mobile)
         };
 
         const token = generatePaySprintToken();
@@ -562,7 +593,7 @@ export const resendMerchantOtp = async (req, res) => {
         const { merchantcode, aadhaar, latitude, longitude, stateresp, ekyc_id } = req.body;
         if (!merchantcode || !ekyc_id) return res.status(400).json({ success: false, message: "Required fields missing" });
 
-        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         let mobile = "9999999999";
         const user = await Retailer.findOne({ retailerId: merchantcode }) || await Distributor.findOne({ distributorId: merchantcode });
         if (user && user.contactNumber) mobile = user.contactNumber;
@@ -579,7 +610,7 @@ export const resendMerchantOtp = async (req, res) => {
             stateresp,
             ekyc_id,
             accessmode: "SITE",
-            pipe: "bank3"
+            pipe: await getVerifiedPipe(merchantcode, mobile)
         };
 
         const token = generatePaySprintToken();
@@ -603,7 +634,7 @@ export const verifyMerchantOtp = async (req, res) => {
         const { merchantcode, aadhaar, latitude, longitude, otp, stateresp, ekyc_id, pidData } = req.body;
         if (!merchantcode || !otp || !pidData) return res.status(400).json({ success: false, message: "Required fields missing" });
 
-        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         
         // pidData needs to be AES encrypted for this specific endpoint.
         const encryptedPidData = encryptPayload(pidData);
@@ -626,7 +657,7 @@ export const verifyMerchantOtp = async (req, res) => {
             ekyc_id,
             piddata: encryptedPidData,
             accessmode: "SITE",
-            pipe: "bank3"
+            pipe: await getVerifiedPipe(merchantcode, mobile)
         };
 
         const token = generatePaySprintToken();
@@ -661,7 +692,7 @@ export const dailyAuth = async (req, res) => {
             return res.status(400).json({ success: false, message: "Required fields missing for Daily Auth" });
         }
 
-        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         
         let actualMobile = mobileNumber;
         if (!mobileNumber || mobileNumber === "9999999999") {
@@ -683,7 +714,7 @@ export const dailyAuth = async (req, res) => {
             submerchantid: merchantcode,
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
             is_iris: "No",
-            pipe: "bank3"
+            pipe: await getVerifiedPipe(merchantcode, actualMobile)
         };
 
         console.log("========== DAILY AUTH PAYLOAD ==========");
@@ -777,7 +808,7 @@ export const getMerchantStatus = async (req, res) => {
         }
 
         // Check PaySprint Onboard Status for pipes
-        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         const token = generatePaySprintToken();
         const headers = {
             'Token': token,
