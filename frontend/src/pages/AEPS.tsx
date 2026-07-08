@@ -70,8 +70,10 @@ const AEPS = () => {
     const [merchantStatus, setMerchantStatus] = useState({
         isMerchantKycComplete: false,
         isDailyAuthDoneToday: false,
-        lastDailyAuthDate: null
+        lastDailyAuthDate: null,
+        activePipes: ['bank3'] // default fallback
     });
+    const [selectedPipe, setSelectedPipe] = useState('bank3');
 
     // Fetch Merchant Status on Load
     useEffect(() => {
@@ -81,6 +83,9 @@ const AEPS = () => {
             .then(data => {
                 if (data.success && data.data) {
                     setMerchantStatus(data.data);
+                    if (data.data.activePipes && data.data.activePipes.length > 0) {
+                        setSelectedPipe(data.data.activePipes[0]);
+                    }
                 }
             })
             .catch(err => console.error("Failed to fetch merchant status", err));
@@ -292,7 +297,8 @@ const AEPS = () => {
                 pidData: pidData,
                 merchantPidData: (activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') ? merchantPidData : undefined,
                 bankName: bankName,
-                customerName: name
+                customerName: name,
+                pipe: selectedPipe
             };
 
             let res;
@@ -462,7 +468,26 @@ const AEPS = () => {
                             </div>
 
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-medium text-foreground">Bank Name</label>
+                                <label className="text-sm font-medium text-foreground">Select AEPS Bank Route (Pipe)</label>
+                                <select 
+                                    value={selectedPipe}
+                                    onChange={(e) => setSelectedPipe(e.target.value)}
+                                    className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
+                                >
+                                    {merchantStatus.activePipes.length > 0 ? (
+                                        merchantStatus.activePipes.map((pipe) => (
+                                            <option key={pipe} value={pipe}>
+                                                {pipe.toUpperCase()} (Verified)
+                                            </option>
+                                        ))
+                                    ) : (
+                                        <option value="bank3">BANK3 (Default)</option>
+                                    )}
+                                </select>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-sm font-medium text-foreground">Customer Bank Name</label>
                                 <select 
                                     value={bankName}
                                     onChange={(e) => setBankName(e.target.value)}

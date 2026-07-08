@@ -6,7 +6,7 @@ import Transaction from "../models/transaction.model.js";
 
 export const balanceEnquiry = async (req, res) => {
     try {
-        const { mobileNumber, aadhaarNumber, bankIIN, pidData, latitude, longitude } = req.body;
+        const { mobileNumber, aadhaarNumber, bankIIN, pidData, latitude, longitude, pipe } = req.body;
         if (!aadhaarNumber || !bankIIN || !pidData) {
             return res.status(400).json({ 
                 success: false,
@@ -27,7 +27,7 @@ export const balanceEnquiry = async (req, res) => {
             data: pidData,
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
             submerchantid: String(retailer.retailerId),
-            pipe: "bank3",
+            pipe: pipe || "bank3",
             is_iris: "No"
         };
 
@@ -131,7 +131,7 @@ export const getBankList = async (req, res) => {
 export const cashWithdrawal = async (req, res) => {
     let session = null;
     try {
-        const { mobileNumber, aadhaarNumber, bankIIN, pidData, merchantPidData, amount, latitude, longitude, bankName, customerName } = req.body;
+        const { mobileNumber, aadhaarNumber, bankIIN, pidData, merchantPidData, amount, latitude, longitude, bankName, customerName, pipe } = req.body;
         if (!aadhaarNumber || !bankIIN || !pidData || !amount) {
             return res.status(400).json({ 
                 success: false,
@@ -210,7 +210,7 @@ export const cashWithdrawal = async (req, res) => {
             submerchantid: String(retailer.retailerId),
             amount: Number(amount),
             is_iris: "No",
-            pipe: "bank3"
+            pipe: pipe || "bank3"
         };
 
         const token = generatePaySprintToken();
@@ -287,7 +287,7 @@ export const cashWithdrawal = async (req, res) => {
 
 export const miniStatement = async (req, res) => {
     try {
-        const { mobileNumber, aadhaarNumber, bankIIN, pidData, latitude, longitude } = req.body;
+        const { mobileNumber, aadhaarNumber, bankIIN, pidData, latitude, longitude, pipe } = req.body;
         if (!aadhaarNumber || !bankIIN || !pidData) {
             return res.status(400).json({ success: false, message: "Required fields missing." });
         }
@@ -308,7 +308,7 @@ export const miniStatement = async (req, res) => {
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
             submerchantid: String(retailer.retailerId),
             is_iris: "No",
-            pipe: "bank3"
+            pipe: pipe || "bank3"
         };
 
         const token = generatePaySprintToken();
@@ -335,7 +335,7 @@ export const miniStatement = async (req, res) => {
 
 export const cashDeposit = async (req, res) => {
     try {
-        const { latitude, longitude, mobileNumber, aadhaarNumber, bankIIN, pidData, merchantPidData, amount, bankName, customerName } = req.body;
+        const { latitude, longitude, mobileNumber, aadhaarNumber, bankIIN, pidData, merchantPidData, amount, bankName, customerName, pipe } = req.body;
 
         if (!aadhaarNumber || !bankIIN || !pidData || !amount) {
             return res.status(400).json({ success: false, message: "Aadhaar number, bank IIN, PID Data, and amount are required" });
@@ -420,7 +420,7 @@ export const cashDeposit = async (req, res) => {
             submerchantid: String(retailer.retailerId),
             amount: Number(amount),
             is_iris: "No",
-            pipe: "bank3"
+            pipe: pipe || "bank3"
         };
 
         const token = generatePaySprintToken();
@@ -727,12 +727,54 @@ export const getMerchantStatus = async (req, res) => {
                 lastAuth.getFullYear() === today.getFullYear();
         }
 
+        // Check PaySprint Onboard Status for pipes
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
+        const token = generatePaySprintToken();
+        const headers = {
+            'Token': token,
+            'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+            'Content-Type': 'application/json'
+        };
+
+        const pipesToCheck = ['bank2', 'bank3', 'bank5'];
+        const activePipes = [];
+
+        try {
+            const statusPromises = pipesToCheck.map(pipe => {
+                return axios.post(`${baseUrl}/service/onboard/onboard/getonboardstatus`, {
+                    merchantcode: merchantcode,
+                    mobile: String(retailer.phone),
+                    pipe: pipe
+                }, { headers });
+            });
+
+            const results = await Promise.allSettled(statusPromises);
+            
+            results.forEach((result, index) => {
+                if (result.status === 'fulfilled') {
+                    const responseData = result.value.data;
+                    if (responseData && responseData.response_code === 1 && responseData.is_approved === 'Accepted') {
+                        activePipes.push(pipesToCheck[index]);
+                    }
+                }
+            });
+            
+            // Fallback just in case the API fails but they have completed KYC locally
+            if (activePipes.length === 0 && retailer.isMerchantKycComplete) {
+                activePipes.push('bank3');
+            }
+        } catch (err) {
+            console.error("Error checking pipe status:", err);
+            if (retailer.isMerchantKycComplete) activePipes.push('bank3');
+        }
+
         return res.status(200).json({
             success: true,
             data: {
                 isMerchantKycComplete: retailer.isMerchantKycComplete,
                 isDailyAuthDoneToday: isDailyAuthDoneToday,
-                lastDailyAuthDate: retailer.lastDailyAuthDate
+                lastDailyAuthDate: retailer.lastDailyAuthDate,
+                activePipes: activePipes
             }
         });
     } catch (error) {
