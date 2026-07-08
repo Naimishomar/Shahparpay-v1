@@ -711,6 +711,10 @@ export const dailyAuth = async (req, res) => {
             }
         }
 
+        // Determine which pipe to use (prioritize verified ones)
+        const pipe = await getVerifiedPipe(merchantcode, actualMobile);
+        console.log(`[DailyAuth] Using pipe: ${pipe}`);
+
         const payload = {
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025",
@@ -723,7 +727,7 @@ export const dailyAuth = async (req, res) => {
             submerchantid: merchantcode,
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
             is_iris: "No",
-            pipe: await getVerifiedPipe(merchantcode, actualMobile)
+            pipe: pipe
         };
 
         console.log("========== DAILY AUTH PAYLOAD ==========");
@@ -739,58 +743,145 @@ export const dailyAuth = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const response = await axios.post(`${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`, { body: encryptedData }, { headers, validateStatus: () => true });
+        // First attempt: Try daily auth login
+        let response = await axios.post(`${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`, 
+            { body: encryptedData }, 
+            { headers, validateStatus: () => true } // Don't throw on any status
+        );
 
         let resultData = response.data;
+        console.log(`[DailyAuth] Auth response code: ${resultData?.response_code}`);
+        console.log(`[DailyAuth] Auth response:`, JSON.stringify(resultData, null, 2));
 
-        // We removed the response_code === 24 early return here so it can be handled by the auto-register block below.
+        // Check if registration is needed (response_code 2 or 24, or registration pending message)
+        const needsRegistration = resultData && (
+            resultData.response_code === 2 || 
+            resultData.response_code === 24 || 
+            (resultData.message && resultData.message.toLowerCase().includes('registration is pending')) ||
+            (resultData.message && resultData.message.toLowerCase().includes('not registered'))
+        );
 
-        // Auto-Register if 2FA registration is pending
-        if (resultData && (resultData.response_code === 2 || resultData.response_code === 24 || (resultData.message && resultData.message.toLowerCase().includes('registration is pending')))) {
-            console.log(`Registration pending detected (code ${resultData.response_code}). Attempting auto-registration for ${payload.pipe}...`);
+        if (needsRegistration) {
+            console.log(`[DailyAuth] Registration pending detected (code ${resultData.response_code}). Attempting auto-registration for pipe ${pipe}...`);
             
-            // We must generate a NEW referenceno to avoid "Duplicate Request ID Found" (code 10)
-            const regPayload = { ...payload, referenceno: `REG${Date.now()}` };
+            // Create registration payload with NEW reference number
+            const regPayload = { 
+                ...payload, 
+                referenceno: `REG${Date.now()}` 
+            };
+            
             const regEncryptedData = encryptPayload(JSON.stringify(regPayload));
             
-            // We must ALSO generate a new JWT token because PaySprint tracks the JWT reqid for duplicate requests!
+            // IMPORTANT: Generate a NEW JWT token for registration
+            const regToken = generatePaySprintToken();
             const regHeaders = {
-                'Token': generatePaySprintToken(),
+                'Token': regToken,
                 'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
                 'Content-Type': 'application/json'
             };
             
-            const regResponse = await axios.post(`${baseUrl}/service/aeps/kyc/Twofactorkyc/register_agent`, { body: regEncryptedData }, { headers: regHeaders, validateStatus: () => true });
+            console.log(`[DailyAuth] Registration payload:`, JSON.stringify(regPayload, null, 2));
             
-            if (regResponse.data && regResponse.data.response_code === 1) {
-                return res.status(400).json({ 
+            try {
+                const regResponse = await axios.post(
+                    `${baseUrl}/service/aeps/kyc/Twofactorkyc/register_agent`, 
+                    { body: regEncryptedData }, 
+                    { headers: regHeaders, validateStatus: () => true }
+                );
+                
+                console.log(`[DailyAuth] Registration response:`, JSON.stringify(regResponse.data, null, 2));
+                
+                const regData = regResponse.data;
+                
+                // Check if registration was successful (response_code 1)
+                if (regData && regData.response_code === 1) {
+                    // Registration successful! Now try the login again with the SAME PID data
+                    console.log(`[DailyAuth] Registration successful! Attempting login again...`);
+                    
+                    // Re-generate token for the second auth attempt
+                    const secondToken = generatePaySprintToken();
+                    const secondHeaders = {
+                        'Token': secondToken,
+                        'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+                        'Content-Type': 'application/json'
+                    };
+                    
+                    // Use the ORIGINAL auth payload (with AUTH reference, not REG)
+                    const secondEncrypted = encryptPayload(JSON.stringify(payload));
+                    
+                    const secondResponse = await axios.post(
+                        `${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`,
+                        { body: secondEncrypted },
+                        { headers: secondHeaders, validateStatus: () => true }
+                    );
+                    
+                    const secondResult = secondResponse.data;
+                    console.log(`[DailyAuth] Second auth attempt response:`, JSON.stringify(secondResult, null, 2));
+                    
+                    if (secondResult && secondResult.status) {
+                        // Update merchant's daily auth date
+                        await Retailer.findOneAndUpdate(
+                            { retailerId: merchantcode },
+                            { lastDailyAuthDate: new Date() }
+                        );
+                        
+                        return res.status(200).json({ 
+                            success: true, 
+                            message: "Registration and Daily Auth Successful!", 
+                            data: secondResult 
+                        });
+                    } else {
+                        return res.status(400).json({ 
+                            success: false, 
+                            message: "Registration successful but login failed. Please scan your fingerprint ONE MORE TIME.", 
+                            data: secondResult 
+                        });
+                    }
+                } else {
+                    // Registration failed
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: regData?.message || "2FA Registration Failed. Please contact support.", 
+                        data: regData 
+                    });
+                }
+            } catch (regError) {
+                console.error(`[DailyAuth] Registration API error:`, regError?.response?.data || regError.message);
+                return res.status(500).json({ 
                     success: false, 
-                    message: "2FA Registration Successful! However, you must scan your fingerprint ONE MORE TIME to complete the Daily Login.", 
-                    data: regResponse.data 
-                });
-            } else {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: regResponse.data?.message || "2FA Registration Failed", 
-                    data: regResponse.data 
+                    message: "Registration API error: " + (regError?.response?.data?.message || regError.message),
+                    error: regError?.response?.data || regError.message
                 });
             }
         }
 
+        // Handle successful login (no registration needed)
         if (resultData && resultData.status) {
             // Update the Retailer's last daily auth date tracker
             await Retailer.findOneAndUpdate(
                 { retailerId: merchantcode },
-                { lastDailyAuthDate: new Date() },
-                { returnDocument: 'after' }
+                { lastDailyAuthDate: new Date() }
             );
-            return res.status(200).json({ success: true, message: "Daily Auth Successful", data: resultData });
+            return res.status(200).json({ 
+                success: true, 
+                message: "Daily Auth Successful", 
+                data: resultData 
+            });
         } else {
-            return res.status(400).json({ success: false, message: resultData.message || "Daily Auth Failed", data: resultData });
+            // Login failed for other reasons
+            return res.status(400).json({ 
+                success: false, 
+                message: resultData?.message || "Daily Auth Failed", 
+                data: resultData 
+            });
         }
     } catch (error) {
         console.error("Daily Auth Error:", error?.response?.data || error.message);
-        return res.status(500).json({ success: false, message: "Internal Error", error: error.message });
+        return res.status(500).json({ 
+            success: false, 
+            message: "Internal Error during Daily Auth", 
+            error: error?.response?.data || error.message 
+        });
     }
 };
 
