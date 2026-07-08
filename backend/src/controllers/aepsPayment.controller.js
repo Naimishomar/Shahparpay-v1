@@ -13,23 +13,29 @@ const getVerifiedPipe = async (merchantcode, mobile) => {
     const headers = {
         'Token': token,
         'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        'Accept': 'application/json'
     };
 
     // Run sequentially to prioritize bank1 > bank2 > bank3 > bank5
     for (const pipe of pipes) {
         try {
+            // Must re-generate token for each request since timestamps change rapidly
+            const currentToken = generatePaySprintToken();
+            const currentHeaders = { ...headers, 'Token': currentToken };
+
             const res = await axios.post(`${baseUrl}/service/onboard/onboard/getonboardstatus`, {
                 merchantcode: merchantcode,
                 mobile: String(mobile),
                 pipe: pipe
-            }, { headers });
+            }, { headers: currentHeaders });
             
             if (res.data && res.data.response_code === 1 && res.data.is_approved === 'Accepted') {
                 return pipe;
             }
         } catch (e) {
-            console.error(`Error checking pipe status for ${pipe}:`, e.message);
+            console.error(`Error checking pipe status for ${pipe}:`, e.message, e.response?.data);
         }
     }
     // Fallback if none are accepted or API fails
