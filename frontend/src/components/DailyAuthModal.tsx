@@ -12,8 +12,8 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose }) => {
     const actualMerchantCode = user?.retailerId || user?.distributorId || user?.adminId || "";
     const actualAadhaar = user?.aadhaarNumber || "";
     const [loading, setLoading] = useState(false);
-    const [merchantCode, setMerchantCode] = useState(actualMerchantCode);
-    const [aadhaar, setAadhaar] = useState(actualAadhaar);
+    const [merchantCode] = useState(actualMerchantCode);
+    const [aadhaar] = useState(actualAadhaar);
     
     const handleCaptureAndAuth = async () => {
         if (!merchantCode || aadhaar.length !== 12) {
