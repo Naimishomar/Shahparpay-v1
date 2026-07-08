@@ -2,6 +2,7 @@ import axios from 'axios';
 import mongoose from 'mongoose';
 import { generatePaySprintToken, encryptPayload } from '../utils/paysprint.util.js';
 import Retailer from "../models/users/retailer.model.js";
+import Distributor from "../models/users/distributor.model.js";
 import Transaction from "../models/transaction.model.js";
 
 export const balanceEnquiry = async (req, res) => {
