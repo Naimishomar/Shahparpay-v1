@@ -743,21 +743,11 @@ export const dailyAuth = async (req, res) => {
 
         let resultData = response.data;
 
-        if (resultData && resultData.response_code === 24) {
-            console.log("Merchant onboarding is pending or IP is not whitelisted. Code 24 returned from Daily Auth.");
-            
-            // We NO LONGER reset isMerchantKycComplete here, because it causes an infinite loop
-            // if Paysprint thinks they are onboarded but the pipe is wrong due to IP whitelist issues.
-            
-            return res.status(400).json({ 
-                success: false, 
-                message: "AEPS Authentication Failed. Either your KYC is pending bank approval, or your Server IP is not whitelisted on PaySprint. Please check your PaySprint dashboard." 
-            });
-        }
+        // We removed the response_code === 24 early return here so it can be handled by the auto-register block below.
 
         // Auto-Register if 2FA registration is pending
-        if (resultData && (resultData.response_code === 2 || (resultData.message && resultData.message.toLowerCase().includes('registration is pending')))) {
-            console.log("Registration pending detected. Attempting auto-registration for Bank 3...");
+        if (resultData && (resultData.response_code === 2 || resultData.response_code === 24 || (resultData.message && resultData.message.toLowerCase().includes('registration is pending')))) {
+            console.log(`Registration pending detected (code ${resultData.response_code}). Attempting auto-registration for ${payload.pipe}...`);
             const regResponse = await axios.post(`${baseUrl}/service/aeps/kyc/Twofactorkyc/register_agent`, { body: encryptedData }, { headers });
             
             if (regResponse.data && regResponse.data.response_code === 1) {
