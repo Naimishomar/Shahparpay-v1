@@ -7,42 +7,151 @@ import Transaction from "../models/transaction.model.js";
 
 // Helper function to resolve which bank pipe is verified for the merchant
 const getVerifiedPipe = async (merchantcode, mobile) => {
+    // IMPORTANT: We MUST prioritize bank3 first because getWebOnboardingUrl in paysprint.util.js 
+    // hardcodes "pipe: bank3". If we prioritize bank1/bank2, PaySprint falsely returns "Accepted" 
+    // but fails the actual auth_login/register_agent calls, causing an infinite loop.
     const pipes = ['bank3', 'bank2', 'bank1', 'bank5'];
     const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
-    const token = generatePaySprintToken();
-    const headers = {
-        'Token': token,
-        'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-        'Accept': 'application/json'
-    };
+    
+    console.log(`[getVerifiedPipe] Checking pipes for merchant: ${merchantcode}`);
 
-    // Run sequentially to prioritize bank1 > bank2 > bank3 > bank5
+    // Run sequentially to prioritize bank3 > bank2 > bank1 > bank5
     for (const pipe of pipes) {
         try {
             // Must re-generate token for each request since timestamps change rapidly
             const currentToken = generatePaySprintToken();
-            const currentHeaders = { ...headers, 'Token': currentToken };
+            const headers = {
+                'Token': currentToken,
+                'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+                'Content-Type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                'Accept': 'application/json'
+            };
 
             const res = await axios.post(`${baseUrl}/service/onboard/onboard/getonboardstatus`, {
                 merchantcode: merchantcode,
                 mobile: String(mobile),
                 pipe: pipe
-            }, { headers: currentHeaders });
+            }, { headers, validateStatus: () => true });
             
             console.log(`[getVerifiedPipe] Response for ${pipe}:`, res.data);
             
-            // Sometimes PaySprint returns is_approved differently, so we check response_code === 1
-            if (res.data && res.data.response_code === 1 && (res.data.status === true || res.data.is_approved)) {
+            // Check if this pipe is approved
+            if (res.data && 
+                res.data.response_code === 1 && 
+                (res.data.status === true || res.data.is_approved === true || res.data.is_approved === 'Accepted')) {
+                console.log(`[getVerifiedPipe] ✅ ${pipe} is verified and approved`);
                 return pipe;
             }
         } catch (e) {
-            console.error(`Error checking pipe status for ${pipe}:`, e.message, e.response?.data);
+            console.log(`[getVerifiedPipe] ⚠️ Error checking ${pipe}:`, e.message);
         }
     }
     // Fallback if none are accepted or API fails
+    console.log(`[getVerifiedPipe] No verified pipes found, defaulting to bank3`);
     return 'bank3';
+};
+
+// Helper function for merchant 2FA auth (used in cash withdrawal/deposit)
+const performMerchantAuth = async (merchantPidData, retailer, req) => {
+    const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+    
+    const twfPayload = {
+        latitude: req.body.latitude || "28.7041",
+        longitude: req.body.longitude || "77.1025",
+        mobilenumber: retailer.contactNumber || "9999999999",
+        referenceno: `AUTH${Date.now()}`,
+        ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
+        adhaarnumber: retailer.aadhaarNumber,
+        accessmodetype: "SITE",
+        data: merchantPidData,
+        submerchantid: retailer.retailerId,
+        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+        is_iris: "No",
+        pipe: await getVerifiedPipe(retailer.retailerId, retailer.contactNumber)
+    };
+
+    const twfToken = generatePaySprintToken();
+    const twfEncrypted = encryptPayload(JSON.stringify(twfPayload));
+    const twfHeaders = {
+        'Token': twfToken,
+        'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+        'Content-Type': 'application/json'
+    };
+
+    const twfResponse = await axios.post(
+        `${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`, 
+        { body: twfEncrypted }, 
+        { headers: twfHeaders, validateStatus: () => true }
+    );
+    
+    // Check if registration is needed
+    if (twfResponse.data && 
+        (twfResponse.data.response_code === 2 || 
+         twfResponse.data.response_code === 24 || 
+         (twfResponse.data.message && twfResponse.data.message.toLowerCase().includes('registration is pending')))) {
+        
+        console.log(`[MerchantAuth] Registration pending, attempting auto-register...`);
+        
+        // Attempt registration
+        const regPayload = { 
+            ...twfPayload, 
+            referenceno: `REG${Date.now()}` 
+        };
+        const regEncrypted = encryptPayload(JSON.stringify(regPayload));
+        const regToken = generatePaySprintToken();
+        const regHeaders = {
+            'Token': regToken,
+            'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+            'Content-Type': 'application/json'
+        };
+        
+        const regResponse = await axios.post(
+            `${baseUrl}/service/aeps/kyc/Twofactorkyc/register_agent`,
+            { body: regEncrypted },
+            { headers: regHeaders, validateStatus: () => true }
+        );
+        
+        if (regResponse.data && regResponse.data.response_code === 1) {
+            // Registration successful, try auth again with new token
+            const secondToken = generatePaySprintToken();
+            const secondHeaders = {
+                'Token': secondToken,
+                'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+                'Content-Type': 'application/json'
+            };
+            const secondEncrypted = encryptPayload(JSON.stringify(twfPayload));
+            const secondResponse = await axios.post(
+                `${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`,
+                { body: secondEncrypted },
+                { headers: secondHeaders, validateStatus: () => true }
+            );
+            
+            if (secondResponse.data && secondResponse.data.status) {
+                return { success: true, data: secondResponse.data };
+            } else {
+                return { 
+                    success: false, 
+                    message: "Registration successful but auth failed. Please scan fingerprint again." 
+                };
+            }
+        } else {
+            return { 
+                success: false, 
+                message: regResponse.data?.message || "Merchant 2FA Registration Failed" 
+            };
+        }
+    }
+    
+    // Check if auth was successful
+    if (twfResponse.data && twfResponse.data.status) {
+        return { success: true, data: twfResponse.data };
+    } else {
+        return { 
+            success: false, 
+            message: twfResponse.data?.message || "Merchant 2FA Auth Failed" 
+        };
+    }
 };
 
 export const balanceEnquiry = async (req, res) => {
@@ -57,10 +166,14 @@ export const balanceEnquiry = async (req, res) => {
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         const retailer = await Retailer.findById(req.user.id);
+        if (!retailer) {
+            return res.status(404).json({ success: false, message: "Retailer not found" });
+        }
+
         const payload = {
             latitude: String(latitude || "28.7041"),
             longitude: String(longitude || "77.1025"),
-            mobilenumber: String(mobileNumber || "9999999999"),
+            mobilenumber: String(mobileNumber || retailer.contactNumber || "9999999999"),
             referenceno: `REF${Date.now()}`,
             adhaarnumber: String(aadhaarNumber),
             accessmodetype: "SITE",
@@ -81,7 +194,11 @@ export const balanceEnquiry = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const response = await axios.post(`${baseUrl}/service/aeps/balanceenquiry/index`, { body: encryptedData }, { headers });
+        const response = await axios.post(
+            `${baseUrl}/service/aeps/balanceenquiry/index`, 
+            { body: encryptedData }, 
+            { headers, validateStatus: () => true }
+        );
 
         if (response.data && response.data.status) {
             return res.status(200).json({
@@ -92,7 +209,7 @@ export const balanceEnquiry = async (req, res) => {
         } else {
             return res.status(400).json({
                 success: false,
-                message: response.data.message || "Failed to fetch balance",
+                message: response.data?.message || "Failed to fetch balance",
                 data: response.data
             });
         }
@@ -130,7 +247,11 @@ export const getBankList = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const response = await axios.post(`${baseUrl}/service/aeps/banklist/index`, {}, { headers });
+        const response = await axios.post(
+            `${baseUrl}/service/aeps/banklist/index`, 
+            {}, 
+            { headers, validateStatus: () => true }
+        );
 
         if (response.data && response.data.status) {
             const banksData = response.data.banklist ? response.data.banklist.data : response.data.data;
@@ -143,9 +264,17 @@ export const getBankList = async (req, res) => {
                 data: banksData
             });
         } else {
+            // Return cached banks as fallback
+            if (cachedAepsBanks) {
+                return res.status(200).json({
+                    success: true,
+                    message: "Bank list fetched from fallback cache",
+                    data: cachedAepsBanks
+                });
+            }
             return res.status(400).json({
                 success: false,
-                message: response.data.message || "Failed to fetch bank list",
+                message: response.data?.message || "Failed to fetch bank list",
                 data: response.data
             });
         }
@@ -189,33 +318,14 @@ export const cashWithdrawal = async (req, res) => {
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         const referenceNo = `CW${Date.now()}`;
 
-        // 1. Merchant 2FA (Txn Auth)
+        // 1. Merchant 2FA (Txn Auth) - Using the improved helper function
         if (merchantPidData) {
-            const twfPayload = {
-                latitude: latitude || "28.7041",
-                longitude: longitude || "77.1025",
-                mobilenumber: retailer.contactNumber || "9999999999",
-                referenceno: `AUTH${Date.now()}`,
-                ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
-                adhaarnumber: retailer.aadhaarNumber,
-                accessmodetype: "SITE",
-                data: merchantPidData,
-                submerchantid: retailer.retailerId,
-                timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-                is_iris: "No"
-            };
-
-            const twfToken = generatePaySprintToken();
-            const twfEncrypted = encryptPayload(JSON.stringify(twfPayload));
-            const twfHeaders = {
-                'Token': twfToken,
-                'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
-                'Content-Type': 'application/json'
-            };
-
-            const twfResponse = await axios.post(`${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`, { body: twfEncrypted }, { headers: twfHeaders });
-            if (!twfResponse.data || !twfResponse.data.status) {
-                return res.status(400).json({ success: false, message: twfResponse.data.message || "Merchant Auth Failed" });
+            const authResult = await performMerchantAuth(merchantPidData, retailer, req);
+            if (!authResult.success) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: authResult.message || "Merchant 2FA Auth Failed" 
+                });
             }
         }
 
@@ -238,7 +348,7 @@ export const cashWithdrawal = async (req, res) => {
         const payload = {
             latitude: String(latitude || "28.7041"),
             longitude: String(longitude || "77.1025"),
-            mobilenumber: String(mobileNumber || "9999999999"),
+            mobilenumber: String(mobileNumber || retailer.contactNumber || "9999999999"),
             referenceno: referenceNo,
             ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
             adhaarnumber: String(aadhaarNumber),
@@ -263,7 +373,11 @@ export const cashWithdrawal = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const response = await axios.post(`${baseUrl}/service/aeps/authcashwithdraw/index`, { body: encryptedData }, { headers });
+        const response = await axios.post(
+            `${baseUrl}/service/aeps/authcashwithdraw/index`, 
+            { body: encryptedData }, 
+            { headers, validateStatus: () => true }
+        );
 
         let txnStatus = (response.data && response.data.status) ? 'SUCCESS' : 'FAILED';
         let paysprintRef = response.data?.data?.ackno || response.data?.data?.rrn || null;
@@ -287,7 +401,6 @@ export const cashWithdrawal = async (req, res) => {
             if (paysprintRef) {
                 newTxn.metadata = { ...newTxn.metadata, paysprintRef };
             }
-            // Note: Commissions skipped for now as per user request
             await newTxn.save({ session });
 
             await session.commitTransaction();
@@ -308,7 +421,7 @@ export const cashWithdrawal = async (req, res) => {
 
             return res.status(400).json({
                 success: false,
-                message: response.data.message || "Cash withdrawal failed",
+                message: response.data?.message || "Cash withdrawal failed",
                 data: response.data
             });
         }
@@ -335,10 +448,14 @@ export const miniStatement = async (req, res) => {
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         const retailer = await Retailer.findById(req.user.id);
+        if (!retailer) {
+            return res.status(404).json({ success: false, message: "Retailer not found" });
+        }
+
         const payload = {
             latitude: String(latitude || "28.7041"),
             longitude: String(longitude || "77.1025"),
-            mobilenumber: String(mobileNumber || "9999999999"),
+            mobilenumber: String(mobileNumber || retailer.contactNumber || "9999999999"),
             referenceno: `MS${Date.now()}`,
             ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
             adhaarnumber: String(aadhaarNumber),
@@ -361,28 +478,47 @@ export const miniStatement = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const response = await axios.post(`${baseUrl}/service/aeps/ministatement/index`, { body: encryptedData }, { headers });
+        const response = await axios.post(
+            `${baseUrl}/service/aeps/ministatement/index`, 
+            { body: encryptedData }, 
+            { headers, validateStatus: () => true }
+        );
 
         if (response.data && response.data.status) {
-            return res.status(200).json({ success: true, message: "Mini Statement fetched", data: response.data });
+            return res.status(200).json({ 
+                success: true, 
+                message: "Mini Statement fetched", 
+                data: response.data 
+            });
         } else {
-            return res.status(400).json({ success: false, message: response.data.message || "Failed", data: response.data });
+            return res.status(400).json({ 
+                success: false, 
+                message: response.data?.message || "Failed to fetch mini statement", 
+                data: response.data 
+            });
         }
     } catch (error) {
         console.error("Mini Statement Error:", error?.response?.data || error.message);
-        return res.status(500).json({ success: false, message: "Internal Error", error: error.message });
+        return res.status(500).json({ 
+            success: false, 
+            message: "Internal Error", 
+            error: error.message 
+        });
     }
 };
 
 export const cashDeposit = async (req, res) => {
+    let session = null;
     try {
         const { latitude, longitude, mobileNumber, aadhaarNumber, bankIIN, pidData, merchantPidData, amount, bankName, customerName, pipe } = req.body;
 
         if (!aadhaarNumber || !bankIIN || !pidData || !amount) {
-            return res.status(400).json({ success: false, message: "Aadhaar number, bank IIN, PID Data, and amount are required" });
+            return res.status(400).json({ 
+                success: false, 
+                message: "Aadhaar number, bank IIN, PID Data, and amount are required" 
+            });
         }
 
-        const Retailer = (await import('../models/retailer.model.js')).default;
         const retailer = await Retailer.findById(req.user.id);
         if (!retailer) {
             return res.status(404).json({ success: false, message: "Retailer not found" });
@@ -391,33 +527,14 @@ export const cashDeposit = async (req, res) => {
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         const referenceNo = `CD${Date.now()}`;
 
-        // 1. Merchant 2FA (Txn Auth)
+        // 1. Merchant 2FA (Txn Auth) - Using the improved helper function
         if (merchantPidData) {
-            const twfPayload = {
-                latitude: latitude || "28.7041",
-                longitude: longitude || "77.1025",
-                mobilenumber: retailer.contactNumber || "9999999999",
-                referenceno: `AUTH${Date.now()}`,
-                ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
-                adhaarnumber: retailer.aadhaarNumber,
-                accessmodetype: "SITE",
-                data: merchantPidData,
-                submerchantid: retailer.retailerId,
-                timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-                is_iris: "No"
-            };
-
-            const twfToken = generatePaySprintToken();
-            const twfEncrypted = encryptPayload(JSON.stringify(twfPayload));
-            const twfHeaders = {
-                'Token': twfToken,
-                'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
-                'Content-Type': 'application/json'
-            };
-
-            const twfResponse = await axios.post(`${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`, { body: twfEncrypted }, { headers: twfHeaders });
-            if (!twfResponse.data || !twfResponse.data.status) {
-                return res.status(400).json({ success: false, message: twfResponse.data.message || "Merchant Auth Failed" });
+            const authResult = await performMerchantAuth(merchantPidData, retailer, req);
+            if (!authResult.success) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: authResult.message || "Merchant 2FA Auth Failed" 
+                });
             }
         }
 
@@ -441,14 +558,17 @@ export const cashDeposit = async (req, res) => {
                 }
             });
         } catch (error) {
-            return res.status(400).json({ success: false, message: error.message || "Insufficient Main Wallet balance for Cash Deposit" });
+            return res.status(400).json({ 
+                success: false, 
+                message: error.message || "Insufficient Main Wallet balance for Cash Deposit" 
+            });
         }
 
         // 3. Make the API Call to PaySprint
         const payload = {
             latitude: String(latitude || "28.7041"),
             longitude: String(longitude || "77.1025"),
-            mobilenumber: String(mobileNumber || "9999999999"),
+            mobilenumber: String(mobileNumber || retailer.contactNumber || "9999999999"),
             referenceno: referenceNo,
             ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
             adhaarnumber: String(aadhaarNumber),
@@ -479,7 +599,11 @@ export const cashDeposit = async (req, res) => {
         let apiMessage = "Transaction failed";
 
         try {
-            response = await axios.post(`${baseUrl}/service/cashdeposit/V3/Cashdeposit/index`, { body: encryptedData }, { headers });
+            response = await axios.post(
+                `${baseUrl}/service/cashdeposit/V3/Cashdeposit/index`, 
+                { body: encryptedData }, 
+                { headers, validateStatus: () => true }
+            );
             if (response.data && response.data.status) {
                 txnStatus = 'SUCCESS';
             }
@@ -491,14 +615,15 @@ export const cashDeposit = async (req, res) => {
         }
         
         // 4. Handle Success/Failure
-        const Transaction = (await import('../models/transaction.model.js')).default;
-        
         if (txnStatus === 'SUCCESS') {
-            await Transaction.findOneAndUpdate({ transactionId: referenceNo }, { 
-                status: 'SUCCESS',
-                'metadata.paysprintRef': paysprintRef,
-                'metadata.apiMessage': apiMessage
-            });
+            await Transaction.findOneAndUpdate(
+                { transactionId: referenceNo }, 
+                { 
+                    status: 'SUCCESS',
+                    'metadata.paysprintRef': paysprintRef,
+                    'metadata.apiMessage': apiMessage
+                }
+            );
 
             return res.status(200).json({
                 success: true,
@@ -516,10 +641,13 @@ export const cashDeposit = async (req, res) => {
                 metadata: { originalTxn: referenceNo, note: 'Refund for failed Cash Deposit' }
             });
 
-            await Transaction.findOneAndUpdate({ transactionId: referenceNo }, { 
-                status: 'FAILED',
-                'metadata.apiMessage': apiMessage
-            });
+            await Transaction.findOneAndUpdate(
+                { transactionId: referenceNo }, 
+                { 
+                    status: 'FAILED',
+                    'metadata.apiMessage': apiMessage
+                }
+            );
 
             return res.status(400).json({
                 success: false,
@@ -527,15 +655,25 @@ export const cashDeposit = async (req, res) => {
             });
         }
     } catch (error) {
+        if (session) {
+            await session.abortTransaction();
+            session.endSession();
+        }
         console.error("Cash Deposit Error:", error);
-        return res.status(500).json({ success: false, message: "Internal server error during cash deposit" });
+        return res.status(500).json({ 
+            success: false, 
+            message: "Internal server error during cash deposit" 
+        });
     }
 };
 
 export const cashWithdrawalTxnStatus = async (req, res) => {
     try {
         const { reference } = req.body;
-        if (!reference) return res.status(400).json({ success: false, message: "reference is required" });
+        if (!reference) return res.status(400).json({ 
+            success: false, 
+            message: "reference is required" 
+        });
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         const payload = { reference };
@@ -549,23 +687,40 @@ export const cashWithdrawalTxnStatus = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const response = await axios.post(`${baseUrl}/service/aeps/aepsquery/query`, { body: encryptedData }, { headers });
+        const response = await axios.post(
+            `${baseUrl}/service/aeps/aepsquery/query`, 
+            { body: encryptedData }, 
+            { headers, validateStatus: () => true }
+        );
 
-        return res.status(200).json({ success: true, data: response.data });
+        return res.status(200).json({ 
+            success: true, 
+            data: response.data 
+        });
     } catch (error) {
         console.error("AEPS Txn Status Error:", error?.response?.data || error.message);
-        return res.status(500).json({ success: false, message: "Internal Error", error: error.message });
+        return res.status(500).json({ 
+            success: false, 
+            message: "Internal Error", 
+            error: error.message 
+        });
     }
 };
 
 export const sendMerchantOtp = async (req, res) => {
     try {
         const { merchantcode, aadhaar, latitude, longitude } = req.body;
-        if (!merchantcode || !aadhaar) return res.status(400).json({ success: false, message: "merchantcode and aadhaar required" });
+        if (!merchantcode || !aadhaar) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "merchantcode and aadhaar required" 
+            });
+        }
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         let mobile = "9999999999";
-        const user = await Retailer.findOne({ retailerId: merchantcode }) || await Distributor.findOne({ distributorId: merchantcode });
+        const user = await Retailer.findOne({ retailerId: merchantcode }) || 
+                     await Distributor.findOne({ distributorId: merchantcode });
         if (user && user.contactNumber) mobile = user.contactNumber;
 
         const payload = {
@@ -588,23 +743,40 @@ export const sendMerchantOtp = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const response = await axios.post(`${baseUrl}/service/aeps/v3/merchantkyc/send_otp`, payload, { headers });
+        const response = await axios.post(
+            `${baseUrl}/service/aeps/v3/merchantkyc/send_otp`, 
+            payload, 
+            { headers, validateStatus: () => true }
+        );
 
-        return res.status(200).json({ success: true, data: response.data });
+        return res.status(200).json({ 
+            success: true, 
+            data: response.data 
+        });
     } catch (error) {
         console.error("Send OTP Error:", error?.response?.data || error.message);
-        return res.status(500).json({ success: false, message: "Internal Error", error: error.message });
+        return res.status(500).json({ 
+            success: false, 
+            message: "Internal Error", 
+            error: error.message 
+        });
     }
 };
 
 export const resendMerchantOtp = async (req, res) => {
     try {
         const { merchantcode, aadhaar, latitude, longitude, stateresp, ekyc_id } = req.body;
-        if (!merchantcode || !ekyc_id) return res.status(400).json({ success: false, message: "Required fields missing" });
+        if (!merchantcode || !ekyc_id) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Required fields missing" 
+            });
+        }
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         let mobile = "9999999999";
-        const user = await Retailer.findOne({ retailerId: merchantcode }) || await Distributor.findOne({ distributorId: merchantcode });
+        const user = await Retailer.findOne({ retailerId: merchantcode }) || 
+                     await Distributor.findOne({ distributorId: merchantcode });
         if (user && user.contactNumber) mobile = user.contactNumber;
 
         const payload = {
@@ -629,19 +801,35 @@ export const resendMerchantOtp = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const response = await axios.post(`${baseUrl}/service/aeps/v3/merchantkyc/resend_otp`, payload, { headers });
+        const response = await axios.post(
+            `${baseUrl}/service/aeps/v3/merchantkyc/resend_otp`, 
+            payload, 
+            { headers, validateStatus: () => true }
+        );
 
-        return res.status(200).json({ success: true, data: response.data });
+        return res.status(200).json({ 
+            success: true, 
+            data: response.data 
+        });
     } catch (error) {
         console.error("Resend OTP Error:", error?.response?.data || error.message);
-        return res.status(500).json({ success: false, message: "Internal Error", error: error.message });
+        return res.status(500).json({ 
+            success: false, 
+            message: "Internal Error", 
+            error: error.message 
+        });
     }
 };
 
 export const verifyMerchantOtp = async (req, res) => {
     try {
         const { merchantcode, aadhaar, latitude, longitude, otp, stateresp, ekyc_id, pidData } = req.body;
-        if (!merchantcode || !otp || !pidData) return res.status(400).json({ success: false, message: "Required fields missing" });
+        if (!merchantcode || !otp || !pidData) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Required fields missing" 
+            });
+        }
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         
@@ -649,7 +837,8 @@ export const verifyMerchantOtp = async (req, res) => {
         const encryptedPidData = encryptPayload(pidData);
 
         let mobile = "9999999999";
-        const user = await Retailer.findOne({ retailerId: merchantcode }) || await Distributor.findOne({ distributorId: merchantcode });
+        const user = await Retailer.findOne({ retailerId: merchantcode }) || 
+                     await Distributor.findOne({ distributorId: merchantcode });
         if (user && user.contactNumber) mobile = user.contactNumber;
 
         const payload = {
@@ -676,21 +865,31 @@ export const verifyMerchantOtp = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const response = await axios.post(`${baseUrl}/service/aeps/v3/merchantkyc/verify_otp`, payload, { headers });
+        const response = await axios.post(
+            `${baseUrl}/service/aeps/v3/merchantkyc/verify_otp`, 
+            payload, 
+            { headers, validateStatus: () => true }
+        );
 
         if (response.data && response.data.status) {
             // Update the Retailer's KYC completion status
             await Retailer.findOneAndUpdate(
                 { retailerId: merchantcode },
-                { isMerchantKycComplete: true },
-                { returnDocument: 'after' }
+                { isMerchantKycComplete: true }
             );
         }
 
-        return res.status(200).json({ success: true, data: response.data });
+        return res.status(200).json({ 
+            success: true, 
+            data: response.data 
+        });
     } catch (error) {
         console.error("Verify OTP Error:", error?.response?.data || error.message);
-        return res.status(500).json({ success: false, message: "Internal Error", error: error.message });
+        return res.status(500).json({ 
+            success: false, 
+            message: "Internal Error", 
+            error: error.message 
+        });
     }
 };
 
@@ -698,20 +897,24 @@ export const dailyAuth = async (req, res) => {
     try {
         const { merchantcode, aadhaarNumber, mobileNumber, pidData, latitude, longitude } = req.body;
         if (!merchantcode || !aadhaarNumber || !pidData) {
-            return res.status(400).json({ success: false, message: "Required fields missing for Daily Auth" });
+            return res.status(400).json({ 
+                success: false, 
+                message: "Required fields missing for Daily Auth" 
+            });
         }
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         
         let actualMobile = mobileNumber;
         if (!mobileNumber || mobileNumber === "9999999999") {
-            const user = await Retailer.findOne({ retailerId: merchantcode }) || await Distributor.findOne({ distributorId: merchantcode });
+            const user = await Retailer.findOne({ retailerId: merchantcode }) || 
+                         await Distributor.findOne({ distributorId: merchantcode });
             if (user && user.contactNumber) {
                 actualMobile = user.contactNumber;
             }
         }
 
-        // Determine which pipe to use (prioritize verified ones)
+        // Determine which pipe to use
         const pipe = await getVerifiedPipe(merchantcode, actualMobile);
         console.log(`[DailyAuth] Using pipe: ${pipe}`);
 
@@ -744,16 +947,17 @@ export const dailyAuth = async (req, res) => {
         };
 
         // First attempt: Try daily auth login
-        let response = await axios.post(`${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`, 
+        let response = await axios.post(
+            `${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`, 
             { body: encryptedData }, 
-            { headers, validateStatus: () => true } // Don't throw on any status
+            { headers, validateStatus: () => true }
         );
 
         let resultData = response.data;
         console.log(`[DailyAuth] Auth response code: ${resultData?.response_code}`);
         console.log(`[DailyAuth] Auth response:`, JSON.stringify(resultData, null, 2));
 
-        // Check if registration is needed (response_code 2 or 24, or registration pending message)
+        // Check if registration is needed
         const needsRegistration = resultData && (
             resultData.response_code === 2 || 
             resultData.response_code === 24 || 
@@ -762,7 +966,7 @@ export const dailyAuth = async (req, res) => {
         );
 
         if (needsRegistration) {
-            console.log(`[DailyAuth] Registration pending detected (code ${resultData.response_code}). Attempting auto-registration for pipe ${pipe}...`);
+            console.log(`[DailyAuth] Registration pending detected. Attempting auto-registration for pipe ${pipe}...`);
             
             // Create registration payload with NEW reference number
             const regPayload = { 
@@ -772,7 +976,7 @@ export const dailyAuth = async (req, res) => {
             
             const regEncryptedData = encryptPayload(JSON.stringify(regPayload));
             
-            // IMPORTANT: Generate a NEW JWT token for registration
+            // Generate a NEW JWT token for registration
             const regToken = generatePaySprintToken();
             const regHeaders = {
                 'Token': regToken,
@@ -795,7 +999,7 @@ export const dailyAuth = async (req, res) => {
                 
                 // Check if registration was successful (response_code 1)
                 if (regData && regData.response_code === 1) {
-                    // Registration successful! Now try the login again with the SAME PID data
+                    // Registration successful! Now try the login again
                     console.log(`[DailyAuth] Registration successful! Attempting login again...`);
                     
                     // Re-generate token for the second auth attempt
@@ -889,12 +1093,18 @@ export const getMerchantStatus = async (req, res) => {
     try {
         const { merchantcode } = req.query;
         if (!merchantcode) {
-            return res.status(400).json({ success: false, message: "merchantcode query param is required" });
+            return res.status(400).json({ 
+                success: false, 
+                message: "merchantcode query param is required" 
+            });
         }
 
         const retailer = await Retailer.findOne({ retailerId: merchantcode });
         if (!retailer) {
-            return res.status(404).json({ success: false, message: "Retailer not found" });
+            return res.status(404).json({ 
+                success: false, 
+                message: "Retailer not found" 
+            });
         }
 
         // Check if daily auth was done today
@@ -918,16 +1128,20 @@ export const getMerchantStatus = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const pipesToCheck = ['bank2', 'bank3', 'bank5'];
+        const pipesToCheck = ['bank3', 'bank2', 'bank1', 'bank5'];
         const activePipes = [];
 
         try {
             const statusPromises = pipesToCheck.map(pipe => {
-                return axios.post(`${baseUrl}/service/onboard/onboard/getonboardstatus`, {
-                    merchantcode: merchantcode,
-                    mobile: String(retailer.phone),
-                    pipe: pipe
-                }, { headers });
+                return axios.post(
+                    `${baseUrl}/service/onboard/onboard/getonboardstatus`,
+                    {
+                        merchantcode: merchantcode,
+                        mobile: String(retailer.contactNumber || retailer.phone), // Try both fields
+                        pipe: pipe
+                    },
+                    { headers, validateStatus: () => true }
+                );
             });
 
             const results = await Promise.allSettled(statusPromises);
@@ -935,7 +1149,9 @@ export const getMerchantStatus = async (req, res) => {
             results.forEach((result, index) => {
                 if (result.status === 'fulfilled') {
                     const responseData = result.value.data;
-                    if (responseData && responseData.response_code === 1 && responseData.is_approved === 'Accepted') {
+                    if (responseData && 
+                        responseData.response_code === 1 && 
+                        (responseData.is_approved === 'Accepted' || responseData.is_approved === true)) {
                         activePipes.push(pipesToCheck[index]);
                     }
                 }
@@ -953,14 +1169,18 @@ export const getMerchantStatus = async (req, res) => {
         return res.status(200).json({
             success: true,
             data: {
-                isMerchantKycComplete: retailer.isMerchantKycComplete,
+                isMerchantKycComplete: retailer.isMerchantKycComplete || false,
                 isDailyAuthDoneToday: isDailyAuthDoneToday,
                 lastDailyAuthDate: retailer.lastDailyAuthDate,
-                activePipes: activePipes
+                activePipes: activePipes.length > 0 ? activePipes : ['bank3']
             }
         });
     } catch (error) {
         console.error("Get Merchant Status Error:", error);
-        return res.status(500).json({ success: false, message: "Internal Error", error: error.message });
+        return res.status(500).json({ 
+            success: false, 
+            message: "Internal Error", 
+            error: error.message 
+        });
     }
 };
