@@ -753,7 +753,14 @@ export const dailyAuth = async (req, res) => {
             const regPayload = { ...payload, referenceno: `REG${Date.now()}` };
             const regEncryptedData = encryptPayload(JSON.stringify(regPayload));
             
-            const regResponse = await axios.post(`${baseUrl}/service/aeps/kyc/Twofactorkyc/register_agent`, { body: regEncryptedData }, { headers });
+            // We must ALSO generate a new JWT token because PaySprint tracks the JWT reqid for duplicate requests!
+            const regHeaders = {
+                'Token': generatePaySprintToken(),
+                'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+                'Content-Type': 'application/json'
+            };
+            
+            const regResponse = await axios.post(`${baseUrl}/service/aeps/kyc/Twofactorkyc/register_agent`, { body: regEncryptedData }, { headers: regHeaders });
             
             if (regResponse.data && regResponse.data.response_code === 1) {
                 return res.status(400).json({ 
