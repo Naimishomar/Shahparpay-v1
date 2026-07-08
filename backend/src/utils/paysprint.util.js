@@ -264,8 +264,17 @@ export const getWebOnboardingUrl = async (merchantData) => {
             return { success: false, message: "PaySprint Web Onboarding API is currently unavailable." };
         }
         
-        if (data.status) {
-            return { success: true, message: data.message, url: data.redirecturl || data.url };
+        console.log("PAYSPRINT RESPONSE:", data);
+        
+        if (data.status || data.response_code === 1) {
+            // PaySprint might return the URL in `data.redirecturl`, `data.url`, `data.data`, or just a string if data itself is the URL (unlikely).
+            const redirectUrl = data.redirecturl || data.url || data.data;
+            if (redirectUrl) {
+                return { success: true, message: data.message || "Success", url: redirectUrl };
+            } else {
+                console.error("URL not found in successful PaySprint response");
+                return { success: false, message: "Success returned but URL is missing from PaySprint." };
+            }
         } else {
             return { success: false, message: data.message || "Failed to generate Onboarding URL." };
         }
