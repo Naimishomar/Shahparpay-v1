@@ -237,7 +237,14 @@ const DMT = () => {
                                         <input
                                             type="text"
                                             value={mobile}
-                                            onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/\D/g, '');
+                                                if (val.length > 10) {
+                                                    toast.error("Mobile number cannot exceed 10 digits");
+                                                    return;
+                                                }
+                                                setMobile(val);
+                                            }}
                                             placeholder="Enter 10-digit number"
                                             className="w-full pl-12 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
                                         />

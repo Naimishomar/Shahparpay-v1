@@ -5,6 +5,7 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
 
 const Recharge = () => {
     const { user } = useAuth();
@@ -282,7 +283,14 @@ const Recharge = () => {
                                         type="text" 
                                         placeholder="Enter 10-digit mobile number"
                                         value={mobileNumber}
-                                        onChange={e => setMobileNumber(e.target.value)}
+                                        onChange={e => {
+                                            const val = e.target.value.replace(/\D/g, '');
+                                            if (val.length > 10) {
+                                                toast.error("Mobile number cannot exceed 10 digits");
+                                                return;
+                                            }
+                                            setMobileNumber(val);
+                                        }}
                                         className="w-full md:w-1/4 p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
                                     />
                                     <select 

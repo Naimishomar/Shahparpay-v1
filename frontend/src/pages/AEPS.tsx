@@ -510,7 +510,14 @@ const AEPS = () => {
                                 <input 
                                     type="text" 
                                     value={mobileNo}
-                                    onChange={(e) => setMobileNo(e.target.value)}
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(/\D/g, ''); // Ensure only digits
+                                        if (val.length > 10) {
+                                            toast.error("Mobile number cannot exceed 10 digits");
+                                            return;
+                                        }
+                                        setMobileNo(val);
+                                    }}
                                     placeholder="Enter your mobile number" 
                                     className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors" 
                                 />
