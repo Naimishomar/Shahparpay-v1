@@ -625,7 +625,8 @@ export const cashDeposit = async (req, res) => {
                     status: 'SUCCESS',
                     'metadata.paysprintRef': paysprintRef,
                     'metadata.apiMessage': apiMessage
-                }
+                },
+                { session }
             );
 
             await session.commitTransaction();
