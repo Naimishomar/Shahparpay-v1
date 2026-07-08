@@ -583,7 +583,7 @@ export const generateOnboardUrl = async (req, res) => {
         const merchantData = {
             merchantcode: merchantCodeFinal.toString(),
             mobile: user.contactNumber,
-            is_new: user.isExistingMerchant ? false : true,
+            is_new: isNew === "1" || isNew === true ? true : (user.isExistingMerchant ? false : true),
             email: user.email,
             businessName: user.businessName || user.name,
             name: user.name,
