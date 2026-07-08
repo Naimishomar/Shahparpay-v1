@@ -741,14 +741,14 @@ export const dailyAuth = async (req, res) => {
         let resultData = response.data;
 
         if (resultData && resultData.response_code === 24) {
-            console.log("Merchant onboarding is pending. Resetting KYC status in DB...");
+            console.log("Merchant onboarding is pending or IP is not whitelisted. Code 24 returned from Daily Auth.");
             
-            await Retailer.findOneAndUpdate({ retailerId: merchantcode }, { isMerchantKycComplete: false });
-            await Distributor.findOneAndUpdate({ distributorId: merchantcode }, { isMerchantKycComplete: false });
+            // We NO LONGER reset isMerchantKycComplete here, because it causes an infinite loop
+            // if Paysprint thinks they are onboarded but the pipe is wrong due to IP whitelist issues.
             
             return res.status(400).json({ 
                 success: false, 
-                message: "Your Bank 3 KYC is pending. We have reset your status. Please click 'Complete KYC' again to onboard for Bank 3." 
+                message: "AEPS Authentication Failed. Either your KYC is pending bank approval, or your Server IP is not whitelisted on PaySprint. Please check your PaySprint dashboard." 
             });
         }
 
