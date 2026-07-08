@@ -7,18 +7,13 @@ import Transaction from "../models/transaction.model.js";
 
 // Helper function to resolve which bank pipe is verified for the merchant
 const getVerifiedPipe = async (merchantcode, mobile) => {
-    // IMPORTANT: We MUST prioritize bank3 first because getWebOnboardingUrl in paysprint.util.js 
-    // hardcodes "pipe: bank3". If we prioritize bank1/bank2, PaySprint falsely returns "Accepted" 
-    // but fails the actual auth_login/register_agent calls, causing an infinite loop.
     const pipes = ['bank3', 'bank2', 'bank1', 'bank5'];
     const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
     
     console.log(`[getVerifiedPipe] Checking pipes for merchant: ${merchantcode}`);
 
-    // Run sequentially to prioritize bank3 > bank2 > bank1 > bank5
     for (const pipe of pipes) {
         try {
-            // Must re-generate token for each request since timestamps change rapidly
             const currentToken = generatePaySprintToken();
             const headers = {
                 'Token': currentToken,
@@ -34,20 +29,22 @@ const getVerifiedPipe = async (merchantcode, mobile) => {
                 pipe: pipe
             }, { headers, validateStatus: () => true });
             
-            console.log(`[getVerifiedPipe] Response for ${pipe}:`, res.data);
+            console.log(`[getVerifiedPipe] Response for ${pipe}:`, JSON.stringify(res.data, null, 2));
             
-            // Check if this pipe is approved
+            // Check if this pipe is approved - must be exactly "Accepted"
             if (res.data && 
                 res.data.response_code === 1 && 
-                res.data.is_approved === 'Accepted') {  // <-- FIX: Check for string "Accepted"
+                res.data.is_approved === 'Accepted') {
                 console.log(`[getVerifiedPipe] ✅ ${pipe} is verified and approved`);
                 return pipe;
+            } else {
+                console.log(`[getVerifiedPipe] ❌ ${pipe} is NOT approved (is_approved: ${res.data?.is_approved})`);
             }
         } catch (e) {
             console.log(`[getVerifiedPipe] ⚠️ Error checking ${pipe}:`, e.message);
         }
     }
-    // Fallback if none are accepted or API fails
+    
     console.log(`[getVerifiedPipe] No verified pipes found, defaulting to bank3`);
     return 'bank3';
 };
