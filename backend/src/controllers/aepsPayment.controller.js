@@ -635,10 +635,18 @@ export const dailyAuth = async (req, res) => {
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://uat.paysprint.in/service-api/api/v1';
         
+        let actualMobile = mobileNumber;
+        if (!mobileNumber || mobileNumber === "9999999999") {
+            const user = await Retailer.findOne({ retailerId: merchantcode }) || await Distributor.findOne({ distributorId: merchantcode });
+            if (user && user.contactNumber) {
+                actualMobile = user.contactNumber;
+            }
+        }
+
         const payload = {
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025",
-            mobilenumber: mobileNumber || "9999999999",
+            mobilenumber: actualMobile || "9999999999",
             referenceno: `AUTH${Date.now()}`,
             ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
             adhaarnumber: aadhaarNumber,
@@ -662,7 +670,7 @@ export const dailyAuth = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        const response = await axios.post(`${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`, { body: encryptedData }, { headers });
+        const response = await axios.post(`${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`, { body: encryptedData }, { headers, validateStatus: () => true });
 
         let resultData = response.data;
 
