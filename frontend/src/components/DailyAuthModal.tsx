@@ -91,9 +91,36 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose }) => {
                 const errorMsg = result.data?.message || result.message;
                 if (errorMsg.includes('Registration Successful')) {
                     alert(errorMsg);
-                } else if (errorMsg.includes('reset your status') || errorMsg.includes('pending')) {
-                    toast.error("Bank 3 KYC pending. Redirecting to KYC completion...");
-                    setTimeout(() => window.location.reload(), 1500);
+                } else if (result.needsWebOnboarding || errorMsg.includes('reset your status') || errorMsg.includes('pending')) {
+                    const pipeToOnboard = result.pipe || 'bank3';
+                    toast.error(`KYC pending for ${pipeToOnboard}. Redirecting to KYC completion...`);
+                    
+                    try {
+                        const onboardRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/paysprint/get-onboard-url`, {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                            },
+                            body: JSON.stringify({
+                                merchantId: user?.id || user?._id || merchantCode,
+                                isNew: "1",
+                                pipe: pipeToOnboard,
+                                callbackUrl: window.location.href
+                            })
+                        });
+                        const onboardData = await onboardRes.json();
+                        if (onboardData.success && onboardData.url) {
+                            setTimeout(() => { window.location.href = onboardData.url; }, 1500);
+                        } else if (onboardData.success && onboardData.alreadyOnboarded) {
+                            toast.success("Merchant already onboarded. Please try again.");
+                            setTimeout(() => { window.location.reload(); }, 1500);
+                        } else {
+                            alert("Failed to get Onboarding URL: " + (onboardData.message || "Unknown error"));
+                        }
+                    } catch (e) {
+                        alert("Error generating onboarding URL");
+                    }
                 } else {
                     alert("Daily Auth Failed: " + errorMsg);
                 }
