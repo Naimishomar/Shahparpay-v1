@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Fingerprint, Loader2, KeyRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
 
 interface DailyAuthModalProps {
     onClose: () => void;
