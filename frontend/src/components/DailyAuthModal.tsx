@@ -86,7 +86,12 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose }) => {
                 alert("Authentication Already Completed for today.");
                 onClose();
             } else {
-                alert("Daily Auth Failed: " + (result.data?.message || result.message));
+                const errorMsg = result.data?.message || result.message;
+                if (errorMsg.includes('Registration Successful')) {
+                    alert(errorMsg);
+                } else {
+                    alert("Daily Auth Failed: " + errorMsg);
+                }
             }
         } catch (error) {
             console.error(error);

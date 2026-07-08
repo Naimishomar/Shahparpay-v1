@@ -664,16 +664,38 @@ export const dailyAuth = async (req, res) => {
 
         const response = await axios.post(`${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`, { body: encryptedData }, { headers });
 
-        if (response.data && response.data.status) {
+        let resultData = response.data;
+
+        // Auto-Register if 2FA registration is pending
+        if (resultData && (resultData.response_code === 2 || (resultData.message && resultData.message.toLowerCase().includes('registration is pending')))) {
+            console.log("Registration pending detected. Attempting auto-registration for Bank 3...");
+            const regResponse = await axios.post(`${baseUrl}/service/aeps/kyc/Twofactorkyc/register_agent`, { body: encryptedData }, { headers });
+            
+            if (regResponse.data && regResponse.data.response_code === 1) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: "2FA Registration Successful! However, you must scan your fingerprint ONE MORE TIME to complete the Daily Login.", 
+                    data: regResponse.data 
+                });
+            } else {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: regResponse.data?.message || "2FA Registration Failed", 
+                    data: regResponse.data 
+                });
+            }
+        }
+
+        if (resultData && resultData.status) {
             // Update the Retailer's last daily auth date tracker
             await Retailer.findOneAndUpdate(
                 { retailerId: merchantcode },
                 { lastDailyAuthDate: new Date() },
                 { returnDocument: 'after' }
             );
-            return res.status(200).json({ success: true, message: "Daily Auth Successful", data: response.data });
+            return res.status(200).json({ success: true, message: "Daily Auth Successful", data: resultData });
         } else {
-            return res.status(400).json({ success: false, message: response.data.message || "Daily Auth Failed", data: response.data });
+            return res.status(400).json({ success: false, message: resultData.message || "Daily Auth Failed", data: resultData });
         }
     } catch (error) {
         console.error("Daily Auth Error:", error?.response?.data || error.message);
