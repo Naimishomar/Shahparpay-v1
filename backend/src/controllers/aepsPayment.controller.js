@@ -137,7 +137,9 @@ const performMerchantAuth = async (merchantPidData, retailer, req) => {
         } else {
             return { 
                 success: false, 
-                message: regResponse.data?.message || "Merchant 2FA Registration Failed" 
+                message: regResponse.data?.message || "Merchant 2FA Registration Failed",
+                needsWebOnboarding: true,
+                pipe: twfPayload.pipe
             };
         }
     }
@@ -1059,8 +1061,10 @@ export const dailyAuth = async (req, res) => {
                     // Registration failed
                     return res.status(400).json({ 
                         success: false, 
-                        message: regData?.message || "2FA Registration Failed. Please contact support.", 
-                        data: regData 
+                        message: regData?.message || "2FA Registration Failed. Please complete Web Onboarding.", 
+                        data: regData,
+                        needsWebOnboarding: true,
+                        pipe: pipe
                     });
                 }
             } catch (regError) {

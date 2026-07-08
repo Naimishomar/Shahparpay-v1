@@ -547,7 +547,7 @@ export const createMainWallet = async(req,res)=>{
 }
 export const generateOnboardUrl = async (req, res) => {
     try {
-        const { merchantId, isNew, callbackUrl } = req.body;
+        const { merchantId, isNew, callbackUrl, pipe } = req.body;
         if (!merchantId) return res.status(400).json({ success: false, message: "merchantId is required" });
 
         let user;
@@ -586,6 +586,7 @@ export const generateOnboardUrl = async (req, res) => {
             email: user.email,
             businessName: user.businessName || user.name,
             name: user.name,
+            pipe: pipe,
             callbackUrl: callbackUrl || `${process.env.FRONTEND_URL || 'http://localhost:5173'}/kyc-status`
         };
 
