@@ -10,9 +10,10 @@ interface DailyAuthModalProps {
 const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose }) => {
     const { user } = useAuth();
     const actualMerchantCode = user?.retailerId || user?.distributorId || user?.adminId || "";
+    const actualAadhaar = user?.aadhaarNumber || "";
     const [loading, setLoading] = useState(false);
     const [merchantCode, setMerchantCode] = useState(actualMerchantCode);
-    const [aadhaar, setAadhaar] = useState('');
+    const [aadhaar, setAadhaar] = useState(actualAadhaar);
     
     const handleCaptureAndAuth = async () => {
         if (!merchantCode || aadhaar.length !== 12) {
@@ -122,9 +123,8 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose }) => {
                         <input 
                             type="text" 
                             value={merchantCode} 
-                            onChange={(e) => setMerchantCode(e.target.value)} 
-                            className="w-full p-2.5 rounded-lg border border-border bg-background"
-                            placeholder="e.g. PS00123"
+                            readOnly
+                            className="w-full p-2.5 rounded-lg border border-border bg-muted cursor-not-allowed opacity-80"
                         />
                     </div>
                     <div>
@@ -132,10 +132,8 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose }) => {
                         <input 
                             type="text" 
                             value={aadhaar} 
-                            onChange={(e) => setAadhaar(e.target.value)} 
-                            maxLength={12}
-                            className="w-full p-2.5 rounded-lg border border-border bg-background"
-                            placeholder="Enter 12-digit Aadhaar"
+                            readOnly
+                            className="w-full p-2.5 rounded-lg border border-border bg-muted cursor-not-allowed opacity-80"
                         />
                     </div>
 
