@@ -39,7 +39,7 @@ const getVerifiedPipe = async (merchantcode, mobile) => {
             // Check if this pipe is approved
             if (res.data && 
                 res.data.response_code === 1 && 
-                (res.data.status === true || res.data.is_approved === true || res.data.is_approved === 'Accepted')) {
+                res.data.is_approved === 'Accepted') {  // <-- FIX: Check for string "Accepted"
                 console.log(`[getVerifiedPipe] ✅ ${pipe} is verified and approved`);
                 return pipe;
             }
@@ -1166,7 +1166,7 @@ export const getMerchantStatus = async (req, res) => {
                     const responseData = result.value.data;
                     if (responseData && 
                         responseData.response_code === 1 && 
-                        (responseData.is_approved === 'Accepted' || responseData.is_approved === true)) {
+                        (responseData.is_approved === 'Accepted')) {
                         activePipes.push(pipesToCheck[index]);
                     }
                 }
