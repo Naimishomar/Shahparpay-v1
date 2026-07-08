@@ -118,7 +118,8 @@ const performMerchantAuth = async (merchantPidData, retailer, req) => {
                 'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
                 'Content-Type': 'application/json'
             };
-            const secondEncrypted = encryptPayload(JSON.stringify(twfPayload));
+            const secondPayload = { ...twfPayload, referenceno: `AUTH${Date.now()}` };
+            const secondEncrypted = encryptPayload(JSON.stringify(secondPayload));
             const secondResponse = await axios.post(
                 `${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`,
                 { body: secondEncrypted },
@@ -1022,8 +1023,9 @@ export const dailyAuth = async (req, res) => {
                         'Content-Type': 'application/json'
                     };
                     
-                    // Use the ORIGINAL auth payload (with AUTH reference, not REG)
-                    const secondEncrypted = encryptPayload(JSON.stringify(payload));
+                    // Use a NEW auth payload (with new AUTH reference, not REG)
+                    const secondPayload = { ...payload, referenceno: `AUTH${Date.now()}` };
+                    const secondEncrypted = encryptPayload(JSON.stringify(secondPayload));
                     
                     const secondResponse = await axios.post(
                         `${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`,
