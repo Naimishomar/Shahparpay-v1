@@ -87,10 +87,6 @@ const retailerSchema = new mongoose.Schema({
         type: Boolean, 
         default: true 
     },
-    isMerchantKycComplete: {
-        type: Boolean,
-        default: false
-    },
     role:{
         type: String,
         default: 'retailer'

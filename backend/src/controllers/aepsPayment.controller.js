@@ -93,10 +93,11 @@ const performMerchantAuth = async (merchantPidData, retailer, req) => {
         
         console.log(`[MerchantAuth] Registration pending, attempting auto-register...`);
         
-        // Attempt registration
+        // Attempt registration 
         const regPayload = { 
             ...twfPayload, 
-            referenceno: `REG${Date.now()}` 
+            referenceno: `REG${Date.now()}`,
+            pipe: twfPayload.pipe
         };
         const regEncrypted = encryptPayload(JSON.stringify(regPayload));
         const regToken = generatePaySprintToken();
@@ -616,6 +617,8 @@ export const cashDeposit = async (req, res) => {
         
         // 4. Handle Success/Failure
         if (txnStatus === 'SUCCESS') {
+            session = await mongoose.startSession();
+            session.startTransaction();
             await Transaction.findOneAndUpdate(
                 { transactionId: referenceNo }, 
                 { 
@@ -624,6 +627,9 @@ export const cashDeposit = async (req, res) => {
                     'metadata.apiMessage': apiMessage
                 }
             );
+
+            await session.commitTransaction();
+            session.endSession();
 
             return res.status(200).json({
                 success: true,
@@ -641,13 +647,21 @@ export const cashDeposit = async (req, res) => {
                 metadata: { originalTxn: referenceNo, note: 'Refund for failed Cash Deposit' }
             });
 
+            // Use the existing session from the top
+            session = await mongoose.startSession();
+            session.startTransaction();
+
             await Transaction.findOneAndUpdate(
                 { transactionId: referenceNo }, 
                 { 
-                    status: 'FAILED',
+                    status: 'FAILED',  // <-- Should be FAILED, not SUCCESS
                     'metadata.apiMessage': apiMessage
-                }
+                },
+                { session }
             );
+
+            await session.commitTransaction();
+            session.endSession();
 
             return res.status(400).json({
                 success: false,
