@@ -973,12 +973,14 @@ export const dailyAuth = async (req, res) => {
         console.log(`[DailyAuth] Auth response code: ${resultData?.response_code}`);
         console.log(`[DailyAuth] Auth response:`, JSON.stringify(resultData, null, 2));
 
-        // Check if registration is needed
+        // Check if the merchant is onboarded but not registered for 2FA
+        // Sometimes auth_login returns 24 even when onboarded, but register_agent might work
         const needsRegistration = resultData && (
             resultData.response_code === 2 || 
             resultData.response_code === 24 || 
             (resultData.message && resultData.message.toLowerCase().includes('registration is pending')) ||
-            (resultData.message && resultData.message.toLowerCase().includes('not registered'))
+            (resultData.message && resultData.message.toLowerCase().includes('not registered')) ||
+            (resultData.message && resultData.message.toLowerCase().includes('onboading is pending'))
         );
 
         if (needsRegistration) {
@@ -1052,14 +1054,26 @@ export const dailyAuth = async (req, res) => {
                             data: secondResult 
                         });
                     } else {
+                        // If second auth fails, the merchant might need to complete web onboarding
                         return res.status(400).json({ 
                             success: false, 
-                            message: "Registration successful but login failed. Please scan your fingerprint ONE MORE TIME.", 
-                            data: secondResult 
+                            message: "Registration successful but login failed. Please complete Web Onboarding first.", 
+                            data: secondResult,
+                            needsWebOnboarding: true,
+                            pipe: pipe
                         });
                     }
+                } else if (regData && regData.response_code === 24) {
+                    // Registration returned 24 - merchant needs web onboarding
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: "Merchant needs to complete Web Onboarding first.", 
+                        data: regData,
+                        needsWebOnboarding: true,
+                        pipe: pipe
+                    });
                 } else {
-                    // Registration failed
+                    // Registration failed for other reasons
                     return res.status(400).json({ 
                         success: false, 
                         message: regData?.message || "2FA Registration Failed. Please complete Web Onboarding.", 
@@ -1092,10 +1106,18 @@ export const dailyAuth = async (req, res) => {
             });
         } else {
             // Login failed for other reasons
+            // Check if the merchant needs web onboarding
+            const needsWebOnboarding = resultData && (
+                resultData.response_code === 24 ||
+                (resultData.message && resultData.message.toLowerCase().includes('onboading is pending'))
+            );
+            
             return res.status(400).json({ 
                 success: false, 
                 message: resultData?.message || "Daily Auth Failed", 
-                data: resultData 
+                data: resultData,
+                needsWebOnboarding: needsWebOnboarding,
+                pipe: pipe
             });
         }
     } catch (error) {
@@ -1147,8 +1169,11 @@ export const getMerchantStatus = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
+        // In getMerchantStatus, add this to check if merchant is actually onboarded
+        // Even if isMerchantKycComplete is false, we might get Accepted from PaySprint
         const pipesToCheck = ['bank3', 'bank2', 'bank1', 'bank5'];
         const activePipes = [];
+        let isActuallyOnboarded = false;
 
         try {
             const statusPromises = pipesToCheck.map(pipe => {
@@ -1156,7 +1181,7 @@ export const getMerchantStatus = async (req, res) => {
                     `${baseUrl}/service/onboard/onboard/getonboardstatus`,
                     {
                         merchantcode: merchantcode,
-                        mobile: String(retailer.contactNumber || retailer.phone), // Try both fields
+                        mobile: String(retailer.contactNumber),
                         pipe: pipe
                     },
                     { headers, validateStatus: () => true }
@@ -1170,19 +1195,23 @@ export const getMerchantStatus = async (req, res) => {
                     const responseData = result.value.data;
                     if (responseData && 
                         responseData.response_code === 1 && 
-                        (responseData.is_approved === 'Accepted')) {
+                        responseData.is_approved === 'Accepted') {
                         activePipes.push(pipesToCheck[index]);
+                        isActuallyOnboarded = true;
                     }
                 }
             });
             
-            // Fallback just in case the API fails but they have completed KYC locally
-            if (activePipes.length === 0 && retailer.isMerchantKycComplete) {
-                activePipes.push('bank3');
+            // If PaySprint says onboarded but DB says false, update DB
+            if (isActuallyOnboarded && !retailer.isMerchantKycComplete) {
+                await Retailer.findOneAndUpdate(
+                    { retailerId: merchantcode },
+                    { isMerchantKycComplete: true }
+                );
+                retailer.isMerchantKycComplete = true;
             }
         } catch (err) {
             console.error("Error checking pipe status:", err);
-            if (retailer.isMerchantKycComplete) activePipes.push('bank3');
         }
 
         return res.status(200).json({
