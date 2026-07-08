@@ -537,7 +537,8 @@ export const sendMerchantOtp = async (req, res) => {
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025",
             aadhaar,
-            adhaarnumber: aadhaar
+            adhaarnumber: aadhaar,
+            pipe: "bank3"
         };
 
         const token = generatePaySprintToken();
@@ -577,7 +578,8 @@ export const resendMerchantOtp = async (req, res) => {
             longitude: longitude || "77.1025",
             stateresp,
             ekyc_id,
-            accessmode: "SITE"
+            accessmode: "SITE",
+            pipe: "bank3"
         };
 
         const token = generatePaySprintToken();
@@ -623,7 +625,8 @@ export const verifyMerchantOtp = async (req, res) => {
             stateresp,
             ekyc_id,
             piddata: encryptedPidData,
-            accessmode: "SITE"
+            accessmode: "SITE",
+            pipe: "bank3"
         };
 
         const token = generatePaySprintToken();
@@ -679,7 +682,8 @@ export const dailyAuth = async (req, res) => {
             data: pidData,
             submerchantid: merchantcode,
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-            is_iris: "No"
+            is_iris: "No",
+            pipe: "bank3"
         };
 
         console.log("========== DAILY AUTH PAYLOAD ==========");
