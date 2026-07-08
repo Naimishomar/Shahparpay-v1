@@ -581,6 +581,16 @@ export const generateOnboardUrl = async (req, res) => {
 
         const result = await getWebOnboardingUrl(merchantData);
         if (result.success) {
+            if (result.alreadyOnboarded) {
+                // Update DB since PaySprint says they are already onboarded
+                if (role === "retailer") {
+                    await Retailer.findOneAndUpdate({ retailerId: merchantCode }, { isMerchantKycComplete: true });
+                } else if (role === "distributor") {
+                    await Distributor.findOneAndUpdate({ distributorId: merchantCode }, { isMerchantKycComplete: true });
+                }
+                // Return callback URL so frontend redirects back gracefully without crashing
+                return res.status(200).json({ success: true, url: merchantData.callbackUrl });
+            }
             return res.status(200).json({ success: true, url: result.url });
         } else {
             return res.status(400).json({ success: false, message: result.message });

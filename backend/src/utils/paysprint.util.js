@@ -267,6 +267,10 @@ export const getWebOnboardingUrl = async (merchantData) => {
         console.log("PAYSPRINT RESPONSE:", data);
         
         if (data.status || data.response_code === 1) {
+            if (data.onboard_pending === 0) {
+                return { success: true, alreadyOnboarded: true, message: data.message };
+            }
+            
             // PaySprint might return the URL in `data.redirecturl`, `data.url`, `data.data`, or just a string if data itself is the URL (unlikely).
             const redirectUrl = data.redirecturl || data.url || data.data;
             if (redirectUrl) {
