@@ -3,6 +3,7 @@ import Distributor from "../models/users/distributor.model.js";
 import Customer from "../models/users/customer.model.js";
 import AepsWallet from "../models/aepsWallet.model.js";
 import MainWallet from "../models/mainWallet.model.js";
+import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import { customAlphabet } from "nanoid";
 import Admin from "../models/users/admin.model.js";
