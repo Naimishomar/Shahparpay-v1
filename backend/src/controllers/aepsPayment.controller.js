@@ -1085,7 +1085,8 @@ export const dailyAuth = async (req, res) => {
             data: pidData,
             submerchantid: merchantcode,
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-            is_iris: "No"
+            is_iris: "No",
+            pipe: pipe
         };
 
         console.log("========== DAILY AUTH PAYLOAD ==========");
