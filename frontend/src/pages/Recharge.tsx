@@ -231,8 +231,16 @@ const Recharge = () => {
         <div className="flex flex-col gap-6 w-full p-2 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             {/* Top Header Section */}
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="flex items-center gap-8">
-                    <h1 className="text-2xl font-bold text-glow">Recharge Transaction</h1>
+                <div className="flex items-center gap-4">
+                    <div className="flex flex-col gap-1">
+                        <h1 className="text-2xl font-bold text-glow flex items-center gap-2">
+                            <Smartphone className="text-primary" size={28} />
+                            Recharge Transaction
+                        </h1>
+                        <p className="text-sm text-muted-foreground hidden md:block">
+                            Instant Prepaid Mobile and DTH recharges.
+                        </p>
+                    </div>
                 </div>
             </div>
 
