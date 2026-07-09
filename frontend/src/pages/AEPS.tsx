@@ -381,7 +381,7 @@ const AEPS = () => {
             {/* Top Header Section */}
             <div className="flex flex-col gap-4">
                 {/* Title and Tabs Row */}
-                <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-8">
                     <h1 className="text-2xl font-bold text-glow">AEPS</h1>
                     <div className="flex items-center gap-6 border-b border-border hidden md:flex">
                         <button 
@@ -418,7 +418,7 @@ const AEPS = () => {
                 </div>
 
                 {/* Action Buttons Row */}
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center justify-end w-full gap-3">
                     <button 
                         onClick={handleReset} 
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 border border-red-200 transition-all text-sm font-semibold shadow-sm"
