@@ -283,55 +283,66 @@ const Recharge = () => {
                     {activeTab === 'prepaid' && (
                         <div className="flex flex-col gap-6 animate-in fade-in duration-300">
                             {/* Top Bar */}
-                            <div className="flex flex-col md:flex-row items-center gap-4 bg-primary/10 p-4 border border-primary/20 rounded-lg border-l-4 border-l-primary">
-                                <h3 className="text-lg font-bold text-foreground min-w-[200px]">Mobile Prepaid Recharge</h3>
+                            <div className="flex flex-col gap-4 bg-primary/5 p-5 border border-primary/20 rounded-lg border-l-4 border-l-primary">
+                                <h3 className="text-lg font-bold text-foreground border-b border-border/50 pb-2">Mobile Prepaid Recharge</h3>
                                 
-                                <div className="flex-1 flex flex-col md:flex-row gap-4 w-full">
-                                    <input 
-                                        type="text" 
-                                        placeholder="Enter 10-digit mobile number"
-                                        value={mobileNumber}
-                                        onChange={e => {
-                                            const val = e.target.value.replace(/\D/g, '');
-                                            if (val.length > 10) {
-                                                toast.error("Mobile number cannot exceed 10 digits");
-                                                return;
-                                            }
-                                            setMobileNumber(val);
-                                        }}
-                                        className="w-full md:w-1/4 p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
-                                    />
-                                    <select 
-                                        value={prepaidOperator}
-                                        onChange={e => setPrepaidOperator(e.target.value)}
-                                        className="w-full md:w-1/4 p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
-                                    >
-                                        <option value="">Select Operator</option>
-                                        {prepaidOperators.map((op: any) => (
-                                            <option key={op.id} value={op.id}>{op.name}</option>
-                                        ))}
-                                    </select>
-                                    <select 
-                                        value={circle}
-                                        onChange={e => setCircle(e.target.value)}
-                                        className="w-full md:w-1/4 p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
-                                    >
-                                        {[
-                                            "Andhra Pradesh", "Assam", "Bihar Jharkhand", "Chennai", "Delhi NCR", "Gujarat", "Haryana", 
-                                            "Himachal Pradesh", "Jammu Kashmir", "Karnataka", "Kerala", "Kolkata", "Madhya Pradesh Chhattisgarh", 
-                                            "Maharashtra Goa", "Mumbai", "North East", "Orissa", "Punjab", "Rajasthan", "Tamil Nadu", 
-                                            "UP East", "UP West", "West Bengal"
-                                        ].map(c => (
-                                            <option key={c} value={c}>{c}</option>
-                                        ))}
-                                    </select>
-                                    <button 
-                                        onClick={handleBrowsePlan}
-                                        disabled={loading || !mobileNumber || !prepaidOperator}
-                                        className="w-full md:w-auto px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-md shadow-sm transition-all disabled:opacity-50"
-                                    >
-                                        {loading ? "Loading..." : "Browse Plan"}
-                                    </button>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full mt-2">
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-sm font-medium text-foreground">Mobile Number</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Enter 10-digit mobile number"
+                                            value={mobileNumber}
+                                            onChange={e => {
+                                                const val = e.target.value.replace(/\D/g, '');
+                                                if (val.length > 10) {
+                                                    toast.error("Mobile number cannot exceed 10 digits");
+                                                    return;
+                                                }
+                                                setMobileNumber(val);
+                                            }}
+                                            className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-sm font-medium text-foreground">Operator</label>
+                                        <select 
+                                            value={prepaidOperator}
+                                            onChange={e => setPrepaidOperator(e.target.value)}
+                                            className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
+                                        >
+                                            <option value="">Select Operator</option>
+                                            {prepaidOperators.map((op: any) => (
+                                                <option key={op.id} value={op.id}>{op.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-sm font-medium text-foreground">Circle</label>
+                                        <select 
+                                            value={circle}
+                                            onChange={e => setCircle(e.target.value)}
+                                            className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
+                                        >
+                                            {[
+                                                "Andhra Pradesh", "Assam", "Bihar Jharkhand", "Chennai", "Delhi NCR", "Gujarat", "Haryana", 
+                                                "Himachal Pradesh", "Jammu Kashmir", "Karnataka", "Kerala", "Kolkata", "Madhya Pradesh Chhattisgarh", 
+                                                "Maharashtra Goa", "Mumbai", "North East", "Orissa", "Punjab", "Rajasthan", "Tamil Nadu", 
+                                                "UP East", "UP West", "West Bengal"
+                                            ].map(c => (
+                                                <option key={c} value={c}>{c}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="flex items-end">
+                                        <button 
+                                            onClick={handleBrowsePlan}
+                                            disabled={loading || !mobileNumber || !prepaidOperator}
+                                            className="w-full px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-md shadow-sm transition-all disabled:opacity-50"
+                                        >
+                                            {loading ? "Loading..." : "Browse Plan"}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -370,34 +381,42 @@ const Recharge = () => {
                     {activeTab === 'dth' && (
                         <div className="flex flex-col gap-6 animate-in fade-in duration-300">
                             {/* Top Bar */}
-                            <div className="flex flex-col md:flex-row items-center gap-4 bg-primary/10 p-4 border border-primary/20 rounded-lg border-l-4 border-l-primary">
-                                <h3 className="text-lg font-bold text-foreground min-w-[200px]">DTH Recharge</h3>
+                            <div className="flex flex-col gap-4 bg-primary/5 p-5 border border-primary/20 rounded-lg border-l-4 border-l-primary">
+                                <h3 className="text-lg font-bold text-foreground border-b border-border/50 pb-2">DTH Recharge</h3>
                                 
-                                <div className="flex-1 flex flex-col md:flex-row gap-4 w-full">
-                                    <input 
-                                        type="text" 
-                                        placeholder="Enter DTH Number"
-                                        value={dthNumber}
-                                        onChange={e => setDthNumber(e.target.value)}
-                                        className="w-full md:w-1/3 p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
-                                    />
-                                    <select 
-                                        value={dthOperator}
-                                        onChange={e => setDthOperator(e.target.value)}
-                                        className="w-full md:w-1/3 p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
-                                    >
-                                        <option value="">Select DTH Operator</option>
-                                        {dthOperators.map((op: any) => (
-                                            <option key={op.id} value={op.id}>{op.name}</option>
-                                        ))}
-                                    </select>
-                                    <button 
-                                        onClick={handleFetchDthInfo}
-                                        disabled={loading}
-                                        className="w-full md:w-auto px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-md shadow-sm transition-all"
-                                    >
-                                        {loading ? "Loading..." : "Browse DTH Plan"}
-                                    </button>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full mt-2">
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-sm font-medium text-foreground">DTH Number</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Enter DTH Number"
+                                            value={dthNumber}
+                                            onChange={e => setDthNumber(e.target.value)}
+                                            className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-sm font-medium text-foreground">DTH Operator</label>
+                                        <select 
+                                            value={dthOperator}
+                                            onChange={e => setDthOperator(e.target.value)}
+                                            className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
+                                        >
+                                            <option value="">Select DTH Operator</option>
+                                            {dthOperators.map((op: any) => (
+                                                <option key={op.id} value={op.id}>{op.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="flex items-end">
+                                        <button 
+                                            onClick={handleFetchDthInfo}
+                                            disabled={loading}
+                                            className="w-full px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-md shadow-sm transition-all"
+                                        >
+                                            {loading ? "Loading..." : "Browse DTH Plan"}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
