@@ -64,8 +64,7 @@ const performMerchantAuth = async (merchantPidData, retailer, req) => {
         data: merchantPidData,
         submerchantid: retailer.retailerId,
         timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        is_iris: "No",
-        pipe: await getVerifiedPipe(retailer.retailerId, retailer.contactNumber)
+        is_iris: "No"
     };
 
     const twfToken = generatePaySprintToken();
@@ -90,11 +89,9 @@ const performMerchantAuth = async (merchantPidData, retailer, req) => {
         
         console.log(`[MerchantAuth] Registration pending, attempting auto-register...`);
         
-        // Attempt registration 
         const regPayload = { 
             ...twfPayload, 
-            referenceno: `REG${Date.now()}`,
-            pipe: twfPayload.pipe
+            referenceno: `REG${Date.now()}`
         };
         const regEncrypted = encryptPayload(JSON.stringify(regPayload));
         const regToken = generatePaySprintToken();
@@ -138,8 +135,7 @@ const performMerchantAuth = async (merchantPidData, retailer, req) => {
             return { 
                 success: false, 
                 message: regResponse.data?.message || "Merchant 2FA Registration Failed",
-                needsWebOnboarding: true,
-                pipe: twfPayload.pipe
+                needsWebOnboarding: true
             };
         }
     }
@@ -1089,8 +1085,7 @@ export const dailyAuth = async (req, res) => {
             data: pidData,
             submerchantid: merchantcode,
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-            is_iris: "No",
-            pipe: pipe
+            is_iris: "No"
         };
 
         console.log("========== DAILY AUTH PAYLOAD ==========");
@@ -1118,7 +1113,7 @@ export const dailyAuth = async (req, res) => {
         console.log(`[DailyAuth] Auth response:`, JSON.stringify(resultData, null, 2));
 
         // Check if the merchant is onboarded but not registered for 2FA
-        // Sometimes auth_login returns 24 even when onboarded, but register_agent might work
+        // Sometimes authentication returns 24 even when onboarded, but registration might work
         const needsRegistration = resultData && (
             resultData.response_code === 2 || 
             resultData.response_code === 24 || 
@@ -1128,7 +1123,7 @@ export const dailyAuth = async (req, res) => {
         );
 
         if (needsRegistration) {
-            console.log(`[DailyAuth] Registration pending detected. Attempting auto-registration for pipe ${pipe}...`);
+            console.log(`[DailyAuth] Registration pending detected. Attempting auto-registration...`);
             
             // Create registration payload with NEW reference number
             const regPayload = { 
