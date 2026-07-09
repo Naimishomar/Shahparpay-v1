@@ -884,8 +884,10 @@ const AEPS = () => {
 
             {/* Daily 2FA Auth Modal */}
             {showDailyAuthModal && (
-                <DailyAuthModal onClose={() => {
-                    setShowDailyAuthModal(false);
+                <DailyAuthModal 
+                    activePipes={merchantStatus.activePipes || []}
+                    onClose={() => {
+                        setShowDailyAuthModal(false);
                     // Force refresh status
                     setMerchantCode(prev => prev + " ");
                     setTimeout(() => setMerchantCode(prev => prev.trim()), 100);

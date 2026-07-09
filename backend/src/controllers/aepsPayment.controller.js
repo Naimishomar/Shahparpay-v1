@@ -6,13 +6,15 @@ import Distributor from "../models/users/distributor.model.js";
 import Transaction from "../models/transaction.model.js";
 
 // Helper function to resolve which bank pipe is verified for the merchant
-const getVerifiedPipe = async (merchantcode, mobile) => {
-    const pipes = ['bank3', 'bank5', 'bank1', 'bank2'];
+export const getVerifiedPipe = async (merchantcode, mobile) => {
+    // Check pipes in order of preference. We prioritize bank2 because 
+    // Bank3 (NSDL) is not activated for this partner (PS004347).
+    const pipesToCheck = ['bank2', 'bank1', 'bank5', 'bank6'];
     const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
     
     console.log(`[getVerifiedPipe] Checking pipes for merchant: ${merchantcode}`);
 
-    for (const pipe of pipes) {
+    for (const pipe of pipesToCheck) {
         try {
             const currentToken = generatePaySprintToken();
             const headers = {
@@ -45,8 +47,8 @@ const getVerifiedPipe = async (merchantcode, mobile) => {
         }
     }
     
-    console.log(`[getVerifiedPipe] No verified pipes found, defaulting to bank3`);
-    return 'bank3';
+    console.log(`[getVerifiedPipe] No verified pipes found, defaulting to bank2`);
+    return 'bank2';
 };
 
 // Helper function for merchant 2FA auth (used in cash withdrawal/deposit)
@@ -1085,9 +1087,13 @@ export const dailyAuth = async (req, res) => {
             data: pidData,
             submerchantid: merchantcode,
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-            is_iris: "No",
-            pipe: pipe
+            is_iris: "No"
         };
+        
+        // Only attach pipe parameter if not using bank3 specific endpoint
+        if (pipe !== 'bank3') {
+            payload.pipe = pipe;
+        }
 
         console.log("========== DAILY AUTH PAYLOAD ==========");
         console.log(JSON.stringify(payload, null, 2));
@@ -1313,7 +1319,9 @@ export const getMerchantStatus = async (req, res) => {
 
         // In getMerchantStatus, add this to check if merchant is actually onboarded
         // Even if isMerchantKycComplete is false, we might get Accepted from PaySprint
-        const pipesToCheck = ['bank3', 'bank2', 'bank1', 'bank5'];
+        // 1. Get Merchant Pipe (which one is approved)
+        // Prefer bank2 since bank3 is not activated by the partner
+        const pipesToCheck = ['bank2', 'bank1', 'bank5', 'bank6'];
         const activePipes = [];
         let isActuallyOnboarded = false;
 

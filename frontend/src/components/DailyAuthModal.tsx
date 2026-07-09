@@ -5,9 +5,10 @@ import { toast } from 'sonner';
 
 interface DailyAuthModalProps {
     onClose: () => void;
+    activePipes?: string[];
 }
 
-const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose }) => {
+const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = [] }) => {
     const { user } = useAuth();
     const actualMerchantCode = user?.retailerId || user?.distributorId || user?.adminId || "";
     const actualAadhaar = user?.aadhaarNumber || "";
@@ -92,7 +93,8 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose }) => {
                 if (errorMsg.includes('Registration Successful')) {
                     alert(errorMsg);
                 } else if (result.needsWebOnboarding || errorMsg.includes('reset your status') || errorMsg.includes('pending')) {
-                    const pipeToOnboard = result.pipe || 'bank3';
+                    const pipeToOnboard = result.pipe || 'bank2';
+                    const dynamicIsNew = activePipes.includes(pipeToOnboard) ? "0" : "1";
                     toast.error(`KYC pending for ${pipeToOnboard}. Redirecting to KYC completion...`);
                     
                     try {
@@ -104,7 +106,7 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose }) => {
                             },
                             body: JSON.stringify({
                                 merchantId: user?.id || user?._id || merchantCode,
-                                isNew: "0",
+                                isNew: dynamicIsNew,
                                 pipe: pipeToOnboard,
                                 callbackUrl: window.location.href
                             })
