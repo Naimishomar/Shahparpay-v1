@@ -77,7 +77,7 @@ const performMerchantAuth = async (merchantPidData, retailer, req) => {
     };
 
     const twfResponse = await axios.post(
-        `${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`, 
+        `${baseUrl}/service/aeps/kyc/Twofactorkyc/authentication`, 
         { body: twfEncrypted }, 
         { headers: twfHeaders, validateStatus: () => true }
     );
@@ -105,7 +105,7 @@ const performMerchantAuth = async (merchantPidData, retailer, req) => {
         };
         
         const regResponse = await axios.post(
-            `${baseUrl}/service/aeps/kyc/Twofactorkyc/register_agent`,
+            `${baseUrl}/service/aeps/kyc/Twofactorkyc/registration`,
             { body: regEncrypted },
             { headers: regHeaders, validateStatus: () => true }
         );
@@ -121,7 +121,7 @@ const performMerchantAuth = async (merchantPidData, retailer, req) => {
             const secondPayload = { ...twfPayload, referenceno: `AUTH${Date.now()}` };
             const secondEncrypted = encryptPayload(JSON.stringify(secondPayload));
             const secondResponse = await axios.post(
-                `${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`,
+                `${baseUrl}/service/aeps/kyc/Twofactorkyc/authentication`,
                 { body: secondEncrypted },
                 { headers: secondHeaders, validateStatus: () => true }
             );
@@ -1108,7 +1108,7 @@ export const dailyAuth = async (req, res) => {
 
         // First attempt: Try daily auth login
         let response = await axios.post(
-            `${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`, 
+            `${baseUrl}/service/aeps/kyc/Twofactorkyc/authentication`, 
             { body: encryptedData }, 
             { headers, validateStatus: () => true }
         );
@@ -1150,7 +1150,7 @@ export const dailyAuth = async (req, res) => {
             
             try {
                 const regResponse = await axios.post(
-                    `${baseUrl}/service/aeps/kyc/Twofactorkyc/register_agent`, 
+                    `${baseUrl}/service/aeps/kyc/Twofactorkyc/registration`, 
                     { body: regEncryptedData }, 
                     { headers: regHeaders, validateStatus: () => true }
                 );
@@ -1177,7 +1177,7 @@ export const dailyAuth = async (req, res) => {
                     const secondEncrypted = encryptPayload(JSON.stringify(secondPayload));
                     
                     const secondResponse = await axios.post(
-                        `${baseUrl}/service/aeps/kyc/Twofactorkyc/auth_login`,
+                        `${baseUrl}/service/aeps/kyc/Twofactorkyc/authentication`,
                         { body: secondEncrypted },
                         { headers: secondHeaders, validateStatus: () => true }
                     );
