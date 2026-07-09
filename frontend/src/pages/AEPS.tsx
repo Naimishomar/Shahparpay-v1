@@ -382,7 +382,15 @@ const AEPS = () => {
             <div className="flex flex-col gap-4">
                 {/* Title and Tabs Row */}
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-8">
-                    <h1 className="text-2xl font-bold text-glow">AEPS</h1>
+                    <div className="flex flex-col gap-1">
+                        <h1 className="text-2xl font-bold text-glow flex items-center gap-2">
+                            <Fingerprint className="text-primary" size={28} />
+                            AEPS
+                        </h1>
+                        <p className="text-sm text-muted-foreground hidden md:block">
+                            Aadhaar Enabled Payment System for seamless transactions.
+                        </p>
+                    </div>
                     <div className="flex items-center gap-6 border-b border-border hidden md:flex">
                         <button 
                             onClick={() => setActiveTab('balance_enquiry')}
