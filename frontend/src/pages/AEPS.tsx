@@ -379,46 +379,10 @@ const AEPS = () => {
     return (
         <div className="flex flex-col gap-6 w-full p-2 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             {/* Top Header Section */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="flex items-center gap-8">
+            <div className="flex flex-col gap-4">
+                {/* Title and Tabs Row */}
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
                     <h1 className="text-2xl font-bold text-glow">AEPS</h1>
-                    <button 
-                        onClick={handleReset} 
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 border border-red-200 transition-all text-sm font-semibold shadow-sm"
-                        title="Reset all fields"
-                    >
-                        <RefreshCcw size={16} />
-                        Reset
-                    </button>
-                    <div className="flex gap-2">
-                        {/* Tracker UI logic: Hides KYC if complete, changes Daily Auth appearance if done */}
-                        {!merchantStatus.isDailyAuthDoneToday ? (
-                            <button 
-                                onClick={() => setShowDailyAuthModal(true)} 
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 transition-all text-sm font-semibold shadow-sm animate-pulse"
-                                title="Daily 2FA Authentication Needed"
-                            >
-                                <KeyRound size={16} />
-                                Pending Daily Auth
-                            </button>
-                        ) : (
-                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 text-green-600 border border-green-200 text-sm font-semibold shadow-sm">
-                                <CheckCircle2 size={16} />
-                                Auth Done
-                            </div>
-                        )}
-
-                        {!merchantStatus.isMerchantKycComplete && (
-                            <button 
-                                onClick={() => setShowKycModal(true)} 
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 border border-emerald-200 transition-all text-sm font-semibold shadow-sm animate-pulse"
-                                title="Complete Mandatory KYC"
-                            >
-                                <ShieldCheck size={16} />
-                                Complete eKYC
-                            </button>
-                        )}
-                    </div>
                     <div className="flex items-center gap-6 border-b border-border hidden md:flex">
                         <button 
                             onClick={() => setActiveTab('balance_enquiry')}
@@ -452,8 +416,48 @@ const AEPS = () => {
                         </button>
                     </div>
                 </div>
-            </div>
 
+                {/* Action Buttons Row */}
+                <div className="flex flex-wrap items-center gap-3">
+                    <button 
+                        onClick={handleReset} 
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 border border-red-200 transition-all text-sm font-semibold shadow-sm"
+                        title="Reset all fields"
+                    >
+                        <RefreshCcw size={16} />
+                        Reset
+                    </button>
+                    <div className="flex flex-wrap gap-2">
+                        {/* Tracker UI logic: Hides KYC if complete, changes Daily Auth appearance if done */}
+                        {!merchantStatus.isDailyAuthDoneToday ? (
+                            <button 
+                                onClick={() => setShowDailyAuthModal(true)} 
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 transition-all text-sm font-semibold shadow-sm animate-pulse"
+                                title="Daily 2FA Authentication Needed"
+                            >
+                                <KeyRound size={16} />
+                                Pending Daily Auth
+                            </button>
+                        ) : (
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 text-green-600 border border-green-200 text-sm font-semibold shadow-sm">
+                                <CheckCircle2 size={16} />
+                                Auth Done
+                            </div>
+                        )}
+
+                        {!merchantStatus.isMerchantKycComplete && (
+                            <button 
+                                onClick={() => setShowKycModal(true)} 
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 border border-emerald-200 transition-all text-sm font-semibold shadow-sm animate-pulse"
+                                title="Complete Mandatory KYC"
+                            >
+                                <ShieldCheck size={16} />
+                                Complete eKYC
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
             {/* Main Form Container */}
             <div className="flex flex-col gap-6 glass-card p-6 rounded-2xl relative overflow-hidden group">
                 {/* Background Glow */}
