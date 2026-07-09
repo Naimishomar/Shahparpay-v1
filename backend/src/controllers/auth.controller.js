@@ -580,10 +580,19 @@ export const generateOnboardUrl = async (req, res) => {
             merchantCodeFinal = merchantId;
         }
 
+        let finalIsNew;
+        if (isNew === "0" || isNew === false) {
+            finalIsNew = false;
+        } else if (isNew === "1" || isNew === true) {
+            finalIsNew = true;
+        } else {
+            finalIsNew = !user.isExistingMerchant;
+        }
+
         const merchantData = {
             merchantcode: merchantCodeFinal.toString(),
             mobile: user.contactNumber,
-            is_new: isNew === "1" || isNew === true ? true : (user.isExistingMerchant ? false : true),
+            is_new: finalIsNew,
             email: user.email,
             businessName: user.businessName || user.name,
             name: user.name,

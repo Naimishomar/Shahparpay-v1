@@ -104,7 +104,7 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose }) => {
                             },
                             body: JSON.stringify({
                                 merchantId: user?.id || user?._id || merchantCode,
-                                isNew: "1",
+                                isNew: "0",
                                 pipe: pipeToOnboard,
                                 callbackUrl: window.location.href
                             })

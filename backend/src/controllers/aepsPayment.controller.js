@@ -1079,7 +1079,7 @@ export const dailyAuth = async (req, res) => {
             longitude: longitude || "77.1025",
             mobilenumber: actualMobile || "9999999999",
             referenceno: `AUTH${Date.now()}`,
-            ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
+            ipaddress: req.ip ? (req.ip === '::1' ? '127.0.0.1' : req.ip.replace(/^::ffff:/, '')) : "127.0.0.1",
             adhaarnumber: aadhaarNumber,
             accessmodetype: "SITE",
             data: pidData,
@@ -1103,8 +1103,9 @@ export const dailyAuth = async (req, res) => {
         };
 
         // First attempt: Try daily auth login
+        const authEndpoint = pipe === 'bank3' ? '/service/aeps/kyc/v5/authentication' : '/service/aeps/kyc/Twofactorkyc/authentication';
         let response = await axios.post(
-            `${baseUrl}/service/aeps/kyc/Twofactorkyc/authentication`, 
+            `${baseUrl}${authEndpoint}`, 
             { body: encryptedData }, 
             { headers, validateStatus: () => true }
         );
@@ -1145,8 +1146,9 @@ export const dailyAuth = async (req, res) => {
             console.log(`[DailyAuth] Registration payload:`, JSON.stringify(regPayload, null, 2));
             
             try {
+                const regEndpoint = pipe === 'bank3' ? '/service/aeps/kyc/Twofactorkyc/auth_login' : '/service/aeps/kyc/Twofactorkyc/registration';
                 const regResponse = await axios.post(
-                    `${baseUrl}/service/aeps/kyc/Twofactorkyc/registration`, 
+                    `${baseUrl}${regEndpoint}`, 
                     { body: regEncryptedData }, 
                     { headers: regHeaders, validateStatus: () => true }
                 );
