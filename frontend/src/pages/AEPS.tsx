@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Fingerprint, Clock, CheckCircle2, XCircle, RefreshCcw, ShieldCheck, KeyRound } from "lucide-react";
+import { Fingerprint, Clock, CheckCircle2, XCircle, RefreshCcw, ShieldCheck, KeyRound, Wallet, FileText, IndianRupee, CreditCard } from "lucide-react";
 import logo from "../assets/logo.png";
 import MerchantKycModal from "../components/MerchantKycModal";
 import DailyAuthModal from "../components/DailyAuthModal";
@@ -417,32 +417,37 @@ const AEPS = () => {
                     <div className="flex items-center gap-6 border-b border-border hidden md:flex">
                         <button 
                             onClick={() => setActiveTab('balance_enquiry')}
-                            className={`pb-2 font-medium transition-colors ${activeTab === 'balance_enquiry' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                            className={`pb-2 px-2 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'balance_enquiry' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
                         >
+                            <Wallet size={16} />
                             Balance Enquiry
                         </button>
                         <button 
                             onClick={() => setActiveTab('mini_statement')}
-                            className={`pb-2 font-medium transition-colors ${activeTab === 'mini_statement' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                            className={`pb-2 px-2 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'mini_statement' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
                         >
+                            <FileText size={16} />
                             Mini Statement
                         </button>
                         <button 
                             onClick={() => setActiveTab('cash_withdrawal')}
-                            className={`pb-2 font-medium transition-colors ${activeTab === 'cash_withdrawal' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                            className={`pb-2 px-2 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'cash_withdrawal' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
                         >
+                            <IndianRupee size={16} />
                             Cash Withdrawal
                         </button>
                         <button 
                             onClick={() => setActiveTab('cash_deposit')}
-                            className={`pb-2 font-medium transition-colors ${activeTab === 'cash_deposit' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                            className={`pb-2 px-2 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'cash_deposit' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
                         >
+                            <CreditCard size={16} />
                             Cash Deposit
                         </button>
                         <button 
                             onClick={() => setActiveTab('aadhaar_pay')}
-                            className={`pb-2 font-medium transition-colors ${activeTab === 'aadhaar_pay' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                            className={`pb-2 px-2 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'aadhaar_pay' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
                         >
+                            <CreditCard size={16} />
                             Aadhaar Pay
                         </button>
                     </div>
