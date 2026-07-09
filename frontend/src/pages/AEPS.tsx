@@ -74,6 +74,7 @@ const AEPS = () => {
         activePipes: [] as string[]
     });
     const [selectedPipe, setSelectedPipe] = useState('');
+    const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
 
     // Fetch Merchant Status on Load
     useEffect(() => {
@@ -92,6 +93,31 @@ const AEPS = () => {
             })
             .catch(err => console.error("Failed to fetch merchant status", err));
     }, [merchantCode]);
+
+    const refreshMerchantStatus = async () => {
+        if (!merchantCode) return;
+        setIsRefreshingStatus(true);
+        try {
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/merchant-status?merchantcode=${merchantCode}`);
+            const data = await res.json();
+            if (data.success && data.data) {
+                setMerchantStatus(data.data);
+                if (data.data.activePipes && data.data.activePipes.length > 0) {
+                    setSelectedPipe(data.data.activePipes[0]);
+                } else {
+                    setSelectedPipe('');
+                }
+                toast.success("Bank routes refreshed successfully!");
+            } else {
+                toast.error("Failed to refresh bank routes");
+            }
+        } catch (err) {
+            console.error("Failed to refresh merchant status", err);
+            toast.error("An error occurred while refreshing routes");
+        } finally {
+            setIsRefreshingStatus(false);
+        }
+    };
     
     // Biometric Capture State
     const [merchantPidData, setMerchantPidData] = useState<string | null>(null);
@@ -499,7 +525,17 @@ const AEPS = () => {
                             </div>
 
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-medium text-foreground">Select AEPS Bank Route (Pipe)</label>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-sm font-medium text-foreground">Select AEPS Bank Route (Pipe)</label>
+                                    <button 
+                                        onClick={refreshMerchantStatus}
+                                        disabled={isRefreshingStatus}
+                                        className="p-1 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+                                        title="Refresh verified pipes"
+                                    >
+                                        <RefreshCcw size={14} className={isRefreshingStatus ? 'animate-spin' : ''} />
+                                    </button>
+                                </div>
                                 <select 
                                     value={selectedPipe}
                                     onChange={(e) => setSelectedPipe(e.target.value)}
