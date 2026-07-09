@@ -71,9 +71,9 @@ const AEPS = () => {
         isMerchantKycComplete: false,
         isDailyAuthDoneToday: false,
         lastDailyAuthDate: null,
-        activePipes: ['bank3'] // default fallback
+        activePipes: [] as string[]
     });
-    const [selectedPipe, setSelectedPipe] = useState('bank3');
+    const [selectedPipe, setSelectedPipe] = useState('');
 
     // Fetch Merchant Status on Load
     useEffect(() => {
@@ -85,6 +85,8 @@ const AEPS = () => {
                     setMerchantStatus(data.data);
                     if (data.data.activePipes && data.data.activePipes.length > 0) {
                         setSelectedPipe(data.data.activePipes[0]);
+                    } else {
+                        setSelectedPipe('');
                     }
                 }
             })
@@ -503,14 +505,14 @@ const AEPS = () => {
                                     onChange={(e) => setSelectedPipe(e.target.value)}
                                     className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
                                 >
-                                    {merchantStatus.activePipes.length > 0 ? (
-                                        merchantStatus.activePipes.map((pipe) => (
+                                    {merchantStatus.activePipes && merchantStatus.activePipes.length > 0 ? (
+                                        merchantStatus.activePipes.map((pipe: string) => (
                                             <option key={pipe} value={pipe}>
                                                 {pipe.toUpperCase()} (Verified)
                                             </option>
                                         ))
                                     ) : (
-                                        <option value="bank3">BANK3 (Default)</option>
+                                        <option value="" disabled>No Verified Pipes Available</option>
                                     )}
                                 </select>
                             </div>

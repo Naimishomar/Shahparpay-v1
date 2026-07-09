@@ -1364,7 +1364,7 @@ export const getMerchantStatus = async (req, res) => {
                 isMerchantKycComplete: retailer.isMerchantKycComplete || false,
                 isDailyAuthDoneToday: isDailyAuthDoneToday,
                 lastDailyAuthDate: retailer.lastDailyAuthDate,
-                activePipes: activePipes.length > 0 ? activePipes : ['bank3']
+                activePipes: activePipes
             }
         });
     } catch (error) {
