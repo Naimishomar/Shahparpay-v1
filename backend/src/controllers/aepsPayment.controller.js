@@ -7,7 +7,6 @@ import Transaction from "../models/transaction.model.js";
 
 // Helper function to resolve which bank pipe is verified for the merchant
 const getVerifiedPipe = async (merchantcode, mobile) => {
-    // Temporarily removed 'bank2' because PaySprint UAT has a deadlock bug for A2ZB1004 on bank2
     const pipes = ['bank3', 'bank5', 'bank1', 'bank2'];
     const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
     
@@ -436,6 +435,151 @@ export const cashWithdrawal = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Internal Server Error during AEPS Cash Withdrawal request",
+            error: error?.response?.data || error.message
+        });
+    }
+};
+
+export const aadhaarPay = async (req, res) => {
+    let session = null;
+    try {
+        const { mobileNumber, aadhaarNumber, bankIIN, pidData, merchantPidData, amount, latitude, longitude, bankName, customerName, pipe } = req.body;
+        if (!aadhaarNumber || !bankIIN || !pidData || !amount) {
+            return res.status(400).json({ 
+                success: false,
+                message: "Aadhaar number, Bank IIN, Biometric PidData, and Amount are required." 
+            });
+        }
+
+        // Fetch retailer for Merchant Auth
+        const retailer = await Retailer.findById(req.user.id);
+        if (!retailer) {
+            return res.status(404).json({ success: false, message: "Retailer not found" });
+        }
+
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+        const referenceNo = `AP${Date.now()}`;
+
+        // 1. Merchant 2FA (Txn Auth) - Using the improved helper function
+        if (merchantPidData) {
+            const authResult = await performMerchantAuth(merchantPidData, retailer, req);
+            if (!authResult.success) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: authResult.message || "Merchant 2FA Auth Failed" 
+                });
+            }
+        }
+
+        // 2. Create PENDING Transaction (Idempotency)
+        let newTxn = await Transaction.create({
+            transactionId: referenceNo,
+            userId: req.user.id,
+            type: 'AADHAAR_PAY',
+            amount: Number(amount),
+            status: 'PENDING',
+            metadata: {
+                aadhaar: aadhaarNumber,
+                bankIIN: bankIIN,
+                bankName: bankName,
+                name: customerName,
+                mobile: mobileNumber
+            }
+        });
+
+        const payload = {
+            latitude: String(latitude || "28.7041"),
+            longitude: String(longitude || "77.1025"),
+            mobilenumber: String(mobileNumber || retailer.contactNumber || "9999999999"),
+            referenceno: referenceNo,
+            ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
+            adhaarnumber: String(aadhaarNumber),
+            accessmodetype: "SITE",
+            nationalbankidentification: Number(bankIIN),
+            requestremarks: "Aadhaar Pay",
+            data: pidData,
+            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            transactiontype: "M", // PaySprint standard for Aadhaar Pay
+            submerchantid: String(retailer.retailerId),
+            amount: Number(amount),
+            is_iris: "No",
+            pipe: pipe || await getVerifiedPipe(retailer.retailerId, mobileNumber || retailer.contactNumber)
+        };
+
+        const token = generatePaySprintToken();
+        const encryptedData = encryptPayload(JSON.stringify(payload));
+        
+        const headers = {
+            'Token': token,
+            'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+            'Content-Type': 'application/json'
+        };
+
+        const response = await axios.post(
+            `${baseUrl}/service/aadharpay/aadharpay/index`, 
+            { body: encryptedData }, 
+            { headers, validateStatus: () => true }
+        );
+
+        let txnStatus = (response.data && response.data.status) ? 'SUCCESS' : 'FAILED';
+        let paysprintRef = response.data?.data?.ackno || response.data?.data?.rrn || null;
+        
+        // 3. Atomically update Wallet & Transaction if SUCCESS
+        if (txnStatus === 'SUCCESS') {
+            session = await mongoose.startSession();
+            session.startTransaction();
+            
+            // Update AepsWallet
+            const { default: AepsWallet } = await import('../models/aepsWallet.model.js');
+            await AepsWallet.findOneAndUpdate(
+                { userId: req.user.id, userModel: 'Retailer' },
+                { $inc: { balance: Number(amount) } }, // Crediting the full amount to merchant
+                { upsert: true, session }
+            );
+
+            // Update Transaction
+            newTxn.status = 'SUCCESS';
+            newTxn.transactionId = paysprintRef || newTxn.transactionId;
+            // The amount is already set in the newTxn creation
+            if (paysprintRef) {
+                newTxn.metadata = { 
+                    ...newTxn.metadata, 
+                    paysprintRef
+                };
+            }
+            await newTxn.save({ session });
+
+            await session.commitTransaction();
+            session.endSession();
+
+            return res.status(200).json({
+                success: true,
+                message: "Aadhaar Pay successful",
+                data: response.data
+            });
+        } else {
+            // Update Transaction to FAILED (No session needed as wallet is unaffected)
+            newTxn.status = 'FAILED';
+            if (paysprintRef) {
+                newTxn.metadata = { ...newTxn.metadata, paysprintRef };
+            }
+            await newTxn.save();
+
+            return res.status(400).json({
+                success: false,
+                message: response.data?.message || "Aadhaar Pay failed",
+                data: response.data
+            });
+        }
+    } catch (error) {
+        if (session) {
+            await session.abortTransaction();
+            session.endSession();
+        }
+        console.error("AEPS Aadhaar Pay Error:", error?.response?.data || error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error during AEPS Aadhaar Pay request",
             error: error?.response?.data || error.message
         });
     }

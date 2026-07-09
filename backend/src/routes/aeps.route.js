@@ -10,7 +10,8 @@ import {
     resendMerchantOtp,
     verifyMerchantOtp,
     dailyAuth,
-    getMerchantStatus
+    getMerchantStatus,
+    aadhaarPay
 } from '../controllers/aepsPayment.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 
@@ -24,6 +25,7 @@ router.get('/banks', getBankList);
 router.post('/balance-enquiry', authMiddlewares, balanceEnquiry);
 router.post('/cash-withdrawal', authMiddlewares, cashWithdrawal);
 router.post('/cash-deposit', authMiddlewares, cashDeposit);
+router.post('/aadhaar-pay', authMiddlewares, aadhaarPay);
 router.post('/mini-statement', authMiddlewares, miniStatement);
 router.post('/txn-status', authMiddlewares, cashWithdrawalTxnStatus);
 

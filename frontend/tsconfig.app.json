@@ -20,8 +20,6 @@
     "noUnusedParameters": false,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    //ts-ignore
-    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {  
       "@/*": ["./src/*"]

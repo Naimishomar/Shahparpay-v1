@@ -169,12 +169,12 @@ const AEPS = () => {
             return;
         }
         
-        // For cash withdrawal and cash deposit, we need Merchant first, then Customer
-        const isCashTxn = activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit';
+        // For cash withdrawal, cash deposit, and aadhaar pay, we need Merchant first, then Customer
+        const isCashTxn = activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit' || activeTab === 'aadhaar_pay';
         const isCapturingMerchant = isCashTxn && !merchantPidData;
         
         if (isCapturingMerchant) {
-            const proceed = window.confirm(`NPCI Guideline: RETAILER must scan their fingerprint first for ${activeTab === 'cash_withdrawal' ? 'Cash Withdrawal' : 'Cash Deposit'}. Please place YOUR finger on the scanner.`);
+            const proceed = window.confirm(`NPCI Guideline: RETAILER must scan their fingerprint first for ${activeTab === 'cash_withdrawal' ? 'Cash Withdrawal' : activeTab === 'aadhaar_pay' ? 'Aadhaar Pay' : 'Cash Deposit'}. Please place YOUR finger on the scanner.`);
             if (!proceed) return;
         } else {
             const proceed = window.confirm("CUSTOMER must now place their finger on the scanner.");
@@ -271,11 +271,11 @@ const AEPS = () => {
         }
         
         // Validate inputs based on active tab
-        if ((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') && (!merchantPidData || !pidData)) {
+        if ((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit' || activeTab === 'aadhaar_pay') && (!merchantPidData || !pidData)) {
             toast.error("Please capture both Retailer and Customer fingerprints.");
             return;
         }
-        if (activeTab !== 'cash_withdrawal' && activeTab !== 'cash_deposit' && !pidData) {
+        if (activeTab !== 'cash_withdrawal' && activeTab !== 'cash_deposit' && activeTab !== 'aadhaar_pay' && !pidData) {
             toast.error("Please capture Customer fingerprint.");
             return;
         }
@@ -295,7 +295,7 @@ const AEPS = () => {
                 aadhaarNumber: aadhaarNo,
                 bankIIN: actualIIN,
                 pidData: pidData,
-                merchantPidData: (activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') ? merchantPidData : undefined,
+                merchantPidData: (activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit' || activeTab === 'aadhaar_pay') ? merchantPidData : undefined,
                 bankName: bankName,
                 customerName: name,
                 pipe: selectedPipe
@@ -323,6 +323,22 @@ const AEPS = () => {
                 }
                 apiPayload.amount = amount;
                 res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/cash-withdrawal`, apiPayload, config);
+            } else if (activeTab === 'aadhaar_pay') {
+                // Intercept logic for DB tracker
+                if (!merchantStatus.isMerchantKycComplete) {
+                    alert("Mandatory eKYC is incomplete. Please complete it first.");
+                    setShowKycModal(true);
+                    setLoading(false);
+                    return;
+                }
+                if (!merchantStatus.isDailyAuthDoneToday) {
+                    alert("Daily Biometric Authentication is required. Please complete it now.");
+                    setShowDailyAuthModal(true);
+                    setLoading(false);
+                    return;
+                }
+                apiPayload.amount = amount;
+                res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/aadhaar-pay`, apiPayload, config);
             } else if (activeTab === 'cash_deposit') {
                 apiPayload.amount = amount;
                 res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/cash-deposit`, apiPayload, config);
@@ -428,6 +444,12 @@ const AEPS = () => {
                         >
                             Cash Deposit
                         </button>
+                        <button 
+                            onClick={() => setActiveTab('aadhaar_pay')}
+                            className={`pb-2 font-medium transition-colors ${activeTab === 'aadhaar_pay' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                        >
+                            Aadhaar Pay
+                        </button>
                     </div>
                 </div>
             </div>
@@ -441,7 +463,7 @@ const AEPS = () => {
                     {/* Inputs Row */}
                     <div className="flex flex-col gap-4 bg-primary/5 p-5 border-l-4 border-primary rounded-lg">
                         <h2 className="text-lg font-bold text-foreground border-b border-border/50 pb-2">
-                            {activeTab === 'balance_enquiry' ? 'Balance Enquiry' : activeTab === 'mini_statement' ? 'Mini Statement' : activeTab === 'cash_deposit' ? 'Cash Deposit' : 'Cash Withdrawal'}
+                            {activeTab === 'balance_enquiry' ? 'Balance Enquiry' : activeTab === 'mini_statement' ? 'Mini Statement' : activeTab === 'cash_deposit' ? 'Cash Deposit' : activeTab === 'aadhaar_pay' ? 'Aadhaar Pay' : 'Cash Withdrawal'}
                         </h2>
                         
                         <div className="flex flex-col gap-4 mt-2">
@@ -523,7 +545,7 @@ const AEPS = () => {
                                 />
                             </div>
 
-                            {(activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') && (
+                            {(activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit' || activeTab === 'aadhaar_pay') && (
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-sm font-medium text-foreground">Amount</label>
                                     <div className="relative">
