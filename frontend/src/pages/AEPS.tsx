@@ -404,9 +404,10 @@ const AEPS = () => {
             }
             setPidData(null);
             setMerchantPidData(null);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            alert("Failed to connect to the server.");
+            const errorMsg = error.response?.data?.message || "Failed to connect to the server.";
+            alert("Transaction Failed: " + errorMsg);
         } finally {
             setLoading(false);
         }

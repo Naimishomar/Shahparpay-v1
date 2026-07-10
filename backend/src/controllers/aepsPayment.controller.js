@@ -178,6 +178,7 @@ export const balanceEnquiry = async (req, res) => {
             adhaarnumber: String(aadhaarNumber),
             accessmodetype: "SITE",
             nationalbankidentification: Number(bankIIN),
+            requestremarks: "Balance Enquiry",
             data: pidData,
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
             transactiontype: "BE",
