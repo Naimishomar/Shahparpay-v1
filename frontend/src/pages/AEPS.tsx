@@ -564,15 +564,15 @@ const AEPS = () => {
                                     onChange={(e) => setSelectedPipe(e.target.value)}
                                     className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
                                 >
-                                    {merchantStatus.activePipes && merchantStatus.activePipes.length > 0 ? (
-                                        merchantStatus.activePipes.map((pipe: string) => (
+                                    <option value="">Auto-Select Verified Pipe</option>
+                                    {['bank1', 'bank2', 'bank3', 'bank5', 'bank6'].map((pipe: string) => {
+                                        const isVerified = merchantStatus.activePipes?.includes(pipe);
+                                        return (
                                             <option key={pipe} value={pipe}>
-                                                {pipe.toUpperCase()} (Verified)
+                                                {pipe.toUpperCase()} {isVerified ? '(Verified)' : '(Unverified)'}
                                             </option>
-                                        ))
-                                    ) : (
-                                        <option value="" disabled>No Verified Pipes Available</option>
-                                    )}
+                                        );
+                                    })}
                                 </select>
                             </div>
 
