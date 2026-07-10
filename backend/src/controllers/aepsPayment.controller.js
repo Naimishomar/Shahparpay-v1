@@ -196,7 +196,7 @@ export const balanceEnquiry = async (req, res) => {
         };
 
         const response = await axios.post(
-            `${baseUrl}/service/aeps/v3/balanceenquiry/index`, 
+            `${baseUrl}/service/aeps/balanceenquiry/index`, 
             { body: encryptedData }, 
             { headers, validateStatus: () => true }
         );
@@ -627,7 +627,7 @@ export const miniStatement = async (req, res) => {
         };
 
         const response = await axios.post(
-            `${baseUrl}/service/aeps/v3/ministatement/index`, 
+            `${baseUrl}/service/aeps/ministatement/index`, 
             { body: encryptedData }, 
             { headers, validateStatus: () => true }
         );
