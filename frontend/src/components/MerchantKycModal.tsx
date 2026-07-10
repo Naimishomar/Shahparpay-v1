@@ -3,9 +3,11 @@ import { ShieldAlert, Fingerprint, Loader2, CheckCircle2 } from 'lucide-react';
 
 interface MerchantKycModalProps {
     onClose: () => void;
+    latitude?: string;
+    longitude?: string;
 }
 
-const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose }) => {
+const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, longitude }) => {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [merchantCode, setMerchantCode] = useState('');
@@ -32,8 +34,8 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose }) => {
                 body: JSON.stringify({
                     merchantcode: merchantCode,
                     aadhaar: aadhaar,
-                    latitude: "28.7041",
-                    longitude: "77.1025"
+                    latitude: latitude || "28.7041",
+                    longitude: longitude || "77.1025"
                 })
             });
             const result = await response.json();
@@ -121,8 +123,8 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose }) => {
                 body: JSON.stringify({
                     merchantcode: merchantCode,
                     aadhaar: aadhaar,
-                    latitude: "28.7041",
-                    longitude: "77.1025",
+                    latitude: latitude || "28.7041",
+                    longitude: longitude || "77.1025",
                     otp: otp,
                     stateresp: stateresp,
                     ekyc_id: ekycId,

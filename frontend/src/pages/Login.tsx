@@ -143,8 +143,8 @@ const Login = () => {
                                     </div>
                                     <input
                                         type="text"
-                                        value={identifier}
-                                        onChange={(e) => setIdentifier(e.target.value)}
+                                        value={identifier.toUpperCase()}
+                                        onChange={(e) => setIdentifier(e.target.value.toUpperCase())}
                                         placeholder="User ID, Email, or Phone"
                                         className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-muted-foreground/50"
                                         required

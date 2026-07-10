@@ -6,9 +6,11 @@ import { toast } from 'sonner';
 interface DailyAuthModalProps {
     onClose: () => void;
     activePipes?: string[];
+    latitude?: string;
+    longitude?: string;
 }
 
-const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = [] }) => {
+const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = [], latitude, longitude }) => {
     const { user } = useAuth();
     const actualMerchantCode = user?.retailerId || user?.distributorId || user?.adminId || "";
     const actualAadhaar = user?.aadhaarNumber || "";
@@ -75,8 +77,8 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = 
                     aadhaarNumber: aadhaar,
                     mobileNumber: "9999999999", // Could be dynamic from profile
                     pidData: capturedData,
-                    latitude: "28.7041",
-                    longitude: "77.1025"
+                    latitude: latitude || "28.7041",
+                    longitude: longitude || "77.1025"
                 })
             });
             

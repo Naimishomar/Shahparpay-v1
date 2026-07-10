@@ -7,6 +7,7 @@ import DailyAuthModal from "../components/DailyAuthModal";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import { toast } from "sonner";
+import { useLocationContext } from "../context/LocationContext";
 
 const banks = [
     { name: 'ICICI Bank', logo: 'https://www.google.com/s2/favicons?domain=icicibank.com&sz=128' },
@@ -45,9 +46,10 @@ const numberToWords = (num: string | number) => {
 
 const AEPS = () => {
     const { user } = useAuth();
+    const { location } = useLocationContext();
     const actualMerchantCode = user?.retailerId || user?.distributorId || user?.adminId || "";
     // UI State
-    const [activeTab, setActiveTab] = useState("cash_withdrawal");
+    const [activeTab, setActiveTab] = useState("balance_enquiry");
     const [selectedDevice, setSelectedDevice] = useState("mantra");
     
     // Form Field State
@@ -319,6 +321,8 @@ const AEPS = () => {
             const actualIIN = selectedBankObj?.iinno || selectedBankObj?.bank_iin || '607152';
 
             const apiPayload: any = {
+                latitude: location?.latitude?.toString(),
+                longitude: location?.longitude?.toString(),
                 mobileNumber: mobileNo,
                 aadhaarNumber: aadhaarNo,
                 bankIIN: actualIIN,
@@ -879,24 +883,31 @@ const AEPS = () => {
 
             {/* Merchant KYC Modal */}
             {showKycModal && (
-                <MerchantKycModal onClose={() => {
-                    setShowKycModal(false);
-                    // Force refresh status
-                    setMerchantCode(prev => prev + " ");
-                    setTimeout(() => setMerchantCode(prev => prev.trim()), 100);
-                }} />
+                <MerchantKycModal 
+                    latitude={location?.latitude?.toString()}
+                    longitude={location?.longitude?.toString()}
+                    onClose={() => {
+                        setShowKycModal(false);
+                        // Force refresh status
+                        setMerchantCode(prev => prev + " ");
+                        setTimeout(() => setMerchantCode(prev => prev.trim()), 100);
+                    }} 
+                />
             )}
 
             {/* Daily 2FA Auth Modal */}
             {showDailyAuthModal && (
                 <DailyAuthModal 
                     activePipes={merchantStatus.activePipes || []}
+                    latitude={location?.latitude?.toString()}
+                    longitude={location?.longitude?.toString()}
                     onClose={() => {
                         setShowDailyAuthModal(false);
-                    // Force refresh status
-                    setMerchantCode(prev => prev + " ");
-                    setTimeout(() => setMerchantCode(prev => prev.trim()), 100);
-                }} />
+                        // Force refresh status
+                        setMerchantCode(prev => prev + " ");
+                        setTimeout(() => setMerchantCode(prev => prev.trim()), 100);
+                    }} 
+                />
             )}
         </div>
     )

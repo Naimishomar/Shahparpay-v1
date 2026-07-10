@@ -5,12 +5,15 @@ import App from './App.tsx'
 import { ThemeProvider } from './contexts/theme-provider.tsx'
 
 import { AuthProvider } from './context/AuthContext.tsx'
+import { LocationProvider } from './context/LocationContext.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
       <AuthProvider>
-        <App />
+        <LocationProvider>
+          <App />
+        </LocationProvider>
       </AuthProvider>
     </ThemeProvider>
   </StrictMode>,
