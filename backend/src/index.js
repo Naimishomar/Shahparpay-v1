@@ -13,18 +13,18 @@ app.use(cors({
     origin: ['http://localhost:5173', 'https://shahparpay-v1.vercel.app'],
     credentials: true,
 }));
+
 morgan.token('custom-date', () => {
-    const d = new Date();
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    let hours = d.getHours();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    const strHours = String(hours).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    return `${day}/${month}/${year} - ${strHours}:${minutes}${ampm}`;
+    const formatter = new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    });
+    return formatter.format(new Date()).replace(', ', ' - ').toUpperCase().replace(' PM', 'PM').replace(' AM', 'AM');
 });
 
 app.use(morgan(function (tokens, req, res) {
