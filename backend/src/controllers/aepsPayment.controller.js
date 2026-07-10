@@ -180,7 +180,7 @@ export const balanceEnquiry = async (req, res) => {
             data: pidData,
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
             submerchantid: String(retailer.retailerId),
-            pipe: pipe || await getVerifiedPipe(retailer.retailerId, mobileNumber || retailer.contactNumber),
+            pipe: pipe || await getVerifiedPipe(retailer.retailerId, retailer.contactNumber),
             is_iris: "No"
         };
 
@@ -360,7 +360,7 @@ export const cashWithdrawal = async (req, res) => {
             submerchantid: String(retailer.retailerId),
             amount: Number(amount),
             is_iris: "No",
-            pipe: pipe || await getVerifiedPipe(retailer.retailerId, mobileNumber || retailer.contactNumber)
+            pipe: pipe || await getVerifiedPipe(retailer.retailerId, retailer.contactNumber)
         };
 
         const token = generatePaySprintToken();
@@ -501,7 +501,7 @@ export const aadhaarPay = async (req, res) => {
             submerchantid: String(retailer.retailerId),
             amount: Number(amount),
             is_iris: "No",
-            pipe: pipe || await getVerifiedPipe(retailer.retailerId, mobileNumber || retailer.contactNumber)
+            pipe: pipe || await getVerifiedPipe(retailer.retailerId, retailer.contactNumber)
         };
 
         const token = generatePaySprintToken();
@@ -610,7 +610,7 @@ export const miniStatement = async (req, res) => {
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
             submerchantid: String(retailer.retailerId),
             is_iris: "No",
-            pipe: pipe || await getVerifiedPipe(retailer.retailerId, mobileNumber || retailer.contactNumber)
+            pipe: pipe || await getVerifiedPipe(retailer.retailerId, retailer.contactNumber)
         };
 
         const token = generatePaySprintToken();
@@ -725,7 +725,7 @@ export const cashDeposit = async (req, res) => {
             submerchantid: String(retailer.retailerId),
             amount: Number(amount),
             is_iris: "No",
-            pipe: pipe || await getVerifiedPipe(retailer.retailerId, mobileNumber || retailer.contactNumber)
+            pipe: pipe || await getVerifiedPipe(retailer.retailerId, retailer.contactNumber)
         };
 
         const token = generatePaySprintToken();
