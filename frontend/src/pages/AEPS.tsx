@@ -100,7 +100,7 @@ const AEPS = () => {
         if (!merchantCode) return;
         setIsRefreshingStatus(true);
         try {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/merchant-status?merchantcode=${merchantCode}`);
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/merchant-status?merchantcode=${merchantCode}&forceRefresh=true`);
             const data = await res.json();
             if (data.success && data.data) {
                 setMerchantStatus(data.data);

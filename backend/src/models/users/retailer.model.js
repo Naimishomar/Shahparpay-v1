@@ -114,6 +114,13 @@ const retailerSchema = new mongoose.Schema({
     isExistingMerchant: {
         type: Boolean,
         default: false
+    },
+    activeAepsPipes: [{
+        type: String
+    }],
+    lastPipeCheckDate: {
+        type: Date,
+        default: null
     }
 }, { timestamps: true });
 

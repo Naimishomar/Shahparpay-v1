@@ -144,6 +144,13 @@ export const verifyLoginOtp = async (req, res) => {
             sameSite: 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
+        
+        // Fire off background pipe synchronization for retailers
+        if (role === 'retailer') {
+            import('./aepsPayment.controller.js').then(({ syncMerchantPipes }) => {
+                syncMerchantPipes(user.retailerId).catch(err => console.error("Background sync failed:", err));
+            }).catch(err => console.error("Failed to import sync function:", err));
+        }
 
         return res.status(200).json({ success: true, message: "Login successful", token: accessToken, role, user: userObj });
     } catch (error) {

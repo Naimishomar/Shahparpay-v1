@@ -1278,9 +1278,68 @@ export const dailyAuth = async (req, res) => {
     }
 };
 
+export const syncMerchantPipes = async (merchantcode) => {
+    try {
+        const retailer = await Retailer.findOne({ retailerId: merchantcode });
+        if (!retailer) return [];
+
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+        const token = generatePaySprintToken();
+        const headers = {
+            'Token': token,
+            'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+            'Content-Type': 'application/json'
+        };
+
+        const pipesToCheck = ['bank2', 'bank1', 'bank5', 'bank6', 'bank3'];
+        const activePipes = [];
+        let isActuallyOnboarded = false;
+
+        const statusPromises = pipesToCheck.map(pipe => {
+            return axios.post(
+                `${baseUrl}/service/onboard/onboard/getonboardstatus`,
+                {
+                    merchantcode: merchantcode,
+                    mobile: String(retailer.contactNumber),
+                    pipe: pipe
+                },
+                { headers, validateStatus: () => true }
+            );
+        });
+
+        const results = await Promise.allSettled(statusPromises);
+        
+        results.forEach((result, index) => {
+            if (result.status === 'fulfilled') {
+                const responseData = result.value.data;
+                if (responseData && 
+                    responseData.response_code === 1 && 
+                    responseData.is_approved === 'Accepted') {
+                    activePipes.push(pipesToCheck[index]);
+                    isActuallyOnboarded = true;
+                }
+            }
+        });
+        
+        await Retailer.findOneAndUpdate(
+            { retailerId: merchantcode },
+            { 
+                isMerchantKycComplete: isActuallyOnboarded ? true : retailer.isMerchantKycComplete,
+                activeAepsPipes: activePipes,
+                lastPipeCheckDate: new Date()
+            }
+        );
+        
+        return activePipes;
+    } catch (err) {
+        console.error("Error checking pipe status in background:", err);
+        return [];
+    }
+};
+
 export const getMerchantStatus = async (req, res) => {
     try {
-        const { merchantcode } = req.query;
+        const { merchantcode, forceRefresh } = req.query;
         if (!merchantcode) {
             return res.status(400).json({ 
                 success: false, 
@@ -1308,60 +1367,11 @@ export const getMerchantStatus = async (req, res) => {
                 lastAuth.getFullYear() === today.getFullYear();
         }
 
-        // Check PaySprint Onboard Status for pipes
-        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
-        const token = generatePaySprintToken();
-        const headers = {
-            'Token': token,
-            'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
-            'Content-Type': 'application/json'
-        };
-
-        // In getMerchantStatus, add this to check if merchant is actually onboarded
-        // Even if isMerchantKycComplete is false, we might get Accepted from PaySprint
-        // 1. Get Merchant Pipe (which one is approved)
-        // Prefer bank2 since bank3 is not activated by the partner
-        const pipesToCheck = ['bank2', 'bank1', 'bank5', 'bank6'];
-        const activePipes = [];
-        let isActuallyOnboarded = false;
-
-        try {
-            const statusPromises = pipesToCheck.map(pipe => {
-                return axios.post(
-                    `${baseUrl}/service/onboard/onboard/getonboardstatus`,
-                    {
-                        merchantcode: merchantcode,
-                        mobile: String(retailer.contactNumber),
-                        pipe: pipe
-                    },
-                    { headers, validateStatus: () => true }
-                );
-            });
-
-            const results = await Promise.allSettled(statusPromises);
-            
-            results.forEach((result, index) => {
-                if (result.status === 'fulfilled') {
-                    const responseData = result.value.data;
-                    if (responseData && 
-                        responseData.response_code === 1 && 
-                        responseData.is_approved === 'Accepted') {
-                        activePipes.push(pipesToCheck[index]);
-                        isActuallyOnboarded = true;
-                    }
-                }
-            });
-            
-            // If PaySprint says onboarded but DB says false, update DB
-            if (isActuallyOnboarded && !retailer.isMerchantKycComplete) {
-                await Retailer.findOneAndUpdate(
-                    { retailerId: merchantcode },
-                    { isMerchantKycComplete: true }
-                );
-                retailer.isMerchantKycComplete = true;
-            }
-        } catch (err) {
-            console.error("Error checking pipe status:", err);
+        let activePipes = retailer.activeAepsPipes || [];
+        
+        // If no pipes are cached, or forceRefresh is true, fetch them now
+        if (activePipes.length === 0 || forceRefresh === 'true') {
+            activePipes = await syncMerchantPipes(merchantcode);
         }
 
         return res.status(200).json({
