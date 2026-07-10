@@ -38,21 +38,20 @@ const DMT = () => {
         setLoading(true);
         try {
             const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/dmt/remitter/query`, { mobile }, getHeaders());
-            if (res.data.success && res.data.data.status) {
-                setRemitter(res.data.data.data);
+            const paysprintData = res.data.data;
+
+            if (res.data.success && paysprintData?.status) {
+                setRemitter(paysprintData.data);
                 toast.success("Remitter found");
                 fetchBeneficiaries(mobile);
-            } else {
-                toast.error("Remitter not found, please register.");
-                setShowRegister(true);
-            }
-        } catch (error: any) {
-            if (error.response?.status === 404 || error.response?.data?.message?.includes("not found")) {
+            } else if (paysprintData && (paysprintData.response_code == 0 || paysprintData.response_code === "0")) {
                 toast.info("Remitter not found, redirecting to registration...");
                 setShowRegister(true);
             } else {
-                toast.error(error.response?.data?.message || "Failed to query remitter");
+                toast.error(paysprintData?.message || "Failed to query remitter");
             }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to query remitter");
         }
         setLoading(false);
     };
@@ -63,11 +62,15 @@ const DMT = () => {
         setLoading(true);
         try {
             const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/dmt/remitter/register`, { mobile, ...regData }, getHeaders());
-            if (res.data.success) {
-                toast.success("OTP sent successfully");
-                setStateResp(res.data.data.stateresp || '');
+            const paysprintData = res.data.data;
+
+            if (res.data.success && paysprintData?.status) {
+                toast.success(paysprintData?.message || "OTP sent successfully");
+                setStateResp(paysprintData?.stateresp || paysprintData?.data?.stateresp || '');
                 setShowRegister(false);
                 setShowOtp(true);
+            } else {
+                toast.error(paysprintData?.message || "Failed to register remitter");
             }
         } catch (error: any) {
             toast.error(error.response?.data?.message || "Failed to register remitter");
@@ -81,11 +84,15 @@ const DMT = () => {
         setLoading(true);
         try {
             const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/dmt/remitter/verify`, { mobile, otp, stateresp: stateResp }, getHeaders());
-            if (res.data.success) {
+            const paysprintData = res.data.data;
+
+            if (res.data.success && paysprintData?.status) {
                 toast.success("Remitter verified successfully!");
                 setShowOtp(false);
                 setRemitter({ mobile, fname: regData.firstName, lname: regData.lastName });
                 fetchBeneficiaries(mobile);
+            } else {
+                toast.error(paysprintData?.message || "Failed to verify OTP");
             }
         } catch (error: any) {
             toast.error(error.response?.data?.message || "Failed to verify OTP");
@@ -97,8 +104,11 @@ const DMT = () => {
     const fetchBeneficiaries = async (mob: string) => {
         try {
             const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/dmt/beneficiary/fetch`, { mobile: mob }, getHeaders());
-            if (res.data.success && res.data.data.data) {
-                setBeneficiaries(res.data.data.data);
+            const paysprintData = res.data.data;
+            if (res.data.success && paysprintData?.status && paysprintData?.data) {
+                setBeneficiaries(paysprintData.data);
+            } else {
+                setBeneficiaries([]);
             }
         } catch (error: any) {
             console.error(error);
@@ -139,12 +149,12 @@ const DMT = () => {
                 ...beneData
             }, { headers: { Authorization: `Bearer ${token}` } });
 
-            if (res.data.success) {
+            if (res.data.success && res.data.data?.status) {
                 toast.success("Beneficiary added successfully");
                 setShowAddBene(false);
                 fetchBeneficiaries(mobile); // Refresh list
             } else {
-                toast.error(res.data.message || "Failed to add beneficiary");
+                toast.error(res.data.data?.message || res.data.message || "Failed to add beneficiary");
             }
         } catch (error: any) {
             toast.error(error.response?.data?.message || "Failed to add beneficiary");
@@ -163,11 +173,11 @@ const DMT = () => {
                 beneid
             }, { headers: { Authorization: `Bearer ${token}` } });
 
-            if (res.data.success) {
+            if (res.data.success && res.data.data?.status) {
                 toast.success("Beneficiary deleted successfully");
                 fetchBeneficiaries(mobile); // Refresh list
             } else {
-                toast.error(res.data.message || "Failed to delete beneficiary");
+                toast.error(res.data.data?.message || res.data.message || "Failed to delete beneficiary");
             }
         } catch (error: any) {
             toast.error(error.response?.data?.message || "Failed to delete beneficiary");
