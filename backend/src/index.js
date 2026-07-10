@@ -13,7 +13,38 @@ app.use(cors({
     origin: ['http://localhost:5173', 'https://shahparpay-v1.vercel.app'],
     credentials: true,
 }));
-app.use(morgan('dev'));
+morgan.token('custom-date', () => {
+    const d = new Date();
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    let hours = d.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const strHours = String(hours).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} - ${strHours}:${minutes}${ampm}`;
+});
+
+app.use(morgan(function (tokens, req, res) {
+    const status = tokens.status(req, res);
+    const statusColor = status >= 500 ? 31 // red
+      : status >= 400 ? 33 // yellow
+      : status >= 300 ? 36 // cyan
+      : status >= 200 ? 32 // green
+      : 0; // no color
+      
+    return [
+        `\x1b[90m[${tokens['custom-date'](req, res)}]\x1b[0m`, 
+        tokens.method(req, res),
+        tokens.url(req, res),
+        `\x1b[${statusColor}m${status}\x1b[0m`,
+        tokens['response-time'](req, res), 'ms',
+        '-',
+        tokens.res(req, res, 'content-length')
+    ].join(' ');
+}));
 app.use(express.json());
 app.use(express.urlencoded({extended:false}));
 app.use(cookieParser());
