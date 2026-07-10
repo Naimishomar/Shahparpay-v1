@@ -25,6 +25,10 @@ const BBPS = () => {
     const [consumerNumber, setConsumerNumber] = useState("");
     const [amount, setAmount] = useState("");
     const [pin, setPin] = useState("");
+    
+    const [ad1, setAd1] = useState("");
+    const [ad2, setAd2] = useState("");
+    const [ad3, setAd3] = useState("");
 
     const [fetchedBill, setFetchedBill] = useState<any>(null);
     const [fetchingBill, setFetchingBill] = useState(false);
@@ -36,7 +40,7 @@ const BBPS = () => {
 
     const fetchOperators = async (type: string) => {
         try {
-            const apiType = type === 'lpg' ? 'gas' : type;
+            const apiType = type;
             const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/operators/${apiType}`);
             if (res.data.success) {
                 setOperators(res.data.data);
@@ -53,6 +57,9 @@ const BBPS = () => {
         setConsumerNumber("");
         setAmount("");
         setPin("");
+        setAd1("");
+        setAd2("");
+        setAd3("");
         setFetchedBill(null);
         fetchOperators(service.id);
     };
@@ -67,7 +74,10 @@ const BBPS = () => {
         try {
             const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/fetch-bill`, {
                 operator: operatorId,
-                caNumber: consumerNumber
+                caNumber: consumerNumber,
+                ad1: ad1 || undefined,
+                ad2: ad2 || undefined,
+                ad3: ad3 || undefined
             });
 
             if (response.data.success) {
@@ -93,7 +103,7 @@ const BBPS = () => {
 
         setLoading(true);
         try {
-            const apiType = selectedService.id === 'lpg' ? 'gas' : selectedService.id;
+            const apiType = selectedService.id;
             const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/do-recharge`, {
                 userId: user?.id || user?._id,
                 type: apiType,
@@ -101,7 +111,10 @@ const BBPS = () => {
                 operator: operatorId,
                 amount: amount,
                 pin: pin,
-                circle: 1
+                circle: 1,
+                ad1: ad1 || undefined,
+                ad2: ad2 || undefined,
+                ad3: ad3 || undefined
             });
 
             if (response.data.success) {
@@ -240,8 +253,10 @@ const BBPS = () => {
                                     </select>
                                 </div>
 
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-foreground">Consumer / Account Number</label>
+                                <div className="space-y-1.5 mt-4">
+                                    <label className="text-sm font-medium text-foreground">
+                                        {operators.find((op: any) => op.id.toString() === operatorId.toString())?.displayname || "Consumer / Account Number"}
+                                    </label>
                                     <input 
                                         type="text"
                                         className="w-full bg-background border border-border rounded-xl p-3.5 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
@@ -251,6 +266,54 @@ const BBPS = () => {
                                         readOnly={!!fetchedBill}
                                     />
                                 </div>
+
+                                {operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad1_name && (
+                                    <div className="space-y-1.5 mt-4">
+                                        <label className="text-sm font-medium text-foreground">
+                                            {operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad1_name}
+                                        </label>
+                                        <input 
+                                            type="text"
+                                            className="w-full bg-background border border-border rounded-xl p-3.5 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                                            placeholder={`Enter ${operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad1_name}`}
+                                            value={ad1}
+                                            onChange={(e) => setAd1(e.target.value)}
+                                            readOnly={!!fetchedBill}
+                                        />
+                                    </div>
+                                )}
+
+                                {operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad2_name && (
+                                    <div className="space-y-1.5 mt-4">
+                                        <label className="text-sm font-medium text-foreground">
+                                            {operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad2_name}
+                                        </label>
+                                        <input 
+                                            type="text"
+                                            className="w-full bg-background border border-border rounded-xl p-3.5 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                                            placeholder={`Enter ${operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad2_name}`}
+                                            value={ad2}
+                                            onChange={(e) => setAd2(e.target.value)}
+                                            readOnly={!!fetchedBill}
+                                        />
+                                    </div>
+                                )}
+
+                                {operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad3_name && (
+                                    <div className="space-y-1.5 mt-4">
+                                        <label className="text-sm font-medium text-foreground">
+                                            {operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad3_name}
+                                        </label>
+                                        <input 
+                                            type="text"
+                                            className="w-full bg-background border border-border rounded-xl p-3.5 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                                            placeholder={`Enter ${operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad3_name}`}
+                                            value={ad3}
+                                            onChange={(e) => setAd3(e.target.value)}
+                                            readOnly={!!fetchedBill}
+                                        />
+                                    </div>
+                                )}
 
                                 {!fetchedBill ? (
                                     <button 

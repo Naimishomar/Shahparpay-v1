@@ -44,9 +44,13 @@ export const getOperators = async (req, res) => {
                 'dth': 'DTH',
                 'electricity': 'Electricity',
                 'gas': 'GAS',
+                'lpg': 'LPG Gas',
                 'water': 'Water',
                 'broadband': 'Broadband',
-                'insurance': 'Insurance'
+                'insurance': 'Insurance',
+                'loan': 'Loan Repayment',
+                'fastag': 'Fastag',
+                'cable': 'Cable TV'
             };
             
             const targetCategory = (typeMap[type.toLowerCase()] || 'Prepaid').toLowerCase();
@@ -55,7 +59,13 @@ export const getOperators = async (req, res) => {
             
             const formattedData = filteredOps.map(op => ({
                 id: op.id,
-                name: op.name
+                name: op.name,
+                category: op.category,
+                viewbill: op.viewbill,
+                displayname: op.displayname,
+                ad1_name: op.ad1_name || op.ad1_d_name,
+                ad2_name: op.ad2_name || op.ad2_d_name,
+                ad3_name: op.ad3_name || op.ad3_d_name,
             }));
             
             return res.status(200).json({ success: true, data: formattedData });
@@ -158,7 +168,7 @@ export const fetchDthInfo = async (req, res) => {
 
 export const fetchBill = async (req, res) => {
     try {
-        const { caNumber, operator } = req.body;
+        const { caNumber, operator, ad1, ad2, ad3 } = req.body;
         if (!caNumber || !operator) {
             return res.status(400).json({ success: false, message: "CA number (Consumer Number) and operator are required" });
         }
@@ -169,6 +179,9 @@ export const fetchBill = async (req, res) => {
             operator: Number(operator),
             canumber: caNumber
         };
+        if (ad1) payload.ad1 = ad1;
+        if (ad2) payload.ad2 = ad2;
+        if (ad3) payload.ad3 = ad3;
         
         const response = await axios.post(url, payload, { headers: getPaysprintHeaders() });
 
@@ -192,7 +205,7 @@ export const fetchBill = async (req, res) => {
 
 export const doRecharge = async (req, res) => {
     try {
-        const { mobileNumber, dthNumber, number, operator, amount, pin, type, userId } = req.body;
+        const { mobileNumber, dthNumber, number, operator, amount, pin, type, userId, ad1, ad2, ad3 } = req.body;
 
         const referenceId = `PAY${Date.now()}${Math.floor(Math.random() * 1000)}`;
         const caNumber = mobileNumber || dthNumber || number;
@@ -243,6 +256,9 @@ export const doRecharge = async (req, res) => {
             amount: totalAmount,
             referenceid: referenceId
         };
+        if (ad1) payload.ad1 = ad1;
+        if (ad2) payload.ad2 = ad2;
+        if (ad3) payload.ad3 = ad3;
 
         const url = `${getPaysprintBase()}/service/recharge/recharge/dorecharge`;
         console.log("--- PAYSPRINT DORECHARGE REQUEST PAYLOAD ---", payload);
