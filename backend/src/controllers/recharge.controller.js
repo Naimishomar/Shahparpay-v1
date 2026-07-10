@@ -31,8 +31,12 @@ export const getOperators = async (req, res) => {
     try {
         const { type } = req.params; // e.g. 'prepaid', 'dth'
         
-        const url = `${getPaysprintBase()}/service/recharge/recharge/getoperator`;
-        const response = await axios.post(url, {}, { headers: getPaysprintHeaders() });
+        const isBBPS = !['prepaid', 'dth'].includes(type.toLowerCase());
+        const basePath = isBBPS ? '/service/bill-payment/bill' : '/service/recharge/recharge';
+        const url = `${getPaysprintBase()}${basePath}/getoperator`;
+        
+        const payload = isBBPS ? { mode: "online" } : {};
+        const response = await axios.post(url, payload, { headers: getPaysprintHeaders() });
 
         if (response.data && response.data.status) {
             const allOperators = response.data.data || [];
@@ -173,7 +177,7 @@ export const fetchBill = async (req, res) => {
             return res.status(400).json({ success: false, message: "CA number (Consumer Number) and operator are required" });
         }
 
-        const url = `${getPaysprintBase()}/service/recharge/recharge/fetchbill`;
+        const url = `${getPaysprintBase()}/service/bill-payment/bill/fetchbill`;
         
         const payload = {
             operator: Number(operator),
@@ -256,12 +260,21 @@ export const doRecharge = async (req, res) => {
             amount: totalAmount,
             referenceid: referenceId
         };
+        
+        const isBBPS = !['prepaid', 'dth'].includes(type?.toLowerCase() || '');
+        if (isBBPS) {
+            payload.latitude = "27.2046";
+            payload.longitude = "77.4977";
+            payload.mode = "online";
+        }
         if (ad1) payload.ad1 = ad1;
         if (ad2) payload.ad2 = ad2;
         if (ad3) payload.ad3 = ad3;
 
-        const url = `${getPaysprintBase()}/service/recharge/recharge/dorecharge`;
-        console.log("--- PAYSPRINT DORECHARGE REQUEST PAYLOAD ---", payload);
+        const basePath = isBBPS ? '/service/bill-payment/bill' : '/service/recharge/recharge';
+        const endpoint = isBBPS ? 'paybill' : 'dorecharge';
+        const url = `${getPaysprintBase()}${basePath}/${endpoint}`;
+        console.log(`--- PAYSPRINT ${endpoint.toUpperCase()} REQUEST PAYLOAD ---`, payload);
 
         let response;
         let status = 'FAILED';
