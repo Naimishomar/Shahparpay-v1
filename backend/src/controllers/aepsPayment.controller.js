@@ -180,9 +180,10 @@ export const balanceEnquiry = async (req, res) => {
             nationalbankidentification: Number(bankIIN),
             data: pidData,
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            transactiontype: "BE",
             submerchantid: String(retailer.retailerId),
-            pipe: pipe || await getVerifiedPipe(retailer.retailerId, retailer.contactNumber),
-            is_iris: "No"
+            is_iris: "No",
+            pipe: pipe || await getVerifiedPipe(retailer.retailerId, retailer.contactNumber)
         };
 
         const token = generatePaySprintToken();
@@ -195,7 +196,7 @@ export const balanceEnquiry = async (req, res) => {
         };
 
         const response = await axios.post(
-            `${baseUrl}/service/aeps/balanceenquiry/index`, 
+            `${baseUrl}/service/aeps/v3/balanceenquiry/index`, 
             { body: encryptedData }, 
             { headers, validateStatus: () => true }
         );
@@ -610,6 +611,7 @@ export const miniStatement = async (req, res) => {
             requestremarks: "Mini Statement",
             data: pidData,
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            transactiontype: "MS",
             submerchantid: String(retailer.retailerId),
             is_iris: "No",
             pipe: pipe || await getVerifiedPipe(retailer.retailerId, retailer.contactNumber)
@@ -625,7 +627,7 @@ export const miniStatement = async (req, res) => {
         };
 
         const response = await axios.post(
-            `${baseUrl}/service/aeps/ministatement/index`, 
+            `${baseUrl}/service/aeps/v3/ministatement/index`, 
             { body: encryptedData }, 
             { headers, validateStatus: () => true }
         );

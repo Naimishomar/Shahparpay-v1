@@ -391,10 +391,11 @@ const AEPS = () => {
                     bankName: bankName ? bankName.toUpperCase() : 'BANK',
                     agentName: 'RETAILER', 
                     aadhaarNo: '********' + (aadhaarNo.slice(-4) || ''),
-                    rrn: result.data?.data?.rrn || 'N/A',
-                    stan: result.data?.data?.stan || 'N/A',
+                    rrn: result.data?.rrn || result.data?.bankrrn || result.data?.data?.rrn || 'N/A',
+                    stan: result.data?.stan || result.data?.ackno || result.data?.data?.stan || 'N/A',
                     txnStatus: 'SUCCESS',
-                    amount: result.data?.data?.balanceamount || result.data?.amount || '0.00'
+                    amount: result.data?.balanceamount || result.data?.amount || result.data?.data?.balanceamount || '0.00',
+                    ministatementlist: result.data?.ministatement || []
                 };
                 setReceiptData(data);
                 setShowReceiptModal(true);
