@@ -174,6 +174,7 @@ export const balanceEnquiry = async (req, res) => {
             longitude: String(longitude || "77.1025"),
             mobilenumber: String(mobileNumber || retailer.contactNumber || "9999999999"),
             referenceno: `REF${Date.now()}`,
+            ipaddress: req.ip ? (req.ip === '::1' ? '127.0.0.1' : req.ip.replace(/^::ffff:/, '')) : "127.0.0.1",
             adhaarnumber: String(aadhaarNumber),
             accessmodetype: "SITE",
             nationalbankidentification: Number(bankIIN),
@@ -206,6 +207,7 @@ export const balanceEnquiry = async (req, res) => {
                 data: response.data
             });
         } else {
+            console.error("AEPS Balance Enquiry API Error:", JSON.stringify(response.data, null, 2));
             return res.status(400).json({
                 success: false,
                 message: response.data?.message || "Failed to fetch balance",
