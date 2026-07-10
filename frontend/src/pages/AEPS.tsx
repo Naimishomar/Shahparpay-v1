@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Fingerprint, Clock, CheckCircle2, XCircle, RefreshCcw, ShieldCheck, KeyRound, Wallet, FileText, IndianRupee, CreditCard } from "lucide-react";
+import { Fingerprint, Clock, CheckCircle2, XCircle, RefreshCcw, ShieldCheck, KeyRound, Wallet, FileText, IndianRupee, CreditCard, Loader2 } from "lucide-react";
 import logo from "../assets/logo.png";
 import MerchantKycModal from "../components/MerchantKycModal";
 import DailyAuthModal from "../components/DailyAuthModal";
@@ -77,10 +77,12 @@ const AEPS = () => {
     });
     const [selectedPipe, setSelectedPipe] = useState('');
     const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
+    const [isLoadingStatus, setIsLoadingStatus] = useState(true);
 
     // Fetch Merchant Status on Load
     useEffect(() => {
         if (!merchantCode) return;
+        setIsLoadingStatus(true);
         fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/merchant-status?merchantcode=${merchantCode}`)
             .then(res => res.json())
             .then(data => {
@@ -93,7 +95,8 @@ const AEPS = () => {
                     }
                 }
             })
-            .catch(err => console.error("Failed to fetch merchant status", err));
+            .catch(err => console.error("Failed to fetch merchant status", err))
+            .finally(() => setIsLoadingStatus(false));
     }, [merchantCode]);
 
     const refreshMerchantStatus = async () => {
@@ -469,31 +472,40 @@ const AEPS = () => {
                     </button>
                     <div className="flex flex-wrap gap-2">
                         {/* Tracker UI logic: Hides KYC if complete, changes Daily Auth appearance if done */}
-                        {!merchantStatus.isDailyAuthDoneToday ? (
-                            <button 
-                                onClick={() => setShowDailyAuthModal(true)} 
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 transition-all text-sm font-semibold shadow-sm animate-pulse"
-                                title="Daily 2FA Authentication Needed"
-                            >
-                                <KeyRound size={16} />
-                                Pending Daily Auth
-                            </button>
-                        ) : (
-                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 text-green-600 border border-green-200 text-sm font-semibold shadow-sm">
-                                <CheckCircle2 size={16} />
-                                Auth Done
+                        {isLoadingStatus ? (
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 text-gray-400 border border-gray-200 text-sm font-semibold shadow-sm animate-pulse">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Loading Status...
                             </div>
-                        )}
+                        ) : (
+                            <>
+                                {!merchantStatus.isDailyAuthDoneToday ? (
+                                    <button 
+                                        onClick={() => setShowDailyAuthModal(true)} 
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 transition-all text-sm font-semibold shadow-sm animate-pulse"
+                                        title="Daily 2FA Authentication Needed"
+                                    >
+                                        <KeyRound size={16} />
+                                        Pending Daily Auth
+                                    </button>
+                                ) : (
+                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 text-green-600 border border-green-200 text-sm font-semibold shadow-sm">
+                                        <CheckCircle2 size={16} />
+                                        Auth Done
+                                    </div>
+                                )}
 
-                        {!merchantStatus.isMerchantKycComplete && (
-                            <button 
-                                onClick={() => setShowKycModal(true)} 
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 border border-emerald-200 transition-all text-sm font-semibold shadow-sm animate-pulse"
-                                title="Complete Mandatory KYC"
-                            >
-                                <ShieldCheck size={16} />
-                                Complete eKYC
-                            </button>
+                                {!merchantStatus.isMerchantKycComplete && (
+                                    <button 
+                                        onClick={() => setShowKycModal(true)} 
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 border border-emerald-200 transition-all text-sm font-semibold shadow-sm animate-pulse"
+                                        title="Complete Mandatory KYC"
+                                    >
+                                        <ShieldCheck size={16} />
+                                        Complete eKYC
+                                    </button>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
