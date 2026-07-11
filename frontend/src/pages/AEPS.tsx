@@ -221,7 +221,7 @@ const AEPS = () => {
             const wadhValue = isCapturingMerchant ? "18f4CEiXeXcfGXvgWA/blxD+w2pw7hfQPY45JMytkPw=" : "";
             const captureXml = `<?xml version="1.0"?>
                 <PidOptions ver="1.0">
-                  <Opts fCount="1" fType="0" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" wadh="${wadhValue}" posh="UNKNOWN" />
+                  <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" wadh="${wadhValue}" posh="UNKNOWN" />
                 </PidOptions>`;
             // Common ports used by RD Services
             const portsToTry = Array.from({length: 21}, (_, i) => 11100 + i); // 11100 to 11120
