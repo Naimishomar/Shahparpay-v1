@@ -7,9 +7,9 @@ import Transaction from "../models/transaction.model.js";
 
 // Helper function to resolve which bank pipe is verified for the merchant
 export const getVerifiedPipe = async (merchantcode, mobile) => {
-    // Check pipes in order of preference. We prioritize bank2 because 
-    // Bank3 (NSDL) is not activated for this partner (PS004347).
-    const pipesToCheck = ['bank2', 'bank1', 'bank5', 'bank6'];
+    // Check pipes in order of preference. We prioritize bank1 and bank5
+    // because bank2 (older gateway) often rejects L1 scanners providing FIR+FMR data.
+    const pipesToCheck = ['bank1', 'bank5', 'bank6', 'bank2'];
     const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
     
     console.log(`[getVerifiedPipe] Checking pipes for merchant: ${merchantcode}`);
