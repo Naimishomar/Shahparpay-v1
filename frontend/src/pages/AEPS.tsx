@@ -218,7 +218,7 @@ const AEPS = () => {
         setIsScanning(true);
         try {
             // Standard UIDAI Registered Device PidOptions XML
-            const wadhAttr = isCapturingMerchant ? `wadh="E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc="` : "";
+            const wadhAttr = `wadh="E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc="`;
             const captureXml = `<?xml version="1.0"?>
             <PidOptions ver="1.0">
             <Opts fCount="1" fType="0" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" ${wadhAttr} posh="UNKNOWN" />
