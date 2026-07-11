@@ -1,12 +1,15 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/:path*",
-      "destination": "http://65.2.132.248:3000/api/:path*"
+      "src": "/api/(.*)",
+      "dest": "http://65.2.132.248:3000/api/$1"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
