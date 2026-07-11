@@ -18,7 +18,7 @@ const bbpsServices = [
 
 const BBPS = () => {
     const [selectedService, setSelectedService] = useState<any>(null);
-    const [operators, setOperators] = useState([]);
+    const [operators, setOperators] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     
     const [operatorId, setOperatorId] = useState("");
