@@ -25,7 +25,7 @@ export const queryRemitter = async (req, res) => {
             bank3_flag: "NO",
             bank4_flag: "NO"
         };
-        const response = await axios.post(`${baseUrl}/service/dmt/remitter/queryremitter`, 
+        const response = await axios.post(`${baseUrl}/service/dmt/kyc/remitter/queryremitter`, 
             payload, 
             { headers: getPaySprintHeaders() }
         );
@@ -54,7 +54,7 @@ export const remitterEkyc = async (req, res) => {
             data: encryptedData
         };
         
-        const response = await axios.post(`${baseUrl}/service/dmt/remitter/remitterekyc`, 
+        const response = await axios.post(`${baseUrl}/service/dmt/kyc/remitter/queryremitter/kyc`, 
             payload, 
             { headers: getPaySprintHeaders() }
         );
@@ -69,7 +69,7 @@ export const registerRemitter = async (req, res) => {
     try {
         const { mobile, firstName, lastName, pincode } = req.body;
         const payload = { mobile, firstname: firstName, lastname: lastName, pincode };
-        const response = await axios.post(`${baseUrl}/service/dmt/remitter/registerremitter`, 
+        const response = await axios.post(`${baseUrl}/service/dmt/kyc/remitter/registerremitter`, 
             payload, 
             { headers: getPaySprintHeaders() }
         );
@@ -84,7 +84,7 @@ export const verifyRemitter = async (req, res) => {
     try {
         const { mobile, otp, stateresp } = req.body;
         const payload = { mobile, otp, stateresp };
-        const response = await axios.post(`${baseUrl}/service/dmt/remitter/verifyremitter`, 
+        const response = await axios.post(`${baseUrl}/service/dmt/kyc/remitter/verifyremitter`, 
             payload, 
             { headers: getPaySprintHeaders() }
         );
@@ -99,7 +99,7 @@ export const fetchBeneficiaries = async (req, res) => {
     try {
         const { mobile } = req.body;
         const payload = { mobile };
-        const response = await axios.post(`${baseUrl}/service/dmt/beneficiary/registerbeneficiary/fetchbeneficiary`, 
+        const response = await axios.post(`${baseUrl}/service/dmt/kyc/beneficiary/registerbeneficiary/fetchbeneficiary`, 
             payload, 
             { headers: getPaySprintHeaders() }
         );
@@ -114,7 +114,7 @@ export const addBeneficiary = async (req, res) => {
     try {
         const { mobile, bankid, benename, beneaccount, ifsc, pincode } = req.body;
         const payload = { mobile, bankid, benename, accno: beneaccount, ifsc, pincode };
-        const response = await axios.post(`${baseUrl}/service/dmt/beneficiary/registerbeneficiary`, 
+        const response = await axios.post(`${baseUrl}/service/dmt/kyc/beneficiary/registerbeneficiary`, 
             payload, 
             { headers: getPaySprintHeaders() }
         );
@@ -129,7 +129,7 @@ export const deleteBeneficiary = async (req, res) => {
     try {
         const { mobile, beneid } = req.body;
         const payload = { mobile, beneid };
-        const response = await axios.post(`${baseUrl}/service/dmt/beneficiary/deletebeneficiary`, 
+        const response = await axios.post(`${baseUrl}/service/dmt/kyc/beneficiary/registerbeneficiary/deletebeneficiary`, 
             payload, 
             { headers: getPaySprintHeaders() }
         );
@@ -197,7 +197,7 @@ export const initiateTransfer = async (req, res) => {
         let status = 'FAILED';
         
         try {
-            response = await axios.post(`${baseUrl}/service/dmt/transact/transact`, 
+            response = await axios.post(`${baseUrl}/service/dmt/kyc/transact/transact`, 
                 payload, 
                 { headers: getPaySprintHeaders() }
             );
