@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, UserPlus, Send, Plus, CreditCard, Lock, CheckCircle2, X, Trash } from 'lucide-react';
+import { Search, UserPlus, Send, Plus, CreditCard, Lock, CheckCircle2, X, Trash, Fingerprint, Loader2 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -14,6 +14,8 @@ const DMT = () => {
     const [loading, setLoading] = useState(false);
     
     // Registration States
+    const [showEkycModal, setShowEkycModal] = useState(false);
+    const [aadhaar, setAadhaar] = useState('');
     const [showRegister, setShowRegister] = useState(false);
     const [regData, setRegData] = useState({ firstName: '', lastName: '', pincode: '' });
     const [showOtp, setShowOtp] = useState(false);
@@ -45,8 +47,8 @@ const DMT = () => {
                 toast.success("Remitter found");
                 fetchBeneficiaries(mobile);
             } else if (paysprintData && (paysprintData.response_code == 0 || paysprintData.response_code === "0")) {
-                toast.info("Remitter not found, redirecting to registration...");
-                setShowRegister(true);
+                toast.info("Remitter not found. Aadhaar E-KYC is mandated by RBI.");
+                setShowEkycModal(true);
             } else {
                 toast.error(paysprintData?.message || "Failed to query remitter");
             }
@@ -55,6 +57,72 @@ const DMT = () => {
         }
         setLoading(false);
     };
+
+    // 1.5. Remitter E-KYC
+    const handleCaptureAndEkyc = async () => {
+        if (aadhaar.length !== 12) return toast.error("Enter valid 12-digit Aadhaar");
+        setLoading(true);
+        try {
+            const ports = [11100, 11101, 11102];
+            let activeUrl = null;
+            
+            const captureXml = `<?xml version="1.0"?>
+                <PidOptions ver="1.0">
+                  <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" wadh="E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=" posh="UNKNOWN" />
+                </PidOptions>`;
+
+            for (const port of ports) {
+                const url = `http://127.0.0.1:${port}`;
+                try {
+                    const res = await fetch(`${url}/rd/info`, { method: 'RDSERVICE', headers: { 'Accept': 'text/xml' }, signal: AbortSignal.timeout(500) });
+                    if (res.ok) { activeUrl = url; break; }
+                } catch (e) {
+                    try {
+                        const urlHttps = `https://127.0.0.1:${port}`;
+                        const resHttps = await fetch(`${urlHttps}/rd/info`, { method: 'RDSERVICE', headers: { 'Accept': 'text/xml' }, signal: AbortSignal.timeout(500) });
+                        if (resHttps.ok) { activeUrl = urlHttps; break; }
+                    } catch (e2) { continue; }
+                }
+            }
+
+            if (!activeUrl) {
+                toast.error("RD Service not found. Please ensure your Biometric scanner is connected.");
+                setLoading(false);
+                return;
+            }
+
+            const captureResponse = await fetch(`${activeUrl}/rd/capture`, {
+                method: 'CAPTURE',
+                body: captureXml,
+                headers: { 'Content-Type': 'text/xml', 'Accept': 'text/xml' }
+            });
+            const capturedData = await captureResponse.text();
+
+            if (!capturedData.includes('errCode="0"')) {
+                toast.error("Biometric capture failed. Please clean the scanner and try again.");
+                setLoading(false);
+                return;
+            }
+
+            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/dmt/remitter/ekyc`, {
+                mobile,
+                aadhaar_number: aadhaar,
+                pidData: capturedData
+            }, getHeaders());
+
+            if (res.data.success && res.data.data?.status) {
+                toast.success("E-KYC successful! Please complete registration.");
+                setShowEkycModal(false);
+                setShowRegister(true);
+            } else {
+                toast.error(res.data.data?.message || "E-KYC failed");
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "E-KYC failed");
+        }
+        setLoading(false);
+    };
+
 
     // 2. Register Remitter
     const handleRegister = async () => {
@@ -271,7 +339,7 @@ const DMT = () => {
                             </div>
 
                             {/* Found Remitter Info */}
-                            {remitter && !showRegister && !showOtp && (
+                            {remitter && !showRegister && !showOtp && !showEkycModal && (
                                 <div className="mt-6 p-4 bg-primary/5 border border-primary/10 rounded-xl">
                                     <div className="flex items-center gap-3 mb-2">
                                         <div className="p-2 bg-primary/10 rounded-full">
@@ -293,7 +361,7 @@ const DMT = () => {
 
                     {/* Right Column: Beneficiaries & Transfer */}
                     <div className="lg:col-span-2">
-                        {remitter && !showRegister && !showOtp ? (
+                        {remitter && !showRegister && !showOtp && !showEkycModal ? (
                             <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm min-h-[400px]">
                                 <div className="flex items-center justify-between mb-6">
                                     <h2 className="text-xl font-bold text-foreground">Saved Beneficiaries</h2>
@@ -369,6 +437,52 @@ const DMT = () => {
                     </div>
                 </div>
             </div>
+
+            {/* E-KYC Modal */}
+            {showEkycModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+                    <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-xl w-full max-w-md relative">
+                        <button onClick={() => setShowEkycModal(false)} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+                            <X className="w-5 h-5" />
+                        </button>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                <Fingerprint className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-foreground">Remitter E-KYC</h2>
+                                <p className="text-xs text-muted-foreground">Mandatory per RBI guidelines</p>
+                            </div>
+                        </div>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-sm font-medium text-foreground mb-1 block">Aadhaar Number</label>
+                                <input 
+                                    type="text" 
+                                    maxLength={12}
+                                    value={aadhaar} 
+                                    onChange={e => setAadhaar(e.target.value.replace(/\D/g, ''))} 
+                                    placeholder="Enter 12-digit Aadhaar"
+                                    className="w-full px-3 py-3 bg-background border border-border/50 rounded-xl text-foreground focus:ring-2 focus:ring-primary/20" 
+                                />
+                            </div>
+
+                            <div className="bg-muted/30 border border-border/50 rounded-xl p-4 mt-2">
+                                <p className="text-xs text-muted-foreground mb-3 text-center">Place your finger on the scanner and click capture</p>
+                                <button 
+                                    onClick={handleCaptureAndEkyc} 
+                                    disabled={loading || aadhaar.length !== 12} 
+                                    className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-medium flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
+                                >
+                                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Fingerprint className="w-5 h-5" />}
+                                    {loading ? 'Processing...' : 'Capture & Verify'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Registration Modal */}
             {showRegister && (

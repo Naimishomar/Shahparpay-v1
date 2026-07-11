@@ -2,6 +2,7 @@ import express from 'express';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 import { 
     queryRemitter, 
+    remitterEkyc,
     registerRemitter, 
     verifyRemitter, 
     fetchBeneficiaries, 
@@ -19,6 +20,7 @@ router.use(authMiddlewares);
 router.post('/banks', fetchBankList);
 
 router.post('/remitter/query', queryRemitter);
+router.post('/remitter/ekyc', remitterEkyc);
 router.post('/remitter/register', registerRemitter);
 router.post('/remitter/verify', verifyRemitter);
 

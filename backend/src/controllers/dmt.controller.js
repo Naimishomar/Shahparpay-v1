@@ -36,6 +36,35 @@ export const queryRemitter = async (req, res) => {
     }
 };
 
+export const remitterEkyc = async (req, res) => {
+    try {
+        const { mobile, aadhaar_number, lat, long, pidData } = req.body;
+        if (!mobile || !aadhaar_number || !pidData) {
+            return res.status(400).json({ success: false, message: "Mobile, Aadhaar, and PID Data are required" });
+        }
+
+        const encryptedData = encryptPayload(pidData);
+
+        const payload = { 
+            mobile,
+            aadhaar_number,
+            lat: lat || "28.7041",
+            long: long || "77.1025",
+            is_iris: "2",
+            data: encryptedData
+        };
+        
+        const response = await axios.post(`${baseUrl}/service/dmt/remitter/remitterekyc`, 
+            payload, 
+            { headers: getPaySprintHeaders() }
+        );
+
+        return res.status(200).json({ success: true, data: response.data });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error?.response?.data?.message || "Failed to complete remitter e-kyc", error: error?.response?.data });
+    }
+};
+
 export const registerRemitter = async (req, res) => {
     try {
         const { mobile, firstName, lastName, pincode } = req.body;
