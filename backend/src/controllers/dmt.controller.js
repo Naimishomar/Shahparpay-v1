@@ -59,6 +59,7 @@ export const remitterEkyc = async (req, res) => {
             { headers: getPaySprintHeaders() }
         );
 
+        // The response contains ekyc_id and stateresp, which are passed to the frontend
         return res.status(200).json({ success: true, data: response.data });
     } catch (error) {
         return res.status(500).json({ success: false, message: error?.response?.data?.message || "Failed to complete remitter e-kyc", error: error?.response?.data });
@@ -67,8 +68,23 @@ export const remitterEkyc = async (req, res) => {
 
 export const registerRemitter = async (req, res) => {
     try {
-        const { mobile, firstName, lastName, pincode } = req.body;
-        const payload = { mobile, firstname: firstName, lastname: lastName, pincode };
+        const { mobile, firstName, lastName, pincode, aadhaar, pidData, ekyc_id, otp, stateresp } = req.body;
+        
+        // Encrypt the PID data exactly as done in E-KYC
+        const { encrypt } = await import('../utils/encryption.js');
+        const encryptedData = encrypt(pidData);
+
+        const payload = { 
+            mobile, 
+            firstname: firstName, 
+            lastname: lastName, 
+            pincode,
+            aadhaar,
+            piddata: encryptedData,
+            ekyc_id,
+            otp,
+            stateresp
+        };
         const response = await axios.post(`${baseUrl}/service/dmt/kyc/remitter/registerremitter`, 
             payload, 
             { headers: getPaySprintHeaders() }
@@ -77,21 +93,6 @@ export const registerRemitter = async (req, res) => {
         return res.status(200).json({ success: true, data: response.data });
     } catch (error) {
         return res.status(500).json({ success: false, message: error?.response?.data?.message || "Failed to register remitter" });
-    }
-};
-
-export const verifyRemitter = async (req, res) => {
-    try {
-        const { mobile, otp, stateresp } = req.body;
-        const payload = { mobile, otp, stateresp };
-        const response = await axios.post(`${baseUrl}/service/dmt/kyc/remitter/verifyremitter`, 
-            payload, 
-            { headers: getPaySprintHeaders() }
-        );
-
-        return res.status(200).json({ success: true, data: response.data });
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error?.response?.data?.message || "Failed to verify remitter" });
     }
 };
 

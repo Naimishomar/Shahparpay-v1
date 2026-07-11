@@ -4,7 +4,6 @@ import {
     queryRemitter, 
     remitterEkyc,
     registerRemitter, 
-    verifyRemitter, 
     fetchBeneficiaries, 
     addBeneficiary, 
     deleteBeneficiary, 
@@ -22,7 +21,6 @@ router.post('/banks', fetchBankList);
 router.post('/remitter/query', queryRemitter);
 router.post('/remitter/ekyc', remitterEkyc);
 router.post('/remitter/register', registerRemitter);
-router.post('/remitter/verify', verifyRemitter);
 
 router.post('/beneficiary/fetch', fetchBeneficiaries);
 router.post('/beneficiary/add', addBeneficiary);

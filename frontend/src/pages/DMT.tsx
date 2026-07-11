@@ -16,9 +16,11 @@ const DMT = () => {
     // Registration States
     const [showEkycModal, setShowEkycModal] = useState(false);
     const [aadhaar, setAadhaar] = useState('');
+    const [ekycPidData, setEkycPidData] = useState('');
+    const [ekycId, setEkycId] = useState('');
+    
     const [showRegister, setShowRegister] = useState(false);
     const [regData, setRegData] = useState({ firstName: '', lastName: '', pincode: '' });
-    const [showOtp, setShowOtp] = useState(false);
     const [otp, setOtp] = useState('');
     const [stateResp, setStateResp] = useState('');
 
@@ -111,7 +113,10 @@ const DMT = () => {
             }, getHeaders());
 
             if (res.data.success && res.data.data?.status) {
-                toast.success("E-KYC successful! Please complete registration.");
+                toast.success("E-KYC successful! OTP sent to mobile.");
+                setEkycId(res.data.data?.ekyc_id || res.data.data?.data?.ekyc_id || '');
+                setStateResp(res.data.data?.stateresp || res.data.data?.data?.stateresp || '');
+                setEkycPidData(capturedData);
                 setShowEkycModal(false);
                 setShowRegister(true);
             } else {
@@ -124,19 +129,28 @@ const DMT = () => {
     };
 
 
-    // 2. Register Remitter
+    // 2. Unified Register Remitter
     const handleRegister = async () => {
-        if (!regData.firstName || !regData.lastName || !regData.pincode) return toast.error("All fields are required");
+        if (!regData.firstName || !regData.lastName || !regData.pincode || !otp) return toast.error("All fields including OTP are required");
         setLoading(true);
         try {
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/dmt/remitter/register`, { mobile, ...regData }, getHeaders());
+            const payload = {
+                mobile,
+                ...regData,
+                aadhaar,
+                pidData: ekycPidData,
+                ekyc_id: ekycId,
+                otp,
+                stateresp: stateResp
+            };
+            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/dmt/remitter/register`, payload, getHeaders());
             const paysprintData = res.data.data;
 
             if (res.data.success && paysprintData?.status) {
-                toast.success(paysprintData?.message || "OTP sent successfully");
-                setStateResp(paysprintData?.stateresp || paysprintData?.data?.stateresp || '');
+                toast.success("Remitter registered successfully!");
                 setShowRegister(false);
-                setShowOtp(true);
+                setRemitter({ mobile, fname: regData.firstName, lname: regData.lastName });
+                fetchBeneficiaries(mobile);
             } else {
                 toast.error(paysprintData?.message || "Failed to register remitter");
             }
@@ -146,27 +160,7 @@ const DMT = () => {
         setLoading(false);
     };
 
-    // 3. Verify OTP
-    const handleVerify = async () => {
-        if (!otp) return toast.error("Enter OTP");
-        setLoading(true);
-        try {
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/dmt/remitter/verify`, { mobile, otp, stateresp: stateResp }, getHeaders());
-            const paysprintData = res.data.data;
 
-            if (res.data.success && paysprintData?.status) {
-                toast.success("Remitter verified successfully!");
-                setShowOtp(false);
-                setRemitter({ mobile, fname: regData.firstName, lname: regData.lastName });
-                fetchBeneficiaries(mobile);
-            } else {
-                toast.error(paysprintData?.message || "Failed to verify OTP");
-            }
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || "Failed to verify OTP");
-        }
-        setLoading(false);
-    };
 
     // 4. Fetch Beneficiaries
     const fetchBeneficiaries = async (mob: string) => {
@@ -339,7 +333,7 @@ const DMT = () => {
                             </div>
 
                             {/* Found Remitter Info */}
-                            {remitter && !showRegister && !showOtp && !showEkycModal && (
+                            {remitter && !showRegister && !showEkycModal && (
                                 <div className="mt-6 p-4 bg-primary/5 border border-primary/10 rounded-xl">
                                     <div className="flex items-center gap-3 mb-2">
                                         <div className="p-2 bg-primary/10 rounded-full">
@@ -361,7 +355,7 @@ const DMT = () => {
 
                     {/* Right Column: Beneficiaries & Transfer */}
                     <div className="lg:col-span-2">
-                        {remitter && !showRegister && !showOtp && !showEkycModal ? (
+                        {remitter && !showRegister && !showEkycModal ? (
                             <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm min-h-[400px]">
                                 <div className="flex items-center justify-between mb-6">
                                     <h2 className="text-xl font-bold text-foreground">Saved Beneficiaries</h2>
@@ -507,35 +501,21 @@ const DMT = () => {
                                 <label className="text-sm text-foreground mb-1 block">Pincode</label>
                                 <input type="text" maxLength={6} value={regData.pincode} onChange={e => setRegData({...regData, pincode: e.target.value.replace(/\D/g, '')})} className="w-full px-3 py-2 bg-background border border-border/50 rounded-lg text-foreground focus:ring-2 focus:ring-primary/20" />
                             </div>
-                            <button onClick={handleRegister} disabled={loading} className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl font-medium mt-2">
-                                {loading ? 'Sending OTP...' : 'Send OTP'}
+                            <div>
+                                <label className="text-sm font-medium text-foreground mb-1 block">OTP Received</label>
+                                <input 
+                                    type="text" 
+                                    maxLength={6}
+                                    value={otp} 
+                                    onChange={e => setOtp(e.target.value.replace(/\D/g, ''))} 
+                                    placeholder="Enter 6-digit OTP"
+                                    className="w-full px-3 py-3 bg-background border border-border/50 rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 tracking-widest text-lg font-mono text-center" 
+                                />
+                            </div>
+                            <button onClick={handleRegister} disabled={loading || otp.length < 6} className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-medium mt-4">
+                                {loading ? 'Processing...' : 'Complete Registration'}
                             </button>
                         </div>
-                    </div>
-                </div>
-            )}
-
-            {/* OTP Modal */}
-            {showOtp && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-                    <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-xl w-full max-w-sm relative text-center">
-                        <button onClick={() => setShowOtp(false)} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
-                            <X className="w-5 h-5" />
-                        </button>
-                        <h2 className="text-xl font-bold text-foreground mb-2">Verify Mobile</h2>
-                        <p className="text-sm text-muted-foreground mb-6">Enter the OTP sent to +91 {mobile}</p>
-                        
-                        <input 
-                            type="text" 
-                            maxLength={6}
-                            value={otp} 
-                            onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
-                            placeholder="Enter 6-digit OTP" 
-                            className="w-full px-4 py-3 text-center tracking-widest text-lg font-bold bg-background border border-border/50 rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 mb-4" 
-                        />
-                        <button onClick={handleVerify} disabled={loading || otp.length < 4} className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl font-medium">
-                            {loading ? 'Verifying...' : 'Verify OTP'}
-                        </button>
                     </div>
                 </div>
             )}
