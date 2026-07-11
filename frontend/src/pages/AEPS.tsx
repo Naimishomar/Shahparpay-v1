@@ -220,9 +220,13 @@ const AEPS = () => {
             // Standard UIDAI Registered Device PidOptions XML
             const wadhAttr = isCapturingMerchant ? `wadh="E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc="` : "";
             const captureXml = `<?xml version="1.0"?>
-                <PidOptions ver="1.0">
-                <Opts fCount="1" fType="0" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" ${wadhAttr} posh="UNKNOWN" />
-                </PidOptions>`;
+            <PidOptions ver="1.0">
+            <Opts fCount="1" fType="0" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" ${wadhAttr} posh="UNKNOWN" />
+            <CustOpts>
+                <Param name="Param1" value="" />
+            </CustOpts>
+            </PidOptions>
+            `;
             // Common ports used by RD Services
             const portsToTry = Array.from({length: 21}, (_, i) => 11100 + i); // 11100 to 11120
             const protocols = window.location.protocol === 'https:' ? ['https', 'http'] : ['http', 'https'];
