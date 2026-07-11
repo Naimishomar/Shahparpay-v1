@@ -77,11 +77,15 @@ const performMerchantAuth = async (merchantPidData, retailer, req) => {
         'Content-Type': 'application/json'
     };
 
+    console.log(`[MerchantAuth Request] Payload:`, JSON.stringify(twfPayload, null, 2));
+
     const twfResponse = await axios.post(
         `${baseUrl}/service/aeps/kyc/Twofactorkyc/authentication`, 
         { body: twfEncrypted }, 
         { headers: twfHeaders, validateStatus: () => true }
     );
+    
+    console.log(`[MerchantAuth Response]`, JSON.stringify(twfResponse.data, null, 2));
     
     // Check if registration is needed
     if (twfResponse.data && 
@@ -196,11 +200,15 @@ export const balanceEnquiry = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
+        console.log(`[Balance Enquiry Request] Payload:`, JSON.stringify({ ...payload, data: "HIDDEN_PID_DATA" }, null, 2));
+
         const response = await axios.post(
             `${baseUrl}/service/aeps/balanceenquiry/index`, 
             { body: encryptedData }, 
             { headers, validateStatus: () => true }
         );
+        
+        console.log(`[Balance Enquiry Response]`, JSON.stringify(response.data, null, 2));
 
         if (response.data && response.data.status) {
             return res.status(200).json({
@@ -376,11 +384,15 @@ export const cashWithdrawal = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
+        console.log(`[Cash Withdrawal Request] Payload:`, JSON.stringify({ ...payload, data: "HIDDEN_PID_DATA" }, null, 2));
+
         const response = await axios.post(
             `${baseUrl}/service/aeps/authcashwithdraw/index`, 
             { body: encryptedData }, 
             { headers, validateStatus: () => true }
         );
+        
+        console.log(`[Cash Withdrawal Response]`, JSON.stringify(response.data, null, 2));
 
         let txnStatus = (response.data && response.data.status) ? 'SUCCESS' : 'FAILED';
         let paysprintRef = response.data?.data?.ackno || response.data?.data?.rrn || null;
@@ -517,11 +529,15 @@ export const aadhaarPay = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
+        console.log(`[Aadhaar Pay Request] Payload:`, JSON.stringify({ ...payload, data: "HIDDEN_PID_DATA" }, null, 2));
+
         const response = await axios.post(
             `${baseUrl}/service/aadharpay/aadharpay/index`, 
             { body: encryptedData }, 
             { headers, validateStatus: () => true }
         );
+        
+        console.log(`[Aadhaar Pay Response]`, JSON.stringify(response.data, null, 2));
 
         let txnStatus = (response.data && response.data.status) ? 'SUCCESS' : 'FAILED';
         let paysprintRef = response.data?.data?.ackno || response.data?.data?.rrn || null;
