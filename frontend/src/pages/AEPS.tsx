@@ -426,13 +426,13 @@ const AEPS = () => {
             } else {
                 alert("Transaction Failed: " + (result.message || "Unknown error"));
             }
-            setPidData(null);
-            setMerchantPidData(null);
         } catch (error: any) {
             console.error(error);
             const errorMsg = error.response?.data?.message || "Failed to connect to the server.";
             alert("Transaction Failed: " + errorMsg);
         } finally {
+            setPidData(null);
+            setMerchantPidData(null);
             setLoading(false);
         }
     };
