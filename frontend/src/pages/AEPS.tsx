@@ -125,7 +125,6 @@ const AEPS = () => {
     };
     
     // Biometric Capture State
-    const [merchantPidData, setMerchantPidData] = useState<string | null>(null);
     const [pidData, setPidData] = useState<string | null>(null);
     const [isScanning, setIsScanning] = useState(false);
 
@@ -202,17 +201,8 @@ const AEPS = () => {
             return;
         }
         
-        // For cash withdrawal, cash deposit, and aadhaar pay, we need Merchant first, then Customer
-        const isCashTxn = activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit' || activeTab === 'aadhaar_pay';
-        const isCapturingMerchant = isCashTxn && !merchantPidData;
-        
-        if (isCapturingMerchant) {
-            const proceed = window.confirm(`NPCI Guideline: RETAILER must scan their fingerprint first for ${activeTab === 'cash_withdrawal' ? 'Cash Withdrawal' : activeTab === 'aadhaar_pay' ? 'Aadhaar Pay' : 'Cash Deposit'}. Please place YOUR finger on the scanner.`);
-            if (!proceed) return;
-        } else {
-            const proceed = window.confirm("CUSTOMER must now place their finger on the scanner.");
-            if (!proceed) return;
-        }
+        const proceed = window.confirm("CUSTOMER must place their finger on the scanner.");
+        if (!proceed) return;
 
         if (isScanning) return;
         setIsScanning(true);
@@ -288,19 +278,13 @@ const AEPS = () => {
             const capturedData = await captureResponse.text();
 
             if (capturedData && capturedData.includes('errCode="0"')) {
-                if (isCapturingMerchant) {
-                    setMerchantPidData(capturedData);
-                    alert(`Retailer Fingerprint captured successfully! Now click scan again for Customer.`);
-                } else {
-                    setPidData(capturedData);
-                    alert(`Customer Fingerprint captured successfully!`);
-                }
+                setPidData(capturedData);
+                alert(`Customer Fingerprint captured successfully!`);
             } else if (capturedData && !capturedData.includes('errCode="0"')) {
                 const errMatch = capturedData.match(/errInfo="([^"]+)"/);
                 const errMsg = errMatch ? errMatch[1] : 'Unknown error';
                 alert(`Capture failed.\nError: ${errMsg}\nPlease wipe the scanner and try again.`);
-                if (isCapturingMerchant) setMerchantPidData(null);
-                else setPidData(null);
+                setPidData(null);
             } else {
                 throw new Error("No valid data returned from capture endpoint.");
             }
@@ -327,12 +311,7 @@ const AEPS = () => {
             return;
         }
         
-        // Validate inputs based on active tab
-        if ((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit' || activeTab === 'aadhaar_pay') && (!merchantPidData || !pidData)) {
-            toast.error("Please capture both Retailer and Customer fingerprints.");
-            return;
-        }
-        if (activeTab !== 'cash_withdrawal' && activeTab !== 'cash_deposit' && activeTab !== 'aadhaar_pay' && !pidData) {
+        if (!pidData) {
             toast.error("Please capture Customer fingerprint.");
             return;
         }
@@ -354,7 +333,6 @@ const AEPS = () => {
                 aadhaarNumber: aadhaarNo,
                 bankIIN: actualIIN,
                 pidData: pidData,
-                merchantPidData: (activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit' || activeTab === 'aadhaar_pay') ? merchantPidData : undefined,
                 bankName: bankName,
                 customerName: name,
                 pipe: selectedPipe
@@ -432,7 +410,6 @@ const AEPS = () => {
             alert("Transaction Failed: " + errorMsg);
         } finally {
             setPidData(null);
-            setMerchantPidData(null);
             setLoading(false);
         }
     };
@@ -737,33 +714,28 @@ const AEPS = () => {
                         </span>
                     </label>
 
-                    {/* Actions */}
                     <div className="flex flex-col md:flex-row justify-center gap-4 mt-4">
                         <button 
                             onClick={captureFingerprint} 
-                            disabled={isScanning || !!((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') ? (merchantPidData && pidData) : pidData)}
+                            disabled={isScanning || !!pidData}
                             className={`flex flex-col items-center justify-center gap-3 p-6 rounded-xl border-2 transition-all 
-                                ${((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') ? (merchantPidData && pidData) : pidData) 
+                                ${pidData 
                                     ? 'border-green-500 bg-green-50 dark:bg-green-500/10' 
                                     : 'border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 cursor-pointer bg-background'}`}
                         >
                             <div className="relative">
-                                <Fingerprint className={`w-12 h-12 ${((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') ? (merchantPidData && pidData) : pidData) ? 'text-green-500' : 'text-primary'} ${isScanning ? 'animate-pulse' : ''}`} />
+                                <Fingerprint className={`w-12 h-12 ${pidData ? 'text-green-500' : 'text-primary'} ${isScanning ? 'animate-pulse' : ''}`} />
                                 {isScanning && (
                                     <div className="absolute inset-0 bg-primary/20 animate-ping rounded-full"></div>
                                 )}
                             </div>
                             <div className="text-center">
-                                <h3 className={`font-semibold ${((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') ? (merchantPidData && pidData) : pidData) ? 'text-green-600 dark:text-green-400' : 'text-foreground'}`}>
-                                    {isScanning ? 'Scanning...' : 
-                                        ((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') ?
-                                            (merchantPidData && pidData ? 'Both Fingerprints Captured' : (merchantPidData ? 'Retailer Captured. Scan Customer Now.' : 'Scan Retailer First.'))
-                                            : (pidData ? 'Fingerprint Captured' : 'Scan Fingerprint'))
-                                    }
+                                <h3 className={`font-semibold ${pidData ? 'text-green-600 dark:text-green-400' : 'text-foreground'}`}>
+                                    {isScanning ? 'Scanning...' : (pidData ? 'Fingerprint Captured' : 'Scan Fingerprint')}
                                 </h3>
-                                {!((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') ? (merchantPidData && pidData) : pidData) && !isScanning && (
+                                {!pidData && !isScanning && (
                                     <p className="text-sm text-muted-foreground mt-1">
-                                        Click to capture {activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit' ? 'merchant/customer' : 'customer'} biometric
+                                        Click to capture customer biometric
                                     </p>
                                 )}
                             </div>
@@ -776,12 +748,11 @@ const AEPS = () => {
                             setMobileNo('');
                             setAmount('');
                             setPidData(null);
-                            setMerchantPidData(null);
                             setBankName('');
                         }} className="px-6 py-2.5 rounded-lg border border-border hover:bg-muted font-medium transition-colors">
                             Clear
                         </button>
-                        <button onClick={handleSubmit} disabled={loading || ((activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit') ? (!merchantPidData || !pidData) : !pidData)} className="px-10 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-bold shadow-[0_0_15px_rgba(139,92,246,0.4)] hover:shadow-[0_0_20px_rgba(139,92,246,0.6)] transition-all duration-300 disabled:opacity-50">
+                        <button onClick={handleSubmit} disabled={loading || !pidData} className="px-10 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-bold shadow-[0_0_15px_rgba(139,92,246,0.4)] hover:shadow-[0_0_20px_rgba(139,92,246,0.6)] transition-all duration-300 disabled:opacity-50">
                             {loading ? <RefreshCcw className="animate-spin mx-auto" size={20} /> : "Submit"}
                         </button>
                     </div>
