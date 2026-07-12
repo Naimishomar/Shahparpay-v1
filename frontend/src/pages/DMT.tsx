@@ -68,9 +68,25 @@ const DMT = () => {
             const ports = [11100, 11101, 11102];
             let activeUrl = null;
             
+            let targetWadh = "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc="; // default fallback
+            try {
+                const token = localStorage.getItem('token');
+                const pidOptsRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/get-pid-options`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const pidOptsData = await pidOptsRes.json();
+                if (pidOptsData && pidOptsData.wadh) {
+                    targetWadh = pidOptsData.wadh;
+                }
+            } catch (err) {
+                console.error("Failed to fetch dynamic WADH", err);
+            }
+
+            const wadhAttr = `wadh="${targetWadh}"`;
             const captureXml = `<?xml version="1.0"?>
                 <PidOptions ver="1.0">
-                  <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" wadh="18f4CEiXeXcfGXvgWA/blxD+w2pw7hfQPY45JMytkPw=" posh="UNKNOWN" />
+                  <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" ${wadhAttr} posh="UNKNOWN" />
                   <CustOpts>
                       <Param name="Param1" value="" />
                   </CustOpts>

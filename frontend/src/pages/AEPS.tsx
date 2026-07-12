@@ -217,9 +217,21 @@ const AEPS = () => {
         if (isScanning) return;
         setIsScanning(true);
         try {
-            // Determine target WADH dynamically based on selected pipe
-            // For now we hardcode Bank 2 because this merchant is routed to Bank 2
-            let targetWadh = "18f4CEiXeXcfGXvgWA/blxD+w2pw7hfQPY45JMytkPw=";
+            // Determine target WADH dynamically based on selected pipe from the backend
+            let targetWadh = "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc="; // default fallback
+            try {
+                const token = localStorage.getItem('token');
+                const pidOptsRes = await axios.post(
+                    `${import.meta.env.VITE_BACKEND_URL}/api/aeps/get-pid-options`,
+                    {},
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                if (pidOptsRes.data && pidOptsRes.data.wadh) {
+                    targetWadh = pidOptsRes.data.wadh;
+                }
+            } catch (err) {
+                console.error("Failed to fetch dynamic WADH", err);
+            }
 
             // Standard high-security L1 options package
             const wadhAttr = `wadh="${targetWadh}"`;

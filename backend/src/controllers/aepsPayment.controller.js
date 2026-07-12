@@ -1413,3 +1413,29 @@ export const getMerchantStatus = async (req, res) => {
         });
     }
 };
+
+export const getPidOptions = async (req, res) => {
+    try {
+        const retailer = await Retailer.findById(req.user._id);
+        if (!retailer) {
+            return res.status(404).json({ success: false, message: "Retailer not found" });
+        }
+        
+        const pipe = await getVerifiedPipe(retailer.paysprint_merchant_code, retailer.mobile);
+        
+        let targetWadh = "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc="; // Bank 1, 5, 6
+        if (pipe === 'bank2') {
+            targetWadh = "18f4CEiXeXcfGXvgWA/blxD+w2pw7hfQPY45JMytkPw=";
+        }
+
+        return res.status(200).json({ 
+            success: true, 
+            pipe: pipe,
+            wadh: targetWadh 
+        });
+    } catch (error) {
+        console.error("[getPidOptions] Error:", error);
+        return res.status(500).json({ success: false, message: "Failed to get PID options" });
+    }
+};
+

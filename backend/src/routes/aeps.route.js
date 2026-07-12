@@ -11,7 +11,8 @@ import {
     verifyMerchantOtp,
     dailyAuth,
     getMerchantStatus,
-    aadhaarPay
+    aadhaarPay,
+    getPidOptions
 } from '../controllers/aepsPayment.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 
@@ -19,6 +20,7 @@ const router = express.Router();
 
 // Merchant Status
 router.get('/merchant-status', getMerchantStatus);
+router.post('/get-pid-options', authMiddlewares, getPidOptions);
 
 // Core AEPS Services
 router.get('/banks', getBankList);
