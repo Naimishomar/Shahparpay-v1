@@ -404,7 +404,7 @@ const AEPS = () => {
                 const data = {
                     dateTime: new Date().toLocaleString(),
                     bankName: bankName ? bankName.toUpperCase() : 'BANK',
-                    agentName: 'RETAILER', 
+                    agentName: user?.name || 'Agent', 
                     aadhaarNo: '********' + (aadhaarNo.slice(-4) || ''),
                     rrn: result.data?.rrn || result.data?.bankrrn || result.data?.data?.rrn || 'N/A',
                     stan: result.data?.stan || result.data?.ackno || result.data?.data?.stan || 'N/A',
@@ -540,12 +540,12 @@ const AEPS = () => {
                         
                         <div className="flex flex-col gap-4 mt-2">
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-medium text-foreground">Name</label>
+                                <label className="text-sm font-medium text-foreground">Customer Name</label>
                                 <input 
                                     type="text" 
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    placeholder="Enter your Name" 
+                                    placeholder="Enter customer name" 
                                     className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors" 
                                 />
                             </div>
