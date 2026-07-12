@@ -8,7 +8,7 @@ import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import { toast } from "sonner";
 import { useLocationContext } from "../context/LocationContext";
-
+import { z } from "zod";
 const banks = [
     { name: 'ICICI Bank', logo: 'https://www.google.com/s2/favicons?domain=icicibank.com&sz=128' },
     { name: 'SBI', logo: 'https://www.google.com/s2/favicons?domain=onlinesbi.sbi&sz=128' },
@@ -310,6 +310,19 @@ const AEPS = () => {
             alert("Please check the consent box.");
             return;
         }
+
+        // Zod validation for 12 digit Aadhaar and 10 digit Mobile
+        const validationSchema = z.object({
+            aadhaarNo: z.string().regex(/^\d{12}$/, "Aadhaar number must be exactly 12 digits."),
+            mobileNo: z.string().regex(/^\d{10}$/, "Mobile number must be exactly 10 digits.")
+        });
+
+        const validationResult = validationSchema.safeParse({ aadhaarNo, mobileNo });
+        if (!validationResult.success) {
+            toast.error(validationResult.error.issues[0].message);
+            return;
+        }
+
         
         if (!pidData) {
             toast.error("Please capture Customer fingerprint.");
@@ -707,7 +720,7 @@ const AEPS = () => {
                             type="checkbox" 
                             checked={consent}
                             onChange={(e) => setConsent(e.target.checked)}
-                            className="w-5 h-5 rounded border-border text-primary focus:ring-primary accent-primary mt-1 md:mt-0" 
+                            className="w-5 h-5 rounded border-border text-primary focus:ring-primary accent-primary mt-1 md:mt-0 cursor-pointer" 
                         />
                         <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
                             I hereby provide my consent to CSP to use my Aadhaar number/ VID to complete AEPS transaction authorisation.
