@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Fingerprint, Clock, CheckCircle2, XCircle, RefreshCcw, ShieldCheck, KeyRound, Wallet, FileText, IndianRupee, CreditCard, Loader2 } from "lucide-react";
+import { Fingerprint, Clock, CheckCircle2, XCircle, RefreshCcw, ShieldCheck, KeyRound, Wallet, FileText, IndianRupee, CreditCard, Loader2, Store, Phone, Printer } from "lucide-react";
 import logo from "../assets/logo.png";
 import MerchantKycModal from "../components/MerchantKycModal";
 import DailyAuthModal from "../components/DailyAuthModal";
@@ -402,14 +402,18 @@ const AEPS = () => {
             
             if (result.success) {
                 const data = {
-                    dateTime: new Date().toLocaleString(),
-                    bankName: bankName ? bankName.toUpperCase() : 'BANK',
-                    agentName: user?.name || 'Agent', 
+                    agentName: user?.name || 'Agent',
+                    agentMobile: user?.contactNumber || '', 
+                    customerName: name || 'Customer',
                     aadhaarNo: '********' + (aadhaarNo.slice(-4) || ''),
+                    amount: result.data?.balanceamount || result.data?.amount || result.data?.data?.balanceamount || '0.00',
+                    bankName: bankName ? bankName.toUpperCase() : 'BANK',
+                    dateTime: new Date().toLocaleString(),
+                    message: 'SUCCESS',
+                    mobileNo: mobileNo || '',
+                    txnStatus: 'SUCCESS',
                     rrn: result.data?.rrn || result.data?.bankrrn || result.data?.data?.rrn || 'N/A',
                     stan: result.data?.stan || result.data?.ackno || result.data?.data?.stan || 'N/A',
-                    txnStatus: 'SUCCESS',
-                    amount: result.data?.balanceamount || result.data?.amount || result.data?.data?.balanceamount || '0.00',
                     ministatementlist: result.data?.ministatement || []
                 };
                 setReceiptData(data);
@@ -835,58 +839,82 @@ const AEPS = () => {
             {/* Receipt Modal */}
             {showReceiptModal && receiptData && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-background border border-border rounded-lg shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-4 border-b border-border flex justify-between items-start bg-muted/30">
-                            <div className="flex flex-col gap-2">
-                                <img src={logo} alt="Shahparpay Logo" className="h-14 object-contain w-max dark:brightness-0 dark:invert" />
-                                <h3 className="font-semibold text-lg text-foreground">
-                                    Customer Copy - {receiptData.ministatementlist && receiptData.ministatementlist.length > 0 ? 'Mini Statement' : (activeTab === 'cash_withdrawal' ? 'Cash Withdrawal' : activeTab === 'cash_deposit' ? 'Cash Deposit' : 'Balance Enquiry')}
-                                </h3>
+                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 text-slate-800">
+                        {/* Header */}
+                        <div className="flex justify-between items-start p-4 bg-white border-b border-gray-100">
+                            <div>
+                                <img src={logo} alt="Logo" className="h-10 object-contain dark:brightness-0 dark:invert" />
                             </div>
-                            <button onClick={() => setShowReceiptModal(false)} className="text-muted-foreground hover:text-foreground transition-colors mt-1">
-                                <XCircle className="w-5 h-5" />
-                            </button>
+                            <div className="flex flex-col items-end text-xs text-slate-600 gap-1 relative pr-8">
+                                <button 
+                                    onClick={() => setShowReceiptModal(false)} 
+                                    className="absolute -top-2 -right-2 text-primary hover:text-primary/80 transition-colors bg-white rounded-full p-1"
+                                >
+                                    <XCircle className="w-6 h-6 fill-primary text-white" />
+                                </button>
+                                <div className="flex items-center gap-1.5 font-medium uppercase text-slate-700">
+                                    <Store className="w-3.5 h-3.5 text-primary" />
+                                    {receiptData.agentName}
+                                </div>
+                                {receiptData.agentMobile && (
+                                    <div className="flex items-center gap-1.5">
+                                        <Phone className="w-3.5 h-3.5 text-primary" />
+                                        {receiptData.agentMobile}
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <div className="p-4">
-                            <table className="w-full text-sm border-collapse border border-border">
-                                <tbody>
-                                    {[
-                                        { label: 'Date & Time', value: receiptData.dateTime },
-                                        { label: 'Bank Name', value: receiptData.bankName },
-                                        { label: 'Agent Name', value: receiptData.agentName },
-                                        { label: 'Aadhaar No.', value: receiptData.aadhaarNo },
-                                        { label: 'RRN', value: receiptData.rrn },
-                                        { label: 'STAN', value: receiptData.stan },
-                                        { label: 'Txn Status', value: receiptData.txnStatus },
-                                        { label: 'Balance Amount', value: receiptData.amount },
-                                    ].map((row) => (
-                                        <tr key={row.label} className="border-b border-border last:border-0 hover:bg-muted/10 transition-colors">
-                                            <td className="p-3 font-medium text-muted-foreground border-r border-border w-[40%] bg-muted/5">{row.label}</td>
-                                            <td className="p-3 text-foreground break-all">{row.value}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+
+                        {/* Status Area */}
+                        <div className="flex flex-col items-center justify-center py-6 bg-white">
+                            <h2 className="text-emerald-500 font-bold text-lg mb-4 uppercase tracking-wide">
+                                TRANSACTION SUCCESSFUL
+                            </h2>
+                            <div className="w-20 h-20 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 relative">
+                                <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-20"></div>
+                                <CheckCircle2 className="w-12 h-12 text-white" />
+                            </div>
+                        </div>
+
+                        {/* Details List */}
+                        <div className="p-5 bg-white">
+                            <div className="flex flex-col gap-2.5">
+                                {[
+                                    { label: 'Aadhar Number', value: receiptData.aadhaarNo },
+                                    { label: 'Customer Name', value: receiptData.customerName },
+                                    { label: 'Balance Amount', value: receiptData.amount },
+                                    { label: 'Bank Name', value: receiptData.bankName },
+                                    { label: 'Enquiry Time', value: receiptData.dateTime },
+                                    { label: 'Message', value: receiptData.message },
+                                    { label: 'Mobile', value: receiptData.mobileNo },
+                                    { label: 'Status', value: receiptData.txnStatus },
+                                    { label: 'Utr', value: receiptData.rrn },
+                                ].map((row) => (
+                                    <div key={row.label} className="flex justify-between items-start text-[13px] border-b border-dashed border-gray-200 pb-2 last:border-0 last:pb-0">
+                                        <span className="font-semibold text-slate-700">{row.label}</span>
+                                        <span className="text-slate-600 text-right max-w-[60%] break-all">{row.value}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            
                             {receiptData.ministatementlist && receiptData.ministatementlist.length > 0 && (
-                                <div className="mt-4">
-                                    <h4 className="font-semibold text-sm mb-2 text-foreground border-b pb-1">Mini Statement Details</h4>
-                                    <div className="max-h-48 overflow-y-auto">
-                                        <table className="w-full text-xs border-collapse">
-                                            <thead className="bg-muted/50 sticky top-0">
+                                <div className="mt-4 border-t border-dashed border-gray-200 pt-4">
+                                    <h4 className="font-semibold text-xs text-slate-700 mb-2">Mini Statement Details</h4>
+                                    <div className="max-h-40 overflow-y-auto">
+                                        <table className="w-full text-[11px] border-collapse">
+                                            <thead className="bg-gray-50">
                                                 <tr>
-                                                    <th className="p-2 border text-left font-medium">Date</th>
-                                                    <th className="p-2 border text-left font-medium">Txn Type</th>
-                                                    <th className="p-2 border text-left font-medium">Amount</th>
-                                                    <th className="p-2 border text-left font-medium">Narration</th>
+                                                    <th className="p-1.5 border text-left font-semibold text-slate-700">Date</th>
+                                                    <th className="p-1.5 border text-left font-semibold text-slate-700">Type</th>
+                                                    <th className="p-1.5 border text-right font-semibold text-slate-700">Amount</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {receiptData.ministatementlist.map((item: any, i: number) => (
-                                                    <tr key={i} className="border-b hover:bg-muted/10">
-                                                        <td className="p-2 border">{item.date}</td>
-                                                        <td className={`p-2 border font-bold ${item.txnType === 'Cr' ? 'text-green-600' : 'text-red-600'}`}>{item.txnType}</td>
-                                                        <td className="p-2 border">{item.amount}</td>
-                                                        <td className="p-2 border max-w-[120px] truncate" title={item.narration}>{item.narration}</td>
+                                                    <tr key={i} className="border-b">
+                                                        <td className="p-1.5 border text-slate-600">{item.date}</td>
+                                                        <td className={`p-1.5 border font-bold ${item.txnType === 'Cr' ? 'text-emerald-600' : 'text-rose-600'}`}>{item.txnType}</td>
+                                                        <td className="p-1.5 border text-right text-slate-600">{item.amount}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -894,10 +922,18 @@ const AEPS = () => {
                                     </div>
                                 </div>
                             )}
+                            
+                            <p className="text-[10px] text-amber-500/80 text-center mt-6">
+                                Note*: This is a system generated receipt and it does not require signature.
+                            </p>
                         </div>
-                        <div className="p-4 bg-muted/30 flex justify-end gap-3 border-t border-border">
-                            <button onClick={() => setShowReceiptModal(false)} className="px-4 py-2 rounded-md border border-border hover:bg-muted transition-colors text-sm font-medium">Close</button>
-                            <button onClick={() => window.print()} className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-colors text-sm font-medium">Print</button>
+
+                        {/* Actions */}
+                        <div className="p-4 bg-gray-50 flex justify-center border-t border-gray-100">
+                            <button onClick={() => window.print()} className="flex items-center gap-2 px-8 py-2.5 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 shadow-md transition-colors text-sm font-semibold">
+                                <Printer size={16} />
+                                Print
+                            </button>
                         </div>
                     </div>
                 </div>
