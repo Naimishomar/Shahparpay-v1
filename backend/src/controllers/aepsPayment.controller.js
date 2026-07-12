@@ -11,8 +11,6 @@ export const getVerifiedPipe = async (merchantcode, mobile) => {
     // because bank2 (older gateway) often rejects L1 scanners providing FIR+FMR data.
     const pipesToCheck = ['bank1', 'bank5', 'bank6', 'bank2'];
     const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
-    
-    console.log(`[getVerifiedPipe] Checking pipes for merchant: ${merchantcode}`);
 
     for (const pipe of pipesToCheck) {
         try {
@@ -30,9 +28,6 @@ export const getVerifiedPipe = async (merchantcode, mobile) => {
                 mobile: String(mobile),
                 pipe: pipe
             }, { headers, validateStatus: () => true });
-            
-            console.log(`[getVerifiedPipe] Response for ${pipe}:`, JSON.stringify(res.data, null, 2));
-            
             // Check if this pipe is approved - must be exactly "Accepted"
             if (res.data && 
                 res.data.response_code === 1 && 
