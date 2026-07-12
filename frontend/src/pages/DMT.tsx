@@ -70,7 +70,10 @@ const DMT = () => {
             
             const captureXml = `<?xml version="1.0"?>
                 <PidOptions ver="1.0">
-                  <Opts fCount="1" fType="0" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" wadh="E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=" posh="UNKNOWN" />
+                  <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" wadh="18f4CEiXeXcfGXvgWA/blxD+w2pw7hfQPY45JMytkPw=" posh="UNKNOWN" />
+                  <CustOpts>
+                      <Param name="Param1" value="" />
+                  </CustOpts>
                 </PidOptions>`;
 
             for (const port of ports) {
