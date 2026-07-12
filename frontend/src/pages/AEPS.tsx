@@ -233,11 +233,12 @@ const AEPS = () => {
                 console.error("Failed to fetch dynamic WADH", err);
             }
 
-            // Standard high-security L1 options package
-            const wadhAttr = `wadh="${targetWadh}"`;
+            // High-security L1 options package (fType="2")
+            // Removing WADH from Balance Enquiry payload because it causes "WADH validation fail" 
+            // when fType="2" is used, and Bank 2 strictly rejects fType="0" (FIR+FMR).
             const captureXml = `<?xml version="1.0"?>
             <PidOptions ver="1.0">
-            <Opts fCount="1" fType="0" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" ${wadhAttr} posh="UNKNOWN" />
+            <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN" />
             <CustOpts>
                 <Param name="Param1" value="" />
             </CustOpts>

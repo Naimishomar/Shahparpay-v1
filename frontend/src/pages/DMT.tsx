@@ -68,29 +68,33 @@ const DMT = () => {
             const ports = [11100, 11101, 11102];
             let activeUrl = null;
             
+            // Determine target WADH dynamically based on selected pipe from the backend
             let targetWadh = "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc="; // default fallback
             try {
                 const token = localStorage.getItem('token');
-                const pidOptsRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/get-pid-options`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const pidOptsData = await pidOptsRes.json();
-                if (pidOptsData && pidOptsData.wadh) {
-                    targetWadh = pidOptsData.wadh;
+                const pidOptsRes = await axios.post(
+                    `${import.meta.env.VITE_BACKEND_URL}/api/aeps/get-pid-options`,
+                    {},
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                if (pidOptsRes.data && pidOptsRes.data.wadh) {
+                    targetWadh = pidOptsRes.data.wadh;
                 }
             } catch (err) {
                 console.error("Failed to fetch dynamic WADH", err);
             }
 
-            const wadhAttr = `wadh="${targetWadh}"`;
+            // High-security L1 options package (fType="2")
+            // Removing WADH from DMT payload because it causes "WADH validation fail" 
+            // when fType="2" is used, and Bank 2 strictly rejects fType="0" (FIR+FMR).
             const captureXml = `<?xml version="1.0"?>
-                <PidOptions ver="1.0">
-                  <Opts fCount="1" fType="0" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" ${wadhAttr} posh="UNKNOWN" />
-                  <CustOpts>
-                      <Param name="Param1" value="" />
-                  </CustOpts>
-                </PidOptions>`;
+            <PidOptions ver="1.0">
+            <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN" />
+            <CustOpts>
+                <Param name="Param1" value="" />
+            </CustOpts>
+            </PidOptions>
+            `;
 
             for (const port of ports) {
                 const url = `http://127.0.0.1:${port}`;
