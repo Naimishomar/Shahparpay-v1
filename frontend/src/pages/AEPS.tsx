@@ -406,7 +406,8 @@ const AEPS = () => {
                     agentMobile: user?.contactNumber || '', 
                     customerName: name || 'Customer',
                     aadhaarNo: '********' + (aadhaarNo.slice(-4) || ''),
-                    amount: result.data?.balanceamount || result.data?.amount || result.data?.data?.balanceamount || '0.00',
+                    txnAmount: (activeTab !== 'balance_enquiry' && activeTab !== 'mini_statement') ? amount : '0.00',
+                    balanceAmount: result.data?.balanceamount || result.data?.amount || result.data?.data?.balanceamount || '0.00',
                     bankName: bankName ? bankName.toUpperCase() : 'BANK',
                     dateTime: new Date().toLocaleString(),
                     message: 'SUCCESS',
@@ -882,17 +883,18 @@ const AEPS = () => {
                                 {[
                                     { label: 'Aadhar Number', value: receiptData.aadhaarNo },
                                     { label: 'Customer Name', value: receiptData.customerName },
-                                    { label: 'Balance Amount', value: receiptData.amount },
+                                    ...(receiptData.txnAmount !== '0.00' ? [{ label: 'Transaction Amount', value: `₹ ${receiptData.txnAmount}`, isBold: true }] : []),
+                                    { label: 'Balance Amount', value: `₹ ${receiptData.balanceAmount}` },
                                     { label: 'Bank Name', value: receiptData.bankName },
                                     { label: 'Enquiry Time', value: receiptData.dateTime },
                                     { label: 'Message', value: receiptData.message },
                                     { label: 'Mobile', value: receiptData.mobileNo },
                                     { label: 'Status', value: receiptData.txnStatus },
                                     { label: 'Utr', value: receiptData.rrn },
-                                ].map((row) => (
+                                ].map((row: any) => (
                                     <div key={row.label} className="flex justify-between items-start text-[13px] border-b border-dashed border-gray-200 pb-2 last:border-0 last:pb-0">
-                                        <span className="font-semibold text-slate-700">{row.label}</span>
-                                        <span className="text-slate-600 text-right max-w-[60%] break-all">{row.value}</span>
+                                        <span className={`font-semibold text-slate-700 ${row.isBold ? 'text-emerald-600 text-[14px]' : ''}`}>{row.label}</span>
+                                        <span className={`text-right max-w-[60%] break-all ${row.isBold ? 'font-bold text-emerald-600 text-[15px]' : 'text-slate-600'}`}>{row.value}</span>
                                     </div>
                                 ))}
                             </div>
@@ -900,21 +902,21 @@ const AEPS = () => {
                             {receiptData.ministatementlist && receiptData.ministatementlist.length > 0 && (
                                 <div className="mt-4 border-t border-dashed border-gray-200 pt-4">
                                     <h4 className="font-semibold text-xs text-slate-700 mb-2">Mini Statement Details</h4>
-                                    <div className="max-h-40 overflow-y-auto">
-                                        <table className="w-full text-[11px] border-collapse">
+                                    <div className="overflow-visible">
+                                        <table className="w-full text-[10px] border-collapse">
                                             <thead className="bg-gray-50">
                                                 <tr>
-                                                    <th className="p-1.5 border text-left font-semibold text-slate-700">Date</th>
-                                                    <th className="p-1.5 border text-left font-semibold text-slate-700">Type</th>
-                                                    <th className="p-1.5 border text-right font-semibold text-slate-700">Amount</th>
+                                                    <th className="p-1 border text-left font-semibold text-slate-700">Date</th>
+                                                    <th className="p-1 border text-left font-semibold text-slate-700">Type</th>
+                                                    <th className="p-1 border text-right font-semibold text-slate-700">Amount</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {receiptData.ministatementlist.map((item: any, i: number) => (
                                                     <tr key={i} className="border-b">
-                                                        <td className="p-1.5 border text-slate-600">{item.date}</td>
-                                                        <td className={`p-1.5 border font-bold ${item.txnType === 'Cr' ? 'text-emerald-600' : 'text-rose-600'}`}>{item.txnType}</td>
-                                                        <td className="p-1.5 border text-right text-slate-600">{item.amount}</td>
+                                                        <td className="p-1 border text-slate-600 whitespace-nowrap">{item.date}</td>
+                                                        <td className={`p-1 border font-bold ${item.txnType === 'Cr' ? 'text-emerald-600' : 'text-rose-600'}`}>{item.txnType}</td>
+                                                        <td className="p-1 border text-right text-slate-600">{item.amount}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
