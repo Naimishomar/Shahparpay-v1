@@ -1416,12 +1416,12 @@ export const getMerchantStatus = async (req, res) => {
 
 export const getPidOptions = async (req, res) => {
     try {
-        const retailer = await Retailer.findById(req.user._id);
+        const retailer = await Retailer.findById(req.user.id);
         if (!retailer) {
             return res.status(404).json({ success: false, message: "Retailer not found" });
         }
         
-        const pipe = await getVerifiedPipe(retailer.paysprint_merchant_code, retailer.mobile);
+        const pipe = await getVerifiedPipe(retailer.retailerId, retailer.contactNumber);
         
         let targetWadh = "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc="; // Bank 1, 5, 6
         if (pipe === 'bank2') {
