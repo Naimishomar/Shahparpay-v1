@@ -320,7 +320,7 @@ export const cashWithdrawal = async (req, res) => {
             });
         }
 
-        // Fetch retailer for Merchant Auth
+        // Fetch retailer for Merchant Auth (no longer strictly required by new Authencity endpoints, but used for fallback contact)
         const retailer = await Retailer.findById(req.user.id);
         if (!retailer) {
             return res.status(404).json({ success: false, message: "Retailer not found" });
@@ -328,17 +328,6 @@ export const cashWithdrawal = async (req, res) => {
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         const referenceNo = `CW${Date.now()}`;
-
-        // 1. Merchant 2FA (Txn Auth) - Using the improved helper function
-        if (merchantPidData) {
-            const authResult = await performMerchantAuth(merchantPidData, retailer, req);
-            if (!authResult.success) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: authResult.message || "Merchant 2FA Auth Failed" 
-                });
-            }
-        }
 
         // 2. Create PENDING Transaction (Idempotency)
         let newTxn = await Transaction.create({
@@ -473,17 +462,6 @@ export const aadhaarPay = async (req, res) => {
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         const referenceNo = `AP${Date.now()}`;
-
-        // 1. Merchant 2FA (Txn Auth) - Using the improved helper function
-        if (merchantPidData) {
-            const authResult = await performMerchantAuth(merchantPidData, retailer, req);
-            if (!authResult.success) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: authResult.message || "Merchant 2FA Auth Failed" 
-                });
-            }
-        }
 
         // 2. Create PENDING Transaction (Idempotency)
         let newTxn = await Transaction.create({
@@ -691,17 +669,6 @@ export const cashDeposit = async (req, res) => {
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
         const referenceNo = `CD${Date.now()}`;
-
-        // 1. Merchant 2FA (Txn Auth) - Using the improved helper function
-        if (merchantPidData) {
-            const authResult = await performMerchantAuth(merchantPidData, retailer, req);
-            if (!authResult.success) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: authResult.message || "Merchant 2FA Auth Failed" 
-                });
-            }
-        }
 
         // 2. Deduct from Main Wallet Atomically (Creates PENDING transaction)
         const { updateWalletAtomically } = await import('../utils/wallet.util.js');
