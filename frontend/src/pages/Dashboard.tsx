@@ -243,11 +243,18 @@ const Dashboard = () => {
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <div className="w-[300px] h-[300px] bg-primary/20 blur-[100px] rounded-full"></div>
                     </div>
-                    {/* Placeholder for Chart */}
                     <div className="flex-1 w-full flex items-end gap-3 px-2 mt-8 relative z-10">
-                        {[40, 70, 45, 90, 65, 85, 120, 80, 50, 95, 110, 140].map((height, i) => (
-                            <div key={i} className="flex-1 bg-gradient-to-t from-primary to-purple-400 rounded-t-md opacity-70 hover:opacity-100 transition-all hover:scale-105 shadow-[0_0_10px_rgba(139,92,246,0.3)]" style={{ height: `${(height / 140) * 100}%` }}></div>
-                        ))}
+                        {(stats?.graphData || [40, 70, 45, 90, 65, 85, 120, 80, 50, 95, 110, 140]).map((val: number, i: number) => {
+                            const maxVal = Math.max(...(stats?.graphData || [140]), 1);
+                            const heightPct = (val / maxVal) * 100;
+                            return (
+                                <div key={i} className="flex-1 bg-gradient-to-t from-primary to-purple-400 rounded-t-md opacity-70 hover:opacity-100 transition-all hover:scale-105 shadow-[0_0_10px_rgba(139,92,246,0.3)] relative group" style={{ height: `${heightPct}%` }}>
+                                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">
+                                        ₹{val.toFixed(0)}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -260,11 +267,12 @@ const Dashboard = () => {
                             recentSales.map((sale, i) => (
                             <div key={i} className="flex items-center p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-border">
                                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-primary/20">
-                                    {sale.name.charAt(0)}
+                                    {sale.service ? sale.service.charAt(0) : sale.name.charAt(0)}
                                 </div>
                                 <div className="ml-4 space-y-1">
-                                    <p className="text-sm font-medium leading-none text-foreground">{sale.name}</p>
-                                    <p className="text-xs text-muted-foreground">{sale.email}</p>
+                                    <p className="text-sm font-bold leading-none text-foreground">{sale.service || sale.name}</p>
+                                    <p className="text-xs font-medium text-foreground">{sale.name}</p>
+                                    <p className="text-xs text-muted-foreground">{sale.details || sale.email}</p>
                                 </div>
                                 <div className="ml-auto text-right">
                                     <div className={`font-semibold ${sale.status === 'FAILED' ? 'text-rose-500' : 'text-emerald-500'}`}>

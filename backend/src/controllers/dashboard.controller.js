@@ -51,6 +51,11 @@ export const getRetailerStats = async (req, res) => {
         let totalTransactionsAmount = 0;
         let uniqueCustomers = new Set();
         let recentSales = [];
+        
+        const startTime = (dateFilter.createdAt?.$gte || new Date(0)).getTime();
+        const endTime = (dateFilter.createdAt?.$lte || new Date()).getTime();
+        const binSize = Math.max((endTime - startTime) / 12, 1);
+        const graphData = new Array(12).fill(0);
 
         transactions.forEach(txn => {
             if (txn.status === 'SUCCESS') {
@@ -61,6 +66,12 @@ export const getRetailerStats = async (req, res) => {
                 stats.TotalCommission += (txn.commissions?.retailerEarned || 0);
                 totalTransactionsAmount += txn.amount;
                 
+                // Group graph data
+                const txnTime = new Date(txn.createdAt).getTime();
+                let binIndex = Math.floor((txnTime - startTime) / binSize);
+                if (binIndex >= 12) binIndex = 11;
+                if (binIndex >= 0) graphData[binIndex] += txn.amount;
+                
                 // Track unique customers based on available metadata
                 let identifier = txn.metadata?.caNumber || txn.metadata?.mobile || txn.metadata?.beneficiaryAccount || txn.metadata?.aadhaar;
                 if (identifier) {
@@ -69,26 +80,34 @@ export const getRetailerStats = async (req, res) => {
             }
 
             if (recentSales.length < 5) {
-                // Determine a display name based on txn type or metadata
-                let name = "Unknown";
-                let email = "N/A";
+                let service = "Unknown";
+                let details = "N/A";
+                let name = txn.metadata?.name || txn.metadata?.customerName || txn.metadata?.beneficiaryName || "Customer";
+
                 if (txn.type === 'RECHARGE' || txn.type === 'BILL_PAYMENT') {
-                    name = `Service: ${txn.metadata?.operator || 'Unknown'}`;
-                    email = txn.metadata?.caNumber || "N/A";
+                    service = `Recharge / BBPS`;
+                    details = `Operator: ${txn.metadata?.operator || 'Unknown'}, No: ${txn.metadata?.caNumber || "N/A"}`;
                 } else if (txn.type === 'DMT') {
-                    name = "Money Transfer";
-                    email = txn.metadata?.beneficiaryAccount || "N/A";
+                    service = "DMT";
+                    details = `A/C: ${txn.metadata?.beneficiaryAccount || "N/A"}`;
                 } else if (txn.type === 'AEPS_WITHDRAWAL') {
-                    name = "AEPS Withdrawal";
-                    email = txn.metadata?.aadhaar ? `Aadhaar ending in ${txn.metadata.aadhaar.slice(-4)}` : "N/A";
+                    service = "AEPS";
+                    details = `Aadhaar: *${txn.metadata?.aadhaar ? txn.metadata.aadhaar.slice(-4) : "N/A"}`;
                 } else if (txn.type === 'AEPS_SETTLEMENT') {
-                    name = "Wallet Settlement";
-                    email = txn.metadata?.accountNumber || "N/A";
+                    service = "AEPS Settlement";
+                    details = `A/C: ${txn.metadata?.bankAccount || txn.metadata?.accountNumber || "N/A"}`;
+                } else if (txn.type === 'DIRECT_PAYOUT') {
+                    service = "Direct Payout";
+                    details = `A/C: ${txn.metadata?.bankAccount || txn.metadata?.accountNumber || "N/A"}`;
+                } else if (txn.type === 'WALLET_TOPUP') {
+                    service = "Wallet Topup";
+                    details = `Ref: ${txn.metadata?.utr || "N/A"}`;
                 }
 
                 recentSales.push({
+                    service,
+                    details,
                     name,
-                    email,
                     amount: `₹${txn.amount.toFixed(2)}`,
                     status: txn.status,
                     date: txn.createdAt
@@ -98,6 +117,7 @@ export const getRetailerStats = async (req, res) => {
 
         stats.TotalCustomers = uniqueCustomers.size;
         stats.TotalTransactionsAmount = totalTransactionsAmount;
+        stats.graphData = graphData;
 
         return res.status(200).json({
             success: true,
