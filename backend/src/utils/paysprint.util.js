@@ -288,3 +288,38 @@ export const getWebOnboardingUrl = async (merchantData) => {
         return { success: false, message: "System error during URL generation." };
     }
 };
+
+export const transferAepsToMainWalletApi = async (merchantcode, amount, referenceid) => {
+    try {
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+        const payload = {
+            merchant_code: merchantcode,
+            amount: amount.toString(),
+            referenceid: referenceid
+        };
+
+        const token = generatePaySprintToken();
+        const headers = {
+            'Token': token,
+            'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+            'Content-Type': 'application/json'
+        };
+
+        const response = await fetch(`${baseUrl}/wallet-money/transact/transact/dotransaction`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        
+        if (data.status || data.response_code === 1) {
+            return { success: true, message: data.message || "Fund Transfer Successful", data: data.data };
+        } else {
+            return { success: false, message: data.message || "PaySprint wallet transfer failed." };
+        }
+    } catch (error) {
+        console.error("PaySprint wallet transfer error:", error);
+        return { success: false, message: "System error during PaySprint wallet transfer." };
+    }
+};

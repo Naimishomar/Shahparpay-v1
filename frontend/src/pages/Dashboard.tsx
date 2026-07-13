@@ -3,9 +3,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import MerchantKycModal from '../components/MerchantKycModal';
 
 const Dashboard = () => {
+    const navigate = useNavigate();
     const { token, user } = useAuth();
     const [stats, setStats] = useState<any>(null);
     const [recentSales, setRecentSales] = useState<any[]>([]);
@@ -241,28 +243,28 @@ const Dashboard = () => {
                 <div className="lg:col-span-4 glass-card rounded-2xl p-6 min-h-[400px] flex flex-col">
                     <h3 className="text-xl font-semibold mb-6">Quick Actions</h3>
                     <div className="grid grid-cols-2 gap-4 h-full">
-                        <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-blue-500/20 transition-all hover:scale-105 group">
+                        <div onClick={() => navigate('/aeps')} className="p-6 rounded-2xl bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-blue-500/20 transition-all hover:scale-105 group">
                             <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                                 <Fingerprint className="text-blue-500" size={32} />
                             </div>
                             <h4 className="font-bold text-lg mb-1">AEPS Services</h4>
                             <p className="text-xs text-muted-foreground">Cash Withdrawal & Inquiry</p>
                         </div>
-                        <div className="p-6 rounded-2xl bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-purple-500/20 transition-all hover:scale-105 group">
+                        <div onClick={() => navigate('/direct-payout')} className="p-6 rounded-2xl bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-purple-500/20 transition-all hover:scale-105 group">
                             <div className="w-16 h-16 rounded-full bg-purple-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                                 <Banknote className="text-purple-500" size={32} />
                             </div>
                             <h4 className="font-bold text-lg mb-1">Direct Payout</h4>
                             <p className="text-xs text-muted-foreground">Instant Bank Settlement</p>
                         </div>
-                        <div className="p-6 rounded-2xl bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-green-500/20 transition-all hover:scale-105 group">
+                        <div onClick={() => navigate('/recharge')} className="p-6 rounded-2xl bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-green-500/20 transition-all hover:scale-105 group">
                             <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                                 <Smartphone className="text-green-500" size={32} />
                             </div>
                             <h4 className="font-bold text-lg mb-1">Recharge & BBPS</h4>
                             <p className="text-xs text-muted-foreground">Mobile, DTH & Utility Bills</p>
                         </div>
-                        <div className="p-6 rounded-2xl bg-gradient-to-br from-orange-500/10 to-orange-600/10 border border-orange-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-orange-500/20 transition-all hover:scale-105 group">
+                        <div onClick={() => navigate('/dmt')} className="p-6 rounded-2xl bg-gradient-to-br from-orange-500/10 to-orange-600/10 border border-orange-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-orange-500/20 transition-all hover:scale-105 group">
                             <div className="w-16 h-16 rounded-full bg-orange-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                                 <Building2 className="text-orange-500" size={32} />
                             </div>

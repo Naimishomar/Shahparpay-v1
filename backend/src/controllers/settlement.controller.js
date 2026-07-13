@@ -173,8 +173,8 @@ export const initiateSettlement = async (req, res) => {
         let apiResponse;
         let status = 'FAILED';
         try {
-            // NOTE: Fixed PaySprint Payout URL based on latest documentation
-            apiResponse = await axios.post(`${baseUrl}/service/payout/payout/dotransaction`, 
+            // NOTE: Updated PaySprint Payout URL for AEPS direct settlement
+            apiResponse = await axios.post(`${baseUrl}/service/aeps/payout/dotransaction`, 
                 payload, 
                 { headers: getPaySprintHeaders() }
             );

@@ -102,22 +102,37 @@ export const transferAepsToMain = async (req, res) => {
         }
 
         const transferAmount = Number(amount);
+        const transactionId = `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`;
+        
+        const User = (await import('../models/user.model.js')).default;
+        const user = await User.findById(userId);
+        const merchantcode = req.user.role === 'distributor' ? (user.distributorId || userId) : (user.retailerId || userId);
+
+        const { transferAepsToMainWalletApi } = await import('../utils/paysprint.util.js');
+        const apiResponse = await transferAepsToMainWalletApi(merchantcode, transferAmount, transactionId);
+
+        if (!apiResponse.success) {
+            return res.status(400).json({ success: false, message: `PaySprint Transfer Failed: ${apiResponse.message}` });
+        }
 
         const { transferBetweenWallets } = await import('../utils/wallet.util.js');
         let transaction;
         try {
             transaction = await transferBetweenWallets(userId, 'AEPS', 'MAIN', transferAmount, {
-                transactionId: `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`,
+                transactionId,
                 userId,
                 type: 'AEPSTOMAIN',
                 amount: transferAmount,
                 status: 'SUCCESS',
                 metadata: {
-                    operator: 'AEPSTOMAIN'
+                    operator: 'AEPSTOMAIN',
+                    apiRef: apiResponse.data?.ackno || ''
                 }
             });
         } catch (error) {
-            return res.status(400).json({ success: false, message: error.message || "Failed to transfer funds." });
+            // Local transfer failed, but PaySprint succeeded! This is critical, we must alert or log heavily
+            console.error("CRITICAL Sync Error: PaySprint succeeded but local DB failed!", error);
+            return res.status(500).json({ success: false, message: "Funds transferred at PaySprint, but local sync failed." });
         }
 
         // Fetch fresh balances for response
