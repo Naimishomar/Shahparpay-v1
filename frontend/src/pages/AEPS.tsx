@@ -884,7 +884,7 @@ const AEPS = () => {
                                     { label: 'Aadhar Number', value: receiptData.aadhaarNo },
                                     { label: 'Customer Name', value: receiptData.customerName },
                                     ...(receiptData.txnAmount !== '0.00' ? [{ label: 'Transaction Amount', value: `₹ ${receiptData.txnAmount}`, isBold: true }] : []),
-                                    { label: 'Balance Amount', value: `₹ ${receiptData.balanceAmount}` },
+                                    { label: 'Balance Amount', value: `₹ ${receiptData.balanceAmount}`, isBold: true },
                                     { label: 'Bank Name', value: receiptData.bankName },
                                     { label: 'Enquiry Time', value: receiptData.dateTime },
                                     { label: 'Message', value: receiptData.message },
