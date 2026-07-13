@@ -253,6 +253,37 @@ export const initiateDirectPayout = async (req, res) => {
 
         const transactionId = `PAYOUT${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
+        let user;
+        if (req.user.role === 'distributor') {
+            user = await Distributor.findById(req.user.id);
+        } else {
+            user = await Retailer.findById(req.user.id);
+        }
+        
+        // 1. Register the beneficiary ON THE FLY to get a valid bene_id for PaySprint
+        const addPayload = {
+            bankid: "1177",
+            merchant_code: user?.distributorId || user?.retailerId || "12345",
+            merchant_type: "1", 
+            account: accountNumber,
+            ifsc: ifscCode,
+            name: accountHolderName,
+            account_type: "PRIMARY",
+            pipe: "bank2"
+        };
+        
+        let validBeneId = Date.now().toString().substring(4); // Fallback numeric ID
+        try {
+            const addResponse = await axios.post(`${baseUrl}/service/payout/payout/add`, addPayload, {
+                headers: getPaySprintHeaders()
+            });
+            validBeneId = addResponse.data?.data?.bene_id || addResponse.data?.bene_id || validBeneId;
+        } catch (err) {
+            console.error("Direct Payout Auto-Add Error:", err?.response?.data || err.message);
+            // If the auto-add fails (e.g. already exists), try extracting bene_id from error response if provided by PaySprint
+            validBeneId = err?.response?.data?.data?.bene_id || err?.response?.data?.bene_id || validBeneId;
+        }
+
         // Deduct balance atomically from MAIN Wallet
         const { lockFundsForTransaction, resolveTransaction } = await import('../utils/wallet.util.js');
         
@@ -283,7 +314,7 @@ export const initiateDirectPayout = async (req, res) => {
             amount: amount.toString(),
             mode: mode || "IMPS",
             refid: transactionId,
-            bene_id: Date.now().toString().substring(4), // PaySprint requires this to be strictly numeric
+            bene_id: validBeneId,
             latitude: String(latitude || "28.6139"),
             longitude: String(longitude || "77.2090")
         };
