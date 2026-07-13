@@ -238,23 +238,37 @@ const Dashboard = () => {
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-8">
-                <div className="lg:col-span-4 glass-card rounded-2xl p-6 min-h-[400px] relative overflow-hidden flex flex-col">
-                    <h3 className="text-xl font-semibold mb-4 text-glow">Overview</h3>
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-[300px] h-[300px] bg-primary/20 blur-[100px] rounded-full"></div>
-                    </div>
-                    <div className="flex-1 w-full flex items-end gap-3 px-2 mt-8 relative z-10">
-                        {(stats?.graphData || [40, 70, 45, 90, 65, 85, 120, 80, 50, 95, 110, 140]).map((val: number, i: number) => {
-                            const maxVal = Math.max(...(stats?.graphData || [140]), 1);
-                            const heightPct = (val / maxVal) * 100;
-                            return (
-                                <div key={i} className="flex-1 bg-gradient-to-t from-primary to-purple-400 rounded-t-md opacity-70 hover:opacity-100 transition-all hover:scale-105 shadow-[0_0_10px_rgba(139,92,246,0.3)] relative group" style={{ height: `${heightPct}%` }}>
-                                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">
-                                        ₹{val.toFixed(0)}
-                                    </div>
-                                </div>
-                            );
-                        })}
+                <div className="lg:col-span-4 glass-card rounded-2xl p-6 min-h-[400px] flex flex-col">
+                    <h3 className="text-xl font-semibold mb-6">Quick Actions</h3>
+                    <div className="grid grid-cols-2 gap-4 h-full">
+                        <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-blue-500/20 transition-all hover:scale-105 group">
+                            <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <Fingerprint className="text-blue-500" size={32} />
+                            </div>
+                            <h4 className="font-bold text-lg mb-1">AEPS Services</h4>
+                            <p className="text-xs text-muted-foreground">Cash Withdrawal & Inquiry</p>
+                        </div>
+                        <div className="p-6 rounded-2xl bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-purple-500/20 transition-all hover:scale-105 group">
+                            <div className="w-16 h-16 rounded-full bg-purple-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <Banknote className="text-purple-500" size={32} />
+                            </div>
+                            <h4 className="font-bold text-lg mb-1">Direct Payout</h4>
+                            <p className="text-xs text-muted-foreground">Instant Bank Settlement</p>
+                        </div>
+                        <div className="p-6 rounded-2xl bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-green-500/20 transition-all hover:scale-105 group">
+                            <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <Smartphone className="text-green-500" size={32} />
+                            </div>
+                            <h4 className="font-bold text-lg mb-1">Recharge & BBPS</h4>
+                            <p className="text-xs text-muted-foreground">Mobile, DTH & Utility Bills</p>
+                        </div>
+                        <div className="p-6 rounded-2xl bg-gradient-to-br from-orange-500/10 to-orange-600/10 border border-orange-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-orange-500/20 transition-all hover:scale-105 group">
+                            <div className="w-16 h-16 rounded-full bg-orange-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <Building2 className="text-orange-500" size={32} />
+                            </div>
+                            <h4 className="font-bold text-lg mb-1">Domestic Money</h4>
+                            <p className="text-xs text-muted-foreground">Money Transfer (DMT)</p>
+                        </div>
                     </div>
                 </div>
 
