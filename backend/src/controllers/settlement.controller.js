@@ -283,7 +283,7 @@ export const initiateDirectPayout = async (req, res) => {
             amount: amount.toString(),
             mode: mode || "IMPS",
             refid: transactionId,
-            bene_id: "MANUAL",
+            bene_id: Date.now().toString().substring(4), // PaySprint requires this to be strictly numeric
             latitude: String(latitude || "28.6139"),
             longitude: String(longitude || "77.2090")
         };
