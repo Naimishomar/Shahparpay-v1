@@ -154,8 +154,10 @@ export const initiateSettlement = async (req, res) => {
             }
         });
 
+        const merchantCodeStr = req.user.role === 'distributor' ? (user.distributorId || req.user.id) : (user.retailerId || req.user.id);
         const payload = {
-            merchant_code: req.user.role === 'distributor' ? (user.distributorId || req.user.id) : (user.retailerId || req.user.id),
+            merchant_code: merchantCodeStr,
+            merchantcode: merchantCodeStr,
             accno: bank.accountNumber,
             bankname: bank.bankName,
             ifsc: bank.ifscCode,
@@ -328,6 +330,7 @@ export const initiateDirectPayout = async (req, res) => {
 
         const payload = {
             merchant_code: merchantCode,
+            merchantcode: merchantCode,
             accno: accountNumber,
             bankname: bankName || 'Bank',
             ifsc: ifscCode,
