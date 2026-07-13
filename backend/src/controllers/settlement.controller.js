@@ -48,7 +48,7 @@ export const addSettlementBank = async (req, res) => {
             return res.status(404).json({ success: false, message: "User not found" });
         }
 
-        const merchantCode = user.distributorId || user.retailerId;
+        const merchantCode = req.user.role === 'distributor' ? user.distributorId : user.retailerId;
         
         // Enforce strict AEPS Rule: Account Holder Name MUST be the KYC Name
         const kycName = `${user.firstName} ${user.lastName}`.trim();
@@ -261,9 +261,10 @@ export const initiateDirectPayout = async (req, res) => {
         }
         
         // 1. Register the beneficiary ON THE FLY to get a valid bene_id for PaySprint
+        const merchantCode = req.user.role === 'distributor' ? user.distributorId : user.retailerId;
         const addPayload = {
             bankid: "1177",
-            merchantcode: user?.distributorId || user?.retailerId || "12345",
+            merchant_code: merchantCode || "12345",
             merchant_type: "1", 
             account: accountNumber,
             ifsc: ifscCode,
