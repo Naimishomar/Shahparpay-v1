@@ -32,7 +32,7 @@ const DmtReport = () => {
             try {
                 const token = localStorage.getItem('token');
                 const typeQuery = "&type=DMT";
-                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/dashboard/recent-transactions?limit=1000${typeQuery}`, {
+                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/dashboard/recent-transactions?limit=1000$"&type=DMT"`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.data.success) {
@@ -63,12 +63,13 @@ const DmtReport = () => {
     }, [filteredTransactions, currentPage]);
 
     const handleDownloadCSV = () => {
-        const headers = ["Transaction ID", "Date", "Customer", "Mobile", "Credit", "Debit", "Status"];
+        const headers = ["S.No.", "Transaction ID", "Date", "Customer", "Mobile", "Credit", "Debit", "Status"];
         const csvRows = [headers.join(",")];
         
-        filteredTransactions.forEach(tx => {
+        filteredTransactions.forEach((tx, idx) => {
             const isCr = getCrDr(tx.type) === 'CR';
             const row = [
+                idx + 1,
                 tx.transactionId || tx._id || "N/A",
                 new Date(tx.createdAt).toLocaleString(),
                 tx.metadata?.name || tx.metadata?.customerName || "N/A",
@@ -95,12 +96,13 @@ const DmtReport = () => {
         const doc = new jsPDF();
         doc.text("DMT Reports", 14, 15);
         
-        const tableColumn = ["ID", "Date", "Customer", "Credit", "Debit", "Status"];
+        const tableColumn = ["S.No.", "ID", "Date", "Customer", "Credit", "Debit", "Status"];
         const tableRows: any[] = [];
 
-        filteredTransactions.forEach(tx => {
+        filteredTransactions.forEach((tx, idx) => {
             const isCr = getCrDr(tx.type) === 'CR';
             const txData = [
+                idx + 1,
                 tx.transactionId || tx._id || "N/A",
                 new Date(tx.createdAt).toLocaleDateString(),
                 tx.metadata?.name || tx.metadata?.customerName || "N/A",
@@ -122,10 +124,10 @@ const DmtReport = () => {
 
     return (
         <div className="flex-1 w-full flex flex-col p-4 md:p-6 animate-in fade-in duration-500 max-w-[1600px] mx-auto h-[calc(100vh-64px)] overflow-hidden">
-            <div className="flex flex-col gap-4 h-full">
+            <div className="flex flex-col gap-6 h-full">
                 {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
+                    <div className="flex items-center gap-3 shrink-0">
                         <div className="p-2 bg-primary/10 rounded-lg">
                             <FileText className="w-6 h-6 text-primary" />
                         </div>
@@ -135,8 +137,8 @@ const DmtReport = () => {
                         </div>
                     </div>
                     
-                    <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                        <div className="relative w-full md:w-auto">
+                    <div className="flex flex-wrap items-center gap-2 md:gap-3 justify-end shrink-0">
+                        <div className="relative w-full md:w-64">
                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                             <input 
                                 type="text" 
@@ -146,16 +148,16 @@ const DmtReport = () => {
                                     setSearchTerm(e.target.value);
                                     setCurrentPage(1);
                                 }}
-                                className="pl-9 pr-4 py-2 w-full bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 md:w-64"
+                                className="pl-9 pr-4 py-2 w-full bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
                         <div className="flex gap-2 w-full md:w-auto">
-                            <button onClick={handleDownloadCSV} className="flex-1 md:flex-none justify-center flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
+                            <button onClick={handleDownloadCSV} className="flex-1 md:flex-none justify-center flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap">
                                 <Download className="w-4 h-4" />
                                 <span className="hidden sm:inline">Export CSV</span>
                                 <span className="sm:hidden">CSV</span>
                             </button>
-                            <button onClick={handleDownloadPDF} className="flex-1 md:flex-none justify-center flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
+                            <button onClick={handleDownloadPDF} className="flex-1 md:flex-none justify-center flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap">
                                 <FileDown className="w-4 h-4" />
                                 <span className="hidden sm:inline">Export PDF</span>
                                 <span className="sm:hidden">PDF</span>
@@ -170,6 +172,7 @@ const DmtReport = () => {
                         <Table>
                             <TableHeader className="bg-muted/50 sticky top-0 z-10">
                                 <TableRow>
+                                    <TableHead className="font-semibold text-foreground px-4 py-3 w-16 text-center">S.No.</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 min-w-[140px]">Txn Details</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 min-w-[140px]">Customer</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 min-w-[120px]">Bank / Mobile</TableHead>
@@ -181,7 +184,7 @@ const DmtReport = () => {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="h-64 text-center">
+                                        <TableCell colSpan={7} className="h-64 text-center">
                                             <div className="flex flex-col items-center justify-center text-muted-foreground gap-2">
                                                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
                                                 <span>Loading transactions...</span>
@@ -190,15 +193,19 @@ const DmtReport = () => {
                                     </TableRow>
                                 ) : paginatedTransactions.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="h-64 text-center text-muted-foreground">
+                                        <TableCell colSpan={7} className="h-64 text-center text-muted-foreground">
                                             No transactions found.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     paginatedTransactions.map((tx, idx) => {
                                         const isCr = getCrDr(tx.type) === 'CR';
+                                        const serialNumber = ((currentPage - 1) * itemsPerPage) + idx + 1;
                                         return (
                                             <TableRow key={idx} className="hover:bg-muted/50 transition-colors">
+                                                <TableCell className="px-4 py-2 text-center text-sm font-medium text-muted-foreground">
+                                                    {serialNumber}
+                                                </TableCell>
                                                 <TableCell className="px-4 py-2">
                                                     <div className="flex flex-col">
                                                         <span className="font-medium text-xs text-foreground/80 truncate max-w-[160px]">{tx.transactionId || tx._id || "N/A"}</span>
