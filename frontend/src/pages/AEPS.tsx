@@ -838,9 +838,11 @@ const AEPS = () => {
             </div>
 
             {/* Receipt Modal */}
-            {showReceiptModal && receiptData && (
+            {showReceiptModal && receiptData && (() => {
+                const hasMiniStatement = receiptData.ministatementlist && receiptData.ministatementlist.length > 0;
+                return (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 text-slate-800">
+                    <div className={`bg-white rounded-lg shadow-2xl w-full ${hasMiniStatement ? 'max-w-3xl' : 'max-w-md'} overflow-hidden animate-in zoom-in-95 duration-200 text-slate-800`}>
                         {/* Header */}
                         <div className="flex justify-between items-start p-4 bg-white border-b border-gray-100">
                             <div>
@@ -878,8 +880,8 @@ const AEPS = () => {
                         </div>
 
                         {/* Details List */}
-                        <div className="p-5 bg-white">
-                            <div className="flex flex-col gap-2.5">
+                        <div className={`p-5 bg-white ${hasMiniStatement ? 'flex gap-6 items-start' : ''}`}>
+                            <div className={`flex flex-col gap-2.5 ${hasMiniStatement ? 'w-1/2 border-r border-dashed border-gray-200 pr-6' : ''}`}>
                                 {[
                                     { label: 'Aadhar Number', value: receiptData.aadhaarNo },
                                     { label: 'Customer Name', value: receiptData.customerName },
@@ -899,24 +901,24 @@ const AEPS = () => {
                                 ))}
                             </div>
                             
-                            {receiptData.ministatementlist && receiptData.ministatementlist.length > 0 && (
-                                <div className="mt-4 border-t border-dashed border-gray-200 pt-4">
-                                    <h4 className="font-semibold text-xs text-slate-700 mb-2">Mini Statement Details</h4>
+                            {hasMiniStatement && (
+                                <div className="w-1/2">
+                                    <h4 className="font-semibold text-sm text-slate-700 mb-3">Mini Statement Details</h4>
                                     <div className="overflow-visible">
-                                        <table className="w-full text-[10px] border-collapse">
+                                        <table className="w-full text-xs border-collapse">
                                             <thead className="bg-gray-50">
                                                 <tr>
-                                                    <th className="p-1 border text-left font-semibold text-slate-700">Date</th>
-                                                    <th className="p-1 border text-left font-semibold text-slate-700">Type</th>
-                                                    <th className="p-1 border text-right font-semibold text-slate-700">Amount</th>
+                                                    <th className="p-2 border text-left font-semibold text-slate-700">Date</th>
+                                                    <th className="p-2 border text-left font-semibold text-slate-700">Type</th>
+                                                    <th className="p-2 border text-right font-semibold text-slate-700">Amount</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {receiptData.ministatementlist.map((item: any, i: number) => (
                                                     <tr key={i} className="border-b">
-                                                        <td className="p-1 border text-slate-600 whitespace-nowrap">{item.date}</td>
-                                                        <td className={`p-1 border font-bold ${item.txnType === 'Cr' ? 'text-emerald-600' : 'text-rose-600'}`}>{item.txnType}</td>
-                                                        <td className="p-1 border text-right text-slate-600">{item.amount}</td>
+                                                        <td className="p-2 border text-slate-600 whitespace-nowrap">{item.date}</td>
+                                                        <td className={`p-2 border font-bold ${item.txnType === 'Cr' ? 'text-emerald-600' : 'text-rose-600'}`}>{item.txnType}</td>
+                                                        <td className="p-2 border text-right text-slate-600">{item.amount}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -924,11 +926,11 @@ const AEPS = () => {
                                     </div>
                                 </div>
                             )}
-                            
-                            <p className="text-[10px] text-amber-500/80 text-center mt-6">
-                                Note*: This is a system generated receipt and it does not require signature.
-                            </p>
                         </div>
+
+                        <p className="text-[10px] text-amber-500/80 text-center pb-4 bg-white">
+                            Note*: This is a system generated receipt and it does not require signature.
+                        </p>
 
                         {/* Actions */}
                         <div className="p-4 bg-gray-50 flex justify-center border-t border-gray-100">
@@ -939,7 +941,8 @@ const AEPS = () => {
                         </div>
                     </div>
                 </div>
-            )}
+                );
+            })()}
 
             {/* Merchant KYC Modal */}
             {showKycModal && (
