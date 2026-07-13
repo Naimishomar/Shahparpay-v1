@@ -34,7 +34,7 @@ export const getRetailerStats = async (req, res) => {
         const transactions = await Transaction.find({
             userId,
             ...dateFilter
-        }).sort({ createdAt: -1 });
+        }).sort({ createdAt: -1 }).lean();
 
         let stats = {
             DMT: 0,
