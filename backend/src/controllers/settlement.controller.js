@@ -282,8 +282,8 @@ export const initiateDirectPayout = async (req, res) => {
             name: accountHolderName,
             amount: amount.toString(),
             mode: mode || "IMPS",
-            reference_id: transactionId,
-            beneficiary_id: "MANUAL",
+            referenceid: transactionId,
+            beneficiaryid: "MANUAL",
             latitude: "28.6139",
             longitude: "77.2090"
         };
