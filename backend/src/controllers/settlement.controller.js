@@ -101,7 +101,7 @@ export const addSettlementBank = async (req, res) => {
 
 export const initiateSettlement = async (req, res) => {
     try {
-        const { bankId, amount, pin, mode } = req.body;
+        const { bankId, amount, pin, mode, latitude, longitude } = req.body;
 
         if (!bankId || !amount || amount <= 0 || !pin) {
             return res.status(400).json({ success: false, message: "Invalid parameters" });
@@ -161,10 +161,10 @@ export const initiateSettlement = async (req, res) => {
             name: bank.accountHolderName,
             amount: amount.toString(),
             mode: mode || "IMPS",
-            reference_id: transactionId,
-            beneficiary_id: bank.beneId,
-            latitude: "28.6139",
-            longitude: "77.2090"
+            refid: transactionId,
+            bene_id: bank.beneId,
+            latitude: String(latitude || "28.6139"),
+            longitude: String(longitude || "77.2090")
         };
 
         let apiResponse;
@@ -225,7 +225,7 @@ export const initiateSettlement = async (req, res) => {
 
 export const initiateDirectPayout = async (req, res) => {
     try {
-        const { accountNumber, ifscCode, accountHolderName, bankName, amount, pin, mode } = req.body;
+        const { accountNumber, ifscCode, accountHolderName, bankName, amount, pin, mode, latitude, longitude } = req.body;
 
         if (!accountNumber || !ifscCode || !accountHolderName || !amount || amount <= 0 || !pin) {
             return res.status(400).json({ success: false, message: "Invalid parameters for Direct Payout" });
@@ -282,10 +282,10 @@ export const initiateDirectPayout = async (req, res) => {
             name: accountHolderName,
             amount: amount.toString(),
             mode: mode || "IMPS",
-            referenceid: transactionId,
-            beneficiaryid: "MANUAL",
-            latitude: "28.6139",
-            longitude: "77.2090"
+            refid: transactionId,
+            bene_id: "MANUAL",
+            latitude: String(latitude || "28.6139"),
+            longitude: String(longitude || "77.2090")
         };
 
         let apiResponse;
