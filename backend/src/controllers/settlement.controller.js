@@ -272,16 +272,31 @@ export const initiateDirectPayout = async (req, res) => {
             pipe: "bank2"
         };
         
-        let validBeneId = Date.now().toString().substring(4); // Fallback numeric ID
+        let validBeneId = null;
         try {
             const addResponse = await axios.post(`${baseUrl}/service/payout/payout/add`, addPayload, {
                 headers: getPaySprintHeaders()
             });
-            validBeneId = addResponse.data?.data?.bene_id || addResponse.data?.bene_id || validBeneId;
+            validBeneId = addResponse.data?.data?.bene_id || addResponse.data?.bene_id;
+
+            if (!validBeneId) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: addResponse.data?.message || "Failed to auto-register beneficiary for Direct Payout.",
+                    details: addResponse.data
+                });
+            }
         } catch (err) {
             console.error("Direct Payout Auto-Add Error:", err?.response?.data || err.message);
-            // If the auto-add fails (e.g. already exists), try extracting bene_id from error response if provided by PaySprint
-            validBeneId = err?.response?.data?.data?.bene_id || err?.response?.data?.bene_id || validBeneId;
+            validBeneId = err?.response?.data?.data?.bene_id || err?.response?.data?.bene_id;
+
+            if (!validBeneId) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: err?.response?.data?.message || err.message || "Failed to connect to PaySprint API for beneficiary registration.",
+                    details: err?.response?.data
+                });
+            }
         }
 
         // Deduct balance atomically from MAIN Wallet
