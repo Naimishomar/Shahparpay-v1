@@ -258,15 +258,24 @@ const Dashboard = () => {
                             <p className="text-center text-muted-foreground text-sm">Loading...</p>
                         ) : recentSales.length > 0 ? (
                             recentSales.map((sale, i) => (
-                            <div key={i} className="flex items-center p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer">
-                                <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold border border-primary/30 shadow-[0_0_10px_rgba(139,92,246,0.3)]">
+                            <div key={i} className="flex items-center p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-border">
+                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-primary/20">
                                     {sale.name.charAt(0)}
                                 </div>
                                 <div className="ml-4 space-y-1">
                                     <p className="text-sm font-medium leading-none text-foreground">{sale.name}</p>
                                     <p className="text-xs text-muted-foreground">{sale.email}</p>
                                 </div>
-                                <div className="ml-auto font-medium text-emerald-400">{sale.amount}</div>
+                                <div className="ml-auto text-right">
+                                    <div className={`font-semibold ${sale.status === 'FAILED' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                        {sale.amount}
+                                    </div>
+                                    {sale.date && (
+                                        <div className="text-[10px] text-muted-foreground mt-0.5">
+                                            {new Date(sale.date).toLocaleDateString()}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         ))
                         ) : (
