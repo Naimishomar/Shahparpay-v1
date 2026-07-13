@@ -63,6 +63,7 @@ import dmtRouter from './routes/dmt.route.js';
 import settlementRouter from './routes/settlement.route.js';
 import fundRequestRouter from './routes/fundRequest.route.js';
 import dashboardRouter from './routes/dashboard.route.js';
+import { startReconciliationWorker } from './workers/reconciliation.worker.js';
 
 app.use('/api/aeps', aepsRoutes);
 app.use('/api/recharge', rechargeRoutes);
@@ -80,6 +81,7 @@ const startServer = async () => {
         await connectDB();
         app.listen(PORT,()=>{
             console.log(`Server is running on port ${PORT}✅`);
+            startReconciliationWorker();
         });
     } catch (error) {
         console.log("Failed to connect to database",error.message);

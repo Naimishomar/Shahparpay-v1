@@ -13,7 +13,7 @@ const transactionSchema = new mongoose.Schema({
     }, // Retailer who did it
     type: { 
         type: String, 
-        enum: ['AEPS_WITHDRAWAL', 'BILL_PAYMENT', 'WALLET_TOPUP', 'RECHARGE', 'AEPSTOMAIN', 'AEPS_SETTLEMENT', 'DMT'], 
+        enum: ['AEPS_WITHDRAWAL', 'BILL_PAYMENT', 'WALLET_TOPUP', 'RECHARGE', 'AEPSTOMAIN', 'AEPS_SETTLEMENT', 'DMT', 'DIRECT_PAYOUT', 'DIRECT_PAYOUT_REFUND'], 
         required: true 
     },
     amount: { 
@@ -36,7 +36,7 @@ const transactionSchema = new mongoose.Schema({
     },
     status: { 
         type: String, 
-        enum: ['PENDING', 'SUCCESS', 'FAILED'], 
+        enum: ['PENDING', 'PROCESSING', 'SUCCESS', 'FAILED', 'REFUNDED'], 
         default: 'PENDING' 
     },
     metadata: { 

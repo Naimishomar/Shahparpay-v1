@@ -254,15 +254,15 @@ export const initiateDirectPayout = async (req, res) => {
         const transactionId = `PAYOUT${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
         // Deduct balance atomically from MAIN Wallet
-        const { updateWalletAtomically } = await import('../utils/wallet.util.js');
+        const { lockFundsForTransaction, resolveTransaction } = await import('../utils/wallet.util.js');
         
         try {
-            await updateWalletAtomically(req.user.id, 'MAIN', -totalDeduction, {
+            await lockFundsForTransaction(req.user.id, 'MAIN', -totalDeduction, {
                 transactionId,
                 userId: req.user.id,
                 type: 'DIRECT_PAYOUT',
                 amount: totalDeduction,
-                status: 'PENDING',
+                status: 'PROCESSING',
                 metadata: {
                     bankAccount: accountNumber,
                     bankName: bankName || 'Bank Account',
@@ -312,23 +312,13 @@ export const initiateDirectPayout = async (req, res) => {
             apiResponse = { data: { status: false, message: errorMessage, error: errorData } };
         }
 
-        if (status === 'FAILED') {
-            await updateWalletAtomically(req.user.id, 'MAIN', totalDeduction, {
-                transactionId: `REF-${transactionId}`,
-                userId: req.user.id,
-                type: 'DIRECT_PAYOUT_REFUND',
-                amount: totalDeduction,
-                status: 'SUCCESS',
-                metadata: { note: 'Refund for failed direct payout', originalTxn: transactionId }
-            });
-        }
-
-        // Update the original Transaction status
-        const Transaction = (await import('../models/transaction.model.js')).default;
-        await Transaction.findOneAndUpdate({ transactionId }, { 
+        // RESOLVE Phase: Update status and securely refund if FAILED
+        await resolveTransaction(
+            transactionId, 
             status, 
-            'metadata.apiMessage': apiResponse.data?.message 
-        });
+            apiResponse.data?.message || (status === 'SUCCESS' ? "Direct payout successful" : "Direct payout failed"),
+            'MAIN'
+        );
 
         return res.status(200).json({ 
             success: status === 'SUCCESS', 
