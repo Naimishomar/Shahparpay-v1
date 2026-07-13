@@ -313,6 +313,9 @@ export const initiateDirectPayout = async (req, res) => {
                     bankAccount: accountNumber,
                     bankName: bankName || 'Bank Account',
                     beneficiaryName: accountHolderName,
+                    name: accountHolderName,
+                    customerName: accountHolderName,
+                    mobile: user?.phone || user?.mobile || "N/A",
                     mode: mode || 'IMPS',
                     fee
                 }
