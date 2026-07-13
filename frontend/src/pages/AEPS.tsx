@@ -842,7 +842,7 @@ const AEPS = () => {
                 const hasMiniStatement = receiptData.ministatementlist && receiptData.ministatementlist.length > 0;
                 return (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className={`bg-white rounded-lg shadow-2xl w-full ${hasMiniStatement ? 'max-w-3xl' : 'max-w-md'} overflow-hidden animate-in zoom-in-95 duration-200 text-slate-800`}>
+                    <div id="printable-receipt" className={`bg-white rounded-lg shadow-2xl w-full ${hasMiniStatement ? 'max-w-3xl' : 'max-w-md'} overflow-hidden animate-in zoom-in-95 duration-200 text-slate-800`}>
                         {/* Header */}
                         <div className="flex justify-between items-start p-4 bg-white border-b border-gray-100">
                             <div>
