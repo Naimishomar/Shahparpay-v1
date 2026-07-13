@@ -870,12 +870,18 @@ const AEPS = () => {
 
                         {/* Status Area */}
                         <div className="flex flex-col items-center justify-center py-6 bg-white">
-                            <h2 className="text-emerald-500 font-bold text-lg mb-4 uppercase tracking-wide">
-                                TRANSACTION SUCCESSFUL
+                            <h2 className={`font-bold text-lg mb-4 uppercase tracking-wide ${receiptData.txnStatus === 'SUCCESS' ? 'text-emerald-500' : receiptData.txnStatus === 'FAILED' ? 'text-rose-500' : 'text-yellow-500'}`}>
+                                TRANSACTION {receiptData.txnStatus}
                             </h2>
-                            <div className="w-20 h-20 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 relative">
-                                <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-20"></div>
-                                <CheckCircle2 className="w-12 h-12 text-white" />
+                            <div className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg relative ${receiptData.txnStatus === 'SUCCESS' ? 'bg-emerald-500 shadow-emerald-500/20' : receiptData.txnStatus === 'FAILED' ? 'bg-rose-500 shadow-rose-500/20' : 'bg-yellow-500 shadow-yellow-500/20'}`}>
+                                <div className={`absolute inset-0 rounded-full animate-ping opacity-20 ${receiptData.txnStatus === 'SUCCESS' ? 'bg-emerald-500' : receiptData.txnStatus === 'FAILED' ? 'bg-rose-500' : 'bg-yellow-500'}`}></div>
+                                {receiptData.txnStatus === 'SUCCESS' ? (
+                                    <CheckCircle2 className="w-12 h-12 text-white" />
+                                ) : receiptData.txnStatus === 'FAILED' ? (
+                                    <XCircle className="w-12 h-12 text-white" />
+                                ) : (
+                                    <RefreshCcw className="w-12 h-12 text-white animate-spin" />
+                                )}
                             </div>
                         </div>
 
@@ -883,20 +889,19 @@ const AEPS = () => {
                         <div className={`p-5 bg-white ${hasMiniStatement ? 'flex gap-6 items-start' : ''}`}>
                             <div className={`flex flex-col gap-2.5 ${hasMiniStatement ? 'w-1/2 border-r border-dashed border-gray-200 pr-6' : ''}`}>
                                 {[
-                                    { label: 'Aadhar Number', value: receiptData.aadhaarNo },
                                     { label: 'Customer Name', value: receiptData.customerName },
-                                    ...(receiptData.txnAmount !== '0.00' ? [{ label: 'Transaction Amount', value: `₹ ${receiptData.txnAmount}`, isBold: true }] : []),
+                                    { label: 'Customer Mobile No', value: receiptData.mobileNo },
+                                    ...(receiptData.txnAmount !== '0.00' ? [{ label: 'Withdrawal Amount', value: `₹ ${receiptData.txnAmount}`, isBold: true }] : []),
                                     { label: 'Balance Amount', value: `₹ ${receiptData.balanceAmount}`, isBold: true },
                                     { label: 'Bank Name', value: receiptData.bankName },
-                                    { label: 'Enquiry Time', value: receiptData.dateTime },
-                                    { label: 'Message', value: receiptData.message },
-                                    { label: 'Mobile', value: receiptData.mobileNo },
-                                    { label: 'Status', value: receiptData.txnStatus },
-                                    { label: 'Utr', value: receiptData.rrn },
+                                    { label: 'Aadhar No', value: receiptData.aadhaarNo },
+                                    { label: 'Transaction Date & Time', value: receiptData.dateTime },
+                                    { label: 'Status', value: receiptData.txnStatus, isStatus: true },
+                                    { label: 'Utr No', value: receiptData.rrn },
                                 ].map((row: any) => (
                                     <div key={row.label} className="flex justify-between items-start text-[13px] border-b border-dashed border-gray-200 pb-2 last:border-0 last:pb-0">
                                         <span className={`font-semibold text-slate-700 ${row.isBold ? 'text-emerald-600 text-[14px]' : ''}`}>{row.label}</span>
-                                        <span className={`text-right max-w-[60%] break-all ${row.isBold ? 'font-bold text-emerald-600 text-[15px]' : 'text-slate-600'}`}>{row.value}</span>
+                                        <span className={`text-right max-w-[60%] break-all ${row.isBold ? 'font-bold text-emerald-600 text-[15px]' : row.isStatus ? (row.value === 'SUCCESS' ? 'font-bold text-emerald-600' : row.value === 'FAILED' ? 'font-bold text-rose-600' : 'font-bold text-yellow-600') : 'text-slate-600'}`}>{row.value}</span>
                                     </div>
                                 ))}
                             </div>
