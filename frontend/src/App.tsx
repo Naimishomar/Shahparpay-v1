@@ -12,6 +12,10 @@ import UPI_Payments from "./pages/UPI_Payments"
 import Reports from "./pages/Reports"
 import FundRequest from "./pages/FundRequest"
 import BiometricSupport from "./pages/BiometricSupport"
+import LedgerReport from "./pages/LedgerReport"
+import DmtReport from "./pages/DmtReport"
+import PayoutReport from "./pages/PayoutReport"
+import UpiReport from "./pages/UpiReport"
 
 // New Pages
 import Login from "./pages/Login"
@@ -40,7 +44,13 @@ function App() {
         <Route path="/wallet-transfer" element={<WalletTransfer/>}/>
         <Route path="/bbps" element={<BBPS/>}/>
         <Route path="/upi-payments" element={<UPI_Payments/>}/>
-        <Route path="/reports" element={<Reports/>}/>
+        
+        {/* Reports Routes */}
+        <Route path="/reports/ledger" element={<LedgerReport/>}/>
+        <Route path="/reports/dmt" element={<DmtReport/>}/>
+        <Route path="/reports/payout" element={<PayoutReport/>}/>
+        <Route path="/reports/upi" element={<UpiReport/>}/>
+
         <Route path="/fund-request" element={<FundRequest/>}/>
         <Route path="/biometric-support" element={<BiometricSupport/>}/>
         <Route path="/profile" element={<Profile/>}/>
