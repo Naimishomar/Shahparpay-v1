@@ -427,8 +427,8 @@ const AEPS = () => {
             const errorMsg = error.response?.data?.message || "Failed to connect to the server.";
             alert("Transaction Failed: " + errorMsg);
         } finally {
-            setPidData(null);
             setLoading(false);
+            handleReset();
         }
     };
 

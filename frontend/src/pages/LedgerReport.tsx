@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { FileText, Search, Download } from "lucide-react"
+import { useState, useEffect } from "react"
+import { FileText, Search, Download, FileDown, Loader2 } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -8,77 +8,104 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import axios from "axios"
+import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
 
 const LedgerReport = () => {
-    // Dummy Data based on user requirements
-    const [transactions] = useState([
-        {
-            id: "DGFINPAY844f08416f",
-            customerName: "John Doe",
-            mobile: "9876543210",
-            amount: "156,510.34",
-            balance: "156,000.00",
-            bankName: "State Bank of India",
-            aadhaar: "********7984",
-            dateTime: "2026-07-10 12:26:10",
-            status: "SUCCESS",
-            utr: "619409045419"
-        },
-        {
-            id: "DGFINPAYb659030e7c",
-            customerName: "Jane Smith",
-            mobile: "8765432109",
-            amount: "25,000.00",
-            balance: "131,503.27",
-            bankName: "HDFC Bank",
-            aadhaar: "********1234",
-            dateTime: "2026-07-10 12:00:08",
-            status: "FAILED",
-            utr: "619409045420"
-        },
-        {
-            id: "DGFINBE1179bffd71",
-            customerName: "Alice Johnson",
-            mobile: "7654321098",
-            amount: "7,000.00",
-            balance: "124,491.51",
-            bankName: "ICICI Bank",
-            aadhaar: "********5678",
-            dateTime: "2026-07-10 11:21:18",
-            status: "PENDING",
-            utr: "619409045421"
-        },
-        {
-            id: "DGFINCWd2a2860e12",
-            customerName: "Bob Williams",
-            mobile: "6543210987",
-            amount: "100.00",
-            balance: "124,391.51",
-            bankName: "Axis Bank",
-            aadhaar: "********9012",
-            dateTime: "2026-07-10 11:19:52",
-            status: "SUCCESS",
-            utr: "619409045422"
-        },
-        {
-            id: "DGFINBE3648612eb1",
-            customerName: "Charlie Brown",
-            mobile: "5432109876",
-            amount: "3,000.00",
-            balance: "121,381.22",
-            bankName: "Kotak Mahindra",
-            aadhaar: "********3456",
-            dateTime: "2026-07-10 10:46:11",
-            status: "SUCCESS",
-            utr: "619409045423"
-        }
-    ]);
+    const [transactions, setTransactions] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState("");
+
+    useEffect(() => {
+        const fetchTransactions = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const typeQuery = "" ? `&type=` : "";
+                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/dashboard/recent-transactions?limit=100${typeQuery}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.data.success) {
+                    setTransactions(res.data.data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch transactions:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTransactions();
+    }, []);
+
+    const filteredTransactions = transactions.filter(tx => 
+        tx.transactionId?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        tx.metadata?.mobile?.includes(searchTerm) ||
+        tx.metadata?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const handleDownloadCSV = () => {
+        const headers = ["Transaction ID", "Date & Time", "Customer", "Mobile", "Bank", "Amount", "Status"];
+        const csvRows = [headers.join(",")];
+        
+        filteredTransactions.forEach(tx => {
+            const row = [
+                tx.transactionId || tx._id || "N/A",
+                new Date(tx.createdAt).toLocaleString(),
+                tx.metadata?.name || tx.metadata?.customerName || "N/A",
+                tx.metadata?.mobile || "N/A",
+                tx.metadata?.bankName || "N/A",
+                tx.amount || 0,
+                tx.status || "UNKNOWN"
+            ];
+            // Escape commas in strings
+            const escapedRow = row.map(v => `"${String(v).replace(/"/g, '""')}"`);
+            csvRows.push(escapedRow.join(","));
+        });
+
+        const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `LedgerReport_${new Date().getTime()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleDownloadPDF = () => {
+        const doc = new jsPDF();
+        doc.text("Ledger Reports", 14, 15);
+        
+        const tableColumn = ["ID", "Date", "Customer", "Mobile", "Bank", "Amount", "Status"];
+        const tableRows: any[] = [];
+
+        filteredTransactions.forEach(tx => {
+            const txData = [
+                tx.transactionId || tx._id || "N/A",
+                new Date(tx.createdAt).toLocaleString(),
+                tx.metadata?.name || tx.metadata?.customerName || "N/A",
+                tx.metadata?.mobile || "N/A",
+                tx.metadata?.bankName || "N/A",
+                tx.amount || 0,
+                tx.status || "UNKNOWN"
+            ];
+            tableRows.push(txData);
+        });
+
+        autoTable(doc, {
+            head: [tableColumn],
+            body: tableRows,
+            startY: 20,
+        });
+
+        doc.save(`LedgerReport_${new Date().getTime()}.pdf`);
+    };
 
     return (
         <div className="flex-1 w-full flex flex-col p-6 animate-in fade-in duration-500 max-w-[1600px] mx-auto h-[calc(100vh-64px)] overflow-hidden">
             <div className="flex flex-col gap-6 h-full">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-primary/10 rounded-lg">
                             <FileText className="w-6 h-6 text-primary" />
@@ -89,18 +116,24 @@ const LedgerReport = () => {
                         </div>
                     </div>
                     
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                         <div className="relative">
                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                             <input 
                                 type="text" 
                                 placeholder="Search by ID or Mobile..." 
-                                className="pl-9 pr-4 py-2 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-64"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-9 pr-4 py-2 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 w-64"
                             />
                         </div>
-                        <button className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        <button onClick={handleDownloadCSV} className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
                             <Download className="w-4 h-4" />
                             Export CSV
+                        </button>
+                        <button onClick={handleDownloadPDF} className="flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
+                            <FileDown className="w-4 h-4" />
+                            Export PDF
                         </button>
                     </div>
                 </div>
@@ -109,55 +142,61 @@ const LedgerReport = () => {
                 <div className="flex-1 bg-card rounded-xl border border-border shadow-sm overflow-hidden flex flex-col">
                     <div className="overflow-x-auto flex-1">
                         <Table>
-                            <TableHeader className="bg-gray-50/50 sticky top-0 z-10">
+                            <TableHeader className="bg-muted/50 sticky top-0 z-10">
                                 <TableRow>
-                                    <TableHead className="font-semibold text-slate-700 whitespace-nowrap px-4 py-3">Transaction ID</TableHead>
-                                    <TableHead className="font-semibold text-slate-700 whitespace-nowrap px-4 py-3">Date & Time</TableHead>
-                                    <TableHead className="font-semibold text-slate-700 whitespace-nowrap px-4 py-3">Customer</TableHead>
-                                    <TableHead className="font-semibold text-slate-700 whitespace-nowrap px-4 py-3">Mobile No</TableHead>
-                                    <TableHead className="font-semibold text-slate-700 whitespace-nowrap px-4 py-3">Bank</TableHead>
-                                    <TableHead className="font-semibold text-slate-700 whitespace-nowrap px-4 py-3">Aadhar No</TableHead>
-                                    <TableHead className="font-semibold text-slate-700 whitespace-nowrap px-4 py-3 text-right">Txn Amount</TableHead>
-                                    <TableHead className="font-semibold text-slate-700 whitespace-nowrap px-4 py-3 text-right">Balance</TableHead>
-                                    <TableHead className="font-semibold text-slate-700 whitespace-nowrap px-4 py-3">UTR No</TableHead>
-                                    <TableHead className="font-semibold text-slate-700 whitespace-nowrap px-4 py-3 text-center">Status</TableHead>
+                                    <TableHead className="font-semibold text-foreground whitespace-nowrap px-4 py-3">Transaction ID</TableHead>
+                                    <TableHead className="font-semibold text-foreground whitespace-nowrap px-4 py-3">Date & Time</TableHead>
+                                    <TableHead className="font-semibold text-foreground whitespace-nowrap px-4 py-3">Customer</TableHead>
+                                    <TableHead className="font-semibold text-foreground whitespace-nowrap px-4 py-3">Mobile No</TableHead>
+                                    <TableHead className="font-semibold text-foreground whitespace-nowrap px-4 py-3">Bank</TableHead>
+                                    <TableHead className="font-semibold text-foreground whitespace-nowrap px-4 py-3 text-right">Amount</TableHead>
+                                    <TableHead className="font-semibold text-foreground whitespace-nowrap px-4 py-3 text-center">Status</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {transactions.map((tx, idx) => (
-                                    <TableRow key={idx} className="hover:bg-gray-50/50 transition-colors">
-                                        <TableCell className="font-medium text-xs text-slate-600 px-4 py-3 whitespace-nowrap">{tx.id}</TableCell>
-                                        <TableCell className="text-xs text-slate-500 px-4 py-3 whitespace-nowrap">{tx.dateTime}</TableCell>
-                                        <TableCell className="text-sm font-medium text-slate-700 px-4 py-3 whitespace-nowrap">{tx.customerName}</TableCell>
-                                        <TableCell className="text-xs text-slate-600 px-4 py-3 whitespace-nowrap">{tx.mobile}</TableCell>
-                                        <TableCell className="text-xs font-medium text-primary px-4 py-3 whitespace-nowrap">{tx.bankName}</TableCell>
-                                        <TableCell className="text-xs text-slate-500 tracking-wider px-4 py-3 whitespace-nowrap">{tx.aadhaar}</TableCell>
-                                        <TableCell className="text-sm font-bold text-slate-700 text-right px-4 py-3 whitespace-nowrap">₹ {tx.amount}</TableCell>
-                                        <TableCell className="text-sm font-bold text-slate-700 text-right px-4 py-3 whitespace-nowrap">₹ {tx.balance}</TableCell>
-                                        <TableCell className="text-xs text-slate-500 px-4 py-3 whitespace-nowrap">{tx.utr}</TableCell>
-                                        <TableCell className="px-4 py-3 text-center">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                                tx.status === 'SUCCESS' ? 'bg-emerald-100 text-emerald-700' : 
-                                                tx.status === 'FAILED' ? 'bg-rose-100 text-rose-700' : 
-                                                'bg-yellow-100 text-yellow-700'
-                                            }`}>
-                                                {tx.status}
-                                            </span>
+                                {loading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={7} className="h-64 text-center">
+                                            <div className="flex flex-col items-center justify-center text-muted-foreground gap-2">
+                                                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                                                <span>Loading transactions...</span>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                ) : filteredTransactions.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={7} className="h-64 text-center text-muted-foreground">
+                                            No transactions found.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    filteredTransactions.map((tx, idx) => (
+                                        <TableRow key={idx} className="hover:bg-muted/50 transition-colors">
+                                            <TableCell className="font-medium text-xs text-foreground/80 px-4 py-3 whitespace-nowrap">{tx.transactionId || tx._id || "N/A"}</TableCell>
+                                            <TableCell className="text-xs text-muted-foreground px-4 py-3 whitespace-nowrap">{new Date(tx.createdAt).toLocaleString()}</TableCell>
+                                            <TableCell className="text-sm font-medium text-foreground px-4 py-3 whitespace-nowrap">{tx.metadata?.name || tx.metadata?.customerName || "N/A"}</TableCell>
+                                            <TableCell className="text-xs text-foreground/80 px-4 py-3 whitespace-nowrap">{tx.metadata?.mobile || "N/A"}</TableCell>
+                                            <TableCell className="text-xs font-medium text-primary px-4 py-3 whitespace-nowrap">{tx.metadata?.bankName || "N/A"}</TableCell>
+                                            <TableCell className="text-sm font-bold text-foreground text-right px-4 py-3 whitespace-nowrap">₹ {tx.amount || 0}</TableCell>
+                                            <TableCell className="px-4 py-3 text-center">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                                    tx.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' : 
+                                                    tx.status === 'FAILED' ? 'bg-rose-500/10 text-rose-500' : 
+                                                    'bg-yellow-500/10 text-yellow-500'
+                                                }`}>
+                                                    {tx.status || "UNKNOWN"}
+                                                </span>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
                             </TableBody>
                         </Table>
                     </div>
                     
-                    {/* Pagination Placeholder */}
-                    <div className="p-4 border-t border-border flex items-center justify-between bg-gray-50/30">
-                        <span className="text-xs text-muted-foreground">Showing 1 to {transactions.length} of {transactions.length} entries</span>
-                        <div className="flex gap-1">
-                            <button className="px-3 py-1 border border-border rounded text-xs text-muted-foreground hover:bg-gray-100" disabled>Previous</button>
-                            <button className="px-3 py-1 border border-primary bg-primary text-primary-foreground rounded text-xs">1</button>
-                            <button className="px-3 py-1 border border-border rounded text-xs text-muted-foreground hover:bg-gray-100" disabled>Next</button>
-                        </div>
+                    {/* Footer */}
+                    <div className="p-4 border-t border-border flex items-center justify-between bg-muted/30">
+                        <span className="text-xs text-muted-foreground">Showing {filteredTransactions.length} entries</span>
                     </div>
                 </div>
             </div>
