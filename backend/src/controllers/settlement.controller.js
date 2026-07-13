@@ -263,7 +263,7 @@ export const initiateDirectPayout = async (req, res) => {
         // 1. Register the beneficiary ON THE FLY to get a valid bene_id for PaySprint
         const addPayload = {
             bankid: "1177",
-            merchant_code: user?.distributorId || user?.retailerId || "12345",
+            merchantcode: user?.distributorId || user?.retailerId || "12345",
             merchant_type: "1", 
             account: accountNumber,
             ifsc: ifscCode,

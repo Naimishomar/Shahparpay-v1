@@ -407,7 +407,7 @@ const AEPS = () => {
                     customerName: name || 'Customer',
                     aadhaarNo: '********' + (aadhaarNo.slice(-4) || ''),
                     txnAmount: (activeTab !== 'balance_enquiry' && activeTab !== 'mini_statement') ? amount : '0.00',
-                    balanceAmount: result.data?.balanceamount || result.data?.amount || result.data?.data?.balanceamount || '0.00',
+                    balanceAmount: result.data?.balanceamount || result.data?.data?.balanceamount || result.data?.amount || '0.00',
                     bankName: bankName ? bankName.toUpperCase() : 'BANK',
                     dateTime: new Date().toLocaleString(),
                     message: 'SUCCESS',
@@ -900,8 +900,8 @@ const AEPS = () => {
                                     { label: 'Utr No', value: receiptData.rrn },
                                 ].map((row: any) => (
                                     <div key={row.label} className="flex justify-between items-start text-[13px] border-b border-dashed border-gray-200 pb-2 last:border-0 last:pb-0">
-                                        <span className={`font-semibold text-slate-700 ${row.isBold ? 'text-emerald-600 text-[14px]' : ''}`}>{row.label}</span>
-                                        <span className={`text-right max-w-[60%] break-all ${row.isBold ? 'font-bold text-emerald-600 text-[15px]' : row.isStatus ? (row.value === 'SUCCESS' ? 'font-bold text-emerald-600' : row.value === 'FAILED' ? 'font-bold text-rose-600' : 'font-bold text-yellow-600') : 'text-slate-600'}`}>{row.value}</span>
+                                        <span className={`font-semibold text-slate-700 ${row.isBold ? 'text-black text-[14px]' : ''}`}>{row.label}</span>
+                                        <span className={`text-right max-w-[60%] break-all ${row.isBold ? 'font-bold text-black text-[15px]' : row.isStatus ? (row.value === 'SUCCESS' ? 'font-bold text-emerald-600' : row.value === 'FAILED' ? 'font-bold text-rose-600' : 'font-bold text-yellow-600') : 'text-slate-600'}`}>{row.value}</span>
                                     </div>
                                 ))}
                             </div>

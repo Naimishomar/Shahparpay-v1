@@ -31,8 +31,7 @@ const LedgerReport = () => {
         const fetchTransactions = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const typeQuery = "";
-                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/dashboard/recent-transactions?limit=1000$""`, {
+                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/dashboard/recent-transactions?limit=1000`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.data.success) {
