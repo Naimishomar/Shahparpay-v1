@@ -53,6 +53,8 @@ export const getRetailers = async (req, res) => {
             
             return {
                 ...ret.toObject(),
+                mainWalletBalance: mainWallet?.balance || 0,
+                aepsWalletBalance: aepsWallet?.balance || 0,
                 commissionsEarned: (mainWallet?.balance || 0) + (aepsWallet?.balance || 0)
             };
         }));
