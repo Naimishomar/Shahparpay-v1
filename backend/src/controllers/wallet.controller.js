@@ -104,9 +104,18 @@ export const transferAepsToMain = async (req, res) => {
         const transferAmount = Number(amount);
         const transactionId = `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`;
         
-        const User = (await import('../models/user.model.js')).default;
-        const user = await User.findById(userId);
-        const merchantcode = req.user.role === 'distributor' ? (user.distributorId || userId) : (user.retailerId || userId);
+        const role = req.user.role;
+        let user;
+        if (role === 'retailer') {
+            const Retailer = (await import('../models/users/retailer.model.js')).default;
+            user = await Retailer.findById(userId);
+        } else if (role === 'distributor') {
+            const Distributor = (await import('../models/users/distributor.model.js')).default;
+            user = await Distributor.findById(userId);
+        } else {
+            return res.status(403).json({ success: false, message: "Invalid role for wallet transfer" });
+        }
+        const merchantcode = role === 'distributor' ? (user?.distributorId || userId) : (user?.retailerId || userId);
 
         const { transferAepsToMainWalletApi } = await import('../utils/paysprint.util.js');
         const apiResponse = await transferAepsToMainWalletApi(merchantcode, transferAmount, transactionId);
