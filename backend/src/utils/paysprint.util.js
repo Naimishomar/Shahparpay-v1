@@ -311,7 +311,14 @@ export const transferAepsToMainWalletApi = async (merchantcode, amount, referenc
             body: JSON.stringify(payload)
         });
 
-        const data = await response.json();
+        const responseText = await response.text();
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            console.error("Non-JSON response from PaySprint Wallet Transfer:", responseText.substring(0, 200));
+            return { success: false, message: "PaySprint API is currently unavailable or the endpoint URL is incorrect (404 Not Found)." };
+        }
         
         if (data.status || data.response_code === 1) {
             return { success: true, message: data.message || "Fund Transfer Successful", data: data.data };
