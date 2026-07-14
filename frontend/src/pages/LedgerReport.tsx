@@ -12,11 +12,12 @@ import axios from "axios"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 
-const getCrDr = (type: string) => {
-    const credits = ['AEPS_WITHDRAWAL', 'WALLET_TOPUP'];
-    const debits = ['BILL_PAYMENT', 'RECHARGE', 'AEPS_SETTLEMENT', 'DMT'];
-    if (credits.includes(type)) return 'CR';
-    if (debits.includes(type)) return 'DR';
+const getCrDr = (tx: any) => {
+    if (tx.transactionId?.startsWith('REF-')) return 'CR';
+    const credits = ['AEPS_WITHDRAWAL', 'WALLET_TOPUP', 'REFUND'];
+    const debits = ['BILL_PAYMENT', 'RECHARGE', 'AEPS_SETTLEMENT', 'DMT', 'DIRECT_PAYOUT'];
+    if (credits.includes(tx.type)) return 'CR';
+    if (debits.includes(tx.type)) return 'DR';
     return 'CR'; // Default fallback
 };
 
@@ -66,7 +67,7 @@ const LedgerReport = () => {
         const csvRows = [headers.join(",")];
         
         filteredTransactions.forEach((tx, idx) => {
-            const isCr = getCrDr(tx.type) === 'CR';
+            const isCr = getCrDr(tx) === 'CR';
             const row = [
                 idx + 1,
                 tx.transactionId || tx._id || "N/A",
@@ -99,7 +100,7 @@ const LedgerReport = () => {
         const tableRows: any[] = [];
 
         filteredTransactions.forEach((tx, idx) => {
-            const isCr = getCrDr(tx.type) === 'CR';
+            const isCr = getCrDr(tx) === 'CR';
             const txData = [
                 idx + 1,
                 tx.transactionId || tx._id || "N/A",
@@ -198,7 +199,7 @@ const LedgerReport = () => {
                                     </TableRow>
                                 ) : (
                                     paginatedTransactions.map((tx, idx) => {
-                                        const isCr = getCrDr(tx.type) === 'CR';
+                                        const isCr = getCrDr(tx) === 'CR';
                                         const serialNumber = ((currentPage - 1) * itemsPerPage) + idx + 1;
                                         return (
                                             <TableRow key={idx} className="hover:bg-muted/50 transition-colors">

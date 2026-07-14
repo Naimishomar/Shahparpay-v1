@@ -270,10 +270,10 @@ const AepsSettlement = () => {
                         </form>
 
                         <div className="mt-4 pt-4 border-t border-border/50">
-                            <p className="text-sm text-foreground/80 leading-relaxed">
-                                <strong className="text-foreground">Note (Only For IMPS):</strong> ₹3.00 will be deducted from your wallet for transfers between ₹100 and ₹10,000.<br/>
-                                ₹5.00 will be deducted for transfers between ₹10,001 and ₹25,000.<br/>
-                                ₹8.00 will be deducted for transfers above ₹25,000 up to ₹500,000.
+                            <p className="text-sm font-semibold text-foreground/90">Primary</p>
+                            <p className="text-sm text-foreground/80 leading-relaxed mt-1">
+                                All 6 Auto Settlement will credit in this account without charges.<br/>
+                                <strong className="text-foreground">Note :-</strong> 0.2% charges is applicable on each manual settelment transaction.
                             </p>
                         </div>
                     </div>

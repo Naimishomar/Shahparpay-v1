@@ -122,13 +122,8 @@ export const initiateSettlement = async (req, res) => {
             return res.status(401).json({ success: false, message: "Incorrect PIN" });
         }
 
-        // Calculate Fee based on typical IMPS slab
-        let fee = 0;
-        if (mode === 'IMPS') {
-            if (amount >= 100 && amount <= 10000) fee = 3.00;
-            else if (amount > 10000 && amount <= 25000) fee = 5.00;
-            else if (amount > 25000) fee = 8.00;
-        }
+        // 0.2% charges is applicable on each manual settlement transaction.
+        const fee = Number(amount) * 0.002;
 
         const totalDeduction = Number(amount) + fee;
 
@@ -155,6 +150,34 @@ export const initiateSettlement = async (req, res) => {
         });
 
         const merchantCodeStr = req.user.role === 'distributor' ? (req.user.distributorId || req.user.id) : (req.user.retailerId || req.user.id);
+        
+        // 1. Auto-register beneficiary ON THE FLY to ensure PaySprint has it and to get a valid bene_id
+        const addPayload = {
+            bankid: "1177",
+            merchant_code: merchantCodeStr || "12345",
+            merchant_type: "1", 
+            account: bank.accountNumber,
+            ifsc: bank.ifscCode,
+            name: bank.accountHolderName,
+            account_type: "PRIMARY",
+            pipe: "bank2"
+        };
+        
+        let validBeneId = bank.beneId;
+        try {
+            const addResponse = await axios.post(`${baseUrl}/service/payout/payout/add`, addPayload, {
+                headers: getPaySprintHeaders()
+            });
+            if (addResponse.data?.data?.bene_id || addResponse.data?.bene_id) {
+                validBeneId = addResponse.data?.data?.bene_id || addResponse.data?.bene_id;
+            }
+        } catch (err) {
+            if (err?.response?.data?.data?.bene_id || err?.response?.data?.bene_id) {
+                validBeneId = err?.response?.data?.data?.bene_id || err?.response?.data?.bene_id;
+            }
+            console.error("Auto-Add Beneficiary in Settlement Error:", err?.response?.data || err.message);
+        }
+
         const payload = {
             merchant_code: merchantCodeStr,
             merchantcode: merchantCodeStr,
@@ -165,7 +188,7 @@ export const initiateSettlement = async (req, res) => {
             amount: amount.toString(),
             mode: mode || "IMPS",
             refid: transactionId,
-            bene_id: bank.beneId,
+            bene_id: validBeneId,
             latitude: String(latitude || "28.6139"),
             longitude: String(longitude || "77.2090")
         };
