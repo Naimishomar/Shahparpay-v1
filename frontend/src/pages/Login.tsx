@@ -14,9 +14,18 @@ const Login = () => {
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [countdown, setCountdown] = useState(0);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    React.useEffect(() => {
+        let timer: NodeJS.Timeout;
+        if (countdown > 0) {
+            timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+        }
+        return () => clearTimeout(timer);
+    }, [countdown]);
+
+    const handleSubmit = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
         setError('');
         setIsLoading(true);
 
@@ -33,6 +42,7 @@ const Login = () => {
                 setMessage(data.message);
                 setIsOtpStep(true);
                 setIsLoading(false);
+                setCountdown(60); // Start 60-second timer
             } else {
                 setError(data.message || 'Invalid credentials. Please try again.');
                 setIsLoading(false);
@@ -203,6 +213,16 @@ const Login = () => {
                                         maxLength={6}
                                         disabled={isLoading}
                                     />
+                                </div>
+                                <div className="flex justify-end mt-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSubmit()}
+                                        disabled={countdown > 0 || isLoading}
+                                        className="text-sm text-primary font-medium hover:underline disabled:text-muted-foreground disabled:no-underline"
+                                    >
+                                        {countdown > 0 ? `Resend OTP in ${countdown}s` : 'Resend OTP'}
+                                    </button>
                                 </div>
                             </div>
                             <button
