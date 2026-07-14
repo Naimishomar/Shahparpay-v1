@@ -112,7 +112,7 @@ export const addSettlementBank = async (req, res) => {
             }
 
             const resData = apiResponse.data;
-            const beneId = resData?.data?.beneid || resData?.data?.bene_id || resData?.bene_id || resData?.beneid || resData?.data?.beneficiary_id || accountNumber;
+            let beneId = resData?.data?.beneid || resData?.data?.bene_id || resData?.bene_id || resData?.beneid || resData?.data?.beneficiary_id || accountNumber;
 
             const newBank = await BankAccount.create({
                 userId: req.user.id,
