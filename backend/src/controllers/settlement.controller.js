@@ -1,9 +1,28 @@
 import axios from 'axios';
 import bcrypt from 'bcrypt';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import BankAccount from '../models/bankAccount.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
 import Transaction from '../models/transaction.model.js';
 import { generatePaySprintToken } from '../utils/paysprint.util.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const dmtBanksPath = path.join(__dirname, '../data/dmt_banks.json');
+let dmtBanks = [];
+try {
+    dmtBanks = JSON.parse(fs.readFileSync(dmtBanksPath, 'utf-8'));
+} catch (e) {
+    console.error("Failed to load dmt_banks.json in settlement.controller.js", e);
+}
+
+const getBankId = (bankName) => {
+    if (!bankName) return "1177";
+    const record = dmtBanks.find(b => b.BankName && b.BankName.toLowerCase() === bankName.toLowerCase());
+    return record ? String(record.BankId) : "1177";
+};
 
 const getPaySprintHeaders = () => {
     return {
@@ -55,7 +74,8 @@ export const addSettlementBank = async (req, res) => {
 
         // Call PaySprint ADD ACCOUNT API
         const payload = {
-            bankid: "1177",
+            bankid: getBankId(bankName),
+            merchant_code: merchantCode,
             merchantcode: merchantCode,
             merchant_type: "1", // 1 or 2 as per PaySprint undocumented requirement
             account: accountNumber,
@@ -153,7 +173,7 @@ export const initiateSettlement = async (req, res) => {
         
         // 1. Auto-register beneficiary ON THE FLY to ensure PaySprint has it and to get a valid bene_id
         const addPayload = {
-            bankid: "1177",
+            bankid: getBankId(bank.bankName),
             merchant_code: merchantCodeStr || "12345",
             merchantcode: merchantCodeStr || "12345",
             merchant_type: "1", 
@@ -293,8 +313,9 @@ export const initiateDirectPayout = async (req, res) => {
         // 1. Register the beneficiary ON THE FLY to get a valid bene_id for PaySprint
         const merchantCode = req.user.role === 'distributor' ? user.distributorId : user.retailerId;
         const addPayload = {
-            bankid: "1177",
+            bankid: getBankId(bankName),
             merchant_code: merchantCode || "12345",
+            merchantcode: merchantCode || "12345",
             merchant_type: "1", 
             account: accountNumber,
             ifsc: ifscCode,
