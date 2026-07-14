@@ -97,7 +97,9 @@ export const addSettlementBank = async (req, res) => {
             ifsc: ifscCode,
             name: kycName,
             account_type: "PRIMARY",
-            pipe: "bank2"
+            pipe: "bank2",
+            bene_id: accountNumber,
+            beneid: accountNumber
         };
 
         try {
@@ -109,8 +111,8 @@ export const addSettlementBank = async (req, res) => {
                 return res.status(400).json({ success: false, message: apiResponse.data.message || "Failed to add account at PaySprint" });
             }
 
-            // Extract bene_id from response (usually in data.bene_id)
-            const beneId = apiResponse.data?.data?.bene_id || apiResponse.data?.bene_id || accountNumber;
+            const resData = apiResponse.data;
+            const beneId = resData?.data?.beneid || resData?.data?.bene_id || resData?.bene_id || resData?.beneid || resData?.data?.beneficiary_id || accountNumber;
 
             const newBank = await BankAccount.create({
                 userId: req.user.id,
@@ -188,29 +190,34 @@ export const initiateSettlement = async (req, res) => {
         
         let validBeneId = bank.beneId;
         
-        // Auto-register via DMT to ensure a valid bene_id exists
+        // Auto-register via Payout Add to ensure a valid bene_id exists
         try {
-            let userObj = await Retailer.findById(req.user.id);
-            if (!userObj) userObj = await Distributor.findById(req.user.id);
-            
-            const dmtPayload = {
-                mobile: String(userObj?.phone || userObj?.mobile || "9999999999"),
+            const addPayload = {
                 bankid: getBankId(bank.bankName),
-                benename: bank.accountHolderName,
-                accno: bank.accountNumber,
+                merchant_code: merchantCodeStr,
+                merchantcode: merchantCodeStr,
+                merchant_type: "1", 
+                account: bank.accountNumber,
                 ifsc: bank.ifscCode,
-                pincode: "110001"
+                name: bank.accountHolderName,
+                account_type: "PRIMARY",
+                pipe: "bank2",
+                bene_id: bank.accountNumber,
+                beneid: bank.accountNumber
             };
-            const dmtRes = await axios.post(`${baseUrl}/service/dmt/kyc/beneficiary/registerbeneficiary`, dmtPayload, { headers: getPaySprintHeaders() });
+            const addRes = await axios.post(`${baseUrl}/service/payout/payout/add`, addPayload, { headers: getPaySprintHeaders() });
             
-            if (dmtRes.data?.data?.beneid || dmtRes.data?.data?.bene_id || dmtRes.data?.bene_id || dmtRes.data?.beneid) {
-                validBeneId = dmtRes.data?.data?.beneid || dmtRes.data?.data?.bene_id || dmtRes.data?.bene_id || dmtRes.data?.beneid;
+            const resData = addRes.data;
+            const extractedBeneId = resData?.data?.beneid || resData?.data?.bene_id || resData?.bene_id || resData?.beneid || resData?.data?.beneficiary_id;
+            if (extractedBeneId) {
+                validBeneId = extractedBeneId;
             }
-        } catch (dmtErr) {
-            console.error("DMT Auto-Register Error:", dmtErr?.response?.data || dmtErr.message);
-            const errData = dmtErr?.response?.data;
-            if (errData?.data?.beneid || errData?.data?.bene_id || errData?.bene_id || errData?.beneid) {
-                validBeneId = errData?.data?.beneid || errData?.data?.bene_id || errData?.bene_id || errData?.beneid;
+        } catch (addErr) {
+            console.error("Payout Auto-Register Error:", addErr?.response?.data || addErr.message);
+            const errData = addErr?.response?.data;
+            const extractedBeneId = errData?.data?.beneid || errData?.data?.bene_id || errData?.bene_id || errData?.beneid || errData?.data?.beneficiary_id;
+            if (extractedBeneId) {
+                validBeneId = extractedBeneId;
             }
         }
 
@@ -327,26 +334,34 @@ export const initiateDirectPayout = async (req, res) => {
         
         let validBeneId = accountNumber;
         
-        // Auto-register via DMT to ensure a valid bene_id exists
+        // Auto-register via Payout Add to ensure a valid bene_id exists
         try {
-            const dmtPayload = {
-                mobile: String(user?.phone || user?.mobile || "9999999999"),
+            const addPayload = {
                 bankid: getBankId(bankName),
-                benename: accountHolderName,
-                accno: accountNumber,
+                merchant_code: merchantCodeStr,
+                merchantcode: merchantCodeStr,
+                merchant_type: "1", 
+                account: accountNumber,
                 ifsc: ifscCode,
-                pincode: "110001"
+                name: accountHolderName,
+                account_type: "PRIMARY",
+                pipe: "bank2",
+                bene_id: accountNumber,
+                beneid: accountNumber
             };
-            const dmtRes = await axios.post(`${baseUrl}/service/dmt/kyc/beneficiary/registerbeneficiary`, dmtPayload, { headers: getPaySprintHeaders() });
+            const addRes = await axios.post(`${baseUrl}/service/payout/payout/add`, addPayload, { headers: getPaySprintHeaders() });
             
-            if (dmtRes.data?.data?.beneid || dmtRes.data?.data?.bene_id || dmtRes.data?.bene_id || dmtRes.data?.beneid) {
-                validBeneId = dmtRes.data?.data?.beneid || dmtRes.data?.data?.bene_id || dmtRes.data?.bene_id || dmtRes.data?.beneid;
+            const resData = addRes.data;
+            const extractedBeneId = resData?.data?.beneid || resData?.data?.bene_id || resData?.bene_id || resData?.beneid || resData?.data?.beneficiary_id;
+            if (extractedBeneId) {
+                validBeneId = extractedBeneId;
             }
-        } catch (dmtErr) {
-            console.error("DMT Auto-Register Error:", dmtErr?.response?.data || dmtErr.message);
-            const errData = dmtErr?.response?.data;
-            if (errData?.data?.beneid || errData?.data?.bene_id || errData?.bene_id || errData?.beneid) {
-                validBeneId = errData?.data?.beneid || errData?.data?.bene_id || errData?.bene_id || errData?.beneid;
+        } catch (addErr) {
+            console.error("Payout Auto-Register Error:", addErr?.response?.data || addErr.message);
+            const errData = addErr?.response?.data;
+            const extractedBeneId = errData?.data?.beneid || errData?.data?.bene_id || errData?.bene_id || errData?.beneid || errData?.data?.beneficiary_id;
+            if (extractedBeneId) {
+                validBeneId = extractedBeneId;
             }
         }
 
