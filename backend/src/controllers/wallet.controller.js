@@ -129,7 +129,7 @@ export const transferAepsToMain = async (req, res) => {
         if (realAepsBalance.balance < transferAmount) {
             return res.status(400).json({ 
                 success: false, 
-                message: `Insufficient real AEPS balance on PaySprint. You have ₹${realAepsBalance.balance}, but tried to transfer ₹${transferAmount}. RAW RESPONSE: ${JSON.stringify(realAepsBalance.raw)}` 
+                message: `Insufficient real AEPS balance on PaySprint. You have ₹${realAepsBalance.balance}, but tried to transfer ₹${transferAmount}.` 
             });
         }
 

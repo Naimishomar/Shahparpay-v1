@@ -355,7 +355,7 @@ export const fetchMainBalance = async (merchantcode) => {
             if (data.data) {
                 balance = parseFloat(data.data.balance || data.data.wallet_balance || data.data.cashbalance || 0);
             } else {
-                balance = parseFloat(data.balance || 0);
+                balance = parseFloat(data.ccwallet || data.mainwallet || data.balance || 0);
             }
             return { success: true, balance };
         }
@@ -389,7 +389,7 @@ export const fetchAepsBalance = async (merchantcode) => {
             if (data.data) {
                 balance = parseFloat(data.data.cashbalance || data.data.balance || data.data.wallet_balance || 0);
             } else {
-                balance = parseFloat(data.balance || 0);
+                balance = parseFloat(data.cdwallet || data.balance || 0);
             }
             return { success: true, balance, raw: data };
         }
