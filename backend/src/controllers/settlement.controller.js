@@ -186,6 +186,34 @@ export const initiateSettlement = async (req, res) => {
 
         const merchantCodeStr = req.user.role === 'distributor' ? (req.user.distributorId || req.user.id) : (req.user.retailerId || req.user.id);
         
+        let validBeneId = bank.beneId;
+        
+        // Auto-register via DMT to ensure a valid bene_id exists
+        try {
+            let userObj = await Retailer.findById(req.user.id);
+            if (!userObj) userObj = await Distributor.findById(req.user.id);
+            
+            const dmtPayload = {
+                mobile: String(userObj?.phone || userObj?.mobile || "9999999999"),
+                bankid: getBankId(bank.bankName),
+                benename: bank.accountHolderName,
+                accno: bank.accountNumber,
+                ifsc: bank.ifscCode,
+                pincode: "110001"
+            };
+            const dmtRes = await axios.post(`${baseUrl}/service/dmt/kyc/beneficiary/registerbeneficiary`, dmtPayload, { headers: getPaySprintHeaders() });
+            
+            if (dmtRes.data?.data?.beneid || dmtRes.data?.data?.bene_id || dmtRes.data?.bene_id || dmtRes.data?.beneid) {
+                validBeneId = dmtRes.data?.data?.beneid || dmtRes.data?.data?.bene_id || dmtRes.data?.bene_id || dmtRes.data?.beneid;
+            }
+        } catch (dmtErr) {
+            console.error("DMT Auto-Register Error:", dmtErr?.response?.data || dmtErr.message);
+            const errData = dmtErr?.response?.data;
+            if (errData?.data?.beneid || errData?.data?.bene_id || errData?.bene_id || errData?.beneid) {
+                validBeneId = errData?.data?.beneid || errData?.data?.bene_id || errData?.bene_id || errData?.beneid;
+            }
+        }
+
         const payload = {
             merchant_code: merchantCodeStr,
             merchantcode: merchantCodeStr,
@@ -196,14 +224,10 @@ export const initiateSettlement = async (req, res) => {
             amount: amount.toString(),
             mode: mode || "IMPS",
             refid: transactionId,
+            bene_id: validBeneId || bank.accountNumber, // fallback to account number just in case
             latitude: String(latitude || "28.6139"),
             longitude: String(longitude || "77.2090")
         };
-
-        // Pass bene_id ONLY if it's a real bene_id and not just the account number
-        if (bank.beneId && bank.beneId !== bank.accountNumber && bank.beneId.toLowerCase().includes('bene')) {
-            payload.bene_id = bank.beneId;
-        }
 
         let apiResponse;
         let status = 'FAILED';
@@ -300,6 +324,31 @@ export const initiateDirectPayout = async (req, res) => {
         
         const merchantCode = req.user.role === 'distributor' ? user.distributorId : user.retailerId;
         const merchantCodeStr = merchantCode || "12345";
+        
+        let validBeneId = accountNumber;
+        
+        // Auto-register via DMT to ensure a valid bene_id exists
+        try {
+            const dmtPayload = {
+                mobile: String(user?.phone || user?.mobile || "9999999999"),
+                bankid: getBankId(bankName),
+                benename: accountHolderName,
+                accno: accountNumber,
+                ifsc: ifscCode,
+                pincode: "110001"
+            };
+            const dmtRes = await axios.post(`${baseUrl}/service/dmt/kyc/beneficiary/registerbeneficiary`, dmtPayload, { headers: getPaySprintHeaders() });
+            
+            if (dmtRes.data?.data?.beneid || dmtRes.data?.data?.bene_id || dmtRes.data?.bene_id || dmtRes.data?.beneid) {
+                validBeneId = dmtRes.data?.data?.beneid || dmtRes.data?.data?.bene_id || dmtRes.data?.bene_id || dmtRes.data?.beneid;
+            }
+        } catch (dmtErr) {
+            console.error("DMT Auto-Register Error:", dmtErr?.response?.data || dmtErr.message);
+            const errData = dmtErr?.response?.data;
+            if (errData?.data?.beneid || errData?.data?.bene_id || errData?.bene_id || errData?.beneid) {
+                validBeneId = errData?.data?.beneid || errData?.data?.bene_id || errData?.bene_id || errData?.beneid;
+            }
+        }
 
         // Deduct balance atomically from MAIN Wallet
         const { lockFundsForTransaction, resolveTransaction } = await import('../utils/wallet.util.js');
@@ -336,6 +385,7 @@ export const initiateDirectPayout = async (req, res) => {
             amount: amount.toString(),
             mode: mode || "IMPS",
             refid: transactionId,
+            bene_id: validBeneId || accountNumber,
             latitude: String(latitude || "28.6139"),
             longitude: String(longitude || "77.2090")
         };
