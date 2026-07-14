@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Send, Plus, Building2, Clock } from 'lucide-react';
+import { Send, Plus, Building2, Clock, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -63,10 +63,26 @@ const AepsSettlement = () => {
                 setSavedBanks(res.data.data);
                 if (res.data.data.length > 0) {
                     setSelectedBankId(res.data.data[0]._id);
+                } else {
+                    setSelectedBankId('');
                 }
             }
         } catch (error) {
             console.error("Failed to fetch saved banks", error);
+        }
+    };
+
+    const handleDeleteBank = async (id: string) => {
+        if (!confirm("Are you sure you want to remove this bank account?")) return;
+        
+        try {
+            const res = await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/settlement/bank/${id}`, getHeaders());
+            if (res.data.success) {
+                toast.success("Bank account removed successfully!");
+                fetchSavedBanks();
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to remove bank account");
         }
     };
 
@@ -154,20 +170,34 @@ const AepsSettlement = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                 {/* Row 1 */}
                                 <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-foreground">Bank Name</label>
-                                    <select 
-                                        value={selectedBankId}
-                                        onChange={(e) => setSelectedBankId(e.target.value)}
-                                        className="w-full px-3 py-2.5 bg-background border border-border rounded-md focus:border-primary outline-none shadow-sm transition-colors text-foreground"
-                                    >
-                                        {savedBanks.length === 0 ? (
-                                            <option value="">No banks added</option>
-                                        ) : (
-                                            savedBanks.map(bank => (
-                                                <option key={bank._id} value={bank._id}>{bank.bankName}</option>
-                                            ))
+                                    <label className="text-sm font-medium text-foreground flex justify-between">
+                                        <span>Bank Name</span>
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <select 
+                                            value={selectedBankId}
+                                            onChange={(e) => setSelectedBankId(e.target.value)}
+                                            className="w-full px-3 py-2.5 bg-background border border-border rounded-md focus:border-primary outline-none shadow-sm transition-colors text-foreground"
+                                        >
+                                            {savedBanks.length === 0 ? (
+                                                <option value="">No banks added</option>
+                                            ) : (
+                                                savedBanks.map(bank => (
+                                                    <option key={bank._id} value={bank._id}>{bank.bankName}</option>
+                                                ))
+                                            )}
+                                        </select>
+                                        {selectedBankId && (
+                                            <button 
+                                                type="button" 
+                                                onClick={() => handleDeleteBank(selectedBankId)}
+                                                className="px-3 py-2 text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-md transition-colors flex items-center justify-center shrink-0"
+                                                title="Delete Bank Account"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
                                         )}
-                                    </select>
+                                    </div>
                                 </div>
                                 
                                 <div className="space-y-1.5">

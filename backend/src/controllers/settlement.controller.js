@@ -7,6 +7,8 @@ import BankAccount from '../models/bankAccount.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
 import Transaction from '../models/transaction.model.js';
 import { generatePaySprintToken } from '../utils/paysprint.util.js';
+import Retailer from '../models/users/retailer.model.js';
+import Distributor from '../models/users/distributor.model.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,15 +36,28 @@ const getPaySprintHeaders = () => {
 
 const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
 
-import Retailer from '../models/users/retailer.model.js';
-import Distributor from '../models/users/distributor.model.js';
-
 export const getSavedBanks = async (req, res) => {
     try {
         const banks = await BankAccount.find({ userId: req.user.id }).sort({ createdAt: -1 });
         return res.status(200).json({ success: true, data: banks });
     } catch (error) {
         console.error("Error fetching saved banks:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
+export const deleteSettlementBank = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const bank = await BankAccount.findOneAndDelete({ _id: id, userId: req.user.id });
+        
+        if (!bank) {
+            return res.status(404).json({ success: false, message: "Bank account not found or unauthorized to delete" });
+        }
+
+        return res.status(200).json({ success: true, message: "Bank account deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting bank:", error);
         return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
