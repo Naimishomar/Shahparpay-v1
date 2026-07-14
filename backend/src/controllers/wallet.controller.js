@@ -2,6 +2,10 @@ import AepsWallet from '../models/aepsWallet.model.js';
 import MainWallet from '../models/mainWallet.model.js';
 import Transaction from '../models/transaction.model.js';
 import bcrypt from 'bcrypt';
+import { transferBetweenWallets } from '../utils/wallet.util.js';
+import { transferAepsToMainWalletApi, fetchAepsBalance } from '../utils/paysprint.util.js';
+import Retailer from '../models/users/retailer.model.js';
+import Distributor from '../models/users/distributor.model.js';
 
 // Helper to initialize wallets if they don't exist
 const initializeWallets = async (userId, userModel) => {
@@ -107,24 +111,34 @@ export const transferAepsToMain = async (req, res) => {
         const role = req.user.role;
         let user;
         if (role === 'retailer') {
-            const Retailer = (await import('../models/users/retailer.model.js')).default;
             user = await Retailer.findById(userId);
         } else if (role === 'distributor') {
-            const Distributor = (await import('../models/users/distributor.model.js')).default;
             user = await Distributor.findById(userId);
         } else {
             return res.status(403).json({ success: false, message: "Invalid role for wallet transfer" });
         }
         const merchantcode = role === 'distributor' ? (user?.distributorId || userId) : (user?.retailerId || userId);
 
-        const { transferAepsToMainWalletApi } = await import('../utils/paysprint.util.js');
+
+        // VERIFICATION: Check the real PaySprint AEPS balance first!
+        const realAepsBalance = await fetchAepsBalance(merchantcode);
+        if (!realAepsBalance.success) {
+            return res.status(400).json({ success: false, message: `Could not verify your PaySprint balance: ${realAepsBalance.message}` });
+        }
+
+        if (realAepsBalance.balance < transferAmount) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `Insufficient real AEPS balance on PaySprint. You have ₹${realAepsBalance.balance}, but tried to transfer ₹${transferAmount}.` 
+            });
+        }
+
         const apiResponse = await transferAepsToMainWalletApi(merchantcode, transferAmount, transactionId);
 
         if (!apiResponse.success) {
             return res.status(400).json({ success: false, message: `PaySprint Transfer Failed: ${apiResponse.message}` });
         }
 
-        const { transferBetweenWallets } = await import('../utils/wallet.util.js');
         let transaction;
         try {
             transaction = await transferBetweenWallets(userId, 'AEPS', 'MAIN', transferAmount, {

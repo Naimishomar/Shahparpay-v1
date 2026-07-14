@@ -330,3 +330,59 @@ export const transferAepsToMainWalletApi = async (merchantcode, amount, referenc
         return { success: false, message: "System error during PaySprint wallet transfer." };
     }
 };
+
+export const fetchMainBalance = async (merchantcode) => {
+    try {
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+        const token = generatePaySprintToken();
+        const headers = {
+            'Token': token,
+            'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+            'Content-Type': 'application/json'
+        };
+        const payload = { merchant_code: merchantcode };
+
+        const response = await fetch(`${baseUrl}/service/balance/balance/mainbalance`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (data.status || data.response_code === 1) {
+            return { success: true, balance: parseFloat(data.balance) || 0 };
+        }
+        return { success: false, message: data.message || "Failed to fetch main balance" };
+    } catch (error) {
+        console.error("fetchMainBalance error:", error);
+        return { success: false, message: "System error while fetching main balance." };
+    }
+};
+
+export const fetchAepsBalance = async (merchantcode) => {
+    try {
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+        const token = generatePaySprintToken();
+        const headers = {
+            'Token': token,
+            'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+            'Content-Type': 'application/json'
+        };
+        const payload = { merchant_code: merchantcode };
+
+        const response = await fetch(`${baseUrl}/service/balance/balance/cashbalance`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (data.status || data.response_code === 1) {
+            return { success: true, balance: parseFloat(data.balance) || 0 };
+        }
+        return { success: false, message: data.message || "Failed to fetch AEPS balance" };
+    } catch (error) {
+        console.error("fetchAepsBalance error:", error);
+        return { success: false, message: "System error while fetching AEPS balance." };
+    }
+};
