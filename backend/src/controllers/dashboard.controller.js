@@ -41,6 +41,7 @@ export const getRetailerStats = async (req, res) => {
             RECHARGE: 0,
             AEPS_WITHDRAWAL: 0,
             AEPS_SETTLEMENT: 0,
+            DIRECT_PAYOUT: 0,
             BILL_PAYMENT: 0,
             WALLET_TOPUP: 0, // UPI is sometimes wallet topup
             TotalCommission: 0,
@@ -58,7 +59,8 @@ export const getRetailerStats = async (req, res) => {
         const graphData = new Array(12).fill(0);
 
         transactions.forEach(txn => {
-            if (txn.status === 'SUCCESS') {
+            const isRefund = txn.transactionId && txn.transactionId.startsWith('REF-');
+            if (txn.status === 'SUCCESS' && !isRefund) {
                 if (stats[txn.type] !== undefined) {
                     stats[txn.type] += txn.amount;
                 }
