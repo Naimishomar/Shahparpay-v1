@@ -350,7 +350,14 @@ export const fetchMainBalance = async (merchantcode) => {
 
         const data = await response.json();
         if (data.status || data.response_code === 1) {
-            return { success: true, balance: parseFloat(data.balance) || 0 };
+            // PaySprint typically returns the balance inside `data.data.balance` or `data.data.wallet_balance`
+            let balance = 0;
+            if (data.data) {
+                balance = parseFloat(data.data.balance || data.data.wallet_balance || data.data.cashbalance || 0);
+            } else {
+                balance = parseFloat(data.balance || 0);
+            }
+            return { success: true, balance };
         }
         return { success: false, message: data.message || "Failed to fetch main balance" };
     } catch (error) {
@@ -378,9 +385,15 @@ export const fetchAepsBalance = async (merchantcode) => {
 
         const data = await response.json();
         if (data.status || data.response_code === 1) {
-            return { success: true, balance: parseFloat(data.balance) || 0 };
+            let balance = 0;
+            if (data.data) {
+                balance = parseFloat(data.data.cashbalance || data.data.balance || data.data.wallet_balance || 0);
+            } else {
+                balance = parseFloat(data.balance || 0);
+            }
+            return { success: true, balance, raw: data };
         }
-        return { success: false, message: data.message || "Failed to fetch AEPS balance" };
+        return { success: false, message: data.message || "Failed to fetch AEPS balance", raw: data };
     } catch (error) {
         console.error("fetchAepsBalance error:", error);
         return { success: false, message: "System error while fetching AEPS balance." };
