@@ -305,7 +305,9 @@ export const transferAepsToMainWalletApi = async (merchantcode, amount, referenc
             'Content-Type': 'application/json'
         };
 
-        const response = await fetch(`${baseUrl}/wallet-money/transact/transact/dotransaction`, {
+        // We discovered the URL via the dashboard network tab!
+        // It might be an internal API or a valid B2B API. We will test it with B2B headers.
+        const response = await fetch(`${baseUrl}/wallettransfer/mainwallet/initiate`, {
             method: 'POST',
             headers,
             body: JSON.stringify(payload)
