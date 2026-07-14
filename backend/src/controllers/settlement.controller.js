@@ -186,34 +186,6 @@ export const initiateSettlement = async (req, res) => {
 
         const merchantCodeStr = req.user.role === 'distributor' ? (req.user.distributorId || req.user.id) : (req.user.retailerId || req.user.id);
         
-        // 1. Auto-register beneficiary ON THE FLY to ensure PaySprint has it and to get a valid bene_id
-        const addPayload = {
-            bankid: getBankId(bank.bankName),
-            merchant_code: merchantCodeStr || "12345",
-            merchantcode: merchantCodeStr || "12345",
-            merchant_type: "1", 
-            account: bank.accountNumber,
-            ifsc: bank.ifscCode,
-            name: bank.accountHolderName,
-            account_type: "PRIMARY",
-            pipe: "bank2"
-        };
-        
-        let validBeneId = bank.beneId;
-        try {
-            const addResponse = await axios.post(`${baseUrl}/service/payout/payout/add`, addPayload, {
-                headers: getPaySprintHeaders()
-            });
-            if (addResponse.data?.data?.bene_id || addResponse.data?.bene_id) {
-                validBeneId = addResponse.data?.data?.bene_id || addResponse.data?.bene_id;
-            }
-        } catch (err) {
-            if (err?.response?.data?.data?.bene_id || err?.response?.data?.bene_id) {
-                validBeneId = err?.response?.data?.data?.bene_id || err?.response?.data?.bene_id;
-            }
-            console.error("Auto-Add Beneficiary in Settlement Error:", err?.response?.data || err.message);
-        }
-
         const payload = {
             merchant_code: merchantCodeStr,
             merchantcode: merchantCodeStr,
@@ -228,8 +200,9 @@ export const initiateSettlement = async (req, res) => {
             longitude: String(longitude || "77.2090")
         };
 
-        if (validBeneId) {
-            payload.bene_id = validBeneId;
+        // Pass bene_id ONLY if it's a real bene_id and not just the account number
+        if (bank.beneId && bank.beneId !== bank.accountNumber && bank.beneId.toLowerCase().includes('bene')) {
+            payload.bene_id = bank.beneId;
         }
 
         let apiResponse;
@@ -325,46 +298,8 @@ export const initiateDirectPayout = async (req, res) => {
             user = await Retailer.findById(req.user.id);
         }
         
-        // 1. Register the beneficiary ON THE FLY to get a valid bene_id for PaySprint
         const merchantCode = req.user.role === 'distributor' ? user.distributorId : user.retailerId;
-        const addPayload = {
-            bankid: getBankId(bankName),
-            merchant_code: merchantCode || "12345",
-            merchantcode: merchantCode || "12345",
-            merchant_type: "1", 
-            account: accountNumber,
-            ifsc: ifscCode,
-            name: accountHolderName,
-            account_type: "PRIMARY",
-            pipe: "bank2"
-        };
-        
-        let validBeneId = null;
-        try {
-            const addResponse = await axios.post(`${baseUrl}/service/payout/payout/add`, addPayload, {
-                headers: getPaySprintHeaders()
-            });
-            validBeneId = addResponse.data?.data?.bene_id || addResponse.data?.bene_id;
-
-            if (!validBeneId) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: addResponse.data?.message || "Failed to auto-register beneficiary for Direct Payout.",
-                    details: addResponse.data
-                });
-            }
-        } catch (err) {
-            console.error("Direct Payout Auto-Add Error:", err?.response?.data || err.message);
-            validBeneId = err?.response?.data?.data?.bene_id || err?.response?.data?.bene_id;
-
-            if (!validBeneId) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: err?.response?.data?.message || err.message || "Failed to connect to PaySprint API for beneficiary registration.",
-                    details: err?.response?.data
-                });
-            }
-        }
+        const merchantCodeStr = merchantCode || "12345";
 
         // Deduct balance atomically from MAIN Wallet
         const { lockFundsForTransaction, resolveTransaction } = await import('../utils/wallet.util.js');
@@ -401,7 +336,6 @@ export const initiateDirectPayout = async (req, res) => {
             amount: amount.toString(),
             mode: mode || "IMPS",
             refid: transactionId,
-            bene_id: validBeneId,
             latitude: String(latitude || "28.6139"),
             longitude: String(longitude || "77.2090")
         };
