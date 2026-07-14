@@ -56,7 +56,7 @@ export const addSettlementBank = async (req, res) => {
         // Call PaySprint ADD ACCOUNT API
         const payload = {
             bankid: "1177",
-            merchant_code: merchantCode,
+            merchantcode: merchantCode,
             merchant_type: "1", // 1 or 2 as per PaySprint undocumented requirement
             account: accountNumber,
             ifsc: ifscCode,
@@ -155,6 +155,7 @@ export const initiateSettlement = async (req, res) => {
         const addPayload = {
             bankid: "1177",
             merchant_code: merchantCodeStr || "12345",
+            merchantcode: merchantCodeStr || "12345",
             merchant_type: "1", 
             account: bank.accountNumber,
             ifsc: bank.ifscCode,
@@ -188,10 +189,13 @@ export const initiateSettlement = async (req, res) => {
             amount: amount.toString(),
             mode: mode || "IMPS",
             refid: transactionId,
-            bene_id: validBeneId,
             latitude: String(latitude || "28.6139"),
             longitude: String(longitude || "77.2090")
         };
+
+        if (validBeneId) {
+            payload.bene_id = validBeneId;
+        }
 
         let apiResponse;
         let status = 'FAILED';
