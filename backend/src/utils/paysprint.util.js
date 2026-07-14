@@ -350,12 +350,12 @@ export const fetchMainBalance = async (merchantcode) => {
 
         const data = await response.json();
         if (data.status || data.response_code === 1) {
-            // PaySprint typically returns the balance inside `data.data.balance` or `data.data.wallet_balance`
+            // PaySprint docs state Main Balance is in `data.wallet`
             let balance = 0;
             if (data.data) {
                 balance = parseFloat(data.data.balance || data.data.wallet_balance || data.data.cashbalance || 0);
             } else {
-                balance = parseFloat(data.ccwallet || data.mainwallet || data.balance || 0);
+                balance = parseFloat(data.wallet || data.ccwallet || data.mainwallet || data.balance || 0);
             }
             return { success: true, balance };
         }
