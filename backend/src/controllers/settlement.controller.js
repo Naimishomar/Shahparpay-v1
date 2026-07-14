@@ -154,7 +154,7 @@ export const initiateSettlement = async (req, res) => {
             }
         });
 
-        const merchantCodeStr = req.user.role === 'distributor' ? (user.distributorId || req.user.id) : (user.retailerId || req.user.id);
+        const merchantCodeStr = req.user.role === 'distributor' ? (req.user.distributorId || req.user.id) : (req.user.retailerId || req.user.id);
         const payload = {
             merchant_code: merchantCodeStr,
             merchantcode: merchantCodeStr,
