@@ -120,6 +120,7 @@ const BBPS = () => {
             if (response.data.success) {
                 setReceiptData({ ...response.data.data, isSuccess: true });
                 setShowReceiptModal(true);
+                window.dispatchEvent(new Event('wallet-updated'));
                 setSelectedService(null);
             } else {
                 const msg = response.data.message;

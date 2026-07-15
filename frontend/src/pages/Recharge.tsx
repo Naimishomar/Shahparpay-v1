@@ -209,6 +209,7 @@ const Recharge = () => {
                     type: type
                 });
                 setShowReceiptModal(true);
+                window.dispatchEvent(new Event('wallet-updated'));
                 if (type === 'prepaid') {
                     setMobileNumber(""); setPrepaidAmount(""); setPrepaidPin("");
                 } else {

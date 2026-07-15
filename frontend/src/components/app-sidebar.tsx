@@ -60,7 +60,7 @@ const projects = [
     name: "Reports",
     icon: BarChart3,
     subItems: [
-      { name: "Ledger Reports", url: "/reports/ledger" },
+      { name: "Ledgar", url: "/reports/ledger" },
       { name: "DMT Reports", url: "/reports/dmt" },
       { name: "Payout Reports", url: "/reports/payout" },
       { name: "UPI Reports", url: "/reports/upi" },

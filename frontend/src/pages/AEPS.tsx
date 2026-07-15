@@ -141,7 +141,6 @@ const AEPS = () => {
         setMobileNo("");
         setAmount("");
         setSelectedBank("");
-        setConsent(false);
         setPidData(null);
     };
 
@@ -419,6 +418,7 @@ const AEPS = () => {
                 };
                 setReceiptData(data);
                 setShowReceiptModal(true);
+                window.dispatchEvent(new Event('wallet-updated'));
             } else {
                 alert("Transaction Failed: " + (result.message || "Unknown error"));
             }
@@ -938,10 +938,13 @@ const AEPS = () => {
                         </p>
 
                         {/* Actions */}
-                        <div className="p-4 bg-gray-50 flex justify-center border-t border-gray-100">
+                        <div className="bg-slate-50 p-4 border-t border-slate-100 flex justify-center print:hidden gap-4">
                             <button onClick={() => window.print()} className="flex items-center gap-2 px-8 py-2.5 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 shadow-md transition-colors text-sm font-semibold">
                                 <Printer size={16} />
                                 Print
+                            </button>
+                            <button onClick={() => setShowReceiptModal(false)} className="flex items-center gap-2 px-8 py-2.5 rounded-full bg-primary text-white hover:bg-primary/90 shadow-md transition-colors text-sm font-semibold">
+                                Next Txn
                             </button>
                         </div>
                     </div>
