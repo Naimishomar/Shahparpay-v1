@@ -394,9 +394,28 @@ export const cashWithdrawal = async (req, res) => {
                 { upsert: true, session }
             );
 
+            // Calculate Admin Commission (0.45% of withdrawal amount)
+            const adminCommission = Number(amount) * 0.0045;
+
+            // Update AdminWallet
+            const { default: AdminWallet } = await import('../models/adminWallet.model.js');
+            const { default: Admin } = await import('../models/users/admin.model.js');
+            const admin = await Admin.findOne({});
+            if (admin) {
+                await AdminWallet.findOneAndUpdate(
+                    { userId: admin._id },
+                    { $inc: { balance: adminCommission } },
+                    { upsert: true, session }
+                );
+            }
+
             // Update Transaction
             newTxn.status = 'SUCCESS';
             newTxn.transactionId = paysprintRef || newTxn.transactionId;
+            newTxn.commissions = {
+                ...newTxn.commissions,
+                adminEarned: adminCommission
+            };
             if (paysprintRef) {
                 newTxn.metadata = { ...newTxn.metadata, paysprintRef };
             }

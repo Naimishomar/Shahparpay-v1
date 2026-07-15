@@ -17,12 +17,17 @@ export const getDashboardStats = async (req, res) => {
         const totalDistributors = await Distributor.countDocuments();
         const totalRetailers = await Retailer.countDocuments();
 
+        const { default: AdminWallet } = await import('../models/adminWallet.model.js');
+        const adminWallet = await AdminWallet.findOne({ userId: req.user.id });
+        const adminWalletBalance = adminWallet ? adminWallet.balance : 0;
+
         // In the future, we can add Transaction totals, active users, etc.
         const stats = {
             totalDistributors,
             totalRetailers,
             activeUsers: totalDistributors + totalRetailers,
-            totalTransactions: 0 // Placeholder
+            totalTransactions: 0, // Placeholder
+            adminWalletBalance
         };
 
         return res.status(200).json({ success: true, data: stats });

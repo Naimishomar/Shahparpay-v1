@@ -32,6 +32,10 @@ const transactionSchema = new mongoose.Schema({
         distributorEarned: { 
             type: Number, 
             default: 0 
+        },
+        adminEarned: {
+            type: Number,
+            default: 0
         }
     },
     status: { 

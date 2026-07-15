@@ -440,6 +440,15 @@ const AdminPortal = () => {
                                 <h3 className="text-3xl font-bold mb-1">₹ 0.00</h3>
                                 <p className="text-sm text-muted-foreground">Total Trx Volume</p>
                             </div>
+
+                            {/* Stat Card 5 - Admin Wallet */}
+                            <div className="glass-card p-6 rounded-2xl relative overflow-hidden group border-amber-500/20 bg-amber-500/5 col-span-1 md:col-span-2 lg:col-span-1">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="p-3 bg-amber-500/20 rounded-xl text-amber-500"><Wallet size={24} /></div>
+                                </div>
+                                <h3 className="text-3xl font-bold mb-1">₹ {(stats as any).adminWalletBalance?.toFixed(2) || '0.00'}</h3>
+                                <p className="text-sm text-muted-foreground">Admin Wallet</p>
+                            </div>
                         </div>
 
                         <div className="glass-card p-8 rounded-3xl border-border">
