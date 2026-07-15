@@ -8,12 +8,12 @@ import { Link } from "react-router-dom";
 const Header = () => {
     const { theme, setTheme } = useTheme();
     const { user, token } = useAuth();
-    const [balances, setBalances] = useState({ aepsBalance: 0, mainBalance: 0 });
+    const [balances, setBalances] = useState({ aepsBalance: 0, mainBalance: 0, adminBalance: 0 });
 
     useEffect(() => {
         const fetchBalances = async () => {
             try {
-                if (user && user.role === 'retailer' && token) {
+                if (user && token) {
                     const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/wallet/balance`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
@@ -34,32 +34,46 @@ const Header = () => {
         return () => {
             window.removeEventListener('wallet-updated', handleBalanceUpdate);
         };
-    }, [user]);
+    }, [user, token]);
 
     return (
         <div className="flex items-center gap-6 w-full justify-end">
             {/* Wallet Balances */}
-            {user?.role === 'retailer' && (
+            {user && (
                 <div className="hidden lg:flex items-center gap-6 mr-auto pl-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/10 rounded-lg border border-primary/20">
-                            <Wallet className="w-5 h-5 text-primary" />
+                    {user.role === 'admin' ? (
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-primary/10 rounded-lg border border-primary/20">
+                                <Wallet className="w-5 h-5 text-primary" />
+                            </div>
+                            <div>
+                                <p className="text-xs font-medium text-muted-foreground">Admin Wallet</p>
+                                <p className="text-sm font-bold text-foreground">₹ {(balances.adminBalance || 0).toFixed(2)}</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-xs font-medium text-muted-foreground">AEPS Wallet</p>
-                            <p className="text-sm font-bold text-foreground">₹ {balances.aepsBalance.toFixed(2)}</p>
-                        </div>
-                    </div>
-                    <div className="w-px h-8 bg-black/10 dark:bg-white/10"></div>
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-                            <Wallet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <div>
-                            <p className="text-xs font-medium text-muted-foreground">Main Wallet</p>
-                            <p className="text-sm font-bold text-foreground">₹ {balances.mainBalance.toFixed(2)}</p>
-                        </div>
-                    </div>
+                    ) : (
+                        <>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-primary/10 rounded-lg border border-primary/20">
+                                    <Wallet className="w-5 h-5 text-primary" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium text-muted-foreground">AEPS Wallet</p>
+                                    <p className="text-sm font-bold text-foreground">₹ {(balances.aepsBalance || 0).toFixed(2)}</p>
+                                </div>
+                            </div>
+                            <div className="w-px h-8 bg-black/10 dark:bg-white/10"></div>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                                    <Wallet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium text-muted-foreground">Main Wallet</p>
+                                    <p className="text-sm font-bold text-foreground">₹ {(balances.mainBalance || 0).toFixed(2)}</p>
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
 

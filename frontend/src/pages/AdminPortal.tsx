@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
     Users, 
     UserPlus, 
@@ -24,7 +24,9 @@ import { toast } from 'sonner';
 const AdminPortal = () => {
     const { user, token, logout, isInitializing } = useAuth();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('dashboard');
+    const { tab } = useParams<{ tab: string }>();
+    const activeTab = tab ? tab.replace('-', '_') : 'dashboard';
+    const setActiveTab = (t: string) => navigate('/admin/' + t);
     
     // Data states
     const [stats, setStats] = useState({ totalDistributors: 0, totalRetailers: 0, activeUsers: 0, totalTransactions: 0 });
@@ -325,66 +327,15 @@ const AdminPortal = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background flex flex-col md:flex-row">
+        <div className="w-full">
             {/* Sidebar */}
-            <aside className="w-full md:w-64 border-r border-border bg-card/50 p-6 flex flex-col gap-8 hidden md:flex h-screen sticky top-0">
-                <div>
-                    <h1 className="text-2xl font-bold text-glow tracking-tight">Admin HQ</h1>
-                    <p className="text-xs text-muted-foreground mt-1">v2.0 Platform Management</p>
-                </div>
-
-                <nav className="flex flex-col gap-2 flex-1">
-                    <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeTab === 'dashboard' ? 'bg-primary text-primary-foreground font-medium shadow-lg' : 'hover:bg-muted/10 text-muted-foreground hover:text-foreground'}`}>
-                        <LayoutDashboard size={18} /> Overview
-                    </button>
-                    <button onClick={() => setActiveTab('distributors')} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeTab === 'distributors' ? 'bg-primary text-primary-foreground font-medium shadow-lg' : 'hover:bg-muted/10 text-muted-foreground hover:text-foreground'}`}>
-                        <Users size={18} /> Distributors
-                    </button>
-                    <button onClick={() => setActiveTab('fund_requests')} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeTab === 'fund_requests' ? 'bg-primary text-primary-foreground font-medium shadow-lg' : 'hover:bg-muted/10 text-muted-foreground hover:text-foreground'}`}>
-                        <Store size={18} /> Fund Requests
-                    </button>
-                    <button onClick={() => setActiveTab('create')} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeTab === 'create' ? 'bg-primary text-primary-foreground font-medium shadow-lg' : 'hover:bg-muted/10 text-muted-foreground hover:text-foreground'}`}>
-                        <UserPlus size={18} /> Add New
-                    </button>
-                    <button onClick={() => setActiveTab('profile')} className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeTab === 'profile' ? 'bg-primary text-primary-foreground font-medium shadow-lg' : 'hover:bg-muted/10 text-muted-foreground hover:text-foreground'}`}>
-                        <UserCircle size={18} /> My Profile
-                    </button>
-                </nav>
-
-                <div className="pt-6 border-t border-border">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-foreground font-bold">
-                            {user.name.charAt(0)}
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-sm font-semibold">{user.name}</span>
-                            <span className="text-xs text-muted-foreground">{user.email}</span>
-                        </div>
-                    </div>
-                    <button onClick={() => { logout(); navigate('/login'); }} className="flex items-center justify-center gap-2 w-full py-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors">
-                        <LogOut size={16} /> Logout
-                    </button>
-                </div>
-            </aside>
+            
 
             {/* Main Content Area */}
-            <main className="flex-1 p-6 md:p-10 overflow-y-auto no-scrollbar">
+            <main className="flex-1 w-full p-2 md:p-6 overflow-y-auto no-scrollbar">
                 
-                {/* Mobile Header (Hidden on Desktop) */}
-                <div className="md:hidden flex justify-between items-center mb-8 pb-4 border-b border-border">
-                    <h1 className="text-xl font-bold">Admin HQ</h1>
-                    <button onClick={() => { logout(); navigate('/login'); }} className="p-2 bg-red-500/10 text-red-500 rounded-lg">
-                        <LogOut size={18} />
-                    </button>
-                </div>
-                {/* Mobile Tabs */}
-                <div className="md:hidden flex gap-2 mb-8 overflow-x-auto pb-2 no-scrollbar">
-                    {['dashboard', 'distributors', 'fund_requests', 'create', 'profile'].map(tab => (
-                        <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-sm rounded-full whitespace-nowrap capitalize ${activeTab === tab ? 'bg-primary text-primary-foreground' : 'bg-muted/10 border border-border'}`}>
-                            {tab.replace('_', ' ')}
-                        </button>
-                    ))}
-                </div>
+                
+                
 
                 {/* Dashboard Tab */}
                 {activeTab === 'dashboard' && (

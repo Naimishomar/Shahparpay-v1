@@ -30,29 +30,37 @@ function App() {
     createRoutesFromElements(
       <>
       <Route path="/login" element={<Login />} />
-      <Route path="/admin" element={<AdminPortal />} />
-      <Route path="/distributor" element={<DistributorPortal />} />
       <Route path="/kyc-status" element={<KycStatus />} />
       <Route path="/" element={<Layout/>}>
+        {/* Retailer Dashboard (Index) */}
         <Route index element={<Dashboard/>}/>
-        <Route path="/aeps" element={<AEPS/>}/>
-        <Route path="/aeps-settlement" element={<AepsSettlement/>}/>
-        <Route path="/direct-payout" element={<DirectPayout/>}/>
-        <Route path="/dmt" element={<DMT/>}/>
-        <Route path="/recharge" element={<Recharge/>}/>
-        <Route path="/wallet-transfer" element={<WalletTransfer/>}/>
-        <Route path="/bbps" element={<BBPS/>}/>
-        <Route path="/upi-payments" element={<UPI_Payments/>}/>
+        
+        {/* Admin Routes */}
+        <Route path="admin" element={<AdminPortal/>}/>
+        <Route path="admin/:tab" element={<AdminPortal/>}/>
+        
+        {/* Distributor Routes */}
+        <Route path="distributor" element={<DistributorPortal/>}/>
+        <Route path="distributor/:tab" element={<DistributorPortal/>}/>
+
+        <Route path="aeps" element={<AEPS/>}/>
+        <Route path="aeps-settlement" element={<AepsSettlement/>}/>
+        <Route path="direct-payout" element={<DirectPayout/>}/>
+        <Route path="dmt" element={<DMT/>}/>
+        <Route path="recharge" element={<Recharge/>}/>
+        <Route path="wallet-transfer" element={<WalletTransfer/>}/>
+        <Route path="bbps" element={<BBPS/>}/>
+        <Route path="upi-payments" element={<UPI_Payments/>}/>
         
         {/* Reports Routes */}
-        <Route path="/reports/ledger" element={<LedgerReport/>}/>
-        <Route path="/reports/dmt" element={<DmtReport/>}/>
-        <Route path="/reports/payout" element={<PayoutReport/>}/>
-        <Route path="/reports/upi" element={<UpiReport/>}/>
+        <Route path="reports/ledger" element={<LedgerReport/>}/>
+        <Route path="reports/dmt" element={<DmtReport/>}/>
+        <Route path="reports/payout" element={<PayoutReport/>}/>
+        <Route path="reports/upi" element={<UpiReport/>}/>
 
-        <Route path="/fund-request" element={<FundRequest/>}/>
-        <Route path="/biometric-support" element={<BiometricSupport/>}/>
-        <Route path="/profile" element={<Profile/>}/>
+        <Route path="fund-request" element={<FundRequest/>}/>
+        <Route path="biometric-support" element={<BiometricSupport/>}/>
+        <Route path="profile" element={<Profile/>}/>
       </Route>
       </>
     )

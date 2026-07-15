@@ -7,55 +7,20 @@ import {
 } from "@/components/ui/sidebar"
 
 import { Link, useLocation } from "react-router-dom"
-import { BarChart3, Wallet, Send, Zap, ScanFace, Landmark, ArrowRightLeft } from "lucide-react"
+import { BarChart3, Wallet, Send, Zap, ScanFace, Landmark, ArrowRightLeft, LayoutDashboard, Users, Store, UserPlus, UserCircle } from "lucide-react"
 import logo from "../assets/logo.png"
+import { useAuth } from "../context/AuthContext"
 
-const projects = [
-  {
-    name: "Dashboard",
-    url: "/",
-    icon: BarChart3,
-  },
-  {
-    name: "Wallet Transfer",
-    url: "/wallet-transfer",
-    icon: Wallet,
-  },
-  {
-    name: "DMT",
-    url: "/dmt",
-    icon: Send,
-  },
-  {
-    name: "Recharge",
-    url: "/recharge",
-    icon: Zap,
-  },
-  {
-    name: "AEPS",
-    url: "/aeps",
-    icon: ScanFace,
-  },
-  {
-    name: "AEPS Settlement",
-    url: "/aeps-settlement",
-    icon: Landmark,
-  },
-  {
-    name: "Direct Payout",
-    url: "/direct-payout",
-    icon: ArrowRightLeft,
-  },
-  {
-    name: "BBPS",
-    url: "/bbps",
-    icon: Zap,
-  },
-  {
-    name: "UPI Payments",
-    url: "/upi-payments",
-    icon: Wallet,
-  },
+const retailerProjects = [
+  { name: "Dashboard", url: "/", icon: BarChart3 },
+  { name: "Wallet Transfer", url: "/wallet-transfer", icon: Wallet },
+  { name: "DMT", url: "/dmt", icon: Send },
+  { name: "Recharge", url: "/recharge", icon: Zap },
+  { name: "AEPS", url: "/aeps", icon: ScanFace },
+  { name: "AEPS Settlement", url: "/aeps-settlement", icon: Landmark },
+  { name: "Direct Payout", url: "/direct-payout", icon: ArrowRightLeft },
+  { name: "BBPS", url: "/bbps", icon: Zap },
+  { name: "UPI Payments", url: "/upi-payments", icon: Wallet },
   {
     name: "Reports",
     icon: BarChart3,
@@ -66,16 +31,24 @@ const projects = [
       { name: "UPI Reports", url: "/reports/upi" },
     ]
   },
-  {
-    name: "Fund Request",
-    url: "/fund-request",
-    icon: Send,
-  },
-  {
-    name: "Biometric Support",
-    url: "/biometric-support",
-    icon: ScanFace,
-  },
+  { name: "Fund Request", url: "/fund-request", icon: Send },
+  { name: "Biometric Support", url: "/biometric-support", icon: ScanFace },
+]
+
+const adminProjects = [
+  { name: "Overview", url: "/admin", icon: LayoutDashboard },
+  { name: "Distributors", url: "/admin/distributors", icon: Users },
+  { name: "Fund Requests", url: "/admin/fund-requests", icon: Store },
+  { name: "Add New", url: "/admin/create", icon: UserPlus },
+  { name: "My Profile", url: "/admin/profile", icon: UserCircle },
+]
+
+const distributorProjects = [
+  { name: "Overview", url: "/distributor", icon: LayoutDashboard },
+  { name: "Retailers", url: "/distributor/retailers", icon: Users },
+  { name: "Fund Requests", url: "/distributor/fund-requests", icon: Store },
+  { name: "Add New", url: "/distributor/create", icon: UserPlus },
+  { name: "My Profile", url: "/distributor/profile", icon: UserCircle },
 ]
 
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
@@ -84,6 +57,11 @@ import { SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton } from "@/comp
 
 export function AppSidebar() {
   const location = useLocation();
+  const { user } = useAuth();
+  
+  const projects = user?.role === 'admin' ? adminProjects : 
+                   user?.role === 'distributor' ? distributorProjects : 
+                   retailerProjects;
 
   return (
     <Sidebar className="border-r border-black/10 dark:border-white/10 !bg-background/95">
@@ -93,7 +71,7 @@ export function AppSidebar() {
             <img src={logo} alt="logo" className="w-[80%] object-contain dark:brightness-0 dark:invert dark:opacity-90 dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
         </div>
         <SidebarMenu className="px-4 py-6 gap-3 mt-2">
-          {projects.map((project) => {
+          {projects.map((project: any) => {
             const Icon = project.icon
             
             if (project.subItems) {
@@ -114,7 +92,7 @@ export function AppSidebar() {
                           </CollapsibleTrigger>
                           <CollapsibleContent>
                               <SidebarMenuSub className="mt-2 pr-0 mr-0 border-l border-white/20 ml-6 pl-4 space-y-1">
-                                  {project.subItems.map((subItem) => {
+                                  {project.subItems.map((subItem: any) => {
                                       const isItemActive = location.pathname === subItem.url;
                                       return (
                                           <SidebarMenuSubItem key={subItem.name}>

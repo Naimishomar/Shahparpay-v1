@@ -1,5 +1,6 @@
 import AepsWallet from '../models/aepsWallet.model.js';
 import MainWallet from '../models/mainWallet.model.js';
+import AdminWallet from '../models/adminWallet.model.js';
 import Transaction from '../models/transaction.model.js';
 import bcrypt from 'bcrypt';
 import { transferBetweenWallets } from '../utils/wallet.util.js';
@@ -25,6 +26,18 @@ const initializeWallets = async (userId, userModel) => {
 export const getBalances = async (req, res) => {
     try {
         const userId = req.user.id;
+        
+        // Handle admin separately
+        if (req.user.role === 'admin') {
+            const adminWallet = await AdminWallet.findOne({ adminId: userId });
+            return res.status(200).json({
+                success: true,
+                data: {
+                    adminBalance: adminWallet ? adminWallet.balance : 0
+                }
+            });
+        }
+
         const userModel = req.user.role === 'distributor' ? 'Distributor' : 'Retailer';
         
         const { aepsWallet, mainWallet } = await initializeWallets(userId, userModel);
