@@ -2,7 +2,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import Header from "@/components/Header"
 import News from "@/components/News"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { Outlet, Navigate } from "react-router-dom"
+import { Outlet, Navigate, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { useEffect, useState } from "react"
 import axios from "axios"
@@ -56,12 +56,14 @@ const Layout = () => {
         }
     };
 
+    const location = useLocation();
+
     if (!token) {
         return <Navigate to="/login" replace />;
     }
 
-    if (user?.role === 'admin') return <Navigate to="/admin" replace />;
-    if (user?.role === 'distributor') return <Navigate to="/distributor" replace />;
+    if (user?.role === 'admin' && !location.pathname.startsWith('/admin')) return <Navigate to="/admin" replace />;
+    if (user?.role === 'distributor' && !location.pathname.startsWith('/distributor')) return <Navigate to="/distributor" replace />;
 
     return (
         <SidebarProvider>

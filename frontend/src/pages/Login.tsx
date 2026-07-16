@@ -28,13 +28,14 @@ const Login = () => {
         if (e) e.preventDefault();
         setError('');
         setIsLoading(true);
+        const trimmedIdentifier = identifier.trim();
 
         try {
             const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ identifier, password })
+                body: JSON.stringify({ identifier: trimmedIdentifier, password })
             });
             const data = await response.json();
 
