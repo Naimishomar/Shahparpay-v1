@@ -50,7 +50,7 @@ app.use(express.urlencoded({extended:false}));
 app.use(cookieParser());
 
 app.get('/', (req,res)=>{
-    return res.send("Hello World");
+    return res.send("Shahparpay never goes down🚀");
 })
 
 import aepsRoutes from './routes/aeps.route.js';
@@ -63,6 +63,7 @@ import dmtRouter from './routes/dmt.route.js';
 import settlementRouter from './routes/settlement.route.js';
 import fundRequestRouter from './routes/fundRequest.route.js';
 import dashboardRouter from './routes/dashboard.route.js';
+import leadRouter from './routes/lead.route.js';
 import { startReconciliationWorker } from './workers/reconciliation.worker.js';
 
 app.use('/api/aeps', aepsRoutes);
@@ -75,6 +76,7 @@ app.use('/api/dmt', dmtRouter);
 app.use('/api/settlement', settlementRouter);
 app.use('/api/fund-request', fundRequestRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/lead', leadRouter);
 
 const startServer = async () => {
     try {

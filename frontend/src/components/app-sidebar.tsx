@@ -21,6 +21,7 @@ const retailerProjects = [
   { name: "Direct Payout", url: "/direct-payout", icon: ArrowRightLeft },
   { name: "BBPS", url: "/bbps", icon: Zap },
   { name: "UPI Payments", url: "/upi-payments", icon: Wallet },
+  { name: "Lead Generation", url: "/lead-generation", icon: UserPlus },
   {
     name: "Reports",
     icon: BarChart3,
@@ -42,6 +43,7 @@ const adminProjects = [
   { name: "Add New", url: "/admin/create", icon: UserPlus },
   { name: "Commissions", url: "/admin/commissions", icon: FileText },
   { name: "Ledger", url: "/reports/ledger", icon: FileText },
+  { name: "Lead Generation", url: "/lead-generation", icon: UserPlus },
 ]
 
 const distributorProjects = [
@@ -50,6 +52,7 @@ const distributorProjects = [
   { name: "Fund Requests", url: "/distributor/fund-requests", icon: Store },
   { name: "Add New", url: "/distributor/create", icon: UserPlus },
   { name: "My Profile", url: "/distributor/profile", icon: UserCircle },
+  { name: "Lead Generation", url: "/lead-generation", icon: UserPlus },
 ]
 
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"

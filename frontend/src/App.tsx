@@ -15,6 +15,7 @@ import LedgerReport from "./pages/LedgerReport"
 import DmtReport from "./pages/DmtReport"
 import PayoutReport from "./pages/PayoutReport"
 import UpiReport from "./pages/UpiReport"
+import LeadGeneration from "./pages/LeadGeneration"
 
 // New Pages
 import Login from "./pages/Login"
@@ -51,6 +52,7 @@ function App() {
         <Route path="wallet-transfer" element={<WalletTransfer/>}/>
         <Route path="bbps" element={<BBPS/>}/>
         <Route path="upi-payments" element={<UPI_Payments/>}/>
+        <Route path="lead-generation" element={<LeadGeneration/>}/>
         
         {/* Reports Routes */}
         <Route path="reports/ledger" element={<LedgerReport/>}/>

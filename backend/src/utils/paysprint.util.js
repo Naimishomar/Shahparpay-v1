@@ -401,3 +401,57 @@ export const fetchAepsBalance = async (merchantcode) => {
         return { success: false, message: "System error while fetching AEPS balance." };
     }
 };
+
+export const generateLeadUrl = async (payloadData) => {
+    try {
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+        const token = generatePaySprintToken();
+        const headers = {
+            'Token': token,
+            'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+            'Content-Type': 'application/json'
+        };
+
+        const response = await fetch(`${baseUrl}/service/lead/generation`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payloadData)
+        });
+
+        const data = await response.json();
+        if (data.status || data.response_code === 1) {
+            return { success: true, message: data.message, data: data.data };
+        }
+        return { success: false, message: data.message || "Failed to generate Lead URL." };
+    } catch (error) {
+        console.error("generateLeadUrl error:", error);
+        return { success: false, message: "System error while generating Lead URL." };
+    }
+};
+
+export const checkLeadStatus = async (refid) => {
+    try {
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+        const token = generatePaySprintToken();
+        const headers = {
+            'Token': token,
+            'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+            'Content-Type': 'application/json'
+        };
+
+        const response = await fetch(`${baseUrl}/service/lead/generation/status_check`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ refid })
+        });
+
+        const data = await response.json();
+        if (data.status || data.response_code === 1) {
+            return { success: true, message: data.message, data: data.data };
+        }
+        return { success: false, message: data.message || "Failed to fetch Lead Status." };
+    } catch (error) {
+        console.error("checkLeadStatus error:", error);
+        return { success: false, message: "System error while fetching Lead Status." };
+    }
+};
