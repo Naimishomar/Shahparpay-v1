@@ -26,15 +26,30 @@ export const addClient = (req, res) => {
     });
 };
 
-export const broadcastTransaction = (transaction) => {
-    const data = `data: ${JSON.stringify(transaction)}\n\n`;
-    
-    // Broadcast to all connected clients
-    clients.forEach(client => {
-        try {
-            client.res.write(data);
-        } catch (e) {
-            console.error('Error broadcasting to client', client.id, e);
+import Retailer from '../models/users/retailer.model.js';
+
+export const broadcastTransaction = async (transaction) => {
+    try {
+        let txnToSend = typeof transaction.toObject === 'function' ? transaction.toObject() : { ...transaction };
+        
+        if (txnToSend.userId && !txnToSend.userId.name) {
+            const retailer = await Retailer.findById(txnToSend.userId).select('name businessName').lean();
+            if (retailer) {
+                txnToSend.userId = retailer;
+            }
         }
-    });
+
+        const data = `data: ${JSON.stringify(txnToSend)}\n\n`;
+        
+        // Broadcast to all connected clients
+        clients.forEach(client => {
+            try {
+                client.res.write(data);
+            } catch (e) {
+                console.error('Error broadcasting to client', client.id, e);
+            }
+        });
+    } catch (err) {
+        console.error("Broadcast error:", err);
+    }
 };

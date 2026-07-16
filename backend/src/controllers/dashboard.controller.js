@@ -138,16 +138,32 @@ export const getRetailerStats = async (req, res) => {
 export const getRecentTransactions = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { type, limit } = req.query;
+        const role = req.user.role;
+        const { type, limit, startDate, endDate } = req.query;
         
-        let query = { userId };
+        let query = {};
+        if (role !== 'admin') {
+            query.userId = userId;
+        }
+
         if (type) {
             query.type = { $regex: new RegExp('^' + type) };
+        }
+        
+        if (startDate && endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            query.createdAt = {
+                $gte: new Date(startDate),
+                $lte: end
+            };
         }
 
         const transactions = await Transaction.find(query)
             .sort({ createdAt: -1 })
-            .limit(Number(limit) || 10);
+            .limit(Number(limit) || 10)
+            .populate('userId', 'name businessName retailerId')
+            .lean();
 
         return res.status(200).json({ success: true, data: transactions });
     } catch (error) {

@@ -11,6 +11,7 @@ import {
 import axios from "axios"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
+import { useAuth } from "../context/AuthContext"
 
 const getCrDr = (tx: any) => {
     if (tx.transactionId?.startsWith('REF-')) return 'CR';
@@ -22,17 +23,25 @@ const getCrDr = (tx: any) => {
 };
 
 const LedgerReport = () => {
+    const { user } = useAuth();
     const [transactions, setTransactions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 20;
 
     useEffect(() => {
         const fetchTransactions = async () => {
+            setLoading(true);
             try {
                 const token = localStorage.getItem('token');
-                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/dashboard/recent-transactions?limit=1000`, {
+                let url = `${import.meta.env.VITE_BACKEND_URL}/api/dashboard/recent-transactions?limit=1000`;
+                if (startDate && endDate) {
+                    url += `&startDate=${startDate}&endDate=${endDate}`;
+                }
+                const res = await axios.get(url, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.data.success) {
@@ -45,7 +54,7 @@ const LedgerReport = () => {
             }
         };
         fetchTransactions();
-    }, []);
+    }, [startDate, endDate]);
 
     const filteredTransactions = useMemo(() => {
         return transactions.filter(tx => 
@@ -61,6 +70,11 @@ const LedgerReport = () => {
         const start = (currentPage - 1) * itemsPerPage;
         return filteredTransactions.slice(start, start + itemsPerPage);
     }, [filteredTransactions, currentPage]);
+
+    const totalAdminEarnings = useMemo(() => {
+        if (user?.role !== 'admin') return 0;
+        return filteredTransactions.reduce((acc, tx) => acc + (tx.commissions?.adminEarned || 0), 0);
+    }, [filteredTransactions, user]);
 
     const handleDownloadCSV = () => {
         const headers = ["S.No.", "Transaction ID", "Date", "Customer", "Mobile", "Credit", "Debit", "Status"];
@@ -138,6 +152,27 @@ const LedgerReport = () => {
                     </div>
                     
                     <div className="flex flex-wrap items-center gap-2 md:gap-3 justify-end shrink-0">
+                        {user?.role === 'admin' && (
+                            <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-lg">
+                                <span className="text-sm font-medium">Earnings:</span>
+                                <span className="text-lg font-bold">₹ {totalAdminEarnings.toFixed(2)}</span>
+                            </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                            <input 
+                                type="date" 
+                                value={startDate}
+                                onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
+                                className="px-3 py-2 bg-card border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
+                            />
+                            <span className="text-muted-foreground">to</span>
+                            <input 
+                                type="date" 
+                                value={endDate}
+                                onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
+                                className="px-3 py-2 bg-card border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
+                            />
+                        </div>
                         <div className="relative w-full md:w-64">
                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                             <input 
@@ -210,6 +245,11 @@ const LedgerReport = () => {
                                                     <div className="flex flex-col">
                                                         <span className="font-medium text-xs text-foreground/80 truncate max-w-[160px]">{tx.transactionId || tx._id || "N/A"}</span>
                                                         <span className="text-[11px] text-muted-foreground">{new Date(tx.createdAt).toLocaleString()}</span>
+                                                        {tx.userId?.name && (
+                                                            <span className="text-[9px] bg-primary/10 text-primary px-1 py-0.5 rounded mt-0.5 w-fit uppercase tracking-wide">
+                                                                By {tx.userId.name}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="px-4 py-2">

@@ -143,7 +143,9 @@ export const getRecentTransactions = async (req, res) => {
 
         const transactions = await Transaction.find({})
             .sort({ createdAt: -1 })
-            .limit(15);
+            .limit(10)
+            .populate('userId', 'name businessName retailerId')
+            .lean();
 
         return res.status(200).json({ success: true, data: transactions });
     } catch (error) {

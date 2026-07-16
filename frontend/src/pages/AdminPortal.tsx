@@ -84,7 +84,7 @@ const AdminPortal = () => {
                 
                 setRecentTransactions(prev => {
                     if (prev.some(t => t._id === data._id)) return prev;
-                    return [data, ...prev].slice(0, 50);
+                    return [data, ...prev].slice(0, 10);
                 });
             } catch (err) {
                 console.error("Error parsing SSE data", err);
@@ -463,7 +463,14 @@ const AdminPortal = () => {
                                                     </td>
                                                     <td className="p-4">
                                                         <div className="text-sm text-foreground/80 font-mono truncate max-w-[150px]">{tx.transactionId || tx._id}</div>
-                                                        <div className="text-[11px] text-primary">{tx.type}</div>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            <div className="text-[11px] text-primary">{tx.type}</div>
+                                                            {tx.userId?.name && (
+                                                                <div className="text-[9px] bg-primary/10 text-primary px-1 py-0.5 rounded uppercase tracking-wide">
+                                                                    By {tx.userId.name}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                     <td className="p-4">
                                                         <div className="text-sm font-medium text-foreground truncate max-w-[140px]">{tx.metadata?.name || tx.metadata?.customerName || tx.metadata?.beneficiaryName || "N/A"}</div>
