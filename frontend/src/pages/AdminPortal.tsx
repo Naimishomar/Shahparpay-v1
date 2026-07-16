@@ -472,7 +472,7 @@ const AdminPortal = () => {
                                                     <td className="p-4 text-right">
                                                         <div className="text-sm font-bold text-foreground">₹ {tx.amount}</div>
                                                         {tx.commissions?.adminEarned > 0 && (
-                                                            <div className="text-[10px] text-emerald-500 font-medium">+₹{tx.commissions.adminEarned} fee</div>
+                                                            <div className="text-[10px] text-emerald-500 font-medium bg-emerald-500/10 px-1.5 py-0.5 rounded inline-block mt-1">Comm: +₹{tx.commissions.adminEarned}</div>
                                                         )}
                                                     </td>
                                                     <td className="p-4 text-center">

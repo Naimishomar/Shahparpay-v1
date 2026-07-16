@@ -40,7 +40,6 @@ const adminProjects = [
   { name: "Distributors", url: "/admin/distributors", icon: Users },
   { name: "Fund Requests", url: "/admin/fund-requests", icon: Store },
   { name: "Add New", url: "/admin/create", icon: UserPlus },
-  { name: "My Profile", url: "/admin/profile", icon: UserCircle },
 ]
 
 const distributorProjects = [
