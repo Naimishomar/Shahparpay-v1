@@ -20,6 +20,7 @@ import {
     FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
+import AdminCommissions from '../components/AdminCommissions';
 
 const AdminPortal = () => {
     const { user, token, logout, isInitializing } = useAuth();
@@ -488,7 +489,7 @@ const AdminPortal = () => {
                                                     <td className="p-4 text-right">
                                                         <div className="text-sm font-bold text-foreground">₹ {tx.amount}</div>
                                                         {tx.commissions?.adminEarned > 0 && (
-                                                            <div className="text-[10px] text-emerald-500 font-medium bg-emerald-500/10 px-1.5 py-0.5 rounded inline-block mt-1">Comm: +₹{tx.commissions.adminEarned}</div>
+                                                            <div className="text-[10px] text-emerald-500 font-medium bg-emerald-500/10 px-1.5 py-0.5 rounded inline-block mt-1">Comm: +₹{tx.commissions.adminEarned.toFixed(2)}</div>
                                                         )}
                                                     </td>
                                                     <td className="p-4 text-center">
@@ -1185,6 +1186,11 @@ const AdminPortal = () => {
                             </div>
                         </div>
                     </div>
+                )}
+
+                {/* Commissions Tab */}
+                {activeTab === 'commissions' && (
+                    <AdminCommissions />
                 )}
 
                 {/* Profile Tab */}

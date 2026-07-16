@@ -4,6 +4,10 @@ import { generatePaySprintToken, encryptPayload } from '../utils/paysprint.util.
 import Retailer from "../models/users/retailer.model.js";
 import Distributor from "../models/users/distributor.model.js";
 import Transaction from "../models/transaction.model.js";
+import GlobalSettings from '../models/globalSettings.model.js';
+import AepsWallet from '../models/aepsWallet.model.js';
+import AdminWallet from '../models/adminWallet.model.js';
+import Admin from '../models/users/admin.model.js';
 
 // Helper function to resolve which bank pipe is verified for the merchant
 export const getVerifiedPipe = async (merchantcode, mobile) => {
@@ -386,22 +390,46 @@ export const cashWithdrawal = async (req, res) => {
             session = await mongoose.startSession();
             session.startTransaction();
             
-            // Update AepsWallet
-            const { default: AepsWallet } = await import('../models/aepsWallet.model.js');
+            // Fetch GlobalSettings for Commission Rates
+            let settings = await GlobalSettings.findOne({});
+            let retailerPct = 0;
+            let distributorPct = 0;
+            let totalApiPct = 0.45;
+            if (settings && settings.aepsCommission) {
+                retailerPct = settings.aepsCommission.retailerPercentage || 0;
+                distributorPct = settings.aepsCommission.distributorPercentage || 0;
+                totalApiPct = settings.aepsCommission.totalApiPercentage || 0.45;
+            }
+
+            const numericAmount = Number(amount);
+            const totalCommission = numericAmount * (totalApiPct / 100);
+            const retailerCommission = numericAmount * (retailerPct / 100);
+            const distributorCommission = numericAmount * (distributorPct / 100);
+            const adminCommission = totalCommission - retailerCommission - distributorCommission;
+
+            // Fetch Retailer to get distributorId
+            const retailer = await Retailer.findById(req.user.id);
+            const distId = retailer ? retailer.distributorId : null;
+
+            // Update Retailer AepsWallet (Principal + Retailer Commission)
             await AepsWallet.findOneAndUpdate(
                 { userId: req.user.id, userModel: 'Retailer' },
-                { $inc: { balance: Number(amount) } },
+                { $inc: { balance: numericAmount + retailerCommission } },
                 { upsert: true, session }
             );
 
-            // Calculate Admin Commission (0.45% of withdrawal amount)
-            const adminCommission = Number(amount) * 0.0045;
+            // Update Distributor AepsWallet
+            if (distId && distributorCommission > 0) {
+                await AepsWallet.findOneAndUpdate(
+                    { userId: distId, userModel: 'Distributor' },
+                    { $inc: { balance: distributorCommission } },
+                    { upsert: true, session }
+                );
+            }
 
             // Update AdminWallet
-            const { default: AdminWallet } = await import('../models/adminWallet.model.js');
-            const { default: Admin } = await import('../models/users/admin.model.js');
             const admin = await Admin.findOne({});
-            if (admin) {
+            if (admin && adminCommission > 0) {
                 await AdminWallet.findOneAndUpdate(
                     { userId: admin._id },
                     { $inc: { balance: adminCommission } },
@@ -414,6 +442,8 @@ export const cashWithdrawal = async (req, res) => {
             newTxn.transactionId = paysprintRef || newTxn.transactionId;
             newTxn.commissions = {
                 ...newTxn.commissions,
+                retailerEarned: retailerCommission,
+                distributorEarned: distributorCommission,
                 adminEarned: adminCommission
             };
             if (paysprintRef) {

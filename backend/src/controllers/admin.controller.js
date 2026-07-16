@@ -168,9 +168,53 @@ export const getRecentTransactions = async (req, res) => {
 };
 
 export const liveTransactionsHandler = (req, res) => {
-    if (req.user.role !== "admin") return res.status(403).json({ success: false, message: "Unauthorized access" });
-    
     // Register the client connection for SSE
     addClient(req, res);
 };
 
+export const getGlobalSettings = async (req, res) => {
+    try {
+        if (req.user.role !== "admin") {
+            return res.status(403).json({ success: false, message: "Unauthorized access" });
+        }
+        const { default: GlobalSettings } = await import('../models/globalSettings.model.js');
+        let settings = await GlobalSettings.findOne({});
+        if (!settings) {
+            settings = await GlobalSettings.create({});
+        }
+        return res.status(200).json({ success: true, data: settings });
+    } catch (error) {
+        console.error("Error fetching global settings:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
+export const updateGlobalSettings = async (req, res) => {
+    try {
+        if (req.user.role !== "admin") {
+            return res.status(403).json({ success: false, message: "Unauthorized access" });
+        }
+        
+        const { aepsCommission } = req.body;
+        if (!aepsCommission) {
+            return res.status(400).json({ success: false, message: "Missing aepsCommission data" });
+        }
+
+        const { default: GlobalSettings } = await import('../models/globalSettings.model.js');
+        let settings = await GlobalSettings.findOne({});
+        if (!settings) {
+            settings = new GlobalSettings();
+        }
+        
+        settings.aepsCommission = {
+            ...settings.aepsCommission,
+            ...aepsCommission
+        };
+        
+        await settings.save();
+        return res.status(200).json({ success: true, message: "Settings updated successfully", data: settings });
+    } catch (error) {
+        console.error("Error updating global settings:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};

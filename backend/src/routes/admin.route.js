@@ -1,5 +1,5 @@
 import express from 'express';
-import { getDashboardStats, getDistributors, getAdminProfile, updateAdminProfile, getRecentTransactions, liveTransactionsHandler } from '../controllers/admin.controller.js';
+import { getDashboardStats, getDistributors, getAdminProfile, updateAdminProfile, getRecentTransactions, liveTransactionsHandler, getGlobalSettings, updateGlobalSettings } from '../controllers/admin.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 import { upload } from '../middlewares/multer.middleware.js';
 
@@ -19,5 +19,8 @@ router.put('/profile', upload.fields([
 
 router.get('/recent-transactions', getRecentTransactions);
 router.get('/live-transactions', liveTransactionsHandler);
+
+router.get('/settings', getGlobalSettings);
+router.put('/settings', updateGlobalSettings);
 
 export default router;
