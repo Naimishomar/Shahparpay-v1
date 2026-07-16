@@ -62,7 +62,7 @@ const Layout = () => {
         return <Navigate to="/login" replace />;
     }
 
-    if (user?.role === 'admin' && !location.pathname.startsWith('/admin')) return <Navigate to="/admin" replace />;
+    if (user?.role === 'admin' && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/reports/')) return <Navigate to="/admin" replace />;
     if (user?.role === 'distributor' && !location.pathname.startsWith('/distributor')) return <Navigate to="/distributor" replace />;
 
     return (

@@ -84,6 +84,15 @@ const AdminPortal = () => {
                 
                 setRecentTransactions(prev => {
                     if (prev.some(t => t._id === data._id)) return prev;
+                    
+                    if (data.commissions?.adminEarned > 0) {
+                        window.dispatchEvent(new Event('wallet-updated'));
+                        setStats((prevStats: any) => ({
+                            ...prevStats,
+                            adminWalletBalance: (prevStats.adminWalletBalance || 0) + data.commissions.adminEarned
+                        }));
+                    }
+                    
                     return [data, ...prev].slice(0, 10);
                 });
             } catch (err) {
@@ -411,7 +420,7 @@ const AdminPortal = () => {
                                 <div className="flex justify-between items-start mb-4">
                                     <div className="p-3 bg-primary/20 rounded-xl text-foreground"><CreditCard size={24} /></div>
                                 </div>
-                                <h3 className="text-3xl font-bold mb-1">₹ 0.00</h3>
+                                <h3 className="text-3xl font-bold mb-1">₹ {((stats as any).totalTrxVolume || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                                 <p className="text-sm text-muted-foreground">Total Trx Volume</p>
                             </div>
 

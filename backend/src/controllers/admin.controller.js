@@ -23,12 +23,25 @@ export const getDashboardStats = async (req, res) => {
         const adminWallet = await AdminWallet.findOne({ userId: req.user.id });
         const adminWalletBalance = adminWallet ? adminWallet.balance : 0;
 
-        // In the future, we can add Transaction totals, active users, etc.
+        const transactionStats = await Transaction.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    count: { $sum: 1 },
+                    volume: { $sum: "$amount" }
+                }
+            }
+        ]);
+        
+        const totalTransactions = transactionStats.length > 0 ? transactionStats[0].count : 0;
+        const totalTrxVolume = transactionStats.length > 0 ? transactionStats[0].volume : 0;
+
         const stats = {
             totalDistributors,
             totalRetailers,
             activeUsers: totalDistributors + totalRetailers,
-            totalTransactions: 0, // Placeholder
+            totalTransactions,
+            totalTrxVolume,
             adminWalletBalance
         };
 
