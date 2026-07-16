@@ -6,7 +6,7 @@ import Retailer from "../models/users/retailer.model.js";
 export const authMiddlewares = async(req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
-        const token = req.cookies?.token || (authHeader ? authHeader.split(" ")[1] : null);
+        const token = req.cookies?.token || (authHeader ? authHeader.split(" ")[1] : null) || req.query?.token;
         
         if (!token) {
             return res.status(401).json({ success: false, message: "Unauthorized request" });

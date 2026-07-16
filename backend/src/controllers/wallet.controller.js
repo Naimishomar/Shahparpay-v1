@@ -29,7 +29,7 @@ export const getBalances = async (req, res) => {
         
         // Handle admin separately
         if (req.user.role === 'admin') {
-            const adminWallet = await AdminWallet.findOne({ adminId: userId });
+            const adminWallet = await AdminWallet.findOne({ userId });
             return res.status(200).json({
                 success: true,
                 data: {

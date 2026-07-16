@@ -65,6 +65,7 @@ const AdminPortal = () => {
     const [merchantCode, setMerchantCode] = useState('');
     const [isEmailVerified, setIsEmailVerified] = useState(false);
     const [verifyingEmail, setVerifyingEmail] = useState(false);
+    const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
 
 
     useEffect(() => {
@@ -74,7 +75,24 @@ const AdminPortal = () => {
             return;
         }
         fetchDashboardData();
-    }, [user, isInitializing, navigate]);
+
+        const sse = new EventSource(`${import.meta.env.VITE_BACKEND_URL}/api/admin/live-transactions?token=${token}`);
+        sse.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.message === "Connected") return;
+                
+                setRecentTransactions(prev => {
+                    if (prev.some(t => t._id === data._id)) return prev;
+                    return [data, ...prev].slice(0, 50);
+                });
+            } catch (err) {
+                console.error("Error parsing SSE data", err);
+            }
+        };
+
+        return () => sse.close();
+    }, [user, isInitializing, navigate, token]);
 
     useEffect(() => {
         if (activeTab === 'create' && !merchantCode) {
@@ -84,11 +102,12 @@ const AdminPortal = () => {
 
     const fetchDashboardData = async () => {
         try {
-            const [statsRes, distRes, profileRes, frRes] = await Promise.all([
+            const [statsRes, distRes, profileRes, frRes, recentTxRes] = await Promise.all([
                 fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/stats`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/distributors`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/profile`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${import.meta.env.VITE_BACKEND_URL}/api/fund-request/admin`, { headers: { 'Authorization': `Bearer ${token}` } })
+                fetch(`${import.meta.env.VITE_BACKEND_URL}/api/fund-request/admin`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/recent-transactions`, { headers: { 'Authorization': `Bearer ${token}` } })
             ]);
             
             if (statsRes.ok) {
@@ -106,6 +125,10 @@ const AdminPortal = () => {
             if (frRes.ok) {
                 const frData = await frRes.json();
                 setFundRequests(frData.data);
+            }
+            if (recentTxRes.ok) {
+                const txData = await recentTxRes.json();
+                setRecentTransactions(txData.data || []);
             }
         } catch (error) {
             console.error('Error fetching admin dashboard data:', error);
@@ -402,11 +425,70 @@ const AdminPortal = () => {
                             </div>
                         </div>
 
-                        <div className="glass-card p-8 rounded-3xl border-border">
-                            <h3 className="text-xl font-bold mb-6">Recent Platform Activity</h3>
-                            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                                <Activity className="mb-4 opacity-50" size={48} />
-                                <p>Activity feed will appear here as transactions happen.</p>
+                        <div className="glass-card rounded-3xl border border-border overflow-hidden">
+                            <div className="p-6 border-b border-border flex justify-between items-center bg-muted/5">
+                                <h3 className="text-xl font-bold flex items-center gap-2">
+                                    <Activity className="text-primary" size={20} />
+                                    Live Platform Activity
+                                </h3>
+                                <div className="flex items-center gap-2 text-xs font-medium text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full animate-pulse">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                    Live Updates Active
+                                </div>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-muted/10 border-b border-border">
+                                            <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</th>
+                                            <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Txn ID</th>
+                                            <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Details</th>
+                                            <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Amount</th>
+                                            <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        {recentTransactions.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                                                    Waiting for new transactions...
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            recentTransactions.map((tx, idx) => (
+                                                <tr key={tx._id || idx} className="hover:bg-muted/10 transition-colors animate-in fade-in slide-in-from-top-2 duration-300">
+                                                    <td className="p-4">
+                                                        <div className="text-sm font-medium text-foreground">{new Date(tx.createdAt).toLocaleDateString()}</div>
+                                                        <div className="text-[11px] text-muted-foreground">{new Date(tx.createdAt).toLocaleTimeString()}</div>
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <div className="text-sm text-foreground/80 font-mono truncate max-w-[150px]">{tx.transactionId || tx._id}</div>
+                                                        <div className="text-[11px] text-primary">{tx.type}</div>
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <div className="text-sm font-medium text-foreground truncate max-w-[140px]">{tx.metadata?.name || tx.metadata?.customerName || tx.metadata?.beneficiaryName || "N/A"}</div>
+                                                        <div className="text-xs text-muted-foreground">{tx.metadata?.mobile || tx.metadata?.accountNumber || "N/A"}</div>
+                                                    </td>
+                                                    <td className="p-4 text-right">
+                                                        <div className="text-sm font-bold text-foreground">₹ {tx.amount}</div>
+                                                        {tx.commissions?.adminEarned > 0 && (
+                                                            <div className="text-[10px] text-emerald-500 font-medium">+₹{tx.commissions.adminEarned} fee</div>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-4 text-center">
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                                            tx.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' : 
+                                                            tx.status === 'FAILED' ? 'bg-rose-500/10 text-rose-500' : 
+                                                            'bg-yellow-500/10 text-yellow-500'
+                                                        }`}>
+                                                            {tx.status || "UNKNOWN"}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>

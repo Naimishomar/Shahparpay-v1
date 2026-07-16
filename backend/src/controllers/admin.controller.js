@@ -4,6 +4,8 @@ import Retailer from "../models/users/retailer.model.js";
 import MainWallet from "../models/mainWallet.model.js";
 import AepsWallet from "../models/aepsWallet.model.js";
 import { uploadOnR2 } from "../utils/r2.js";
+import Transaction from "../models/transaction.model.js";
+import { addClient } from "../utils/sse.js";
 
 // Get dashboard statistics
 export const getDashboardStats = async (req, res) => {
@@ -134,3 +136,26 @@ export const updateAdminProfile = async (req, res) => {
         return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
+
+export const getRecentTransactions = async (req, res) => {
+    try {
+        if (req.user.role !== "admin") return res.status(403).json({ success: false, message: "Unauthorized access" });
+
+        const transactions = await Transaction.find({})
+            .sort({ createdAt: -1 })
+            .limit(15);
+
+        return res.status(200).json({ success: true, data: transactions });
+    } catch (error) {
+        console.error("Error fetching recent transactions:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
+export const liveTransactionsHandler = (req, res) => {
+    if (req.user.role !== "admin") return res.status(403).json({ success: false, message: "Unauthorized access" });
+    
+    // Register the client connection for SSE
+    addClient(req, res);
+};
+

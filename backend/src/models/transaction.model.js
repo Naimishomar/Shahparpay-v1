@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { broadcastTransaction } from "../utils/sse.js";
 
 const transactionSchema = new mongoose.Schema({
     transactionId: {
@@ -47,6 +48,11 @@ const transactionSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.Mixed 
     } // Stores dynamic data like Aadhaar ending, Bill numbers
 }, { timestamps: true });
+
+transactionSchema.post('save', function(doc) {
+    // Fire and forget broadcast
+    broadcastTransaction(doc);
+});
 
 const Transaction = mongoose.model("Transaction", transactionSchema);
 export default Transaction;
