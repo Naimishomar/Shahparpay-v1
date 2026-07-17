@@ -406,7 +406,7 @@ const AEPS = () => {
                     customerName: name || 'Customer',
                     aadhaarNo: '********' + (aadhaarNo.slice(-4) || ''),
                     txnAmount: (activeTab !== 'balance_enquiry' && activeTab !== 'mini_statement') ? amount : '0.00',
-                    balanceAmount: (bankName?.toLowerCase() === 'sbi' || bankName?.toLowerCase() === 'state bank of india') ? '0' : (result.data?.balanceamount || result.data?.data?.balanceamount || result.data?.amount || '0.00'),
+                    balanceAmount: ((bankName?.toLowerCase() === 'sbi' || bankName?.toLowerCase() === 'state bank of india') && (activeTab !== 'balance_enquiry' && activeTab !== 'mini_statement')) ? '0' : (result.data?.balanceamount || result.data?.data?.balanceamount || result.data?.amount || '0.00'),
                     bankName: bankName ? bankName.toUpperCase() : 'BANK',
                     dateTime: new Date().toLocaleString(),
                     message: 'SUCCESS',

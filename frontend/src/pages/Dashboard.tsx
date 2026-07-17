@@ -271,6 +271,13 @@ const Dashboard = () => {
                             <h4 className="font-bold text-lg mb-1">Domestic Money</h4>
                             <p className="text-xs text-muted-foreground">Money Transfer (DMT)</p>
                         </div>
+                        <div onClick={() => navigate('/lead-generation')} className="p-6 rounded-2xl bg-gradient-to-br from-teal-500/10 to-teal-600/10 border border-teal-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-teal-500/20 transition-all hover:scale-105 group">
+                            <div className="w-16 h-16 rounded-full bg-teal-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <Users className="text-teal-500" size={32} />
+                            </div>
+                            <h4 className="font-bold text-lg mb-1">Lead Generation</h4>
+                            <p className="text-xs text-muted-foreground">Credit Cards & Loans</p>
+                        </div>
                     </div>
                 </div>
 
