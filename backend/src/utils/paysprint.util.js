@@ -412,11 +412,10 @@ export const generateLeadUrl = async (payloadData) => {
             'Content-Type': 'application/json'
         };
 
-        const encryptedData = encryptPayload(JSON.stringify(payloadData));
         const response = await fetch(`${baseUrl}/service/lead/generation`, {
             method: 'POST',
             headers,
-            body: JSON.stringify({ body: encryptedData })
+            body: JSON.stringify(payloadData)
         });
 
         const data = await response.json();

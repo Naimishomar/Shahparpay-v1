@@ -27,12 +27,22 @@ export const generateLead = async (req, res) => {
             name,
             mobile_no,
             email,
-            product
+            product,
+            redirect_url: process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/lead-generation` : "https://shahparpay-v1.vercel.app/lead-generation"
         };
 
         const psResponse = await generateLeadUrl(payload);
+        console.log("PAYSPRINT LEAD RESPONSE:", JSON.stringify(psResponse));
 
-        if (psResponse.success && psResponse.data && psResponse.data.url) {
+        if (psResponse.success && psResponse.data) {
+            // PaySprint sometimes returns the token separately or needs it appended
+            let finalUrl = psResponse.data.url;
+            if (finalUrl && psResponse.data.token && !finalUrl.includes('?')) {
+                finalUrl = `${finalUrl}?token=${psResponse.data.token}`;
+            } else if (finalUrl && psResponse.data.jwt && !finalUrl.includes('?')) {
+                finalUrl = `${finalUrl}?jwt=${psResponse.data.jwt}`;
+            }
+
             // Save to DB
             const newLead = new Lead({
                 userId: req.user.id,
@@ -45,7 +55,7 @@ export const generateLead = async (req, res) => {
                 product,
                 pincode,
                 state,
-                url: psResponse.data.url
+                url: finalUrl
             });
             await newLead.save();
 
