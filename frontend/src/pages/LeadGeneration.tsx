@@ -115,7 +115,7 @@ const LeadGeneration = () => {
     };
 
     return (
-        <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+        <div className="flex flex-col gap-6 w-full p-2 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             <div className="flex flex-col gap-4">
                 <h1 className="text-2xl font-bold text-glow flex items-center gap-2">
                     <UserPlus className="text-primary" size={28} />
