@@ -742,22 +742,17 @@ export const cashDeposit = async (req, res) => {
 
         // 3. Make the API Call to PaySprint
         const payload = {
+            mobilenumber: String(mobileNumber || retailer.contactNumber || "9999999999"),
+            accessmodetype: "SITE",
+            adhaarnumber: String(aadhaarNumber),
             latitude: String(latitude || "28.7041"),
             longitude: String(longitude || "77.1025"),
-            mobilenumber: String(mobileNumber || retailer.contactNumber || "9999999999"),
             referenceno: referenceNo,
-            ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
-            adhaarnumber: String(aadhaarNumber),
-            accessmodetype: "SITE",
             nationalbankidentification: Number(bankIIN),
-            requestremarks: "Cash Deposit",
-            data: pidData,
-            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-            transactiontype: "CD",
             submerchantid: String(retailer.retailerId),
-            amount: Number(amount),
-            is_iris: "No",
-            pipe: pipe || await getVerifiedPipe(retailer.retailerId, retailer.contactNumber)
+            data: pidData,
+            timestamp: Math.floor(Date.now() / 1000),
+            amount: Number(amount)
         };
 
         const token = generatePaySprintToken();

@@ -1,0 +1,177 @@
+# Pay Sprint Documentation
+
+> Documentation for Pay Sprint
+
+## API Reference
+- [Getting Started](https://pay-sprint.readme.io/reference/getting-started.md): PaySprint for Developers A brief overview of PaySprint's services, API stack, and tools for developers.
+- [Authentication](https://pay-sprint.readme.io/reference/authentication-1.md): API Security Protocol
+- [UAT Credentials](https://pay-sprint.readme.io/reference/credentials.md)
+- [Main Balance(Credit Balance)](https://pay-sprint.readme.io/reference/main-balance.md): main balance
+- [Cash Balance(Debit Balance)](https://pay-sprint.readme.io/reference/cash-balance.md): Cash Balance
+- [INTRODUCTION](https://pay-sprint.readme.io/reference/dmt-introduction.md): Domestic money transfer (DMT) facilitates to send money instantly to any Bank's account holder within India.
+- [DMT BANK LIST](https://pay-sprint.readme.io/reference/dmt-bank-list.md)
+- [Introduction](https://pay-sprint.readme.io/reference/dmt-case-introduction.md): Overview
+- [QueryRemitter](https://pay-sprint.readme.io/reference/dmt-casa-queryremitter-api.md)
+- [Check Aadhar number](https://pay-sprint.readme.io/reference/dmt-casa-aadharnumber-check-api.md)
+- [Check Pan](https://pay-sprint.readme.io/reference/dmt-casa-check-pan-api.md)
+- [Ekyc](https://pay-sprint.readme.io/reference/dmt-casa-ekyc-api.md)
+- [Check pincode](https://pay-sprint.readme.io/reference/dmt-casa-pincode.md)
+- [Get Otp](https://pay-sprint.readme.io/reference/get-otp.md)
+- [Account Submit Request](https://pay-sprint.readme.io/reference/dmt-casa-account-submit-request.md)
+- [Account Revision Submit](https://pay-sprint.readme.io/reference/dmt-casa-account-opening-revision-submit-api.md)
+- [Send Bene Otp](https://pay-sprint.readme.io/reference/dmt-casa-create-bene-otp.md)
+- [Add_Bene](https://pay-sprint.readme.io/reference/dmt-casa-verify-bene-otp.md)
+- [Delete Beneficiary](https://pay-sprint.readme.io/reference/dmt-casa-delete-beneficiary.md)
+- [Get Bene List](https://pay-sprint.readme.io/reference/dmt-casa-get-bene-list.md)
+- [Bene Verification Api](https://pay-sprint.readme.io/reference/dmt-casa-bene-verification-api.md)
+- [Get Single Bene](https://pay-sprint.readme.io/reference/dmt-casa-get-single-bene.md)
+- [Transaction send otp](https://pay-sprint.readme.io/reference/dmt-casa-transaction-send-otp.md)
+- [Transaction Verify Otp](https://pay-sprint.readme.io/reference/dmt-casa-transaction-verify-otp.md)
+- [Transaction Status](https://pay-sprint.readme.io/reference/dmt-casa-transaction-status-api.md)
+- [Refund send otp api](https://pay-sprint.readme.io/reference/dmt-casa-refund-send-otp-api.md)
+- [Refund Claim Api](https://pay-sprint.readme.io/reference/dmt-casa-refund-claim-api.md)
+- [Onboarding Web](https://pay-sprint.readme.io/reference/onboarding.md): LIVE URL : https://api.paysprint.in/api/v1/service/onboard/onboard/getonboardurl
+- [ONBOARDING TRANSACTION CALLBACK](https://pay-sprint.readme.io/reference/onboarding-transaction-callback.md): Transaction Callback function setup at API partner
+- [Bank 2, Bank5 & Bank 6 Merchant e-KYC API](https://pay-sprint.readme.io/reference/merchant-activation-api-copy.md)
+- [ONBOARDING MOBILE SDK](https://pay-sprint.readme.io/reference/onboarding-mobile-sdk.md): First implement Onboarding transaction callback at api partner end.,and then implement Mobile sdk
+- [ONBOARD STATUS CHECK](https://pay-sprint.readme.io/reference/onboard-status-check-for-pipe-wise.md): use API endpoint URL to check Merchant Onboarding status for Bank2 | Bank3 |Bank5 | Bank6
+- [ONBOARD STATUS CHECK (DMT CASA)](https://pay-sprint.readme.io/reference/onboard-status-check-dmt-casa.md): use API endpoint URL to check Merchant Onboarding status for DMT CASA
+- [SEND OTP](https://pay-sprint.readme.io/reference/send-otp-9.md)
+- [Verify OTP](https://pay-sprint.readme.io/reference/verify-otp-8.md)
+- [Ekyc](https://pay-sprint.readme.io/reference/ekyc.md)
+- [Merchant PAN Update](https://pay-sprint.readme.io/reference/merchant-pan-update.md)
+- [RD Service](https://pay-sprint.readme.io/reference/rd-service.md)
+- [Encryption Body Technique](https://pay-sprint.readme.io/reference/encryption-body-technique.md)
+- [AEPS Two Factor Authentication BANK 2](https://pay-sprint.readme.io/reference/aeps-two-factor-authentication.md)
+- [Registration](https://pay-sprint.readme.io/reference/aeps-two-factor-authentication-register.md)
+- [Authenticate](https://pay-sprint.readme.io/reference/aeps-two-factor-authentication-authenticate.md)
+- [AEPS Two Factor Authentication BANK 3](https://pay-sprint.readme.io/reference/aeps-two-factor-authentication-bank-3.md)
+- [Registartion](https://pay-sprint.readme.io/reference/aeps-two-factor-authentication-bank-3-registartion.md)
+- [Authenticate](https://pay-sprint.readme.io/reference/aeps-two-factor-authentication-bank-3-authenticate.md)
+- [AEPS Two Factor Authentication BANK 5](https://pay-sprint.readme.io/reference/aeps-two-factor-authentication-bank-5.md)
+- [Authentication](https://pay-sprint.readme.io/reference/aeps-two-factor-authentication-bank-5-api.md)
+- [AEPS Two Factor Authentication BANK 6](https://pay-sprint.readme.io/reference/aeps-two-factor-authentication-bank-6.md)
+- [Authentication](https://pay-sprint.readme.io/reference/authentication-2.md)
+- [Enquiry](https://pay-sprint.readme.io/reference/balance-enquiry.md)
+- [Enquiry](https://pay-sprint.readme.io/reference/enquiry.md)
+- [AePS Transaction Initiate OTP API](https://pay-sprint.readme.io/reference/aeps-transaction-initiate-otp-api.md)
+- [Withdrawl](https://pay-sprint.readme.io/reference/withdrawl.md)
+- [Wihdraw with Authencity (NEW)](https://pay-sprint.readme.io/reference/aeps-cashwithdraw-transaction-with-merchant-authencity-api.md)
+- [Ministatement](https://pay-sprint.readme.io/reference/ministatement.md): Ministatement
+- [Mini Statement](https://pay-sprint.readme.io/reference/mini-statement.md)
+- [Bank List](https://pay-sprint.readme.io/reference/bank-list.md): Aeps Bank List
+- [Bank list](https://pay-sprint.readme.io/reference/bank-list-1.md): Aeps bank list
+- [Withdrawl transaction status](https://pay-sprint.readme.io/reference/withdrawl-transaction-status.md)
+- [Cash Withdraw transaction status query](https://pay-sprint.readme.io/reference/cash-withdraw-transaction-status-query-1.md): Transaction status API used to get status of Cash Withdraw  transaction.
+- [AADHAR PAY](https://pay-sprint.readme.io/reference/aadhar-pay.md)
+- [Aadhar Pay](https://pay-sprint.readme.io/reference/aadhar-pay-1.md)
+- [Aadhar pay transaction status query](https://pay-sprint.readme.io/reference/aadhar-pay-transaction-status-query.md)
+- [Merchant Location Update API(Bank2/5/6)](https://pay-sprint.readme.io/reference/aeps-merchant-base-location-update-api.md)
+- [Generate Onboarding URL](https://pay-sprint.readme.io/reference/city-unioun-bank-onboarding.md): Start the merchant onboarding process for BANK 1 and BANK 4
+- [Onboard Status check](https://pay-sprint.readme.io/reference/merchant-onboard-status-check-api-for-bank1-and-bank4.md)
+- [Authentication](https://pay-sprint.readme.io/reference/authenticate.md)
+- [Balance Enquiry](https://pay-sprint.readme.io/reference/city-union-aeps-balance-enquiry.md)
+- [Enquiry](https://pay-sprint.readme.io/reference/balance-enquiry-api.md)
+- [Cash Withdrawl](https://pay-sprint.readme.io/reference/city-union-bank-cash-withdrawl.md)
+- [Withdrawal API](https://pay-sprint.readme.io/reference/withdrawal-api.md)
+- [Ministatement](https://pay-sprint.readme.io/reference/city-union-bank-ministatement.md)
+- [Ministatement API](https://pay-sprint.readme.io/reference/ministatement-api.md)
+- [Withdrawal Transaction Status](https://pay-sprint.readme.io/reference/city-union-bank-withdrawal-transaction-status.md)
+- [Withdrawl transaction status API](https://pay-sprint.readme.io/reference/withdrawl-transaction-status-api.md)
+- [Aadhaar Pay](https://pay-sprint.readme.io/reference/city-union-bank-aadhaar-pay.md)
+- [Aadhaar Pay API](https://pay-sprint.readme.io/reference/aadhaar-pay-api.md)
+- [Merchant EKYC](https://pay-sprint.readme.io/reference/aeps-bank1-merchant-ekyc.md)
+- [SEND OTP](https://pay-sprint.readme.io/reference/aeps-bank-1-merchant-ekyc-sendotp.md)
+- [Re-Send OTP](https://pay-sprint.readme.io/reference/re-send-otp.md)
+- [Verify OTP](https://pay-sprint.readme.io/reference/verify-otp-7.md)
+- [Daily Authentication API](https://pay-sprint.readme.io/reference/authenticate-1.md)
+- [Balance Enquiry](https://pay-sprint.readme.io/reference/balance-enquiry-2.md)
+- [Mini Statement](https://pay-sprint.readme.io/reference/mini-statement-1.md)
+- [Cash Withdrawal](https://pay-sprint.readme.io/reference/cash-withdrawal.md)
+- [Cash Withdrawal Txn Status](https://pay-sprint.readme.io/reference/aeps-bank-1-cashwithdrawal-transaction-status-check-api.md)
+- [NSDL Cash Deposit](https://pay-sprint.readme.io/reference/nsdl-cash-deposit.md)
+- [NSDL Cash Deposit Transaction](https://pay-sprint.readme.io/reference/nsdl-cash-deposit-transaction.md)
+- [NSDL Cash Deposit Transaction Status Query](https://pay-sprint.readme.io/reference/nsdl-cash-deposit-transaction-status-query.md)
+- [INTRODUCTION](https://pay-sprint.readme.io/reference/fino-matm-new.md): MINI ATM  provide Cash withdraw and Balance enquiry through ATM using mobile APP  PROCESS: 1- Merchant Onboarding 2- Integraion of SDK into APP
+- [MATM SDK LINK](https://pay-sprint.readme.io/reference/matm-sdk-link2.md)
+- [MATMFINO Three Way Recon](https://pay-sprint.readme.io/reference/matmfino-three-way-recon.md): Three way api is mandatory to be hit on same day transaction,  This APi is to acknowledge the txn status maintain at APi partner level to paysprint.   Do not handle your end txn response on the basis of this api, this is only acknowledge API for recon. It is must to implement ,API partner can hit  three way instantly  or through cron.    **NOTE**  Only threeway hit success txn will be settled to partner wallet.
+- [MatmFINO Three-way API](https://pay-sprint.readme.io/reference/matmfino-three-way-api.md)
+- [MatmFino withdraw Transaction status](https://pay-sprint.readme.io/reference/matmfino-withdraw-transaction-status.md)
+- [MATMFINO WITHDRAW STATUS QUERY](https://pay-sprint.readme.io/reference/matmfino-withdraw-status-query.md): STATUS QUERY API Should hit after 360 in case of timeout or no response
+- [MERCHANT ONBOARDING Transaction callback](https://pay-sprint.readme.io/reference/merchant-onboarding-transaction-callback.md): Amount mention in transaction will be deduction from wallet, So partner need to deduct amount from retailer as a onboarding cost,
+- [PAYOUT TRANSACTION CALLBACK](https://pay-sprint.readme.io/reference/payout-transaction-callback.md): Amount mention in transaction will be deduction from wallet, So partner need to deduct amount from retailer as a onboarding cost,
+- [MATM TRANSACTION CALLBACK](https://pay-sprint.readme.io/reference/payout-transaction-callback2.md): Callback  matm txn response will be sent to registered Url
+- [ONBOARD STATUS CALLBACK](https://pay-sprint.readme.io/reference/onboard-status-callback.md)
+- [Bus Ticket Booking Callback](https://pay-sprint.readme.io/reference/bus-ticket-booking-callback.md): Need to implement callback on every deduction and credit of any booking you made on paysprint. Redirection to generate url api response  url and encdata,    mention callback request from Paysprint to partner end.
+- [Introduction](https://pay-sprint.readme.io/reference/introduction-1.md)
+- [GET LIST](https://pay-sprint.readme.io/reference/get-list.md)
+- [ADD ACCOUNT](https://pay-sprint.readme.io/reference/add-account.md)
+- [UPLOAD DOCUMENT](https://pay-sprint.readme.io/reference/upload-document.md)
+- [ACCOUNT STATUS CHECK](https://pay-sprint.readme.io/reference/account-status-check.md)
+- [DO TRANSACTION](https://pay-sprint.readme.io/reference/do-transaction.md)
+- [STATUS ENQUIRY](https://pay-sprint.readme.io/reference/status-enquiry-7.md)
+- [Introduction](https://pay-sprint.readme.io/reference/airtel-cms-v2-introduction.md)
+- [Generate URL](https://pay-sprint.readme.io/reference/generate-url-7.md)
+- [BALANCE ENQUIRY](https://pay-sprint.readme.io/reference/airlet-cms-v2-balance-enquiry-callback.md): CALL URL IS SAME FOR ALL CALLBACK SHARED BY PARTNER END ,Only JSON REQUEST VALUE CHANGE
+- [BALANCE DEBIT](https://pay-sprint.readme.io/reference/airtel-cms-v2-balance-debit-callback.md): CALL URL IS SAME FOR ALL CALLBACK SHARED BY PARTNER END ,Only JSON REQUEST VALUE CHANGE
+- [LOW BALANCE INQUIRY](https://pay-sprint.readme.io/reference/airtel-cms-v2-commission-credit-callback.md): CALL URL IS SAME FOR ALL CALLBACK SHARED BY PARTNER END ,Only JSON REQUEST VALUE CHANGE
+- [CMS POSTING](https://pay-sprint.readme.io/reference/airtel-cms-v2-balance-credit.md): CALL URL IS SAME FOR ALL CALLBACK SHARED BY PARTNER END ,Only JSON REQUEST VALUE CHANGE
+- [TRANSACTION ENQUIRY](https://pay-sprint.readme.io/reference/airtel-cms-v2-transaction-status-enquiry.md)
+- [Introduction](https://pay-sprint.readme.io/reference/introduction-3.md)
+- [Generate URL](https://pay-sprint.readme.io/reference/generate-url-10.md)
+- [balance enquiry](https://pay-sprint.readme.io/reference/balance-enquiry-3.md)
+- [balance_debit](https://pay-sprint.readme.io/reference/balance_debit.md)
+- [posting cms](https://pay-sprint.readme.io/reference/posting-cms.md)
+- [Generate Url](https://pay-sprint.readme.io/reference/generate-url-2.md)
+- [Postman Collection](https://pay-sprint.readme.io/reference/postman-collection.md)
+- [Get Source City](https://pay-sprint.readme.io/reference/get-source-city.md): Get the source city from which you want to start your trip
+- [Get Available Trips](https://pay-sprint.readme.io/reference/get-available-trips.md): Get the list of available trips on the drfined route and date of journey
+- [Get Current Trip Details](https://pay-sprint.readme.io/reference/get-current-trip-details.md): Get the detail like fares and seat layout of current trip
+- [Get Boarding Point Detail](https://pay-sprint.readme.io/reference/get-boarding-point-detail.md): Get the detail of boarding point of the current trip
+- [Block Ticket](https://pay-sprint.readme.io/reference/block-ticket.md): Api used for block the particuar ticket
+- [Book Ticket](https://pay-sprint.readme.io/reference/book-ticket.md): Api used for book the particuar ticket
+- [Check Booked Ticket](https://pay-sprint.readme.io/reference/check-booked-ticket.md): Api used for checking booked ticket
+- [Get Booked Ticket](https://pay-sprint.readme.io/reference/get-booked-ticket.md): Api used for checking booked ticket
+- [Get Cancelation Data](https://pay-sprint.readme.io/reference/get-cancelation-data.md): Api used for get Cancelation data on a ticket
+- [Ticket Cancelation](https://pay-sprint.readme.io/reference/ticket-cancelation.md): Api used for Cancel the particular ticket
+- [FAQ](https://pay-sprint.readme.io/reference/faq.md)
+- [Introduction](https://pay-sprint.readme.io/reference/credit-card-personal-loan-lead-generation-introduction.md)
+- [Generate URL](https://pay-sprint.readme.io/reference/cc.md)
+- [Lead status check API](https://pay-sprint.readme.io/reference/lead-status-check-api.md)
+- [Introduction](https://pay-sprint.readme.io/reference/mmtc-digital-gold-silver-api-introduction.md)
+- [Get Profile](https://pay-sprint.readme.io/reference/get-customer-profile.md)
+- [Create](https://pay-sprint.readme.io/reference/create-customer.md)
+- [Balance Get](https://pay-sprint.readme.io/reference/digital-gold-customer-balance-get.md)
+- [Activation](https://pay-sprint.readme.io/reference/digital-gold-customer-activation.md)
+- [Deactivation](https://pay-sprint.readme.io/reference/digital-gold-customer-deactivation.md)
+- [Update Profile](https://pay-sprint.readme.io/reference/digital-gold-update-customer.md)
+- [Get Quotation](https://pay-sprint.readme.io/reference/digital-gold-and-silver-buy-quote-api.md)
+- [Validate Quote](https://pay-sprint.readme.io/reference/digital-gold-and-silver-validate-quote.md): This api is only required before BUY transactions.
+- [Send OTP](https://pay-sprint.readme.io/reference/digital-gold-and-silver-sell-send-otp.md)
+- [Buy Execute](https://pay-sprint.readme.io/reference/buy-execute.md)
+- [Transaction Status](https://pay-sprint.readme.io/reference/digital-gold-and-silver-buy-transaction-status.md): This api would work for both BUY and SELL transactions.
+- [Sell Quotation](https://pay-sprint.readme.io/reference/digital-gold-and-silver-sell-quotation.md)
+- [Sell Execute](https://pay-sprint.readme.io/reference/digital-gold-and-silver-sell-execute.md)
+- [Address Listing](https://pay-sprint.readme.io/reference/digital-gold-and-silver-customer-address-listing.md)
+- [Add Address](https://pay-sprint.readme.io/reference/digital-gold-and-silver-add-customer-address.md)
+- [Update Address](https://pay-sprint.readme.io/reference/digital-gold-and-silver-customer-update-address.md)
+- [Delete Address](https://pay-sprint.readme.io/reference/digital-gold-and-silver-customer-delete-address.md)
+- [Generate URL API](https://pay-sprint.readme.io/reference/fixed-deposite-generate-url-api.md)
+- [Callback](https://pay-sprint.readme.io/reference/fixed-deposite-payment-callback.md)
+- [Introduction](https://pay-sprint.readme.io/reference/create-credit-card-api-introduction.md)
+- [Generate UTM](https://pay-sprint.readme.io/reference/create-credit-card-generate-utm-link-api.md)
+- [UTM Status Check](https://pay-sprint.readme.io/reference/utm-status-check.md)
+- [Merchant Status Check](https://pay-sprint.readme.io/reference/merchant-status-check.md)
+- [Merchant Registration](https://pay-sprint.readme.io/reference/merchant-registration.md)
+- [Generate URL](https://pay-sprint.readme.io/reference/generate-url-4.md)
+- [TRAIN BOOKING DEBIT CONFIRMATION](https://pay-sprint.readme.io/reference/train-booking-debit-confirmation.md)
+- [TRAIN BOOKING STATUS](https://pay-sprint.readme.io/reference/train-booking-status.md)
+- [TRAIN BOOKING CANCELLATION](https://pay-sprint.readme.io/reference/train-booking-cancellation.md)
+- [Merchant Registeration](https://pay-sprint.readme.io/reference/merchant-registeration.md)
+- [Status Check](https://pay-sprint.readme.io/reference/status-check.md)
+- [Generate URL](https://pay-sprint.readme.io/reference/generate-url-9.md)
+- [Flight Call-Backs](https://pay-sprint.readme.io/reference/call-backs.md): The event triggered when booking is made
+- [Upi-Cashout workflow](https://pay-sprint.readme.io/reference/upi-cashout-workflow.md)
+- [SDK TOKEN GENERATION](https://pay-sprint.readme.io/reference/upi-cashout-sdk-token-generation.md)
+- [TRANSACTION STATUS CHECK](https://pay-sprint.readme.io/reference/upi-cashout-transaction-status-check.md)
+- [CALLBACKS](https://pay-sprint.readme.io/reference/upi-cashout-callbacks.md)
