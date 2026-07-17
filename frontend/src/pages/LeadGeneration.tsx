@@ -47,6 +47,37 @@ const LeadGeneration = () => {
         }
     };
 
+    const handleOpenLink = (url: string) => {
+        try {
+            const urlObj = new URL(url);
+            const encdata = urlObj.searchParams.get('encdata');
+            
+            if (encdata) {
+                // PaySprint expects a POST form submission with encdata
+                const baseUrl = url.split('?')[0];
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = baseUrl;
+                form.target = '_blank';
+                
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'encdata';
+                // URL was already decoded by searchParams.get, but let's be safe
+                input.value = encdata;
+                
+                form.appendChild(input);
+                document.body.appendChild(form);
+                form.submit();
+                document.body.removeChild(form);
+            } else {
+                window.open(url, '_blank');
+            }
+        } catch (e) {
+            window.open(url, '_blank');
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
@@ -81,7 +112,7 @@ const LeadGeneration = () => {
                 
                 // If you want to automatically open the URL for the customer:
                 if (data.data && data.data.url) {
-                    window.open(data.data.url, '_blank');
+                    handleOpenLink(data.data.url);
                 }
             } else {
                 toast.error(data.message || "Failed to generate lead.");
@@ -300,14 +331,12 @@ const LeadGeneration = () => {
                                                         <RefreshCw className="w-3 h-3" /> Status
                                                     </button>
                                                     {lead.url && (
-                                                        <a 
-                                                            href={lead.url} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer"
+                                                        <button 
+                                                            onClick={() => handleOpenLink(lead.url)}
                                                             className="text-xs text-primary hover:underline inline-flex items-center gap-1 ml-3"
                                                         >
                                                             Link <ExternalLink className="w-3 h-3" />
-                                                        </a>
+                                                        </button>
                                                     )}
                                                 </td>
                                             </tr>
