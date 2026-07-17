@@ -406,7 +406,7 @@ const AEPS = () => {
                     customerName: name || 'Customer',
                     aadhaarNo: '********' + (aadhaarNo.slice(-4) || ''),
                     txnAmount: (activeTab !== 'balance_enquiry' && activeTab !== 'mini_statement') ? amount : '0.00',
-                    balanceAmount: ((bankName?.toLowerCase() === 'sbi' || bankName?.toLowerCase() === 'state bank of india') && (activeTab === 'cash_withdrawal')) ? '0' : (result.data?.balanceamount || result.data?.balanceAmount || result.data?.balance || result.data?.data?.balanceamount || result.data?.data?.balanceAmount || result.data?.data?.balance || result.data?.amount || '0.00'),
+                    balanceAmount: ((bankName?.toLowerCase() === 'sbi' || bankName?.toLowerCase() === 'state bank of india') && (activeTab === 'cash_withdrawal' || activeTab === 'mini_statement')) ? 'N/A' : (result.data?.balanceamount || result.data?.balanceAmount || result.data?.balance || result.data?.data?.balanceamount || result.data?.data?.balanceAmount || result.data?.data?.balance || result.data?.amount || '0.00'),
                     bankName: bankName ? bankName.toUpperCase() : 'BANK',
                     dateTime: new Date().toLocaleString(),
                     message: 'SUCCESS',
@@ -418,7 +418,6 @@ const AEPS = () => {
                 };
                 setReceiptData(data);
                 setShowReceiptModal(true);
-                window.dispatchEvent(new Event('wallet-updated'));
             } else {
                 alert("Transaction Failed: " + (result.message || "Unknown error"));
             }
@@ -427,6 +426,7 @@ const AEPS = () => {
             const errorMsg = error.response?.data?.message || "Failed to connect to the server.";
             alert("Transaction Failed: " + errorMsg);
         } finally {
+            window.dispatchEvent(new Event('wallet-updated'));
             setLoading(false);
             handleReset();
         }

@@ -51,7 +51,7 @@ const LeadGeneration = () => {
         try {
             const urlObj = new URL(url);
             const encdata = urlObj.searchParams.get('encdata');
-            
+
             if (encdata) {
                 // PaySprint expects a POST form submission with encdata
                 const baseUrl = url.split('?')[0];
@@ -59,13 +59,13 @@ const LeadGeneration = () => {
                 form.method = 'POST';
                 form.action = baseUrl;
                 form.target = '_blank';
-                
+
                 const input = document.createElement('input');
                 input.type = 'hidden';
                 input.name = 'encdata';
                 // URL was already decoded by searchParams.get, but let's be safe
                 input.value = encdata;
-                
+
                 form.appendChild(input);
                 document.body.appendChild(form);
                 form.submit();
@@ -80,7 +80,7 @@ const LeadGeneration = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!formData.name || !formData.mobile_no || !formData.email || !formData.product) {
             toast.error("Please fill in all required fields.");
             return;
@@ -97,7 +97,7 @@ const LeadGeneration = () => {
                 body: JSON.stringify(formData)
             });
             const data = await res.json();
-            
+
             if (data.success) {
                 toast.success("Lead generated successfully!");
                 setFormData({
@@ -109,7 +109,7 @@ const LeadGeneration = () => {
                     state: ''
                 });
                 fetchHistory(); // Refresh table
-                
+
                 // If you want to automatically open the URL for the customer:
                 if (data.data && data.data.url) {
                     handleOpenLink(data.data.url);
@@ -132,7 +132,7 @@ const LeadGeneration = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
-            
+
             if (data.success) {
                 toast.success(`Status updated: ${data.data.executive_status || 'Pending'}`);
                 fetchHistory(); // Refresh table to show new status
@@ -160,7 +160,7 @@ const LeadGeneration = () => {
                 <div>
                     <div className="glass-card p-6 rounded-2xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl -z-10 translate-x-1/2 -translate-y-1/2"></div>
-                        
+
                         <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
                             <UserPlus className="w-5 h-5 text-primary" />
                             New Lead
@@ -173,7 +173,7 @@ const LeadGeneration = () => {
                                     type="text"
                                     required
                                     value={formData.name}
-                                    onChange={e => setFormData({...formData, name: e.target.value})}
+                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
                                     className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     placeholder="Enter full name"
                                 />
@@ -186,7 +186,7 @@ const LeadGeneration = () => {
                                     required
                                     maxLength={10}
                                     value={formData.mobile_no}
-                                    onChange={e => setFormData({...formData, mobile_no: e.target.value.replace(/\D/g, '')})}
+                                    onChange={e => setFormData({ ...formData, mobile_no: e.target.value.replace(/\D/g, '') })}
                                     className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     placeholder="Enter 10 digit mobile"
                                 />
@@ -198,7 +198,7 @@ const LeadGeneration = () => {
                                     type="email"
                                     required
                                     value={formData.email}
-                                    onChange={e => setFormData({...formData, email: e.target.value})}
+                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
                                     className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     placeholder="Enter email address"
                                 />
@@ -209,7 +209,7 @@ const LeadGeneration = () => {
                                 <select
                                     required
                                     value={formData.product}
-                                    onChange={e => setFormData({...formData, product: e.target.value})}
+                                    onChange={e => setFormData({ ...formData, product: e.target.value })}
                                     className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none"
                                 >
                                     {products.map(p => (
@@ -225,7 +225,7 @@ const LeadGeneration = () => {
                                         type="text"
                                         maxLength={6}
                                         value={formData.pincode}
-                                        onChange={e => setFormData({...formData, pincode: e.target.value.replace(/\D/g, '')})}
+                                        onChange={e => setFormData({ ...formData, pincode: e.target.value.replace(/\D/g, '') })}
                                         className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                                         placeholder="Pincode"
                                     />
@@ -235,7 +235,7 @@ const LeadGeneration = () => {
                                     <input
                                         type="text"
                                         value={formData.state}
-                                        onChange={e => setFormData({...formData, state: e.target.value})}
+                                        onChange={e => setFormData({ ...formData, state: e.target.value })}
                                         className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                                         placeholder="State"
                                     />
@@ -267,7 +267,7 @@ const LeadGeneration = () => {
                             <h2 className="text-xl font-semibold flex items-center gap-2">
                                 Lead History
                             </h2>
-                            <button 
+                            <button
                                 onClick={fetchHistory}
                                 disabled={loading}
                                 className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
@@ -314,11 +314,10 @@ const LeadGeneration = () => {
                                                     {lead.refid}
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                                                        lead.executive_status === 'APPROVED' ? 'bg-green-500/10 text-green-500' :
-                                                        lead.executive_status === 'REJECTED' || lead.executive_status === 'NOT_INTERESTED' ? 'bg-red-500/10 text-red-500' :
-                                                        'bg-yellow-500/10 text-yellow-500'
-                                                    }`}>
+                                                    <span className={`px-2 py-1 text-xs rounded-full font-medium ${lead.executive_status === 'APPROVED' ? 'bg-green-500/10 text-green-500' :
+                                                            lead.executive_status === 'REJECTED' || lead.executive_status === 'NOT_INTERESTED' ? 'bg-red-500/10 text-red-500' :
+                                                                'bg-yellow-500/10 text-yellow-500'
+                                                        }`}>
                                                         {lead.executive_status || 'PENDING'}
                                                     </span>
                                                 </td>
@@ -331,7 +330,7 @@ const LeadGeneration = () => {
                                                         <RefreshCw className="w-3 h-3" /> Status
                                                     </button>
                                                     {lead.url && (
-                                                        <button 
+                                                        <button
                                                             onClick={() => handleOpenLink(lead.url)}
                                                             className="text-xs text-primary hover:underline inline-flex items-center gap-1 ml-3"
                                                         >

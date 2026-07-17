@@ -1141,7 +1141,7 @@ export const dailyAuth = async (req, res) => {
         };
 
         // First attempt: Try daily auth login
-        const authEndpoint = pipe === 'bank3' ? '/service/aeps/kyc/v5/authentication' : '/service/aeps/kyc/Twofactorkyc/authentication';
+        const authEndpoint = pipe === 'bank3' ? '/service/aeps/kyc/Twofactorkyc/auth_login' : '/service/aeps/kyc/Twofactorkyc/authentication';
         let response = await axios.post(
             `${baseUrl}${authEndpoint}`, 
             { body: encryptedData }, 
@@ -1184,7 +1184,7 @@ export const dailyAuth = async (req, res) => {
             console.log(`[DailyAuth] Registration payload:`, JSON.stringify(regPayload, null, 2));
             
             try {
-                const regEndpoint = pipe === 'bank3' ? '/service/aeps/kyc/Twofactorkyc/auth_login' : '/service/aeps/kyc/Twofactorkyc/registration';
+                const regEndpoint = pipe === 'bank3' ? '/service/aeps/kyc/Twofactorkyc/register_agent' : '/service/aeps/kyc/Twofactorkyc/registration';
                 const regResponse = await axios.post(
                     `${baseUrl}${regEndpoint}`, 
                     { body: regEncryptedData }, 
@@ -1213,7 +1213,7 @@ export const dailyAuth = async (req, res) => {
                     const secondEncrypted = encryptPayload(JSON.stringify(secondPayload));
                     
                     const secondResponse = await axios.post(
-                        `${baseUrl}/service/aeps/kyc/Twofactorkyc/authentication`,
+                        `${baseUrl}${authEndpoint}`,
                         { body: secondEncrypted },
                         { headers: secondHeaders, validateStatus: () => true }
                     );

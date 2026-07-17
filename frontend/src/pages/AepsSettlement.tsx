@@ -124,13 +124,13 @@ const AepsSettlement = () => {
                 setAmount('');
                 setPin('');
                 fetchHistory(); // refresh history after settlement
-                window.dispatchEvent(new Event('wallet-updated'));
             } else {
                 toast.error(res.data.message || "Settlement failed");
             }
         } catch (error: any) {
             toast.error(error.response?.data?.message || "Failed to initiate settlement");
         }
+        window.dispatchEvent(new Event('wallet-updated'));
         setLoading(false);
     };
 

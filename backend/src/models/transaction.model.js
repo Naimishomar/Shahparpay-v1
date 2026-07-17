@@ -14,7 +14,7 @@ const transactionSchema = new mongoose.Schema({
     }, // Retailer who did it
     type: { 
         type: String, 
-        enum: ['AEPS_WITHDRAWAL', 'BILL_PAYMENT', 'WALLET_TOPUP', 'RECHARGE', 'AEPSTOMAIN', 'AEPS_SETTLEMENT', 'DMT', 'DIRECT_PAYOUT', 'DIRECT_PAYOUT_REFUND'], 
+        enum: ['AEPS_WITHDRAWAL', 'BILL_PAYMENT', 'WALLET_TOPUP', 'RECHARGE', 'AEPSTOMAIN', 'AEPS_SETTLEMENT', 'DMT', 'DIRECT_PAYOUT', 'DIRECT_PAYOUT_REFUND', 'AEPS_DEPOSIT', 'AEPS_DEPOSIT_REFUND'], 
         required: true 
     },
     amount: { 
