@@ -115,13 +115,13 @@ const LeadGeneration = () => {
     };
 
     return (
-        <div className="flex flex-col gap-6 w-full p-2 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 w-full p-2 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+            <div className="flex flex-col gap-1">
                 <h1 className="text-2xl font-bold text-glow flex items-center gap-2">
                     <UserPlus className="text-primary" size={28} />
                     Lead Generation
                 </h1>
-                <p className="text-muted-foreground">Generate leads for Credit Cards and Loans, and track their application status.</p>
+                <p className="text-sm text-muted-foreground hidden md:block">Generate leads for Credit Cards and Loans, and track their application status.</p>
             </div>
 
             <div className="grid grid-cols-1 gap-8">
