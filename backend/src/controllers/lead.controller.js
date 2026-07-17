@@ -35,9 +35,11 @@ export const generateLead = async (req, res) => {
         console.log("PAYSPRINT LEAD RESPONSE:", JSON.stringify(psResponse));
 
         if (psResponse.success && psResponse.data) {
-            // PaySprint sometimes returns the token separately or needs it appended
+            // PaySprint returns 'encdata' which needs to be appended to the url
             let finalUrl = psResponse.data.url;
-            if (finalUrl && psResponse.data.token && !finalUrl.includes('?')) {
+            if (finalUrl && psResponse.data.encdata && !finalUrl.includes('?')) {
+                finalUrl = `${finalUrl}?encdata=${encodeURIComponent(psResponse.data.encdata)}`;
+            } else if (finalUrl && psResponse.data.token && !finalUrl.includes('?')) {
                 finalUrl = `${finalUrl}?token=${psResponse.data.token}`;
             } else if (finalUrl && psResponse.data.jwt && !finalUrl.includes('?')) {
                 finalUrl = `${finalUrl}?jwt=${psResponse.data.jwt}`;
