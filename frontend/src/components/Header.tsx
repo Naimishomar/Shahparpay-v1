@@ -14,7 +14,7 @@ const Header = () => {
         const fetchBalances = async () => {
             try {
                 if (user && token) {
-                    const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/wallet/balance`, {
+                    const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/wallet/balance?_t=${Date.now()}`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     if (res.data.success) {

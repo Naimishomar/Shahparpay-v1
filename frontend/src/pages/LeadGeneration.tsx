@@ -116,14 +116,17 @@ const LeadGeneration = () => {
 
     return (
         <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Lead Generation</h1>
-                <p className="text-muted-foreground mt-2">Generate leads for Credit Cards and Loans, and track their application status.</p>
+            <div className="flex flex-col gap-4">
+                <h1 className="text-2xl font-bold text-glow flex items-center gap-2">
+                    <UserPlus className="text-primary" size={28} />
+                    Lead Generation
+                </h1>
+                <p className="text-muted-foreground">Generate leads for Credit Cards and Loans, and track their application status.</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 gap-8">
                 {/* Form Section */}
-                <div className="lg:col-span-1">
+                <div>
                     <div className="glass-card p-6 rounded-2xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl -z-10 translate-x-1/2 -translate-y-1/2"></div>
                         
@@ -211,7 +214,7 @@ const LeadGeneration = () => {
                             <button
                                 type="submit"
                                 disabled={submitting}
-                                className="w-full btn-primary py-3 rounded-xl font-medium mt-4 flex items-center justify-center gap-2"
+                                className="w-full btn-primary py-3 rounded-xl font-medium mt-4 flex items-center justify-center gap-2 dark:bg-white dark:text-black dark:hover:bg-gray-200"
                             >
                                 {submitting ? (
                                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -227,7 +230,7 @@ const LeadGeneration = () => {
                 </div>
 
                 {/* History Section */}
-                <div className="lg:col-span-2">
+                <div>
                     <div className="glass-card rounded-2xl h-full flex flex-col">
                         <div className="p-6 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
                             <h2 className="text-xl font-semibold flex items-center gap-2">
