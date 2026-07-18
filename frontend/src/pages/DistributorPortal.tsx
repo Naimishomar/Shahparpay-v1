@@ -1237,7 +1237,7 @@ const DistributorPortal = () => {
                                 <h2 className="text-3xl font-bold mb-2">My Profile</h2>
                                 <p className="text-muted-foreground">Manage your personal and business details.</p>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-wrap items-center gap-3">
                                 <button 
                                     onClick={() => handleGenerateKycLink(profileData._id)}
                                     className="px-5 py-2.5 font-medium rounded-lg transition-colors bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:shadow-[0_0_25px_rgba(37,99,235,0.5)] flex items-center gap-2"
@@ -1246,6 +1246,10 @@ const DistributorPortal = () => {
                                 </button>
                                 <button onClick={() => setIsEditingProfile(!isEditingProfile)} className={`px-5 py-2.5 font-medium rounded-lg transition-colors ${isEditingProfile ? 'bg-white/10 text-foreground border border-border' : 'bg-primary text-primary-foreground'}`}>
                                     {isEditingProfile ? 'Cancel Edit' : 'Edit Profile'}
+                                </button>
+                                <button onClick={logout} className="px-5 py-2.5 font-medium rounded-lg transition-colors bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 flex items-center gap-2">
+                                    <LogOut className="w-4 h-4" />
+                                    Logout
                                 </button>
                             </div>
                         </div>

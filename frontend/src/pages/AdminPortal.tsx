@@ -5,7 +5,6 @@ import {
     Users, 
     UserPlus, 
     LayoutDashboard, 
-    LogOut, 
     Activity, 
     CreditCard, 
     Briefcase,
@@ -17,7 +16,8 @@ import {
     Store,
     CheckCircle,
     XCircle,
-    FileText
+    FileText,
+    LogOut
 } from 'lucide-react';
 import { toast } from 'sonner';
 import AdminCommissions from '../components/AdminCommissions';
@@ -1225,9 +1225,15 @@ const AdminPortal = () => {
                                 <h2 className="text-3xl font-bold mb-2">My Profile</h2>
                                 <p className="text-muted-foreground">Manage your personal and business details.</p>
                             </div>
-                            <button onClick={() => setIsEditingProfile(!isEditingProfile)} className={`px-5 py-2.5 font-medium rounded-lg transition-colors ${isEditingProfile ? 'bg-muted/20 text-foreground border border-border' : 'bg-primary text-primary-foreground'}`}>
-                                {isEditingProfile ? 'Cancel Edit' : 'Edit Profile'}
-                            </button>
+                            <div className="flex flex-wrap items-center gap-3">
+                                <button onClick={() => setIsEditingProfile(!isEditingProfile)} className={`px-5 py-2.5 font-medium rounded-lg transition-colors ${isEditingProfile ? 'bg-muted/20 text-foreground border border-border' : 'bg-primary text-primary-foreground'}`}>
+                                    {isEditingProfile ? 'Cancel Edit' : 'Edit Profile'}
+                                </button>
+                                <button onClick={logout} className="px-5 py-2.5 font-medium rounded-lg transition-colors bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 flex items-center gap-2">
+                                    <LogOut className="w-4 h-4" />
+                                    Logout
+                                </button>
+                            </div>
                         </div>
 
                         <div className="glass-card p-8 rounded-3xl border border-border max-w-3xl">
