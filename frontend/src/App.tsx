@@ -13,7 +13,7 @@ import FundRequest from "./pages/FundRequest"
 import BiometricSupport from "./pages/BiometricSupport"
 import LedgerReport from "./pages/LedgerReport"
 import DmtReport from "./pages/DmtReport"
-import AepsReport from ./pages/AepsReport
+import AepsReport from "./pages/AepsReport"
 import PayoutReport from "./pages/PayoutReport"
 import UpiReport from "./pages/UpiReport"
 import LeadGeneration from "./pages/LeadGeneration"
@@ -57,7 +57,7 @@ function App() {
         
         {/* Reports Routes */}
         <Route path="reports/ledger" element={<LedgerReport/>}/>
-        <Route path=reports/aeps element={<AepsReport/>}/>
+        <Route path="reports/aeps" element={<AepsReport/>}/>
         <Route path="reports/dmt" element={<DmtReport/>}/>
         <Route path="reports/payout" element={<PayoutReport/>}/>
         <Route path="reports/upi" element={<UpiReport/>}/>
