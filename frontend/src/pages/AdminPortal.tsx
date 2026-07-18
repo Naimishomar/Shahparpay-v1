@@ -312,6 +312,7 @@ const AdminPortal = () => {
     };
 
     const handleGenerateKycLink = async (merchantId: string) => {
+        const loadingToast = toast.loading("Generating KYC Link...");
         try {
             const token = localStorage.getItem('token');
             const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/paysprint/get-onboard-url`, {
@@ -323,12 +324,21 @@ const AdminPortal = () => {
                 body: JSON.stringify({ merchantId, isNew: true })
             });
             const data = await res.json();
+            toast.dismiss(loadingToast);
             if (data.success && data.url) {
-                window.open(data.url, '_blank');
+                try {
+                    await navigator.clipboard.writeText(data.url);
+                    toast.success('KYC Link copied to clipboard!');
+                } catch (err) {}
+                const newWindow = window.open(data.url, '_blank');
+                if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                    toast.error("Popup blocked! Please allow popups or paste the copied link.");
+                }
             } else {
                 toast.error(data.message || 'Failed to generate KYC link');
             }
         } catch (err) {
+            toast.dismiss(loadingToast);
             toast.error('Error generating KYC link');
         }
     };
