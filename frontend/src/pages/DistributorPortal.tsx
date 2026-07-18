@@ -1076,9 +1076,9 @@ const DistributorPortal = () => {
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-semibold text-muted-foreground">State *</label>
                                                     <select name="state" onChange={handleChange} required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors">
-                                                        <option value="" disabled selected>Select State</option>
+                                                        <option value="" disabled selected className="bg-background text-foreground">Select State</option>
                                                         {INDIAN_STATES.map((state) => (
-                                                            <option key={state} value={state}>{state}</option>
+                                                            <option key={state} value={state} className="bg-background text-foreground">{state}</option>
                                                         ))}
                                                     </select>
                                                 </div>

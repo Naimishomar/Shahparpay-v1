@@ -238,9 +238,9 @@ const LeadGeneration = () => {
                                         onChange={e => setFormData({ ...formData, state: e.target.value })}
                                         className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                                     >
-                                        <option value="" disabled>Select State</option>
+                                        <option value="" disabled className="bg-background text-foreground">Select State</option>
                                         {INDIAN_STATES.map((state) => (
-                                            <option key={state} value={state}>{state}</option>
+                                            <option key={state} value={state} className="bg-background text-foreground">{state}</option>
                                         ))}
                                     </select>
                                 </div>
