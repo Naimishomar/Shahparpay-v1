@@ -12,7 +12,8 @@ import {
     dailyAuth,
     getMerchantStatus,
     aadhaarPay,
-    getPidOptions
+    getPidOptions,
+    activateMerchant
 } from '../controllers/aepsPayment.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 
@@ -35,6 +36,7 @@ router.post('/txn-status', authMiddlewares, cashWithdrawalTxnStatus);
 router.post('/kyc/send-otp', sendMerchantOtp);
 router.post('/kyc/resend-otp', resendMerchantOtp);
 router.post('/kyc/verify-otp', verifyMerchantOtp);
+router.post('/kyc/activate-merchant', activateMerchant);
 router.post('/daily-auth', dailyAuth);
 
 export default router;

@@ -10,8 +10,10 @@ interface MerchantKycModalProps {
 const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, longitude }) => {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [kycMethod, setKycMethod] = useState<'bank3' | 'bank2'>('bank2'); // Default to bank2 since it's the default pipe
     const [merchantCode, setMerchantCode] = useState('');
     const [aadhaar, setAadhaar] = useState('');
+    const [dob, setDob] = useState('');
     const [otp, setOtp] = useState('');
     
     // API State
@@ -21,40 +23,50 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
     // Biometric State
     const [pidData, setPidData] = useState<string | null>(null);
 
-    const handleSendOtp = async () => {
+    const handleNextStep = async () => {
         if (!merchantCode || aadhaar.length !== 12) {
             alert('Please enter valid Merchant Code and 12-digit Aadhaar');
             return;
         }
-        setLoading(true);
-        try {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/kyc/send-otp`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    merchantcode: merchantCode,
-                    aadhaar: aadhaar,
-                    latitude: latitude || "28.7041",
-                    longitude: longitude || "77.1025"
-                })
-            });
-            const result = await response.json();
-            if (result.success && result.data?.response_code === 1) {
-                setEkycId(result.data.data.otpreqid || result.data.data.ekyc_id);
-                setStateresp(result.data.data.stateresp || 'unknown');
-                setStep(2);
-                alert("OTP sent successfully to your registered Aadhaar mobile number.");
-            } else if (result.data?.response_code === 2) {
-                alert("KYC already completed! You can proceed with transactions.");
-                onClose();
-            } else {
-                alert("Failed to send OTP: " + (result.data?.message || result.message));
+        if (kycMethod === 'bank2' && !dob) {
+            alert('Please enter your Date of Birth for Bank 2 activation');
+            return;
+        }
+
+        if (kycMethod === 'bank3') {
+            setLoading(true);
+            try {
+                const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/kyc/send-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        merchantcode: merchantCode,
+                        aadhaar: aadhaar,
+                        latitude: latitude || "28.7041",
+                        longitude: longitude || "77.1025"
+                    })
+                });
+                const result = await response.json();
+                if (result.success && result.data?.response_code === 1) {
+                    setEkycId(result.data.data.otpreqid || result.data.data.ekyc_id);
+                    setStateresp(result.data.data.stateresp || 'unknown');
+                    setStep(2);
+                    alert("OTP sent successfully to your registered Aadhaar mobile number.");
+                } else if (result.data?.response_code === 2) {
+                    alert("KYC already completed! You can proceed with transactions.");
+                    onClose();
+                } else {
+                    alert("Failed to send OTP: " + (result.data?.message || result.message));
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Server error while sending OTP');
+            } finally {
+                setLoading(false);
             }
-        } catch (error) {
-            console.error(error);
-            alert('Server error while sending OTP');
-        } finally {
-            setLoading(false);
+        } else {
+            // For bank 2, no OTP needed, just go to step 2 for fingerprint capture
+            setStep(2);
         }
     };
 
@@ -63,7 +75,9 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
         try {
             const ports = [11100, 11101, 11102];
             let activeUrl = null;
-            const wadh = "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc="; // Provided WADH for eKYC
+            const wadh = kycMethod === 'bank2' 
+                ? "18f4CEiXeXcfGXvgWA/blxD+w2pw7hfQPY45JMytkPw=" 
+                : "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc="; // Bank 3/5/6
             const captureXml = `<?xml version="1.0"?>
                 <PidOptions ver="1.0">
                   <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN" wadh="${wadh}" />
@@ -110,29 +124,54 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
         }
     };
 
-    const handleVerifyOtp = async () => {
-        if (!otp || !pidData) {
+    const handleVerifyKyc = async () => {
+        if (kycMethod === 'bank3' && (!otp || !pidData)) {
             alert("Please enter OTP and capture your fingerprint first.");
             return;
         }
+        if (kycMethod === 'bank2' && !pidData) {
+            alert("Please capture your fingerprint first.");
+            return;
+        }
+
         setLoading(true);
         try {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/kyc/verify-otp`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    merchantcode: merchantCode,
-                    aadhaar: aadhaar,
-                    latitude: latitude || "28.7041",
-                    longitude: longitude || "77.1025",
-                    otp: otp,
-                    stateresp: stateresp,
-                    ekyc_id: ekycId,
-                    pidData: pidData
-                })
-            });
-            const result = await response.json();
-            if (result.success && result.data?.response_code === 1) {
+            let response, result;
+
+            if (kycMethod === 'bank3') {
+                response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/kyc/verify-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        merchantcode: merchantCode,
+                        aadhaar: aadhaar,
+                        latitude: latitude || "28.7041",
+                        longitude: longitude || "77.1025",
+                        otp: otp,
+                        stateresp: stateresp,
+                        ekyc_id: ekycId,
+                        pidData: pidData
+                    })
+                });
+            } else {
+                response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/kyc/activate-merchant`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        merchantcode: merchantCode,
+                        aadhaar: aadhaar,
+                        dob: dob.replace(/-/g, '/'), // Convert YYYY-MM-DD to YYYY/MM/DD
+                        pipe: 'bank2',
+                        latitude: latitude || "28.7041",
+                        longitude: longitude || "77.1025",
+                        pidData: pidData
+                    })
+                });
+            }
+
+            result = await response.json();
+            
+            if (result.success && result.data?.response_code == "1") {
                 alert("Merchant eKYC Completed Successfully! You can now perform transactions.");
                 onClose();
             } else {
@@ -140,7 +179,7 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
             }
         } catch (error) {
             console.error(error);
-            alert('Server error while verifying OTP');
+            alert('Server error while verifying KYC');
         } finally {
             setLoading(false);
         }
@@ -160,6 +199,17 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
                 <div className="p-6">
                     {step === 1 ? (
                         <div className="flex flex-col gap-4">
+                            <div>
+                                <label className="text-sm font-medium mb-1 block">KYC Pipeline</label>
+                                <select 
+                                    value={kycMethod}
+                                    onChange={(e) => setKycMethod(e.target.value as 'bank3' | 'bank2')}
+                                    className="w-full p-2.5 rounded-lg border border-border bg-background"
+                                >
+                                    <option value="bank2">Bank 2 / 5 / 6 (Direct Biometric)</option>
+                                    <option value="bank3">Bank 3 (OTP + Biometric)</option>
+                                </select>
+                            </div>
                             <div>
                                 <label className="text-sm font-medium mb-1 block">Merchant Code</label>
                                 <input 
@@ -181,32 +231,49 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
                                     placeholder="Enter 12-digit Aadhaar"
                                 />
                             </div>
+                            
+                            {kycMethod === 'bank2' && (
+                                <div>
+                                    <label className="text-sm font-medium mb-1 block">Date of Birth</label>
+                                    <input 
+                                        type="date" 
+                                        value={dob} 
+                                        onChange={(e) => setDob(e.target.value)} 
+                                        className="w-full p-2.5 rounded-lg border border-border bg-background"
+                                    />
+                                </div>
+                            )}
+
                             <button 
-                                onClick={handleSendOtp}
+                                onClick={handleNextStep}
                                 disabled={loading}
                                 className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-semibold shadow-md flex justify-center mt-2 disabled:opacity-50"
                             >
-                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send OTP'}
+                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (kycMethod === 'bank3' ? 'Send OTP' : 'Next Step')}
                             </button>
                         </div>
                     ) : (
                         <div className="flex flex-col gap-5">
-                            <div className="bg-emerald-50 text-emerald-700 p-3 rounded-lg text-sm flex gap-2 items-start border border-emerald-100">
-                                <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
-                                <p>OTP has been sent to the mobile number linked with your Aadhaar.</p>
-                            </div>
-                            
-                            <div>
-                                <label className="text-sm font-medium mb-1 block">Enter Aadhaar OTP</label>
-                                <input 
-                                    type="text" 
-                                    value={otp} 
-                                    onChange={(e) => setOtp(e.target.value)} 
-                                    maxLength={6}
-                                    className="w-full p-2.5 rounded-lg border border-border text-center tracking-[0.5em] font-bold text-xl bg-background"
-                                    placeholder="------"
-                                />
-                            </div>
+                            {kycMethod === 'bank3' && (
+                                <>
+                                    <div className="bg-emerald-50 text-emerald-700 p-3 rounded-lg text-sm flex gap-2 items-start border border-emerald-100">
+                                        <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+                                        <p>OTP has been sent to the mobile number linked with your Aadhaar.</p>
+                                    </div>
+                                    
+                                    <div>
+                                        <label className="text-sm font-medium mb-1 block">Enter Aadhaar OTP</label>
+                                        <input 
+                                            type="text" 
+                                            value={otp} 
+                                            onChange={(e) => setOtp(e.target.value)} 
+                                            maxLength={6}
+                                            className="w-full p-2.5 rounded-lg border border-border text-center tracking-[0.5em] font-bold text-xl bg-background"
+                                            placeholder="------"
+                                        />
+                                    </div>
+                                </>
+                            )}
 
                             <div className="border border-border rounded-xl p-4 flex flex-col items-center justify-center gap-3 bg-muted/20">
                                 <div className={`w-16 h-16 rounded-full flex items-center justify-center ${pidData ? 'bg-emerald-100 text-emerald-600' : 'bg-primary/10 text-primary'}`}>
@@ -217,14 +284,14 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
                                     disabled={loading}
                                     className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${pidData ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}
                                 >
-                                    {loading && !otp ? 'Scanning...' : (pidData ? 'Fingerprint Captured' : 'Capture Biometric')}
+                                    {loading && (!otp && kycMethod === 'bank3') ? 'Scanning...' : (pidData ? 'Fingerprint Captured' : 'Capture Biometric')}
                                 </button>
                                 {!pidData && <p className="text-xs text-muted-foreground text-center">Place finger on scanner and click capture</p>}
                             </div>
 
                             <button 
-                                onClick={handleVerifyOtp}
-                                disabled={loading || !pidData || !otp}
+                                onClick={handleVerifyKyc}
+                                disabled={loading || !pidData || (kycMethod === 'bank3' && !otp)}
                                 className="w-full py-3 bg-slate-800 text-white hover:bg-slate-900 rounded-lg font-semibold shadow-md flex justify-center mt-2 disabled:opacity-50 transition-colors"
                             >
                                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify eKYC'}

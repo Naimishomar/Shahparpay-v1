@@ -1445,3 +1445,61 @@ export const getPidOptions = async (req, res) => {
     }
 };
 
+export const activateMerchant = async (req, res) => {
+    try {
+        const { merchantcode, aadhaar, dob, pidData, pipe, latitude, longitude } = req.body;
+        if (!merchantcode || !aadhaar || !dob || !pidData || !pipe) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Required fields missing (merchantcode, aadhaar, dob, pidData, pipe)" 
+            });
+        }
+
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+        const currentToken = generatePaySprintToken();
+        const encryptedPidData = encryptPayload(pidData);
+
+        const payload = {
+            merchantcode,
+            aadhaar,
+            piddata: encryptedPidData,
+            dob, // YYYY/MM/DD
+            is_casa: "0",
+            pipe, // bank2, bank5, bank6
+            accessmode: "SITE",
+            latitude: latitude || "28.7041",
+            longitude: longitude || "77.1025"
+        };
+
+        const headers = {
+            'Token': currentToken,
+            'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+            'Content-Type': 'application/json'
+        };
+
+        const response = await axios.post(`${baseUrl}/service/onboard/onboard/activate_merchant`, payload, { headers });
+
+        if (response.data && response.data.status === true && response.data.response_code == "1") {
+            // Check if we should update DB
+            return res.status(200).json({
+                success: true,
+                message: response.data.message || "Merchant Activated Successfully",
+                data: response.data
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: response.data.message || "Activation failed",
+                data: response.data
+            });
+        }
+    } catch (error) {
+        console.error("Activate Merchant Error:", error?.response?.data || error);
+        return res.status(500).json({ 
+            success: false, 
+            message: "Internal Server Error during activation", 
+            error: error?.response?.data || error.message 
+        });
+    }
+};
+
