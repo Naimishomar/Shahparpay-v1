@@ -2,12 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
-    
     UserPlus, 
     LayoutDashboard, 
     LogOut, 
     Activity, 
-    
     Briefcase,
     ShieldCheck,
     UserCircle,
@@ -192,7 +190,7 @@ const DistributorPortal = () => {
 
     if (!user || user.role !== 'distributor') return null;
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
         setFormData({ ...formData, [e.target.name]: value });
     };

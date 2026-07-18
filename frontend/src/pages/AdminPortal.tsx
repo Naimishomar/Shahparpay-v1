@@ -22,7 +22,6 @@ import {
 import { toast } from 'sonner';
 import AdminCommissions from '../components/AdminCommissions';
 import DailyAuthModal from '../components/DailyAuthModal';
-import { adminConfig } from '../config/adminConfig';
 import { INDIAN_STATES } from '../constants';
 
 const AdminPortal = () => {
@@ -159,7 +158,7 @@ const AdminPortal = () => {
 
     if (!user || user.role !== 'admin') return null;
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
         setFormData({ ...formData, [e.target.name]: value });
     };
