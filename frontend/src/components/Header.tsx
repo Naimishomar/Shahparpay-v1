@@ -104,7 +104,7 @@ const Header = () => {
             </button>
 
             {/* User Profile */}
-            <Link to={user?.role === 'admin' ? "/admin/profile" : "/profile"} className="flex items-center gap-3 cursor-pointer group">
+            <Link to={user?.role === 'admin' ? "/admin/profile" : user?.role === 'distributor' ? "/distributor/profile" : "/profile"} className="flex items-center gap-3 cursor-pointer group">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-purple-400 p-[2px] shadow-[0_0_10px_rgba(139,92,246,0.3)] group-hover:shadow-[0_0_15px_rgba(139,92,246,0.6)] transition-shadow">
                     <div className="w-full h-full bg-background rounded-full flex items-center justify-center overflow-hidden">
                         {user?.profilePicture ? (
