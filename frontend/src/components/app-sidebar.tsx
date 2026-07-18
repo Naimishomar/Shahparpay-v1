@@ -27,6 +27,7 @@ const retailerProjects = [
     icon: BarChart3,
     subItems: [
       { name: "Ledgar", url: "/reports/ledger" },
+      { name: "AEPS Reports", url: "/reports/aeps" },
       { name: "DMT Reports", url: "/reports/dmt" },
       { name: "Payout Reports", url: "/reports/payout" },
       { name: "UPI Reports", url: "/reports/upi" },

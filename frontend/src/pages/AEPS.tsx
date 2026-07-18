@@ -471,13 +471,13 @@ const AEPS = () => {
                             <CreditCard size={16} />
                             Cash Deposit
                         </button>
-                        <button 
+                        {/* <button 
                             onClick={() => setActiveTab('aadhaar_pay')}
                             className={`pb-2 px-2 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'aadhaar_pay' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             <CreditCard size={16} />
                             Aadhaar Pay
-                        </button>
+                        </button> */}
                     </div>
                 </div>
 
