@@ -53,7 +53,6 @@ const distributorProjects = [
   { name: "Fund Requests", url: "/distributor/fund-requests", icon: Store },
   { name: "Add New", url: "/distributor/create", icon: UserPlus },
   { name: "My Profile", url: "/distributor/profile", icon: UserCircle },
-  { name: "Lead Generation", url: "/lead-generation", icon: UserPlus },
 ]
 
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
