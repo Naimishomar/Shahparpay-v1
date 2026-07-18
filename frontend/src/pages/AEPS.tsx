@@ -428,7 +428,11 @@ const AEPS = () => {
         } finally {
             window.dispatchEvent(new Event('wallet-updated'));
             setLoading(false);
-            handleReset();
+            if (activeTab !== 'balance_enquiry') {
+                handleReset();
+            } else {
+                setPidData(null);
+            }
         }
     };
 
