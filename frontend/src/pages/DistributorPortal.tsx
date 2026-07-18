@@ -1418,7 +1418,16 @@ const DistributorPortal = () => {
                                     disabled={isGeneratingSelf}
                                     className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
                                 >
-                                    {isGeneratingSelf ? "Redirecting..." : "Complete KYC Now"}
+                                    {isGeneratingSelf ? "Redirecting..." : "Step 1: Complete Web KYC"}
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        setShowKyc(false);
+                                        setShowMerchantKycModal(true);
+                                    }}
+                                    className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                                >
+                                    Step 2: Biometric Activation
                                 </button>
                                 <button 
                                     onClick={() => logout && logout()}

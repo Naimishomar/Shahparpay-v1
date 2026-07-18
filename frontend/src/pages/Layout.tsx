@@ -100,7 +100,16 @@ const Layout = () => {
                                     disabled={isGenerating}
                                     className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
                                 >
-                                    {isGenerating ? "Redirecting..." : "Complete KYC Now"}
+                                    {isGenerating ? "Redirecting..." : "Step 1: Complete Web KYC"}
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        setShowKyc(false);
+                                        setShowMerchantKyc(true);
+                                    }}
+                                    className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                                >
+                                    Step 2: Biometric Activation
                                 </button>
                                 <button 
                                     onClick={() => logout && logout()}
