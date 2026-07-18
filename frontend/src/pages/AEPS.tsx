@@ -643,6 +643,7 @@ const AEPS = () => {
                                             type="number" 
                                             value={amount}
                                             onChange={(e) => setAmount(e.target.value)}
+                                            onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                             placeholder="Enter amount" 
                                             className="w-full pl-8 p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors" 
                                         />

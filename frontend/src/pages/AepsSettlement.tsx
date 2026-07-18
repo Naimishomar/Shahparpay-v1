@@ -255,6 +255,7 @@ const AepsSettlement = () => {
                                             type="number" 
                                             value={amount}
                                             onChange={(e) => setAmount(e.target.value)}
+                                            onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                             placeholder="0.00"
                                             required
                                             className="w-full pl-8 pr-3 py-2.5 bg-background border border-border rounded-md focus:border-primary outline-none shadow-sm transition-colors text-foreground"
