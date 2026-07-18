@@ -21,6 +21,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import AdminCommissions from '../components/AdminCommissions';
+import DailyAuthModal from '../components/DailyAuthModal';
+import { adminConfig } from '../config/adminConfig';
+import { INDIAN_STATES } from '../constants';
 
 const AdminPortal = () => {
     const { user, token, logout, isInitializing } = useAuth();
@@ -1057,7 +1060,12 @@ const AdminPortal = () => {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-semibold text-muted-foreground">State *</label>
-                                                    <input name="state" placeholder="State" onChange={handleChange} required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
+                                                    <select name="state" onChange={handleChange} required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors">
+                                                        <option value="" disabled selected>Select State</option>
+                                                        {INDIAN_STATES.map((state) => (
+                                                            <option key={state} value={state}>{state}</option>
+                                                        ))}
+                                                    </select>
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-semibold text-muted-foreground">Landmark</label>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import { CreditCard, ExternalLink, RefreshCw, UserPlus } from 'lucide-react';
+import { INDIAN_STATES } from '../constants';
 
 const LeadGeneration = () => {
     const { token } = useAuth();
@@ -232,13 +233,16 @@ const LeadGeneration = () => {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-1">State</label>
-                                    <input
-                                        type="text"
+                                    <select
                                         value={formData.state}
                                         onChange={e => setFormData({ ...formData, state: e.target.value })}
                                         className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                        placeholder="State"
-                                    />
+                                    >
+                                        <option value="" disabled>Select State</option>
+                                        {INDIAN_STATES.map((state) => (
+                                            <option key={state} value={state}>{state}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
 
