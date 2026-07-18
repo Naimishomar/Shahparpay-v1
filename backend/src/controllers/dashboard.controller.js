@@ -75,7 +75,7 @@ export const getRetailerStats = async (req, res) => {
                 if (binIndex >= 0) graphData[binIndex] += txn.amount;
                 
                 // Track unique customers based on available metadata
-                let identifier = txn.metadata?.caNumber || txn.metadata?.mobile || txn.metadata?.beneficiaryAccount || txn.metadata?.aadhaar;
+                let identifier = txn.metadata?.aadhaar || txn.metadata?.beneficiaryAccount || txn.metadata?.caNumber || txn.metadata?.mobile;
                 if (identifier) {
                     uniqueCustomers.add(identifier);
                 }
