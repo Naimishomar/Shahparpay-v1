@@ -1324,6 +1324,7 @@ export const syncMerchantPipes = async (merchantcode) => {
         results.forEach((result, index) => {
             if (result.status === 'fulfilled') {
                 const responseData = result.value.data;
+                console.log(`[syncMerchantPipes] PIPE ${pipesToCheck[index]} STATUS:`, JSON.stringify(responseData));
                 if (responseData && 
                     responseData.response_code === 1 && 
                     responseData.is_approved === 'Accepted') {
