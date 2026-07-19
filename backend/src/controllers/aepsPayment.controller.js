@@ -928,6 +928,11 @@ export const sendMerchantOtp = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
+        console.log("=== SEND OTP DEBUG ===");
+        console.log("URL:", `${baseUrl}/service/aeps/v3/merchantkyc/send_otp`);
+        console.log("Payload:", JSON.stringify(payload, null, 2));
+        console.log("Headers:", JSON.stringify(headers, null, 2));
+
         const response = await axios.post(
             `${baseUrl}/service/aeps/v3/merchantkyc/send_otp`, 
             payload, 
