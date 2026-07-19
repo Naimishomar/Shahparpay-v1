@@ -13,14 +13,14 @@ import Admin from '../models/users/admin.model.js';
 export const getVerifiedPipe = async (merchantcode, mobile) => {
     // Check pipes in order of preference. We prioritize bank1 and bank5
     // because bank2 (older gateway) often rejects L1 scanners providing FIR+FMR data.
-    const pipesToCheck = ['bank3', 'bank1', 'bank5', 'bank6', 'bank2'];
+    const pipesToCheck = ['bank2', 'bank3', 'bank1', 'bank5', 'bank6'];
     const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
 
     for (const pipe of pipesToCheck) {
         try {
             const currentToken = generatePaySprintToken();
             const headers = {
-                'Token': currentToken,
+                'Token': currentToken, 
                 'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
                 'Content-Type': 'application/json',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -910,15 +910,10 @@ export const sendMerchantOtp = async (req, res) => {
 
         const payload = {
             merchantcode,
-            submerchantid: merchantcode,
-            mobile,
-            mobilenumber: mobile,
             accessmode: "SITE",
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025",
-            aadhaar,
-            adhaarnumber: aadhaar,
-            pipe: req.body.pipe || (await getVerifiedPipe(merchantcode, mobile))
+            aadhaar
         };
 
         const token = generatePaySprintToken();
