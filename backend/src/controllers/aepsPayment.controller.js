@@ -966,17 +966,12 @@ export const resendMerchantOtp = async (req, res) => {
 
         const payload = {
             merchantcode,
-            submerchantid: merchantcode,
-            mobile,
-            mobilenumber: mobile,
             aadhaar,
-            adhaarnumber: aadhaar,
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025",
             stateresp,
             ekyc_id,
-            accessmode: "SITE",
-            pipe: req.body.pipe || (await getVerifiedPipe(merchantcode, mobile))
+            accessmode: "SITE"
         };
 
         const token = generatePaySprintToken();
@@ -1021,26 +1016,16 @@ export const verifyMerchantOtp = async (req, res) => {
         // pidData needs to be AES encrypted for this specific endpoint.
         const encryptedPidData = encryptPayload(pidData);
 
-        let mobile = "9999999999";
-        const user = await Retailer.findOne({ retailerId: merchantcode }) || 
-                     await Distributor.findOne({ distributorId: merchantcode });
-        if (user && user.contactNumber) mobile = user.contactNumber;
-
         const payload = {
             merchantcode,
-            submerchantid: merchantcode,
-            mobile,
-            mobilenumber: mobile,
             aadhaar,
-            adhaarnumber: aadhaar,
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025",
             otp,
             stateresp,
             ekyc_id,
-            piddata: encryptedPidData,
             accessmode: "SITE",
-            pipe: req.body.pipe || (await getVerifiedPipe(merchantcode, mobile))
+            piddata: encryptedPidData
         };
 
         const token = generatePaySprintToken();
