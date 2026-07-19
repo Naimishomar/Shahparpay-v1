@@ -36,10 +36,10 @@ const KycStatus = () => {
                 setStatus('success');
                 localStorage.setItem('webKycCompleted', Date.now().toString());
                 
-                // Redirect back to dashboard after a short delay if it's the same window, but since it's a new tab, we just tell them to close it
-                // setTimeout(() => {
-                //     window.location.href = '/';
-                // }, 3000);
+                // Redirect back to dashboard after a short delay
+                setTimeout(() => {
+                    navigate('/');
+                }, 3000);
             } catch (error) {
                 setStatus('error');
             }
@@ -75,8 +75,9 @@ const KycStatus = () => {
                             <h2 className="text-2xl font-bold mb-2">Web KYC Captured!</h2>
                             <p className="text-muted-foreground text-sm">
                                 Your web identity verification was processed successfully. 
-                                <br/><br/>
-                                <strong>You can now safely close this tab, return to your dashboard, and click on "Step 2: Biometric Activation".</strong>
+                            </p>
+                            <p className="text-muted-foreground mt-4 text-sm">
+                                Redirecting you back to your dashboard...
                             </p>
                         </div>
                     </>
