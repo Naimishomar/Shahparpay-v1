@@ -15,6 +15,7 @@ interface User {
     contactNumber?: string;
     profilePicture?: string;
     isMerchantKycComplete?: boolean;
+    activeAepsPipes?: string[];
     aadhaarNumber?: string;
     dob?: string;
 }
