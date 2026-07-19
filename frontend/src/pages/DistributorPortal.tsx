@@ -86,8 +86,19 @@ const DistributorPortal = () => {
     const [webKycDone, setWebKycDone] = useState(false);
 
     useEffect(() => {
-        if (user && user.role === 'distributor' && user.isMerchantKycComplete === false) {
-            setShowKyc(true);
+        if (user && user.role === 'distributor') {
+            const needsWebKyc = user.isMerchantKycComplete === false;
+            const needsBiometricKyc = !user.activeAepsPipes || user.activeAepsPipes.length === 0;
+            
+            if (needsWebKyc || needsBiometricKyc) {
+                setShowKyc(true);
+            } else {
+                setShowKyc(false);
+            }
+
+            if (user.isMerchantKycComplete) {
+                setWebKycDone(true);
+            }
         } else {
             setShowKyc(false);
         }
