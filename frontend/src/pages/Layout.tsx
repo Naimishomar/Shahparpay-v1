@@ -41,7 +41,7 @@ const Layout = () => {
                     setShowKyc(false);
                     setIsGenerating(false);
                 } else if (res.data.url) {
-                    window.location.href = res.data.url;
+                    window.open(res.data.url, '_blank');
                 } else {
                     toast.error("Invalid KYC link received.");
                     setIsGenerating(false);

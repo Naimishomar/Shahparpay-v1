@@ -99,7 +99,7 @@ const Dashboard = () => {
                 if (res.data.alreadyOnboarded) {
                     setShowMerchantKycModal(true);
                 } else if (res.data.url) {
-                    window.location.href = res.data.url;
+                    window.open(res.data.url, '_blank');
                 } else {
                     alert("Invalid KYC URL returned.");
                 }

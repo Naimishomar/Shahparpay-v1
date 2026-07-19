@@ -113,7 +113,7 @@ const DistributorPortal = () => {
                     setShowKyc(false);
                     setIsGeneratingSelf(false);
                 } else if (data.url) {
-                    window.location.href = data.url;
+                    window.open(data.url, '_blank');
                 } else {
                     toast.error("Invalid KYC link received.");
                     setIsGeneratingSelf(false);
@@ -1242,7 +1242,13 @@ const DistributorPortal = () => {
                                     onClick={() => handleGenerateKycLink(profileData._id)}
                                     className="px-5 py-2.5 font-medium rounded-lg transition-colors bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:shadow-[0_0_25px_rgba(37,99,235,0.5)] flex items-center gap-2"
                                 >
-                                    Complete KYC
+                                    Web KYC
+                                </button>
+                                <button 
+                                    onClick={() => setShowMerchantKycModal(true)}
+                                    className="px-5 py-2.5 font-medium rounded-lg transition-colors bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] flex items-center gap-2"
+                                >
+                                    Biometric KYC
                                 </button>
                                 <button onClick={() => setIsEditingProfile(!isEditingProfile)} className={`px-5 py-2.5 font-medium rounded-lg transition-colors ${isEditingProfile ? 'bg-white/10 text-foreground border border-border' : 'bg-primary text-primary-foreground'}`}>
                                     {isEditingProfile ? 'Cancel Edit' : 'Edit Profile'}
