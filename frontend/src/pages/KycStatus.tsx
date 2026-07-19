@@ -34,6 +34,7 @@ const KycStatus = () => {
                 await checkSession();
                 
                 setStatus('success');
+                localStorage.setItem('webKycCompleted', Date.now().toString());
                 
                 // Redirect back to dashboard after a short delay if it's the same window, but since it's a new tab, we just tell them to close it
                 // setTimeout(() => {

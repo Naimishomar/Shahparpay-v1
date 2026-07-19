@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { ShieldAlert, Fingerprint, Loader2, CheckCircle2 } from 'lucide-react';
 
+import { useAuth } from '../context/AuthContext';
+
 interface MerchantKycModalProps {
     onClose: () => void;
     latitude?: string;
@@ -8,11 +10,12 @@ interface MerchantKycModalProps {
 }
 
 const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, longitude }) => {
+    const { user } = useAuth();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [kycMethod, setKycMethod] = useState<'bank3' | 'bank2'>('bank2'); // Default to bank2 since it's the default pipe
-    const [merchantCode, setMerchantCode] = useState('');
-    const [aadhaar, setAadhaar] = useState('');
+    const [merchantCode, setMerchantCode] = useState(user?.code || '');
+    const [aadhaar, setAadhaar] = useState(user?.aadhaarNumber || '');
     const [dob, setDob] = useState('');
     const [otp, setOtp] = useState('');
     

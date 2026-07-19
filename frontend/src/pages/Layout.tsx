@@ -16,12 +16,25 @@ const Layout = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [showMerchantKyc, setShowMerchantKyc] = useState(false);
 
+    const [webKycDone, setWebKycDone] = useState(false);
+
     useEffect(() => {
         if (user && user.role === 'retailer' && user.isMerchantKycComplete === false) {
             setShowKyc(true);
         } else {
             setShowKyc(false);
         }
+
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === 'webKycCompleted' && e.newValue) {
+                setWebKycDone(true);
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        if (localStorage.getItem('webKycCompleted')) {
+            setWebKycDone(true);
+        }
+        return () => window.removeEventListener('storage', handleStorageChange);
     }, [user]);
 
     const handleCompleteKyc = async () => {
@@ -97,10 +110,10 @@ const Layout = () => {
                             <div className="space-y-3 pt-4">
                                 <button 
                                     onClick={handleCompleteKyc}
-                                    disabled={isGenerating}
-                                    className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                                    disabled={isGenerating || webKycDone}
+                                    className={`w-full py-3 px-4 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${webKycDone ? 'bg-slate-600 text-white cursor-not-allowed opacity-80' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
                                 >
-                                    {isGenerating ? "Redirecting..." : "Step 1: Complete Web KYC"}
+                                    {isGenerating ? "Redirecting..." : webKycDone ? "Step 1: Completed" : "Step 1: Complete Web KYC"}
                                 </button>
                                 <button 
                                     onClick={() => {
