@@ -106,6 +106,15 @@ const DistributorPortal = () => {
     const handleCompleteSelfKyc = async () => {
         if (!user || !user._id) return;
         setIsGeneratingSelf(true);
+        
+        // Open window synchronously to avoid popup blocker
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+            newWindow.document.write('<div style="font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh;"><h2>Loading KYC Portal, please wait...</h2></div>');
+        } else {
+            toast.error("Popup blocked! Please allow popups for this site.");
+        }
+
         try {
             const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/paysprint/get-onboard-url`, {
                 method: 'POST',
@@ -122,20 +131,29 @@ const DistributorPortal = () => {
             const data = await res.json();
             if (data.success) {
                 if (data.alreadyOnboarded) {
+                    if (newWindow) newWindow.close();
                     setShowMerchantKycModal(true);
                     setShowKyc(false);
                     setIsGeneratingSelf(false);
                 } else if (data.url) {
-                    window.open(data.url, '_blank');
+                    if (newWindow) {
+                        newWindow.location.href = data.url;
+                    } else {
+                        window.location.href = data.url; // fallback if blocked
+                    }
+                    setIsGeneratingSelf(false);
                 } else {
+                    if (newWindow) newWindow.close();
                     toast.error("Invalid KYC link received.");
                     setIsGeneratingSelf(false);
                 }
             } else {
+                if (newWindow) newWindow.close();
                 toast.error(data.message || "Failed to generate KYC link.");
                 setIsGeneratingSelf(false);
             }
         } catch (err: any) {
+            if (newWindow) newWindow.close();
             toast.error("Failed to generate KYC link.");
             setIsGeneratingSelf(false);
         }

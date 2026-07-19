@@ -14,9 +14,9 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [kycMethod, setKycMethod] = useState<'bank3' | 'bank2'>('bank2'); // Default to bank2 since it's the default pipe
-    const [merchantCode, setMerchantCode] = useState(user?.code || '');
+    const [merchantCode, setMerchantCode] = useState(user?.retailerId || user?.distributorId || '');
     const [aadhaar, setAadhaar] = useState(user?.aadhaarNumber || '');
-    const [dob, setDob] = useState('');
+    const [dob, setDob] = useState(user?.dob || '');
     const [otp, setOtp] = useState('');
     
     // API State
@@ -219,7 +219,8 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
                                     type="text" 
                                     value={merchantCode} 
                                     onChange={(e) => setMerchantCode(e.target.value)} 
-                                    className="w-full p-2.5 rounded-lg border border-border bg-background"
+                                    disabled={true}
+                                    className="w-full p-2.5 rounded-lg border border-border bg-muted text-muted-foreground cursor-not-allowed"
                                     placeholder="e.g. PS00123"
                                 />
                             </div>
@@ -230,7 +231,8 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
                                     value={aadhaar} 
                                     onChange={(e) => setAadhaar(e.target.value)} 
                                     maxLength={12}
-                                    className="w-full p-2.5 rounded-lg border border-border bg-background"
+                                    disabled={true}
+                                    className="w-full p-2.5 rounded-lg border border-border bg-muted text-muted-foreground cursor-not-allowed tracking-widest"
                                     placeholder="Enter 12-digit Aadhaar"
                                 />
                             </div>

@@ -16,6 +16,7 @@ interface User {
     profilePicture?: string;
     isMerchantKycComplete?: boolean;
     aadhaarNumber?: string;
+    dob?: string;
 }
 
 interface AuthContextType {

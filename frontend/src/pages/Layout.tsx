@@ -40,6 +40,15 @@ const Layout = () => {
     const handleCompleteKyc = async () => {
         if (!user || !user._id) return;
         setIsGenerating(true);
+        
+        // Open window synchronously to avoid popup blocker
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+            newWindow.document.write('<div style="font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh;"><h2>Loading KYC Portal, please wait...</h2></div>');
+        } else {
+            toast.error("Popup blocked! Please allow popups for this site.");
+        }
+
         try {
             const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/paysprint/get-onboard-url`, {
                 merchantId: user._id,
@@ -50,20 +59,29 @@ const Layout = () => {
             });
             if (res.data.success) {
                 if (res.data.alreadyOnboarded) {
+                    if (newWindow) newWindow.close();
                     setShowMerchantKyc(true);
                     setShowKyc(false);
                     setIsGenerating(false);
                 } else if (res.data.url) {
-                    window.open(res.data.url, '_blank');
+                    if (newWindow) {
+                        newWindow.location.href = res.data.url;
+                    } else {
+                        window.location.href = res.data.url; // fallback if blocked
+                    }
+                    setIsGenerating(false);
                 } else {
+                    if (newWindow) newWindow.close();
                     toast.error("Invalid KYC link received.");
                     setIsGenerating(false);
                 }
             } else {
+                if (newWindow) newWindow.close();
                 toast.error(res.data.message || "Failed to generate KYC link.");
                 setIsGenerating(false);
             }
         } catch (err: any) {
+            if (newWindow) newWindow.close();
             toast.error(err.response?.data?.message || "Failed to generate KYC link.");
             setIsGenerating(false);
         }
