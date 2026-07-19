@@ -1308,6 +1308,12 @@ export const syncMerchantPipes = async (merchantcode) => {
         let isActuallyOnboarded = false;
 
         const statusPromises = pipesToCheck.map(pipe => {
+            const freshToken = generatePaySprintToken();
+            const freshHeaders = {
+                'Token': freshToken,
+                'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+                'Content-Type': 'application/json'
+            };
             return axios.post(
                 `${baseUrl}/service/onboard/onboard/getonboardstatus`,
                 {
@@ -1315,7 +1321,7 @@ export const syncMerchantPipes = async (merchantcode) => {
                     mobile: String(retailer.contactNumber),
                     pipe: pipe
                 },
-                { headers, validateStatus: () => true }
+                { headers: freshHeaders, validateStatus: () => true }
             );
         });
 
