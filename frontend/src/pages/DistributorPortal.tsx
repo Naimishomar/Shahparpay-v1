@@ -1460,7 +1460,6 @@ const DistributorPortal = () => {
                                         className="w-full p-3 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
                                         disabled={webKycDone || isGeneratingSelf}
                                     >
-                                        <select disabled className="hidden" />
                                         <option value="bank3">Bank 3 (Fino - Recommended)</option>
                                         <option value="bank2">Bank 2 (Yes/NSDL)</option>
                                     </select>
