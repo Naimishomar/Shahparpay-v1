@@ -15,6 +15,7 @@ const Layout = () => {
     const [showKyc, setShowKyc] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [showMerchantKyc, setShowMerchantKyc] = useState(false);
+    const [selectedPipe, setSelectedPipe] = useState('bank3');
 
     const [webKycDone, setWebKycDone] = useState(false);
 
@@ -53,6 +54,7 @@ const Layout = () => {
             const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/paysprint/get-onboard-url`, {
                 merchantId: user._id,
                 isNew: true,
+                pipe: selectedPipe,
                 callbackUrl: window.location.origin + '/kyc-status'
             }, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -126,13 +128,32 @@ const Layout = () => {
                             </div>
                             
                             <div className="space-y-3 pt-4">
-                                <button 
-                                    onClick={handleCompleteKyc}
-                                    disabled={isGenerating || webKycDone}
-                                    className={`w-full py-3 px-4 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${webKycDone ? 'bg-slate-600 text-white cursor-not-allowed opacity-80' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
-                                >
-                                    {isGenerating ? "Redirecting..." : webKycDone ? "Step 1: Completed" : "Step 1: Complete Web KYC"}
-                                </button>
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-medium text-foreground">Select Primary Bank (Pipe)</label>
+                                    <select 
+                                        value={selectedPipe}
+                                        onChange={(e) => setSelectedPipe(e.target.value)}
+                                        className="w-full p-3 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                                        disabled={webKycDone || isGenerating}
+                                    >
+                                        <select disabled className="hidden" />
+                                        <option value="bank3">Bank 3 (Fino - Recommended)</option>
+                                        <option value="bank2">Bank 2 (Yes/NSDL)</option>
+                                    </select>
+                                </div>
+                                {selectedPipe === 'bank3' ? (
+                                    <button 
+                                        onClick={handleCompleteKyc}
+                                        disabled={isGenerating || webKycDone}
+                                        className={`w-full py-3 px-4 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${webKycDone ? 'bg-slate-600 text-white cursor-not-allowed opacity-80' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+                                    >
+                                        {isGenerating ? "Redirecting..." : webKycDone ? "Step 1: Completed" : "Step 1: Complete Web KYC"}
+                                    </button>
+                                ) : (
+                                    <div className="w-full py-3 px-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 text-sm text-center font-medium">
+                                        Step 1 is not required for Bank 2.<br/>Proceed directly to Step 2.
+                                    </div>
+                                )}
                                 <button 
                                     onClick={() => {
                                         setShowKyc(false);
