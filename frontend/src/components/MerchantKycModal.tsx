@@ -45,6 +45,7 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
                     body: JSON.stringify({
                         merchantcode: merchantCode,
                         aadhaar: aadhaar,
+                        pipe: kycMethod,
                         latitude: latitude || "28.7041",
                         longitude: longitude || "77.1025"
                     })
@@ -148,6 +149,7 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
                     body: JSON.stringify({
                         merchantcode: merchantCode,
                         aadhaar: aadhaar,
+                        pipe: kycMethod,
                         latitude: latitude || "28.7041",
                         longitude: longitude || "77.1025",
                         otp: otp,

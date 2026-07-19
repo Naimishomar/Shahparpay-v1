@@ -918,7 +918,7 @@ export const sendMerchantOtp = async (req, res) => {
             longitude: longitude || "77.1025",
             aadhaar,
             adhaarnumber: aadhaar,
-            pipe: await getVerifiedPipe(merchantcode, mobile)
+            pipe: req.body.pipe || (await getVerifiedPipe(merchantcode, mobile))
         };
 
         const token = generatePaySprintToken();
@@ -976,7 +976,7 @@ export const resendMerchantOtp = async (req, res) => {
             stateresp,
             ekyc_id,
             accessmode: "SITE",
-            pipe: await getVerifiedPipe(merchantcode, mobile)
+            pipe: req.body.pipe || (await getVerifiedPipe(merchantcode, mobile))
         };
 
         const token = generatePaySprintToken();
@@ -1040,7 +1040,7 @@ export const verifyMerchantOtp = async (req, res) => {
             ekyc_id,
             piddata: encryptedPidData,
             accessmode: "SITE",
-            pipe: await getVerifiedPipe(merchantcode, mobile)
+            pipe: req.body.pipe || (await getVerifiedPipe(merchantcode, mobile))
         };
 
         const token = generatePaySprintToken();
