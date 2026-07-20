@@ -1101,12 +1101,6 @@ export const dailyAuth = async (req, res) => {
             timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
             is_iris: "No"
         };
-        
-        // Only attach pipe parameter if not using bank3 specific endpoint
-        if (pipe !== 'bank3') {
-            payload.pipe = pipe;
-        }
-
         console.log("========== DAILY AUTH PAYLOAD ==========");
         console.log(JSON.stringify(payload, null, 2));
         console.log("========================================");
@@ -1121,7 +1115,7 @@ export const dailyAuth = async (req, res) => {
         };
 
         // First attempt: Try daily auth login
-        const authEndpoint = pipe === 'bank3' ? '/service/aeps/kyc/Twofactorkyc/auth_login' : '/service/aeps/kyc/Twofactorkyc/authentication';
+        const authEndpoint = '/service/aeps/kyc/Twofactorkyc/authentication';
         let response = await axios.post(
             `${baseUrl}${authEndpoint}`, 
             { body: encryptedData }, 
