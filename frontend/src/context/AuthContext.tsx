@@ -61,8 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         } catch (error) {
             console.error("Session restoration failed:", error);
-            setToken(null);
-            setUser(null);
+            // Do not log the user out on network errors
         } finally {
             setIsInitializing(false);
         }
