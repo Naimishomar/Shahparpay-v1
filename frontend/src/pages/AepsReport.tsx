@@ -32,7 +32,7 @@ const AepsReport = () => {
             try {
                 const token = localStorage.getItem('token');
                 const typeQuery = "&type=AEPS";
-                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/dashboard/recent-transactions?limit=1000$"&type=AEPS"`, {
+                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/dashboard/recent-transactions?limit=1000&type=AEPS`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.data.success) {
@@ -137,31 +137,33 @@ const AepsReport = () => {
                         </div>
                     </div>
                     
-                    <div className="flex flex-wrap items-center gap-2 md:gap-3 justify-end shrink-0">
-                        <div className="relative w-full md:w-64">
-                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                            <input 
-                                type="text" 
-                                placeholder="Search ID or Mobile..." 
-                                value={searchTerm}
-                                onChange={(e) => {
-                                    setSearchTerm(e.target.value);
-                                    setCurrentPage(1);
-                                }}
-                                className="pl-9 pr-4 py-2 w-full bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            />
-                        </div>
-                        <div className="flex gap-2 w-full md:w-auto">
-                            <button onClick={handleDownloadCSV} className="flex-1 md:flex-none justify-center flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap">
-                                <Download className="w-4 h-4" />
-                                <span className="hidden sm:inline">Export CSV</span>
-                                <span className="sm:hidden">CSV</span>
-                            </button>
-                            <button onClick={handleDownloadPDF} className="flex-1 md:flex-none justify-center flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap">
-                                <FileDown className="w-4 h-4" />
-                                <span className="hidden sm:inline">Export PDF</span>
-                                <span className="sm:hidden">PDF</span>
-                            </button>
+                    <div className="flex flex-col items-end gap-3 shrink-0 w-full md:w-auto">
+                        <div className="flex flex-wrap md:flex-nowrap items-center gap-2 w-full justify-end">
+                            <div className="relative flex-1 min-w-[200px] md:w-64">
+                                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Search ID or Mobile..." 
+                                    value={searchTerm}
+                                    onChange={(e) => {
+                                        setSearchTerm(e.target.value);
+                                        setCurrentPage(1);
+                                    }}
+                                    className="pl-9 pr-4 py-2 w-full bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                />
+                            </div>
+                            <div className="flex gap-2 shrink-0">
+                                <button onClick={handleDownloadCSV} className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap">
+                                    <Download className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Export CSV</span>
+                                    <span className="sm:hidden">CSV</span>
+                                </button>
+                                <button onClick={handleDownloadPDF} className="flex items-center justify-center gap-2 bg-rose-500 hover:bg-rose-600 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap">
+                                    <FileDown className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Export PDF</span>
+                                    <span className="sm:hidden">PDF</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
