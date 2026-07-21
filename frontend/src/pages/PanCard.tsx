@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { CreditCard, User, Mail, CreditCard as CardIcon } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { CreditCard, User, Mail, ChevronRight, FileText, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 const PanCard: React.FC = () => {
+    const { token } = useAuth();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         title: '1',
@@ -31,6 +33,11 @@ const PanCard: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
+        if (!formData.first_name || !formData.last_name) {
+            toast.error("First Name and Last Name are required.");
+            return;
+        }
+
         if (formData.mode === 'E' && !formData.email_id) {
             toast.error("Email ID is required for Electronic PAN.");
             return;
@@ -38,7 +45,6 @@ const PanCard: React.FC = () => {
 
         setLoading(true);
         try {
-            const token = localStorage.getItem('token');
             const res = await axios.post(
                 `${import.meta.env.VITE_BACKEND_URL}/api/pan/generate-url`,
                 {
@@ -54,7 +60,6 @@ const PanCard: React.FC = () => {
 
             if (res.data.success) {
                 toast.success("Redirecting to NSDL Portal...");
-                // Set the redirect data which will trigger the hidden form submission
                 setRedirectData({
                     response_url: res.data.data.response_url,
                     encdata: res.data.data.encdata
@@ -81,194 +86,253 @@ const PanCard: React.FC = () => {
     }, [redirectData]);
 
     return (
-        <>
-            <div className="container mx-auto px-4 py-8 max-w-3xl">
-                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-                    {/* Header */}
-                    <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-8 text-white">
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <h1 className="text-3xl font-bold mb-2 flex items-center">
-                                    <CardIcon className="mr-3 h-8 w-8" />
-                                    NSDL PAN Card Services
-                                </h1>
-                                <p className="text-blue-100 opacity-90">Apply for a new Electronic or Physical PAN Card</p>
+        <div className="min-h-screen bg-background p-4 lg:p-8">
+            <div className="max-w-6xl mx-auto space-y-6">
+                
+                {/* Header Section */}
+                <div className="flex flex-col gap-2">
+                    <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+                        <CreditCard className="w-8 h-8 text-primary" />
+                        NSDL PAN Card Services
+                    </h1>
+                    <p className="text-muted-foreground">Apply for a new Electronic or Physical PAN Card for your customers.</p>
+                </div>
+
+                {/* Main Content Area */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    {/* Left Column: Instructions & Info */}
+                    <div className="lg:col-span-1 space-y-6">
+                        <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+                            <h2 className="text-xl font-bold text-foreground mb-4">How It Works</h2>
+                            
+                            <div className="space-y-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="min-w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">1</div>
+                                    <div>
+                                        <p className="text-sm font-medium text-foreground">Fill Details</p>
+                                        <p className="text-xs text-muted-foreground">Enter the customer's name, gender, and PAN mode</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <div className="min-w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">2</div>
+                                    <div>
+                                        <p className="text-sm font-medium text-foreground">NSDL Portal</p>
+                                        <p className="text-xs text-muted-foreground">You'll be redirected to the official NSDL portal</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <div className="min-w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">3</div>
+                                    <div>
+                                        <p className="text-sm font-medium text-foreground">Complete Application</p>
+                                        <p className="text-xs text-muted-foreground">Fill remaining details on NSDL and make payment</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="hidden sm:block opacity-20">
-                                <CardIcon size={80} />
+                        </div>
+
+                        {/* PAN Mode Info */}
+                        <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+                            <h2 className="text-lg font-bold text-foreground mb-3">PAN Card Types</h2>
+                            <div className="space-y-3">
+                                <div className="p-3 rounded-xl border border-border/50 bg-background/50">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <FileText className="w-4 h-4 text-primary" />
+                                        <span className="text-sm font-bold text-foreground">Electronic PAN (E-PAN)</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">Digital PAN card sent via email. Faster processing.</p>
+                                </div>
+                                <div className="p-3 rounded-xl border border-border/50 bg-background/50">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <CreditCard className="w-4 h-4 text-primary" />
+                                        <span className="text-sm font-bold text-foreground">Physical PAN</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">Physical card delivered to address. Takes 15-20 days.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Form */}
-                    <div className="p-6 sm:p-10">
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Title */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
-                                    <select
-                                        name="title"
-                                        value={formData.title}
-                                        onChange={handleChange}
-                                        className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                        required
-                                    >
-                                        <option value="1">Mr / Shri</option>
-                                        <option value="2">Mrs / Shrimati</option>
-                                    </select>
+                    {/* Right Column: Application Form */}
+                    <div className="lg:col-span-2">
+                        <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-bold text-foreground">Customer Details</h2>
+                                <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
+                                    NSDL PAN
                                 </div>
-                                
-                                {/* Gender */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
-                                    <select
-                                        name="gender"
-                                        value={formData.gender}
-                                        onChange={handleChange}
-                                        className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                        required
-                                    >
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                        <option value="Transgender">Transgender</option>
-                                    </select>
-                                </div>
+                            </div>
 
-                                {/* First Name */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <User className="h-5 w-5 text-gray-400" />
-                                        </div>
-                                        <input
-                                            type="text"
-                                            name="first_name"
-                                            value={formData.first_name}
+                            <form onSubmit={handleSubmit} className="space-y-5">
+                                {/* Row 1: Title & Gender */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Title</label>
+                                        <select
+                                            name="title"
+                                            value={formData.title}
                                             onChange={handleChange}
-                                            className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Enter first name"
+                                            className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
                                             required
-                                        />
+                                        >
+                                            <option value="1">Mr / Shri</option>
+                                            <option value="2">Mrs / Shrimati</option>
+                                        </select>
                                     </div>
-                                </div>
-
-                                {/* Middle Name */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Middle Name <span className="text-gray-400 text-xs">(Optional)</span></label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <User className="h-5 w-5 text-gray-400" />
-                                        </div>
-                                        <input
-                                            type="text"
-                                            name="middle_name"
-                                            value={formData.middle_name}
+                                    <div>
+                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Gender</label>
+                                        <select
+                                            name="gender"
+                                            value={formData.gender}
                                             onChange={handleChange}
-                                            className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Enter middle name"
-                                        />
+                                            className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                                            required
+                                        >
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                            <option value="Transgender">Transgender</option>
+                                        </select>
                                     </div>
                                 </div>
 
-                                {/* Last Name */}
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                                {/* Row 2: First Name & Middle Name */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-sm font-medium text-foreground mb-1.5 block">First Name</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <User className="w-4 h-4 text-muted-foreground" />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                name="first_name"
+                                                value={formData.first_name}
+                                                onChange={handleChange}
+                                                className="w-full pl-10 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                                                placeholder="Enter first name"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-foreground mb-1.5 block">
+                                            Middle Name <span className="text-muted-foreground text-xs">(Optional)</span>
+                                        </label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <User className="w-4 h-4 text-muted-foreground" />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                name="middle_name"
+                                                value={formData.middle_name}
+                                                onChange={handleChange}
+                                                className="w-full pl-10 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                                                placeholder="Enter middle name"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Row 3: Last Name */}
+                                <div>
+                                    <label className="text-sm font-medium text-foreground mb-1.5 block">Last Name</label>
                                     <div className="relative">
                                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <User className="h-5 w-5 text-gray-400" />
+                                            <User className="w-4 h-4 text-muted-foreground" />
                                         </div>
                                         <input
                                             type="text"
                                             name="last_name"
                                             value={formData.last_name}
                                             onChange={handleChange}
-                                            className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full pl-10 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
                                             placeholder="Enter last name"
                                             required
                                         />
                                     </div>
                                 </div>
 
-                                {/* Mode */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">PAN Card Mode</label>
-                                    <select
-                                        name="mode"
-                                        value={formData.mode}
-                                        onChange={handleChange}
-                                        className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                        required
-                                    >
-                                        <option value="E">Electronic PAN (E-PAN)</option>
-                                        <option value="P">Physical PAN</option>
-                                    </select>
-                                </div>
-
-                                {/* Email ID */}
-                                <div className={`${formData.mode === 'E' ? 'block' : 'hidden'}`}>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <Mail className="h-5 w-5 text-gray-400" />
-                                        </div>
-                                        <input
-                                            type="email"
-                                            name="email_id"
-                                            value={formData.email_id}
+                                {/* Row 4: Mode & Email */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-sm font-medium text-foreground mb-1.5 block">PAN Card Mode</label>
+                                        <select
+                                            name="mode"
+                                            value={formData.mode}
                                             onChange={handleChange}
-                                            className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Enter customer email"
-                                            required={formData.mode === 'E'}
-                                        />
+                                            className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                                            required
+                                        >
+                                            <option value="E">Electronic PAN (E-PAN)</option>
+                                            <option value="P">Physical PAN</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-foreground mb-1.5 block">
+                                            Email Address {formData.mode === 'E' && <span className="text-red-500">*</span>}
+                                        </label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <Mail className="w-4 h-4 text-muted-foreground" />
+                                            </div>
+                                            <input
+                                                type="email"
+                                                name="email_id"
+                                                value={formData.email_id}
+                                                onChange={handleChange}
+                                                className="w-full pl-10 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                                                placeholder="customer@email.com"
+                                                required={formData.mode === 'E'}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="mt-8 pt-6 border-t border-gray-100">
-                                <button
-                                    type="submit"
-                                    disabled={loading || redirectData !== null}
-                                    className="w-full flex justify-center items-center py-4 px-4 border border-transparent rounded-xl shadow-md text-base font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200"
-                                >
-                                    {loading ? (
-                                        <span className="flex items-center">
-                                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            Processing...
-                                        </span>
-                                    ) : redirectData !== null ? (
-                                        "Redirecting..."
-                                    ) : (
-                                        <span className="flex items-center">
-                                            <CreditCard className="mr-2 h-5 w-5" />
-                                            Proceed to NSDL Application
-                                        </span>
-                                    )}
-                                </button>
-                            </div>
-                        </form>
-
-                        {/* Hidden form for NSDL redirect via POST */}
-                        {redirectData && (
-                            <form 
-                                id="nsdl-redirect-form" 
-                                action={redirectData.response_url} 
-                                method="POST" 
-                                className="hidden"
-                            >
-                                <input type="hidden" name="encdata" value={redirectData.encdata} />
+                                {/* Submit Button */}
+                                <div className="pt-4 border-t border-border/30">
+                                    <button
+                                        type="submit"
+                                        disabled={loading || redirectData !== null}
+                                        className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                    >
+                                        {loading ? (
+                                            <>
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                                Processing...
+                                            </>
+                                        ) : redirectData !== null ? (
+                                            <>
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                                Redirecting to NSDL...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <ChevronRight className="w-5 h-5" />
+                                                Proceed to NSDL Application
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </form>
-                        )}
 
+                            {/* Hidden form for NSDL redirect via POST */}
+                            {redirectData && (
+                                <form 
+                                    id="nsdl-redirect-form" 
+                                    action={redirectData.response_url} 
+                                    method="POST" 
+                                    className="hidden"
+                                >
+                                    <input type="hidden" name="encdata" value={redirectData.encdata} />
+                                </form>
+                            )}
+                        </div>
                     </div>
+
                 </div>
             </div>
-        </>
+        </div>
     );
 };
 
