@@ -22,8 +22,8 @@ export const generatePanUrl = async (req, res) => {
             return res.status(404).json({ success: false, message: "Retailer not found" });
         }
 
-        // Generate a unique customer reference ID
-        const customerRefId = `PAN${Date.now()}${Math.floor(Math.random() * 1000)}`;
+        // Generate a unique numeric-only customer reference ID (BharatPays requires numbers only)
+        const customerRefId = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
         // For now, no wallet deduction as per user feedback
         // amount: 0 since there's no deduction for now
