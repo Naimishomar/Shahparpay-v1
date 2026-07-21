@@ -83,21 +83,22 @@ const AEPS = () => {
     useEffect(() => {
         if (!merchantCode) return;
         setIsLoadingStatus(true);
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/merchant-status?merchantcode=${merchantCode}`)
+        let url = `${import.meta.env.VITE_BACKEND_URL}/api/aeps/merchant-status?merchantcode=${merchantCode}`;
+        if (selectedPipe) url += `&pipe=${selectedPipe}`;
+        
+        fetch(url)
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.data) {
                     setMerchantStatus(data.data);
-                    if (data.data.activePipes && data.data.activePipes.length > 0) {
+                    if (!selectedPipe && data.data.activePipes && data.data.activePipes.length > 0) {
                         setSelectedPipe(data.data.activePipes[0]);
-                    } else {
-                        setSelectedPipe('');
                     }
                 }
             })
             .catch(err => console.error("Failed to fetch merchant status", err))
             .finally(() => setIsLoadingStatus(false));
-    }, [merchantCode]);
+    }, [merchantCode, selectedPipe]);
 
     const refreshMerchantStatus = async () => {
         if (!merchantCode) return;
@@ -504,6 +505,31 @@ const AEPS = () => {
                             </div>
                         ) : (
                             <>
+                                {merchantStatus.activePipes && merchantStatus.activePipes.length > 0 && (
+                                    <div className="flex items-center gap-2 mr-2">
+                                        <select 
+                                            value={selectedPipe} 
+                                            onChange={(e) => setSelectedPipe(e.target.value)}
+                                            className="px-3 py-1.5 rounded-lg border border-border bg-background text-foreground text-sm font-semibold shadow-sm focus:outline-none focus:border-primary transition-colors cursor-pointer"
+                                            title="Select Active Pipe"
+                                        >
+                                            {merchantStatus.activePipes.map((pipe) => (
+                                                <option key={pipe} value={pipe}>
+                                                    {pipe.toUpperCase()}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                                
+                                <button 
+                                    onClick={() => setShowKycModal(true)} 
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 border border-emerald-200 transition-all text-sm font-semibold shadow-sm"
+                                    title="Add New Bank Pipe"
+                                >
+                                    <ShieldCheck size={16} />
+                                    {merchantStatus.isMerchantKycComplete ? "Add New Pipe" : "Complete eKYC"}
+                                </button>
                                 {!merchantStatus.isDailyAuthDoneToday ? (
                                     <button 
                                         onClick={() => setShowDailyAuthModal(true)} 
@@ -518,17 +544,6 @@ const AEPS = () => {
                                         <CheckCircle2 size={16} />
                                         Auth Done
                                     </div>
-                                )}
-
-                                {!merchantStatus.isMerchantKycComplete && (
-                                    <button 
-                                        onClick={() => setShowKycModal(true)} 
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 border border-emerald-200 transition-all text-sm font-semibold shadow-sm animate-pulse"
-                                        title="Complete Mandatory KYC"
-                                    >
-                                        <ShieldCheck size={16} />
-                                        Complete eKYC
-                                    </button>
                                 )}
                             </>
                         )}

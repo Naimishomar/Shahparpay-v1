@@ -107,6 +107,11 @@ const retailerSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
+    dailyAuthDates: {
+        type: Map,
+        of: Date,
+        default: {}
+    },
     isMerchantKycComplete: {
         type: Boolean,
         default: false

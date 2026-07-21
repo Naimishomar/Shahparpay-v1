@@ -1055,10 +1055,13 @@ export const verifyMerchantOtp = async (req, res) => {
         );
 
         if (response.data && response.data.status) {
-            // Update the Retailer's KYC completion status
+            // Update the Retailer's KYC completion status and add to activeAepsPipes
             await Retailer.findOneAndUpdate(
                 { retailerId: merchantcode },
-                { isMerchantKycComplete: true }
+                { 
+                    isMerchantKycComplete: true,
+                    $addToSet: { activeAepsPipes: pipe }
+                }
             );
         }
 
@@ -1224,10 +1227,13 @@ export const dailyAuth = async (req, res) => {
                     console.log(`[DailyAuth] Second auth attempt response:`, JSON.stringify(secondResult, null, 2));
                     
                     if (secondResult && secondResult.status) {
-                        // Update merchant's daily auth date
+                        // Update merchant's daily auth date for this specific pipe
+                        const updateData = { lastDailyAuthDate: new Date() };
+                        updateData[`dailyAuthDates.${pipe}`] = new Date();
+                        
                         await Retailer.findOneAndUpdate(
                             { retailerId: merchantcode },
-                            { lastDailyAuthDate: new Date() }
+                            updateData
                         );
                         
                         return res.status(200).json({ 
@@ -1276,10 +1282,13 @@ export const dailyAuth = async (req, res) => {
 
         // Handle successful login (no registration needed)
         if (resultData && resultData.status) {
-            // Update the Retailer's last daily auth date tracker
+            // Update merchant's daily auth date for this specific pipe
+            const updateData = { lastDailyAuthDate: new Date() };
+            updateData[`dailyAuthDates.${pipe}`] = new Date();
+            
             await Retailer.findOneAndUpdate(
                 { retailerId: merchantcode },
-                { lastDailyAuthDate: new Date() }
+                updateData
             );
             return res.status(200).json({ 
                 success: true, 
@@ -1396,23 +1405,31 @@ export const getMerchantStatus = async (req, res) => {
             });
         }
 
-        // Check if daily auth was done today
+        // Check if daily auth was done today for the specific pipe
         const today = new Date();
-        const lastAuth = retailer.lastDailyAuthDate;
         let isDailyAuthDoneToday = false;
+        
+        let activePipes = retailer.activeAepsPipes || [];
+        
+        // If no pipes are cached, or forceRefresh is true, fetch them now
+        if (activePipes.length === 0 || forceRefresh === 'true') {
+            activePipes = await syncMerchantPipes(merchantcode);
+        }
+
+        const pipeToCheck = req.query.pipe || (activePipes.length > 0 ? activePipes[0] : null);
+        let lastAuth = null;
+
+        if (pipeToCheck && retailer.dailyAuthDates && retailer.dailyAuthDates.get(pipeToCheck)) {
+            lastAuth = retailer.dailyAuthDates.get(pipeToCheck);
+        } else {
+            lastAuth = retailer.lastDailyAuthDate; // Fallback
+        }
         
         if (lastAuth) {
             isDailyAuthDoneToday = 
                 lastAuth.getDate() === today.getDate() &&
                 lastAuth.getMonth() === today.getMonth() &&
                 lastAuth.getFullYear() === today.getFullYear();
-        }
-
-        let activePipes = retailer.activeAepsPipes || [];
-        
-        // If no pipes are cached, or forceRefresh is true, fetch them now
-        if (activePipes.length === 0 || forceRefresh === 'true') {
-            activePipes = await syncMerchantPipes(merchantcode);
         }
 
         return res.status(200).json({
@@ -1495,6 +1512,13 @@ export const activateMerchant = async (req, res) => {
 
         if (response.data && response.data.status === true && response.data.response_code == "1") {
             // Check if we should update DB
+            await Retailer.findOneAndUpdate(
+                { retailerId: merchantcode },
+                { 
+                    isMerchantKycComplete: true,
+                    $addToSet: { activeAepsPipes: pipe }
+                }
+            );
             return res.status(200).json({
                 success: true,
                 message: response.data.message || "Merchant Activated Successfully",

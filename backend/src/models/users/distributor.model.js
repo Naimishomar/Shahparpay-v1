@@ -91,6 +91,22 @@ const distributorSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    lastDailyAuthDate: {
+        type: Date,
+        default: null
+    },
+    dailyAuthDates: {
+        type: Map,
+        of: Date,
+        default: {}
+    },
+    activeAepsPipes: [{
+        type: String
+    }],
+    lastPipeCheckDate: {
+        type: Date,
+        default: null
+    },
     role:{
         type: String,
         default: 'distributor'
