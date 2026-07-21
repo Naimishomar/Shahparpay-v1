@@ -907,7 +907,84 @@ export const sendMerchantOtp = async (req, res) => {
         const user = await Retailer.findOne({ retailerId: merchantcode }) || 
                      await Distributor.findOne({ distributorId: merchantcode });
         if (user && user.contactNumber) mobile = user.contactNumber;
+        
+        const selectedPipe = pipe || "bank3";
 
+        // ──────────────────────────────────────────────────────────────────────
+        // STEP 1: Check if merchant is already onboarded on this pipe.
+        //         If not, auto-onboard them first. This fixes "Merchantcode not 
+        //         found" when a merchant verified on Bank2 tries to add Bank3.
+        // ──────────────────────────────────────────────────────────────────────
+        try {
+            const checkToken = generatePaySprintToken();
+            const checkHeaders = {
+                'Token': checkToken,
+                'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+                'Content-Type': 'application/json'
+            };
+            const statusRes = await axios.post(
+                `${baseUrl}/service/onboard/onboard/getonboardstatus`,
+                { merchantcode, mobile, pipe: selectedPipe },
+                { headers: checkHeaders, validateStatus: () => true }
+            );
+            const statusData = statusRes.data;
+            console.log(`[SendOTP] Onboard status for pipe ${selectedPipe}:`, JSON.stringify(statusData));
+
+            const isAlreadyOnboarded = statusData?.response_code === 1 && statusData?.is_approved === 'Accepted';
+
+            if (!isAlreadyOnboarded) {
+                console.log(`[SendOTP] Merchant NOT onboarded on ${selectedPipe}. Auto-onboarding...`);
+
+                // Get user details for onboarding payload
+                const firstName = user?.firstName || user?.name?.split(' ')?.[0] || 'Agent';
+                const lastName = user?.lastName || user?.name?.split(' ')?.slice(1).join(' ') || 'User';
+                const emailId = user?.email || `${merchantcode}@shahparpay.in`;
+                const aadhaarNum = user?.aadhaarNumber || aadhaar;
+                const panNum = user?.panNumber || 'XXXXX0000X';
+
+                const onboardPayload = {
+                    merchantcode,
+                    submerchantid: merchantcode,
+                    mobile,
+                    mobilenumber: mobile,
+                    emailid: emailId,
+                    firstname: firstName,
+                    lastname: lastName,
+                    aadhaar: aadhaarNum,
+                    adhaarnumber: aadhaarNum,
+                    pannumber: panNum,
+                    latitude: latitude || "28.7041",
+                    longitude: longitude || "77.1025",
+                    pipe: selectedPipe
+                };
+
+                const onboardToken = generatePaySprintToken();
+                const onboardHeaders = {
+                    'Token': onboardToken,
+                    'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+                    'Content-Type': 'application/json'
+                };
+
+                console.log(`[SendOTP] Onboard payload for ${selectedPipe}:`, JSON.stringify(onboardPayload, null, 2));
+                const onboardRes = await axios.post(
+                    `${baseUrl}/service/onboard/onboard/onboardmerchant`,
+                    onboardPayload,
+                    { headers: onboardHeaders, validateStatus: () => true }
+                );
+                console.log(`[SendOTP] Onboard response for ${selectedPipe}:`, JSON.stringify(onboardRes.data, null, 2));
+                // Allow flow to continue — even if onboarding fails, the OTP call 
+                // may succeed if the merchant was already partially registered.
+            } else {
+                console.log(`[SendOTP] Merchant already onboarded on ${selectedPipe}. Proceeding to OTP.`);
+            }
+        } catch (onboardErr) {
+            console.warn(`[SendOTP] Warning: Could not check/perform auto-onboarding:`, onboardErr.message);
+            // Non-fatal — continue with the OTP attempt anyway
+        }
+
+        // ──────────────────────────────────────────────────────────────────────
+        // STEP 2: Send OTP for KYC
+        // ──────────────────────────────────────────────────────────────────────
         const payload = {
             merchantcode,
             submerchantid: merchantcode,
@@ -918,7 +995,7 @@ export const sendMerchantOtp = async (req, res) => {
             longitude: longitude || "77.1025",
             aadhaar,
             adhaarnumber: aadhaar,
-            pipe: pipe || "bank3"
+            pipe: selectedPipe
         };
 
         const token = generatePaySprintToken();
@@ -952,6 +1029,7 @@ export const sendMerchantOtp = async (req, res) => {
         });
     }
 };
+
 
 export const resendMerchantOtp = async (req, res) => {
     try {
