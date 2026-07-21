@@ -1183,41 +1183,19 @@ export const dailyAuth = async (req, res) => {
         const pipe = await getVerifiedPipe(merchantcode, actualMobile);
         console.log(`[DailyAuth] Using pipe: ${pipe}`);
 
-        let payload = {};
-        if (pipe === 'bank3') {
-            payload = {
-                merchantcode,
-                submerchantid: merchantcode,
-                accessmode: "SITE",
-                accessmodetype: "SITE",
-                latitude: latitude || "28.7041",
-                longitude: longitude || "77.1025",
-                mobilenumber: actualMobile || "9999999999",
-                aadhaar: aadhaarNumber,
-                adhaarnumber: aadhaarNumber,
-                data: pidData,
-                piddata: pidData, // Include both data and piddata as raw XML
-                referenceno: `AUTH${Date.now()}`,
-                ipaddress: req.ip ? (req.ip === '::1' ? '127.0.0.1' : req.ip.replace(/^::ffff:/, '')) : "127.0.0.1",
-                timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-                is_iris: "No",
-                pipe: "bank3"
-            };
-        } else {
-            payload = {
-                latitude: latitude || "28.7041",
-                longitude: longitude || "77.1025",
-                mobilenumber: actualMobile || "9999999999",
-                referenceno: `AUTH${Date.now()}`,
-                ipaddress: req.ip ? (req.ip === '::1' ? '127.0.0.1' : req.ip.replace(/^::ffff:/, '')) : "127.0.0.1",
-                adhaarnumber: aadhaarNumber,
-                accessmodetype: "SITE",
-                data: pidData,
-                submerchantid: merchantcode,
-                timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-                is_iris: "No"
-            };
-        }
+        const payload = {
+            latitude: String(latitude || "28.7041"),
+            longitude: String(longitude || "77.1025"),
+            mobilenumber: String(actualMobile || "9999999999"),
+            referenceno: `AUTH${Date.now()}`,
+            ipaddress: req.ip ? (req.ip === '::1' ? '127.0.0.1' : req.ip.replace(/^::ffff:/, '')) : "127.0.0.1",
+            adhaarnumber: String(aadhaarNumber),
+            accessmodetype: "SITE",
+            data: pidData,
+            submerchantid: String(merchantcode),
+            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            is_iris: "No"
+        };
         console.log("========== DAILY AUTH PAYLOAD ==========");
         console.log(JSON.stringify(payload, null, 2));
         console.log("========================================");
