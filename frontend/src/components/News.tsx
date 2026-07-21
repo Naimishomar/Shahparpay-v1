@@ -9,7 +9,7 @@ const News = ()=>{
     const currentTheme = theme === "system" ? systemTheme : theme;
     
     // Background colors corresponding to our light and dark theme background CSS variables
-    const gradientColor = currentTheme === "dark" ? "#020817" : "#EEEEEE";
+    const gradientColor = currentTheme === "dark" ? "#111111" : "#EEEEEE";
 
     return(
         <div className="w-full bg-primary/5 border-y border-primary/10 my-2 py-2 flex items-center shadow-inner overflow-hidden">
