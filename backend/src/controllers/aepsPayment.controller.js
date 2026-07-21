@@ -894,7 +894,7 @@ export const cashWithdrawalTxnStatus = async (req, res) => {
 
 export const sendMerchantOtp = async (req, res) => {
     try {
-        const { merchantcode, aadhaar, latitude, longitude } = req.body;
+        const { merchantcode, aadhaar, latitude, longitude, pipe } = req.body;
         if (!merchantcode || !aadhaar) {
             return res.status(400).json({ 
                 success: false, 
@@ -910,10 +910,15 @@ export const sendMerchantOtp = async (req, res) => {
 
         const payload = {
             merchantcode,
+            submerchantid: merchantcode,
+            mobile: mobile,
+            mobilenumber: mobile,
             accessmode: "SITE",
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025",
-            aadhaar
+            aadhaar,
+            adhaarnumber: aadhaar,
+            pipe: pipe || "bank3"
         };
 
         const token = generatePaySprintToken();
@@ -950,7 +955,7 @@ export const sendMerchantOtp = async (req, res) => {
 
 export const resendMerchantOtp = async (req, res) => {
     try {
-        const { merchantcode, aadhaar, latitude, longitude, stateresp, ekyc_id } = req.body;
+        const { merchantcode, aadhaar, latitude, longitude, stateresp, ekyc_id, pipe } = req.body;
         if (!merchantcode || !ekyc_id) {
             return res.status(400).json({ 
                 success: false, 
@@ -966,12 +971,17 @@ export const resendMerchantOtp = async (req, res) => {
 
         const payload = {
             merchantcode,
+            submerchantid: merchantcode,
+            mobile: mobile,
+            mobilenumber: mobile,
             aadhaar,
+            adhaarnumber: aadhaar,
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025",
             stateresp,
             ekyc_id,
-            accessmode: "SITE"
+            accessmode: "SITE",
+            pipe: pipe || "bank3"
         };
 
         const token = generatePaySprintToken();
@@ -1003,7 +1013,7 @@ export const resendMerchantOtp = async (req, res) => {
 
 export const verifyMerchantOtp = async (req, res) => {
     try {
-        const { merchantcode, aadhaar, latitude, longitude, otp, stateresp, ekyc_id, pidData } = req.body;
+        const { merchantcode, aadhaar, latitude, longitude, otp, stateresp, ekyc_id, pidData, pipe } = req.body;
         if (!merchantcode || !otp || !pidData) {
             return res.status(400).json({ 
                 success: false, 
@@ -1018,14 +1028,17 @@ export const verifyMerchantOtp = async (req, res) => {
 
         const payload = {
             merchantcode,
+            submerchantid: merchantcode,
             aadhaar,
+            adhaarnumber: aadhaar,
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025",
             otp,
             stateresp,
             ekyc_id,
             accessmode: "SITE",
-            piddata: encryptedPidData
+            piddata: encryptedPidData,
+            pipe: pipe || "bank3"
         };
 
         const token = generatePaySprintToken();
@@ -1088,19 +1101,34 @@ export const dailyAuth = async (req, res) => {
         const pipe = await getVerifiedPipe(merchantcode, actualMobile);
         console.log(`[DailyAuth] Using pipe: ${pipe}`);
 
-        const payload = {
-            latitude: latitude || "28.7041",
-            longitude: longitude || "77.1025",
-            mobilenumber: actualMobile || "9999999999",
-            referenceno: `AUTH${Date.now()}`,
-            ipaddress: req.ip ? (req.ip === '::1' ? '127.0.0.1' : req.ip.replace(/^::ffff:/, '')) : "127.0.0.1",
-            adhaarnumber: aadhaarNumber,
-            accessmodetype: "SITE",
-            data: pidData,
-            submerchantid: merchantcode,
-            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-            is_iris: "No"
-        };
+        let payload = {};
+        if (pipe === 'bank3') {
+            payload = {
+                merchantcode,
+                accessmode: "SITE",
+                latitude: latitude || "28.7041",
+                longitude: longitude || "77.1025",
+                aadhaar: aadhaarNumber,
+                data: pidData,
+                referenceno: `AUTH${Date.now()}`,
+                ipaddress: req.ip ? (req.ip === '::1' ? '127.0.0.1' : req.ip.replace(/^::ffff:/, '')) : "127.0.0.1",
+                timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            };
+        } else {
+            payload = {
+                latitude: latitude || "28.7041",
+                longitude: longitude || "77.1025",
+                mobilenumber: actualMobile || "9999999999",
+                referenceno: `AUTH${Date.now()}`,
+                ipaddress: req.ip ? (req.ip === '::1' ? '127.0.0.1' : req.ip.replace(/^::ffff:/, '')) : "127.0.0.1",
+                adhaarnumber: aadhaarNumber,
+                accessmodetype: "SITE",
+                data: pidData,
+                submerchantid: merchantcode,
+                timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                is_iris: "No"
+            };
+        }
         console.log("========== DAILY AUTH PAYLOAD ==========");
         console.log(JSON.stringify(payload, null, 2));
         console.log("========================================");
@@ -1115,7 +1143,7 @@ export const dailyAuth = async (req, res) => {
         };
 
         // First attempt: Try daily auth login
-        const authEndpoint = '/service/aeps/kyc/Twofactorkyc/authentication';
+        const authEndpoint = pipe === 'bank3' ? '/service/aeps/kyc/Twofactorkyc/auth_login' : '/service/aeps/kyc/Twofactorkyc/authentication';
         let response = await axios.post(
             `${baseUrl}${authEndpoint}`, 
             { body: encryptedData }, 
