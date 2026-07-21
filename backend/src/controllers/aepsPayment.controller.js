@@ -1195,7 +1195,8 @@ export const dailyAuth = async (req, res) => {
                 mobilenumber: actualMobile || "9999999999",
                 aadhaar: aadhaarNumber,
                 adhaarnumber: aadhaarNumber,
-                piddata: encryptPayload(pidData), // Bank 3 uses encrypted piddata
+                data: pidData,
+                piddata: pidData, // Include both data and piddata as raw XML
                 referenceno: `AUTH${Date.now()}`,
                 ipaddress: req.ip ? (req.ip === '::1' ? '127.0.0.1' : req.ip.replace(/^::ffff:/, '')) : "127.0.0.1",
                 timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
@@ -1232,11 +1233,10 @@ export const dailyAuth = async (req, res) => {
 
         // First attempt: Try daily auth login
         const authEndpoint = pipe === 'bank3' ? '/service/aeps/kyc/Twofactorkyc/auth_login' : '/service/aeps/kyc/Twofactorkyc/authentication';
-        const postData = pipe === 'bank3' ? payload : { body: encryptedData };
 
         let response = await axios.post(
             `${baseUrl}${authEndpoint}`, 
-            postData, 
+            { body: encryptedData }, 
             { headers, validateStatus: () => true }
         );
 
@@ -1277,11 +1277,10 @@ export const dailyAuth = async (req, res) => {
             
             try {
                 const regEndpoint = pipe === 'bank3' ? '/service/aeps/kyc/Twofactorkyc/register_agent' : '/service/aeps/kyc/Twofactorkyc/registration';
-                const regPostData = pipe === 'bank3' ? regPayload : { body: regEncryptedData };
 
                 const regResponse = await axios.post(
                     `${baseUrl}${regEndpoint}`, 
-                    regPostData, 
+                    { body: regEncryptedData }, 
                     { headers: regHeaders, validateStatus: () => true }
                 );
                 
@@ -1305,11 +1304,10 @@ export const dailyAuth = async (req, res) => {
                     // Use a NEW auth payload (with new AUTH reference, not REG)
                     const secondPayload = { ...payload, referenceno: `AUTH${Date.now()}` };
                     const secondEncrypted = encryptPayload(JSON.stringify(secondPayload));
-                    const secondPostData = pipe === 'bank3' ? secondPayload : { body: secondEncrypted };
                     
                     const secondResponse = await axios.post(
                         `${baseUrl}${authEndpoint}`,
-                        secondPostData,
+                        { body: secondEncrypted },
                         { headers: secondHeaders, validateStatus: () => true }
                     );
                     
