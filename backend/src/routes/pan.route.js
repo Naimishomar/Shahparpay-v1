@@ -1,6 +1,6 @@
 import express from 'express';
 import { generatePanUrl, panCallback } from '../controllers/pan.controller.js';
-import { authMiddlewares } from '../middleware/auth.middleware.js';
+import { authMiddlewares } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
