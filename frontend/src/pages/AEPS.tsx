@@ -505,23 +505,6 @@ const AEPS = () => {
                             </div>
                         ) : (
                             <>
-                                {merchantStatus.activePipes && merchantStatus.activePipes.length > 0 && (
-                                    <div className="flex items-center gap-2 mr-2">
-                                        <select 
-                                            value={selectedPipe} 
-                                            onChange={(e) => setSelectedPipe(e.target.value)}
-                                            className="px-3 py-1.5 rounded-lg border border-border bg-background text-foreground text-sm font-semibold shadow-sm focus:outline-none focus:border-primary transition-colors cursor-pointer"
-                                            title="Select Active Pipe"
-                                        >
-                                            {merchantStatus.activePipes.map((pipe) => (
-                                                <option key={pipe} value={pipe}>
-                                                    {pipe.toUpperCase()}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                )}
-                                
                                 <button 
                                     onClick={() => setShowKycModal(true)} 
                                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 border border-emerald-200 transition-all text-sm font-semibold shadow-sm"
