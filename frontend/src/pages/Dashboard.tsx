@@ -1,4 +1,4 @@
-import { Banknote, Smartphone, Fingerprint, Building2, Receipt, Wallet, IndianRupee, Users } from "lucide-react";
+import { Banknote, Smartphone, Fingerprint, Building2, Receipt, Wallet, IndianRupee, Users, CreditCard } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -277,6 +277,13 @@ const Dashboard = () => {
                             </div>
                             <h4 className="font-bold text-lg mb-1">Lead Generation</h4>
                             <p className="text-xs text-muted-foreground">Credit Cards & Loans</p>
+                        </div>
+                        <div onClick={() => navigate('/pan')} className="p-6 rounded-2xl bg-gradient-to-br from-rose-500/10 to-rose-600/10 border border-rose-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-rose-500/20 transition-all hover:scale-105 group">
+                            <div className="w-16 h-16 rounded-full bg-rose-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <CreditCard className="text-rose-500" size={32} />
+                            </div>
+                            <h4 className="font-bold text-lg mb-1">PAN Card</h4>
+                            <p className="text-xs text-muted-foreground">Apply NSDL PAN</p>
                         </div>
                     </div>
                 </div>

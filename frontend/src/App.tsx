@@ -17,6 +17,7 @@ import AepsReport from "./pages/AepsReport"
 import PayoutReport from "./pages/PayoutReport"
 import UpiReport from "./pages/UpiReport"
 import LeadGeneration from "./pages/LeadGeneration"
+import PanCard from "./pages/PanCard"
 
 // New Pages
 import Login from "./pages/Login"
@@ -54,6 +55,7 @@ function App() {
         <Route path="bbps" element={<BBPS/>}/>
         <Route path="upi-payments" element={<UPI_Payments/>}/>
         <Route path="lead-generation" element={<LeadGeneration/>}/>
+        <Route path="pan" element={<PanCard/>}/>
         
         {/* Reports Routes */}
         <Route path="reports/ledger" element={<LedgerReport/>}/>
