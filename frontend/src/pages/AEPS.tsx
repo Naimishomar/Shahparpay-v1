@@ -917,6 +917,7 @@ const AEPS = () => {
                                             <thead className="bg-gray-50">
                                                 <tr>
                                                     <th className="p-2 border text-left font-semibold text-slate-700">Date</th>
+                                                    <th className="p-2 border text-left font-semibold text-slate-700">Narration</th>
                                                     <th className="p-2 border text-left font-semibold text-slate-700">Type</th>
                                                     <th className="p-2 border text-right font-semibold text-slate-700">Amount</th>
                                                 </tr>
@@ -924,7 +925,8 @@ const AEPS = () => {
                                             <tbody>
                                                 {receiptData.ministatementlist.map((item: any, i: number) => (
                                                     <tr key={i} className="border-b">
-                                                        <td className="p-2 border text-slate-600 whitespace-nowrap">{item.date}</td>
+                                                        <td className="p-2 border text-slate-600 whitespace-nowrap">{item.date || 'N/A'}</td>
+                                                        <td className="p-2 border text-slate-600 text-[10px]">{item.narration || '-'}</td>
                                                         <td className={`p-2 border font-bold ${item.txnType === 'Cr' ? 'text-emerald-600' : 'text-rose-600'}`}>{item.txnType}</td>
                                                         <td className="p-2 border text-right text-slate-600">{item.amount}</td>
                                                     </tr>

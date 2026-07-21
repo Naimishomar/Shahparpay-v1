@@ -672,6 +672,32 @@ export const miniStatement = async (req, res) => {
         );
 
         if (response.data && response.data.status) {
+            // Normalize mini statement entries - PaySprint returns inconsistent field names
+            // across pipes. Some return narration in 'date' field and date in 'narration'.
+            let ministatement = response.data.ministatement || response.data.data?.ministatement || [];
+            if (Array.isArray(ministatement)) {
+                ministatement = ministatement.map(entry => {
+                    let dateVal = entry.date || entry.txnDate || '';
+                    let narration = entry.narration || entry.description || '';
+                    const txnType = entry.txnType || entry.type || '';
+                    const amount = entry.amount || entry.txnAmount || '0';
+
+                    // Detect if 'date' contains narration text (e.g., 'RS CW 61...')
+                    // A valid date usually contains '/' or '-' with digits
+                    const looksLikeDate = /^\d{1,4}[\/-]\d{1,2}[\/-]\d{1,4}/.test(dateVal);
+                    if (!looksLikeDate && dateVal) {
+                        // The 'date' field actually has narration, swap them
+                        const temp = narration;
+                        narration = dateVal;
+                        dateVal = temp || 'N/A';
+                    }
+                    if (!dateVal) dateVal = 'N/A';
+
+                    return { date: dateVal, narration, txnType, amount };
+                });
+            }
+            response.data.ministatement = ministatement;
+
             return res.status(200).json({ 
                 success: true, 
                 message: "Mini Statement fetched", 
@@ -1161,14 +1187,19 @@ export const dailyAuth = async (req, res) => {
         if (pipe === 'bank3') {
             payload = {
                 merchantcode,
+                submerchantid: merchantcode,
                 accessmode: "SITE",
+                accessmodetype: "SITE",
                 latitude: latitude || "28.7041",
                 longitude: longitude || "77.1025",
+                mobilenumber: actualMobile || "9999999999",
                 aadhaar: aadhaarNumber,
+                adhaarnumber: aadhaarNumber,
                 data: pidData,
                 referenceno: `AUTH${Date.now()}`,
                 ipaddress: req.ip ? (req.ip === '::1' ? '127.0.0.1' : req.ip.replace(/^::ffff:/, '')) : "127.0.0.1",
                 timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                is_iris: "No"
             };
         } else {
             payload = {
