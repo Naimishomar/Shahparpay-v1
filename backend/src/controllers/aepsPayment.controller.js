@@ -1328,11 +1328,12 @@ export const dailyAuth = async (req, res) => {
                     });
                 } else {
                     // Registration failed for other reasons
+                    const isDeviceError = regData?.message?.toLowerCase().includes('device') || regData?.message?.toLowerCase().includes('mapped');
                     return res.status(400).json({ 
                         success: false, 
-                        message: regData?.message || "2FA Registration Failed. Please complete Web Onboarding.", 
+                        message: regData?.message || "2FA Registration Failed.", 
                         data: regData,
-                        needsWebOnboarding: true,
+                        needsWebOnboarding: !isDeviceError,
                         pipe: pipe
                     });
                 }
