@@ -2,19 +2,15 @@ import Transaction from "../models/transaction.model.js";
 import Retailer from "../models/users/retailer.model.js";
 import axios from "axios";
 
-// @desc Generate PAN Card URL from BharatPays
-// @route POST /api/pan/generate-url
+// @desc Register for UTI PSA
+// @route POST /api/pan/register-psa
 // @access Private (Retailer)
-export const generatePanUrl = async (req, res) => {
+export const registerPsa = async (req, res) => {
     try {
-        const { title, first_name, middle_name, last_name, gender, mode, email_id } = req.body;
+        const { shop_name, name, state, district, address, pincode, mobile, email, dob, pan_no, aadhar_no } = req.body;
 
-        if (!title || !first_name || !last_name || !gender || !mode) {
+        if (!shop_name || !name || !state || !district || !address || !pincode || !mobile || !email || !dob || !pan_no || !aadhar_no) {
             return res.status(400).json({ success: false, message: "Missing required fields" });
-        }
-
-        if (mode === 'E' && !email_id) {
-            return res.status(400).json({ success: false, message: "Email ID is required for Electronic PAN" });
         }
 
         const retailer = await Retailer.findById(req.user.id);
@@ -22,112 +18,109 @@ export const generatePanUrl = async (req, res) => {
             return res.status(404).json({ success: false, message: "Retailer not found" });
         }
 
-        // Generate a unique numeric-only customer reference ID (BharatPays requires numbers only)
+        // Generate a unique numeric-only customer reference ID
         const customerRefId = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
-        // For now, no wallet deduction as per user feedback
-        // amount: 0 since there's no deduction for now
         const transaction = new Transaction({
             transactionId: customerRefId,
             userId: retailer._id,
-            type: 'PAN_CARD',
+            type: 'PAN_CARD', // Reusing the same enum for UTI PAN
             amount: 0,
             status: 'PENDING',
             metadata: {
-                title,
-                first_name,
-                middle_name,
-                last_name,
-                gender,
-                mode,
-                email_id,
-                apiProvider: 'BharatPays'
+                shop_name,
+                name,
+                mobile,
+                email,
+                pan_no,
+                aadhar_no,
+                apiProvider: 'BharatPays_UTI_PSA'
             }
         });
         await transaction.save();
 
         const token = process.env.BHARATPAYS_TOKEN;
-        const redirectUrl = req.body.redirect_url || `${process.env.FRONTEND_URL}/dashboard`;
+        
+        console.log(`[UTI PSA Registration] Calling BharatPays API for Ref: ${customerRefId}`);
 
-        const queryParams = new URLSearchParams({
-            customer_ref_id: customerRefId,
-            title,
-            first_name,
-            middle_name: middle_name || '',
-            last_name,
-            gender,
-            mode,
-            redirect_url: redirectUrl,
-            token
+        // Format as FormData since the PHP example uses standard cURL POST fields which translates to application/x-www-form-urlencoded or multipart/form-data. We will use x-www-form-urlencoded format for axios, or send JSON if BharatPays accepts it. Usually they accept FormData.
+        const formData = new URLSearchParams();
+        formData.append('shop_name', shop_name);
+        formData.append('name', name);
+        formData.append('state', state);
+        formData.append('district', district);
+        formData.append('address', address);
+        formData.append('pincode', pincode);
+        formData.append('mobile', mobile);
+        formData.append('email', email);
+        formData.append('dob', dob);
+        formData.append('pan_no', pan_no);
+        formData.append('aadhar_no', aadhar_no);
+        formData.append('ref_id', customerRefId);
+
+        const response = await axios.post("https://api.bharatpays.in/api/psa/register", formData.toString(), {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
         });
 
-        if (mode === 'E') {
-            queryParams.append('email_id', email_id);
-        }
-
-        const bharatPaysUrl = `https://api.bharatpays.in/api/nsdl?${queryParams.toString()}`;
-
-        console.log(`[PAN URL Generation] Calling BharatPays API for Ref: ${customerRefId}`);
-
-        const response = await axios.get(bharatPaysUrl);
         const data = response.data;
 
         if (data && data.success === 1 && data.data) {
+            // Update transaction with psa_id
+            transaction.metadata.psa_id = data.data.psa_id;
+            transaction.status = data.data.status; // usually PENDING or APPROVED
+            await transaction.save();
+
             return res.status(200).json({
                 success: true,
-                message: "URL Generated Successfully",
-                data: {
-                    response_url: data.data.response_url,
-                    encdata: data.data.encdata,
-                    customer_ref_id: customerRefId
-                }
+                message: data.message,
+                data: data.data
             });
         } else {
-            console.error(`[PAN URL Generation] Failed:`, data);
+            console.error(`[UTI PSA Registration] Failed:`, data);
             transaction.status = 'FAILED';
             await transaction.save();
             return res.status(400).json({
                 success: false,
-                message: data?.message || "Failed to Generate URL from Service Provider"
+                message: data?.message || "Failed to register PSA"
             });
         }
 
     } catch (error) {
-        console.error("Error generating PAN URL:", error);
-        res.status(500).json({ success: false, message: "Internal server error" });
+        console.error("Error registering PSA:", error);
+        res.status(500).json({ success: false, message: error.response?.data?.message || "Internal server error" });
     }
 };
 
-// @desc Webhook callback from BharatPays
+// @desc Webhook callback from BharatPays for PSA
 // @route POST /api/pan/callback
 // @access Public
 export const panCallback = async (req, res) => {
     try {
-        const { status, customer_ref_id, type } = req.body;
-        console.log(`[PAN Callback] Received webhook:`, req.body);
+        const { success, message, data } = req.body;
+        console.log(`[UTI PSA Callback] Received webhook:`, req.body);
 
-        if (!customer_ref_id) {
-            return res.status(400).json({ success: false, message: "Missing customer_ref_id" });
+        if (!data || !data.ref_id) {
+            return res.status(400).json({ success: false, message: "Missing ref_id" });
         }
 
-        const transaction = await Transaction.findOne({ transactionId: customer_ref_id, type: 'PAN_CARD' });
+        const transaction = await Transaction.findOne({ transactionId: data.ref_id, type: 'PAN_CARD' });
 
         if (!transaction) {
             return res.status(404).json({ success: false, message: "Transaction not found" });
         }
 
-        if (status === "SUCCESS") {
-            transaction.status = 'SUCCESS';
-        } else if (status === "FAILED") {
-            transaction.status = 'FAILED';
-            // No refund logic for now as per user feedback
-        }
-
+        transaction.status = data.status;
+        transaction.metadata.remark = data.remark;
+        transaction.metadata.updated_at = data.updated_at;
+        
         await transaction.save();
 
         return res.status(200).json({ success: true, message: "Callback processed successfully" });
     } catch (error) {
-        console.error("Error processing PAN callback:", error);
+        console.error("Error processing PSA callback:", error);
         res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
