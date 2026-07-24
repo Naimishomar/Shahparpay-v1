@@ -43,27 +43,25 @@ export const registerPsa = async (req, res) => {
         
         console.log(`[UTI PSA Registration] Calling BharatPays API for Ref: ${customerRefId}`);
 
-        // The PHP example uses an array for CURLOPT_POSTFIELDS which usually implies multipart/form-data.
-        // We can pass a plain object to axios and use multipart/form-data header.
-        const payload = {
-            shop_name,
-            name,
-            state,
-            district,
-            address,
-            pincode,
-            mobile,
-            email,
-            dob,
-            pan_no,
-            aadhar_no,
-            ref_id: customerRefId
-        };
+        // Include token in body & query string in case BharatPays PHP script expects it there
+        const formData = new FormData();
+        formData.append('token', token);
+        formData.append('shop_name', shop_name);
+        formData.append('name', name);
+        formData.append('state', state);
+        formData.append('district', district);
+        formData.append('address', address);
+        formData.append('pincode', pincode);
+        formData.append('mobile', mobile);
+        formData.append('email', email);
+        formData.append('dob', dob);
+        formData.append('pan_no', pan_no);
+        formData.append('aadhar_no', aadhar_no);
+        formData.append('ref_id', customerRefId);
 
-        const response = await axios.post("https://api.bharatpays.in/api/psa/register", payload, {
+        const response = await axios.post(`https://api.bharatpays.in/api/psa/register?token=${token}`, formData, {
             headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'multipart/form-data'
+                'Authorization': `Bearer ${token}`
             }
         });
 
@@ -81,7 +79,7 @@ export const registerPsa = async (req, res) => {
                 data: data.data
             });
         } else {
-            console.error(`[UTI PSA Registration] Failed:`, data);
+            console.error(`[UTI PSA Registration] Failed response:`, data);
             transaction.status = 'FAILED';
             await transaction.save();
             return res.status(400).json({
@@ -91,8 +89,22 @@ export const registerPsa = async (req, res) => {
         }
 
     } catch (error) {
-        console.error("Error registering PSA:", error);
-        res.status(500).json({ success: false, message: error.response?.data?.message || "Internal server error" });
+        console.error("Error registering PSA:", error?.response?.data || error.message);
+        
+        let errMsg = "Failed to register PSA from provider";
+        if (error.response?.data) {
+            if (typeof error.response.data === 'string') {
+                errMsg = error.response.data.replace(/<[^>]*>?/gm, '').trim() || errMsg;
+            } else if (error.response.data.message) {
+                errMsg = error.response.data.message;
+            }
+        }
+
+        res.status(500).json({ 
+            success: false, 
+            message: errMsg,
+            details: error.response?.data || error.message 
+        });
     }
 };
 
