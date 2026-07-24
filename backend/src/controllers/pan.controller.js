@@ -43,25 +43,27 @@ export const registerPsa = async (req, res) => {
         
         console.log(`[UTI PSA Registration] Calling BharatPays API for Ref: ${customerRefId}`);
 
-        // Format as FormData since the PHP example uses standard cURL POST fields which translates to application/x-www-form-urlencoded or multipart/form-data. We will use x-www-form-urlencoded format for axios, or send JSON if BharatPays accepts it. Usually they accept FormData.
-        const formData = new URLSearchParams();
-        formData.append('shop_name', shop_name);
-        formData.append('name', name);
-        formData.append('state', state);
-        formData.append('district', district);
-        formData.append('address', address);
-        formData.append('pincode', pincode);
-        formData.append('mobile', mobile);
-        formData.append('email', email);
-        formData.append('dob', dob);
-        formData.append('pan_no', pan_no);
-        formData.append('aadhar_no', aadhar_no);
-        formData.append('ref_id', customerRefId);
+        // The PHP example uses an array for CURLOPT_POSTFIELDS which usually implies multipart/form-data.
+        // We can pass a plain object to axios and use multipart/form-data header.
+        const payload = {
+            shop_name,
+            name,
+            state,
+            district,
+            address,
+            pincode,
+            mobile,
+            email,
+            dob,
+            pan_no,
+            aadhar_no,
+            ref_id: customerRefId
+        };
 
-        const response = await axios.post("https://api.bharatpays.in/api/psa/register", formData.toString(), {
+        const response = await axios.post("https://api.bharatpays.in/api/psa/register", payload, {
             headers: {
                 'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/x-www-form-urlencoded'
+                'Content-Type': 'multipart/form-data'
             }
         });
 
