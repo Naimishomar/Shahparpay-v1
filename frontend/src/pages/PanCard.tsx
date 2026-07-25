@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CreditCard, User, Mail, ChevronRight, Loader2, Store, MapPin, Phone, CheckCircle2, Info } from 'lucide-react';
+import { CreditCard, User, Mail, ChevronRight, Loader2, Store, MapPin, Phone, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -265,7 +265,7 @@ const PanCard: React.FC = () => {
                                             value={formData.state_id}
                                             onChange={handleChange}
                                             className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                                            placeholder="Numeric State ID (e.g. 13)"
+                                            placeholder="State ID (e.g. 13)"
                                             required
                                         />
                                     </div>
@@ -277,7 +277,7 @@ const PanCard: React.FC = () => {
                                             value={formData.district_id}
                                             onChange={handleChange}
                                             className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                                            placeholder="Numeric District ID (e.g. 260)"
+                                            placeholder="District ID (e.g. 260)"
                                             required
                                         />
                                     </div>
@@ -309,7 +309,7 @@ const PanCard: React.FC = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Address Line 2 (Optional)</label>
+                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Address Line 2</label>
                                         <input
                                             type="text"
                                             name="address_line_2"
@@ -317,6 +317,7 @@ const PanCard: React.FC = () => {
                                             onChange={handleChange}
                                             className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
                                             placeholder="Landmark / Locality"
+                                            required
                                         />
                                     </div>
                                 </div>

@@ -18,10 +18,10 @@ export const registerBiometricPsa = async (req, res) => {
             state_id,
             location,
             address_line_1,
-            address_line_2 = "",
-            address_line_3 = "",
-            address_line_4 = ""
+            address_line_2
         } = req.body;
+
+        const addr2 = address_line_2 || address_line_1;
 
         if (!name || !contact_person || !email || !mobile || !pin || !pan_no || !district_id || !state_id || !location || !address_line_1) {
             return res.status(400).json({ success: false, message: "Missing required fields for Biometric PSA registration" });
@@ -32,8 +32,8 @@ export const registerBiometricPsa = async (req, res) => {
             return res.status(404).json({ success: false, message: "Retailer not found" });
         }
 
-        // Generate unique reference ID
-        const customerRefId = `BIOPSA${Date.now()}${Math.floor(Math.random() * 1000)}`;
+        // Ref ID MUST be numeric only and max 20 chars
+        const customerRefId = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
         const transaction = new Transaction({
             transactionId: customerRefId,
@@ -69,9 +69,9 @@ export const registerBiometricPsa = async (req, res) => {
             state_id,
             location,
             address_line_1,
-            address_line_2,
-            address_line_3,
-            address_line_4,
+            address_line_2: addr2,
+            address_line_3: '',
+            address_line_4: '',
             ref_id: customerRefId
         });
 
@@ -101,9 +101,16 @@ export const registerBiometricPsa = async (req, res) => {
         } else {
             transaction.status = 'FAILED';
             await transaction.save();
+            
+            // Clean up error message if HTML tags returned by PHP validator
+            let cleanMsg = data?.message || "Failed to register Biometric PSA Agent";
+            if (typeof cleanMsg === 'string') {
+                cleanMsg = cleanMsg.replace(/<[^>]*>?/gm, '').replace(/\n/g, ' ').trim();
+            }
+
             return res.status(400).json({
                 success: false,
-                message: data?.message || "Failed to register Biometric PSA Agent"
+                message: cleanMsg
             });
         }
 
