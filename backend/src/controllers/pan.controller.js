@@ -19,7 +19,7 @@ export const getMyPsaStatus = async (req, res) => {
             'metadata.psa_id': { $exists: true, $ne: null }
         }).sort({ createdAt: -1 });
 
-        if (!existingTxn) {
+        if (!existingTxn || !existingTxn.metadata?.psa_id) {
             return res.status(200).json({
                 success: true,
                 hasPsa: false,
@@ -84,7 +84,7 @@ export const registerBiometricPsa = async (req, res) => {
             'metadata.psa_id': { $exists: true, $ne: null }
         });
 
-        if (existingTxn) {
+        if (existingTxn && existingTxn.metadata?.psa_id) {
             return res.status(200).json({
                 success: true,
                 message: `You are already registered with PSA ID: ${existingTxn.metadata.psa_id}`,
@@ -97,24 +97,6 @@ export const registerBiometricPsa = async (req, res) => {
 
         // Ref ID MUST be numeric only and max 20 chars
         const customerRefId = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
-
-        const transaction = new Transaction({
-            transactionId: customerRefId,
-            userId: retailer._id,
-            type: 'PAN_CARD',
-            amount: 0,
-            status: 'PENDING',
-            metadata: {
-                name,
-                contact_person,
-                mobile,
-                email,
-                pan_no,
-                location,
-                apiProvider: 'BharatPays_Biometric_PSA'
-            }
-        });
-        await transaction.save();
 
         const token = process.env.BHARATPAYS_TOKEN;
         
@@ -152,8 +134,26 @@ export const registerBiometricPsa = async (req, res) => {
         const data = response.data;
 
         if (data && data.success === 1) {
-            transaction.metadata.psa_id = data.data?.psa_id;
-            transaction.status = data.data?.status || 'PENDING';
+            const psaId = data.data?.psa_id;
+            const psaStatus = data.data?.status || 'PENDING';
+
+            const transaction = new Transaction({
+                transactionId: customerRefId,
+                userId: retailer._id,
+                type: 'PAN_CARD',
+                amount: 0,
+                status: psaStatus,
+                metadata: {
+                    psa_id: psaId,
+                    name,
+                    contact_person,
+                    mobile,
+                    email,
+                    pan_no,
+                    location,
+                    apiProvider: 'BharatPays_Biometric_PSA'
+                }
+            });
             await transaction.save();
 
             return res.status(200).json({
@@ -162,9 +162,6 @@ export const registerBiometricPsa = async (req, res) => {
                 data: data.data
             });
         } else {
-            transaction.status = 'FAILED';
-            await transaction.save();
-            
             let cleanMsg = data?.message || "Failed to register Biometric PSA Agent";
             if (typeof cleanMsg === 'string') {
                 cleanMsg = cleanMsg.replace(/<[^>]*>?/gm, '').replace(/\n/g, ' ').trim();
@@ -244,7 +241,11 @@ export const buyPsaCoupons = async (req, res) => {
 
         if (data && data.success === 1) {
             transaction.status = data.data?.status || 'SUCCESS';
-            transaction.metadata.order_id = data.data?.order_id;
+            transaction.metadata = {
+                ...transaction.metadata,
+                order_id: data.data?.order_id
+            };
+            transaction.markModified('metadata');
             await transaction.save();
 
             return res.status(200).json({
@@ -290,7 +291,11 @@ export const panCallback = async (req, res) => {
 
             if (transaction) {
                 transaction.status = data.status || transaction.status;
-                transaction.metadata.callback_data = data;
+                transaction.metadata = {
+                    ...transaction.metadata,
+                    callback_data: data
+                };
+                transaction.markModified('metadata');
                 await transaction.save();
             }
         }
