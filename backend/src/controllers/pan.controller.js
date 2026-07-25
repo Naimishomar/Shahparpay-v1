@@ -46,7 +46,6 @@ export const registerPsa = async (req, res) => {
 
         // Include token in body & query string in case BharatPays PHP script expects it there
         const formData = new FormData();
-        formData.append('token', token);
         formData.append('shop_name', shop_name);
         formData.append('name', name);
         formData.append('state', state);
@@ -60,12 +59,35 @@ export const registerPsa = async (req, res) => {
         formData.append('aadhar_no', aadhar_no);
         formData.append('ref_id', customerRefId);
 
+        console.log({
+            shop_name,
+            name,
+            state,
+            district,
+            address,
+            pincode,
+            mobile,
+            email,
+            dob,
+            pan_no,
+            aadhar_no,
+            ref_id: customerRefId
+        });
+        console.log(formData.getHeaders());
+
         const response = await axios.post(`https://api.bharatpays.in/api/psa/register`, formData, {
             headers: {
                 ...formData.getHeaders(),
                 'Authorization': `Bearer ${token}`
-            }
+            },
+            validateStatus: () => true,
+            responseType: "text"
         });
+
+        console.log(token);
+        console.log(response.status);
+        console.log(response.headers);
+        console.log(response.data);
 
         const data = response.data;
 
