@@ -92,8 +92,8 @@ export const registerPsa = async (req, res) => {
 
     } catch (error) {
         console.log("Status:", error.response?.status);
-        console.log("Headers:", error.response?.headers);
-        console.log("Body:", error.response?.data);
+        console.log("Body Type:", typeof error.response?.data);
+        console.log("Body:\n", String(error.response?.data));
         
         let errMsg = "Failed to register PSA from provider";
         if (error.response?.data) {
