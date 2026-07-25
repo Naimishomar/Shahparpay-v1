@@ -254,7 +254,12 @@ const PanCard: React.FC = () => {
                                                 type="date"
                                                 name="dob"
                                                 value={formData.dob}
-                                                onChange={handleChange}
+                                                onChange={(e) =>
+                                                    setFormData((prev) => ({
+                                                        ...prev,
+                                                        dob: e.target.value, // YYYY-MM-DD
+                                                    }))
+                                                }
                                                 className="w-full pl-10 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
                                                 required
                                             />

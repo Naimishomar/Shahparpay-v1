@@ -1,6 +1,7 @@
 import Transaction from "../models/transaction.model.js";
 import Retailer from "../models/users/retailer.model.js";
 import axios from "axios";
+import FormData from "form-data";
 
 // @desc Register for UTI PSA
 // @route POST /api/pan/register-psa
@@ -59,8 +60,9 @@ export const registerPsa = async (req, res) => {
         formData.append('aadhar_no', aadhar_no);
         formData.append('ref_id', customerRefId);
 
-        const response = await axios.post(`https://api.bharatpays.in/api/psa/register?token=${token}`, formData, {
+        const response = await axios.post(`https://api.bharatpays.in/api/psa/register`, formData, {
             headers: {
+                ...formData.getHeaders(),
                 'Authorization': `Bearer ${token}`
             }
         });
@@ -89,7 +91,9 @@ export const registerPsa = async (req, res) => {
         }
 
     } catch (error) {
-        console.error("Error registering PSA:", error?.response?.data || error.message);
+        console.log("Status:", error.response?.status);
+        console.log("Headers:", error.response?.headers);
+        console.log("Body:", error.response?.data);
         
         let errMsg = "Failed to register PSA from provider";
         if (error.response?.data) {
