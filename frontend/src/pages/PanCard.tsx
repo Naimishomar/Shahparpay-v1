@@ -21,6 +21,9 @@ const PanCard: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [couponLoading, setCouponLoading] = useState(false);
     const [couponAmount, setCouponAmount] = useState('107');
+    const [syncLoading, setSyncLoading] = useState(false);
+    const [manualStatus, setManualStatus] = useState('REJECTED');
+    const [manualPsaId, setManualPsaId] = useState('');
 
     const [formData, setFormData] = useState({
         name: '',
@@ -157,6 +160,29 @@ const PanCard: React.FC = () => {
         }
     };
 
+    const handleSyncStatus = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!manualPsaId.trim()) return toast.error("Enter the PSA ID to sync");
+        setSyncLoading(true);
+        try {
+            const res = await axios.patch(
+                `${import.meta.env.VITE_BACKEND_URL}/api/pan/sync-psa-status`,
+                { psa_id: manualPsaId.trim(), status: manualStatus },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            if (res.data.success) {
+                toast.success(`Status synced to ${manualStatus} successfully!`);
+                fetchPsaStatus();
+            } else {
+                toast.error(res.data.message || "Failed to sync status");
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Error syncing status");
+        } finally {
+            setSyncLoading(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-background p-4 lg:p-8">
             <div className="max-w-6xl mx-auto space-y-6">
@@ -288,8 +314,42 @@ const PanCard: React.FC = () => {
                                         Your registration request with PSA ID <strong>{existingPsa.psa_id}</strong> is currently being verified and approved by UTI Interservices & BharatPays.
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                        Once your status changes to <strong>APPROVED</strong>, you will be able to purchase PAN application coupons/tokens directly from this page to process biometric customer PAN card applications.
+                                        Once your status changes to <strong>APPROVED</strong>, you will be able to purchase PAN application coupons/tokens directly from this page.
                                     </p>
+
+                                    {/* Manual Status Sync — for cases where BharatPays webhook failed */}
+                                    <div className="pt-4 border-t border-yellow-500/20 space-y-3">
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Got a status update from BharatPays but it didn't reflect here?</p>
+                                        <form onSubmit={handleSyncStatus} className="flex flex-col gap-3">
+                                            <div className="flex gap-3">
+                                                <input
+                                                    type="text"
+                                                    value={manualPsaId}
+                                                    onChange={(e) => setManualPsaId(e.target.value)}
+                                                    className="flex-1 px-3 py-2 bg-background border border-border/50 rounded-xl text-sm text-foreground font-mono focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                                                    placeholder={`PSA ID (e.g. ${existingPsa.psa_id || 'ANNECHM-808'})`}
+                                                    defaultValue={existingPsa.psa_id || ''}
+                                                />
+                                                <select
+                                                    value={manualStatus}
+                                                    onChange={(e) => setManualStatus(e.target.value)}
+                                                    className="px-3 py-2 bg-background border border-border/50 rounded-xl text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                                                >
+                                                    <option value="APPROVED">APPROVED</option>
+                                                    <option value="REJECTED">REJECTED</option>
+                                                    <option value="PENDING">PENDING</option>
+                                                </select>
+                                            </div>
+                                            <button
+                                                type="submit"
+                                                disabled={syncLoading}
+                                                className="w-full px-4 py-2 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border border-yellow-500/30 rounded-xl text-sm font-medium hover:bg-yellow-500/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                            >
+                                                {syncLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                                Manually Sync Status
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             ) : (
                                 /* Buy Coupons Form (Step 2) */

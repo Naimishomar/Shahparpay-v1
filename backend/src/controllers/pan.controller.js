@@ -100,6 +100,66 @@ export const setPsaId = async (req, res) => {
     }
 };
 
+// @desc Manually sync PSA status from BharatPays (for stuck PENDING records)
+// @route PATCH /api/pan/sync-psa-status
+// @access Private (Retailer)
+export const syncPsaStatus = async (req, res) => {
+    try {
+        const { psa_id, status } = req.body;
+        const allowedStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'FAILED', 'SUCCESS'];
+
+        if (!psa_id || !status) {
+            return res.status(400).json({ success: false, message: "psa_id and status are required" });
+        }
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json({ success: false, message: `Invalid status. Allowed: ${allowedStatuses.join(', ')}` });
+        }
+
+        const retailer = await Retailer.findById(req.user.id);
+        if (!retailer) {
+            return res.status(404).json({ success: false, message: "Retailer not found" });
+        }
+
+        // Find by psa_id in metadata OR by apiProvider (for old records)
+        let txn = await Transaction.findOne({
+            userId: retailer._id,
+            type: 'PAN_CARD',
+            'metadata.psa_id': psa_id
+        });
+
+        if (!txn) {
+            // Fallback: find by apiProvider for old records where psa_id wasn't saved
+            txn = await Transaction.findOne({
+                userId: retailer._id,
+                type: 'PAN_CARD',
+                'metadata.apiProvider': 'BharatPays_Biometric_PSA',
+                'metadata.action': { $exists: false }
+            }).sort({ createdAt: -1 });
+        }
+
+        if (!txn) {
+            return res.status(404).json({ success: false, message: "No PSA registration record found" });
+        }
+
+        // Update status and ensure psa_id is persisted
+        txn.status = status;
+        txn.metadata = { ...txn.metadata, psa_id };
+        txn.markModified('metadata');
+        await txn.save();
+
+        console.log(`[PSA Status Sync] Retailer ${retailer._id} manually synced PSA ${psa_id} → ${status}`);
+
+        return res.status(200).json({
+            success: true,
+            message: `PSA status updated to ${status}`,
+            data: { psa_id, status }
+        });
+    } catch (error) {
+        console.error("Error syncing PSA status:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
 // @desc Register Biometric PSA Agent
 // @route POST /api/pan/register-bio-psa
 // @access Private (Retailer)
