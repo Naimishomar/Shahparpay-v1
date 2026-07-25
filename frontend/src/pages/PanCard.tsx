@@ -131,6 +131,32 @@ const PanCard: React.FC = () => {
         }
     };
 
+    const [linkPsaId, setLinkPsaId] = useState('');
+    const [linkLoading, setLinkLoading] = useState(false);
+
+    const handleLinkPsaId = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!linkPsaId.trim()) return toast.error("Please enter your PSA ID");
+        setLinkLoading(true);
+        try {
+            const res = await axios.patch(
+                `${import.meta.env.VITE_BACKEND_URL}/api/pan/set-psa-id`,
+                { psa_id: linkPsaId.trim() },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            if (res.data.success) {
+                toast.success(`PSA ID ${linkPsaId} linked successfully!`);
+                fetchPsaStatus();
+            } else {
+                toast.error(res.data.message || "Failed to link PSA ID");
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Error linking PSA ID");
+        } finally {
+            setLinkLoading(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-background p-4 lg:p-8">
             <div className="max-w-6xl mx-auto space-y-6">
@@ -148,6 +174,35 @@ const PanCard: React.FC = () => {
                     <div className="flex items-center justify-center p-12 bg-card border border-border/50 rounded-2xl">
                         <Loader2 className="w-8 h-8 animate-spin text-primary mr-3" />
                         <span className="text-muted-foreground">Checking PSA Registration Status...</span>
+                    </div>
+                ) : hasPsa && existingPsa && !existingPsa.psa_id ? (
+                    /* Old record found but psa_id was never saved — let user link it manually */
+                    <div className="bg-card border border-yellow-500/30 bg-yellow-500/5 rounded-2xl p-8 shadow-sm max-w-xl mx-auto space-y-4">
+                        <div className="flex items-center gap-3 text-yellow-600 dark:text-yellow-400 font-bold text-lg">
+                            <AlertCircle className="w-6 h-6" />
+                            <span>Registration Found — Link Your PSA ID</span>
+                        </div>
+                        <p className="text-sm text-foreground leading-relaxed">
+                            We found your Biometric PSA registration record but the PSA ID (e.g. <strong>ANNECHM-806</strong>) was not saved due to an earlier issue. Please enter your assigned PSA ID from BharatPays to continue.
+                        </p>
+                        <form onSubmit={handleLinkPsaId} className="flex gap-3">
+                            <input
+                                type="text"
+                                value={linkPsaId}
+                                onChange={(e) => setLinkPsaId(e.target.value)}
+                                className="flex-1 px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all font-mono"
+                                placeholder="e.g. ANNECHM-806"
+                                required
+                            />
+                            <button
+                                type="submit"
+                                disabled={linkLoading}
+                                className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                            >
+                                {linkLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
+                                Link PSA ID
+                            </button>
+                        </form>
                     </div>
                 ) : hasPsa && existingPsa ? (
                     /* Existing PSA Agent Dashboard View */

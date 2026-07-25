@@ -12,14 +12,24 @@ export const getMyPsaStatus = async (req, res) => {
             return res.status(404).json({ success: false, message: "Retailer not found" });
         }
 
-        // Find latest PAN_CARD transaction with psa_id
-        const existingTxn = await Transaction.findOne({
+        // First: find transaction that has psa_id in metadata (new records)
+        let existingTxn = await Transaction.findOne({
             userId: retailer._id,
             type: 'PAN_CARD',
             'metadata.psa_id': { $exists: true, $ne: null }
         }).sort({ createdAt: -1 });
 
+        // Fallback: find any BharatPays PSA registration transaction (older records that missed saving psa_id)
         if (!existingTxn || !existingTxn.metadata?.psa_id) {
+            existingTxn = await Transaction.findOne({
+                userId: retailer._id,
+                type: 'PAN_CARD',
+                'metadata.apiProvider': 'BharatPays_Biometric_PSA',
+                'metadata.action': { $exists: false } // Exclude coupon payment requests
+            }).sort({ createdAt: -1 });
+        }
+
+        if (!existingTxn) {
             return res.status(200).json({
                 success: true,
                 hasPsa: false,
@@ -31,18 +41,61 @@ export const getMyPsaStatus = async (req, res) => {
             success: true,
             hasPsa: true,
             data: {
-                psa_id: existingTxn.metadata.psa_id,
+                psa_id: existingTxn.metadata?.psa_id || null,
                 status: existingTxn.status,
-                name: existingTxn.metadata.name,
-                contact_person: existingTxn.metadata.contact_person,
-                mobile: existingTxn.metadata.mobile,
-                email: existingTxn.metadata.email,
-                pan_no: existingTxn.metadata.pan_no,
-                createdAt: existingTxn.createdAt
+                name: existingTxn.metadata?.name,
+                contact_person: existingTxn.metadata?.contact_person,
+                mobile: existingTxn.metadata?.mobile,
+                email: existingTxn.metadata?.email,
+                pan_no: existingTxn.metadata?.pan_no,
+                createdAt: existingTxn.createdAt,
+                txnId: existingTxn._id
             }
         });
     } catch (error) {
         console.error("Error fetching PSA status:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
+// @desc Manually set psa_id on an existing registration transaction (repair old records)
+// @route PATCH /api/pan/set-psa-id
+// @access Private (Retailer)
+export const setPsaId = async (req, res) => {
+    try {
+        const { psa_id } = req.body;
+        if (!psa_id) {
+            return res.status(400).json({ success: false, message: "psa_id is required" });
+        }
+
+        const retailer = await Retailer.findById(req.user.id);
+        if (!retailer) {
+            return res.status(404).json({ success: false, message: "Retailer not found" });
+        }
+
+        // Find the BharatPays PSA registration transaction (non-coupon)
+        const txn = await Transaction.findOne({
+            userId: retailer._id,
+            type: 'PAN_CARD',
+            'metadata.apiProvider': 'BharatPays_Biometric_PSA',
+            'metadata.action': { $exists: false }
+        }).sort({ createdAt: -1 });
+
+        if (!txn) {
+            return res.status(404).json({ success: false, message: "No PSA registration record found to update" });
+        }
+
+        txn.metadata = { ...txn.metadata, psa_id };
+        txn.markModified('metadata');
+        await txn.save();
+
+        return res.status(200).json({
+            success: true,
+            message: `PSA ID ${psa_id} linked successfully`,
+            data: { psa_id, status: txn.status }
+        });
+    } catch (error) {
+        console.error("Error setting PSA ID:", error);
         res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
