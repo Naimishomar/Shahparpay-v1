@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CreditCard, User, Mail, ChevronRight, FileText, Loader2, Store, MapPin, Phone, Calendar } from 'lucide-react';
+import { CreditCard, User, Mail, ChevronRight, Loader2, Store, MapPin, Phone, CheckCircle2, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -7,21 +7,23 @@ import { useAuth } from '../context/AuthContext';
 const PanCard: React.FC = () => {
     const { token } = useAuth();
     const [loading, setLoading] = useState(false);
+    const [psaResult, setPsaResult] = useState<{ psa_id?: string; status?: string } | null>(null);
+
     const [formData, setFormData] = useState({
-        shop_name: '',
         name: '',
-        state: '',
-        district: '',
-        address: '',
-        pincode: '',
+        contact_person: '',
         mobile: '',
         email: '',
-        dob: '',
         pan_no: '',
-        aadhar_no: ''
+        pin: '',
+        state_id: '',
+        district_id: '',
+        location: '',
+        address_line_1: '',
+        address_line_2: ''
     });
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         setFormData({
             ...formData,
             [e.target.name]: e.target.value
@@ -33,14 +35,13 @@ const PanCard: React.FC = () => {
         
         // Basic validation
         if (formData.mobile.length !== 10) return toast.error("Mobile number must be 10 digits");
-        if (formData.pincode.length !== 6) return toast.error("Pincode must be 6 digits");
+        if (formData.pin.length !== 6) return toast.error("Pincode must be 6 digits");
         if (formData.pan_no.length !== 10) return toast.error("PAN number must be 10 characters");
-        if (formData.aadhar_no.length !== 12) return toast.error("Aadhaar number must be 12 digits");
 
         setLoading(true);
         try {
             const res = await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/pan/register-psa`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/pan/register-bio-psa`,
                 formData,
                 {
                     headers: {
@@ -50,15 +51,13 @@ const PanCard: React.FC = () => {
             );
 
             if (res.data.success) {
-                toast.success(res.data.message || "PSA Registration Successful!");
-                setFormData({
-                    shop_name: '', name: '', state: '', district: '', address: '', pincode: '', mobile: '', email: '', dob: '', pan_no: '', aadhar_no: ''
-                });
+                toast.success(res.data.message || "Biometric PSA Agent Registered Successfully!");
+                setPsaResult(res.data.data);
             } else {
-                toast.error(res.data.message || "Failed to register PSA.");
+                toast.error(res.data.message || "Failed to register Biometric PSA Agent.");
             }
         } catch (error: any) {
-            console.error("PSA Error:", error);
+            console.error("Biometric PSA Error:", error);
             toast.error(error.response?.data?.message || "An error occurred. Please try again.");
         } finally {
             setLoading(false);
@@ -73,9 +72,9 @@ const PanCard: React.FC = () => {
                 <div className="flex flex-col gap-2">
                     <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
                         <CreditCard className="w-8 h-8 text-primary" />
-                        UTI PSA Registration
+                        Biometric PSA Agent Registration
                     </h1>
-                    <p className="text-muted-foreground">Register for UTI PSA to provide PAN Card services.</p>
+                    <p className="text-muted-foreground">Register your shop to become an authorized Biometric PAN Service Agent (PSA).</p>
                 </div>
 
                 {/* Main Content Area */}
@@ -84,42 +83,56 @@ const PanCard: React.FC = () => {
                     {/* Left Column: Instructions & Info */}
                     <div className="lg:col-span-1 space-y-6">
                         <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
-                            <h2 className="text-xl font-bold text-foreground mb-4">How It Works</h2>
+                            <h2 className="text-xl font-bold text-foreground mb-4">Biometric PSA Benefits</h2>
                             
                             <div className="space-y-4">
                                 <div className="flex items-start gap-3">
                                     <div className="min-w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">1</div>
                                     <div>
-                                        <p className="text-sm font-medium text-foreground">Fill Details</p>
-                                        <p className="text-xs text-muted-foreground">Enter all required shop and personal details.</p>
+                                        <p className="text-sm font-medium text-foreground">Biometric e-KYC</p>
+                                        <p className="text-xs text-muted-foreground">Process PAN applications using Mantra/Morpho fingerprint scanners.</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
                                     <div className="min-w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">2</div>
                                     <div>
-                                        <p className="text-sm font-medium text-foreground">Submit Application</p>
-                                        <p className="text-xs text-muted-foreground">Submit the form for approval.</p>
+                                        <p className="text-sm font-medium text-foreground">Instant PSA ID</p>
+                                        <p className="text-xs text-muted-foreground">Get a unique PSA Agent ID assigned to your retail shop.</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
                                     <div className="min-w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">3</div>
                                     <div>
-                                        <p className="text-sm font-medium text-foreground">Approval</p>
-                                        <p className="text-xs text-muted-foreground">Wait for your PSA ID to be approved.</p>
+                                        <p className="text-sm font-medium text-foreground">Earn Commissions</p>
+                                        <p className="text-xs text-muted-foreground">Earn attractive commissions on every successful PAN application.</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        {psaResult && (
+                            <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-6 space-y-2">
+                                <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-bold">
+                                    <CheckCircle2 className="w-5 h-5" />
+                                    <span>Registration Submitted</span>
+                                </div>
+                                <p className="text-sm text-foreground">
+                                    <strong>PSA ID:</strong> {psaResult.psa_id || 'N/A'}
+                                </p>
+                                <p className="text-sm text-foreground">
+                                    <strong>Status:</strong> {psaResult.status || 'PENDING'}
+                                </p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Right Column: Application Form */}
                     <div className="lg:col-span-2">
                         <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
                             <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-foreground">Registration Details</h2>
+                                <h2 className="text-xl font-bold text-foreground">Agent Registration Form</h2>
                                 <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
-                                    UTI PSA
+                                    Biometric PSA
                                 </div>
                             </div>
 
@@ -127,27 +140,10 @@ const PanCard: React.FC = () => {
                                 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Shop Name</label>
+                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Shop / Agent Name</label>
                                         <div className="relative">
                                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                                 <Store className="w-4 h-4 text-muted-foreground" />
-                                            </div>
-                                            <input
-                                                type="text"
-                                                name="shop_name"
-                                                value={formData.shop_name}
-                                                onChange={handleChange}
-                                                className="w-full pl-10 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                                                placeholder="Enter shop name"
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="text-sm font-medium text-foreground mb-1.5 block">ShopKeeper Name</label>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <User className="w-4 h-4 text-muted-foreground" />
                                             </div>
                                             <input
                                                 type="text"
@@ -155,7 +151,24 @@ const PanCard: React.FC = () => {
                                                 value={formData.name}
                                                 onChange={handleChange}
                                                 className="w-full pl-10 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                                                placeholder="Enter full name"
+                                                placeholder="Enter shop or agent name"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Contact Person Name</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <User className="w-4 h-4 text-muted-foreground" />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                name="contact_person"
+                                                value={formData.contact_person}
+                                                onChange={handleChange}
+                                                className="w-full pl-10 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                                                placeholder="Enter contact person name"
                                                 required
                                             />
                                         </div>
@@ -178,7 +191,7 @@ const PanCard: React.FC = () => {
                                                     if(val.length <= 10) setFormData({...formData, mobile: val});
                                                 }}
                                                 className="w-full pl-10 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                                                placeholder="10 digit mobile"
+                                                placeholder="10-digit mobile"
                                                 required
                                             />
                                         </div>
@@ -204,7 +217,7 @@ const PanCard: React.FC = () => {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="text-sm font-medium text-foreground mb-1.5 block">PAN Number</label>
+                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Agent PAN Number</label>
                                         <div className="relative">
                                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                                 <CreditCard className="w-4 h-4 text-muted-foreground" />
@@ -215,71 +228,28 @@ const PanCard: React.FC = () => {
                                                 value={formData.pan_no}
                                                 onChange={(e) => setFormData({...formData, pan_no: e.target.value.toUpperCase()})}
                                                 className="w-full pl-10 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all uppercase"
-                                                placeholder="10 char PAN"
+                                                placeholder="10-character PAN"
                                                 maxLength={10}
                                                 required
                                             />
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Aadhaar Number</label>
+                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Pincode</label>
                                         <div className="relative">
                                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <CreditCard className="w-4 h-4 text-muted-foreground" />
+                                                <MapPin className="w-4 h-4 text-muted-foreground" />
                                             </div>
                                             <input
                                                 type="text"
-                                                name="aadhar_no"
-                                                value={formData.aadhar_no}
+                                                name="pin"
+                                                value={formData.pin}
                                                 onChange={(e) => {
                                                     const val = e.target.value.replace(/\D/g, '');
-                                                    if(val.length <= 12) setFormData({...formData, aadhar_no: val});
+                                                    if(val.length <= 6) setFormData({...formData, pin: val});
                                                 }}
                                                 className="w-full pl-10 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                                                placeholder="12 digit Aadhaar"
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Date of Birth</label>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <Calendar className="w-4 h-4 text-muted-foreground" />
-                                            </div>
-                                            <input
-                                                type="date"
-                                                name="dob"
-                                                value={formData.dob}
-                                                onChange={(e) =>
-                                                    setFormData((prev) => ({
-                                                        ...prev,
-                                                        dob: e.target.value, // YYYY-MM-DD
-                                                    }))
-                                                }
-                                                className="w-full pl-10 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 gap-4">
-                                    <div>
-                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Address</label>
-                                        <div className="relative">
-                                            <div className="absolute top-3 left-3 pointer-events-none">
-                                                <MapPin className="w-4 h-4 text-muted-foreground" />
-                                            </div>
-                                            <textarea
-                                                name="address"
-                                                value={formData.address}
-                                                onChange={(e: any) => handleChange(e)}
-                                                className="w-full pl-10 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all min-h-[80px]"
-                                                placeholder="Full Address"
+                                                placeholder="6-digit pincode"
                                                 required
                                             />
                                         </div>
@@ -288,42 +258,65 @@ const PanCard: React.FC = () => {
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
-                                        <label className="text-sm font-medium text-foreground mb-1.5 block">State</label>
+                                        <label className="text-sm font-medium text-foreground mb-1.5 block">State ID</label>
                                         <input
-                                            type="text"
-                                            name="state"
-                                            value={formData.state}
+                                            type="number"
+                                            name="state_id"
+                                            value={formData.state_id}
                                             onChange={handleChange}
                                             className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                                            placeholder="State"
+                                            placeholder="Numeric State ID (e.g. 13)"
                                             required
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-foreground mb-1.5 block">District</label>
+                                        <label className="text-sm font-medium text-foreground mb-1.5 block">District ID</label>
                                         <input
-                                            type="text"
-                                            name="district"
-                                            value={formData.district}
+                                            type="number"
+                                            name="district_id"
+                                            value={formData.district_id}
                                             onChange={handleChange}
                                             className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                                            placeholder="District"
+                                            placeholder="Numeric District ID (e.g. 260)"
                                             required
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Pincode</label>
+                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Location / City</label>
                                         <input
                                             type="text"
-                                            name="pincode"
-                                            value={formData.pincode}
-                                            onChange={(e) => {
-                                                const val = e.target.value.replace(/\D/g, '');
-                                                if(val.length <= 6) setFormData({...formData, pincode: val});
-                                            }}
+                                            name="location"
+                                            value={formData.location}
+                                            onChange={handleChange}
                                             className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                                            placeholder="6 digit pincode"
+                                            placeholder="City / Area"
                                             required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Address Line 1</label>
+                                        <input
+                                            type="text"
+                                            name="address_line_1"
+                                            value={formData.address_line_1}
+                                            onChange={handleChange}
+                                            className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                                            placeholder="Building / Street Address"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Address Line 2 (Optional)</label>
+                                        <input
+                                            type="text"
+                                            name="address_line_2"
+                                            value={formData.address_line_2}
+                                            onChange={handleChange}
+                                            className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                                            placeholder="Landmark / Locality"
                                         />
                                     </div>
                                 </div>
@@ -338,12 +331,12 @@ const PanCard: React.FC = () => {
                                         {loading ? (
                                             <>
                                                 <Loader2 className="w-5 h-5 animate-spin" />
-                                                Processing...
+                                                Submitting Agent Registration...
                                             </>
                                         ) : (
                                             <>
                                                 <ChevronRight className="w-5 h-5" />
-                                                Submit Registration
+                                                Register Biometric PSA Agent
                                             </>
                                         )}
                                     </button>
