@@ -214,7 +214,9 @@ const PanCard: React.FC = () => {
                                     <h2 className="text-lg font-bold text-foreground">PSA Agent Account</h2>
                                     <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
                                         existingPsa.status === 'APPROVED' || existingPsa.status === 'SUCCESS' 
-                                            ? 'bg-green-500/10 text-green-500 border border-green-500/30' 
+                                            ? 'bg-green-500/10 text-green-500 border border-green-500/30'
+                                            : existingPsa.status === 'REJECTED' || existingPsa.status === 'FAILED'
+                                            ? 'bg-red-500/10 text-red-500 border border-red-500/30'
                                             : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/30'
                                     }`}>
                                         {existingPsa.status || 'PENDING'}
@@ -257,7 +259,26 @@ const PanCard: React.FC = () => {
 
                         {/* Status / Coupon Purchase Section */}
                         <div className="lg:col-span-2 space-y-6">
-                            {existingPsa.status === 'PENDING' ? (
+                            {(existingPsa.status === 'REJECTED' || existingPsa.status === 'FAILED') ? (
+                                <div className="bg-red-500/5 border border-red-500/30 rounded-2xl p-6 shadow-sm space-y-4">
+                                    <div className="flex items-center gap-3 text-red-500 font-bold text-lg">
+                                        <AlertCircle className="w-6 h-6" />
+                                        <span>PSA Registration Rejected</span>
+                                    </div>
+                                    <p className="text-sm text-foreground leading-relaxed">
+                                        Your registration request with PSA ID <strong>{existingPsa.psa_id}</strong> has been <strong className="text-red-500">rejected</strong> by UTI Interservices / BharatPays.
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Please contact BharatPays support to understand the reason for rejection and re-apply with corrected details. You may need to submit a fresh registration.
+                                    </p>
+                                    <button
+                                        onClick={() => { setHasPsa(false); setExistingPsa(null); }}
+                                        className="mt-2 px-4 py-2 bg-red-500/10 text-red-500 border border-red-500/30 rounded-xl text-sm font-medium hover:bg-red-500/20 transition-colors"
+                                    >
+                                        Apply for New Registration
+                                    </button>
+                                </div>
+                            ) : existingPsa.status === 'PENDING' ? (
                                 <div className="bg-card border border-yellow-500/30 bg-yellow-500/5 rounded-2xl p-6 shadow-sm space-y-4">
                                     <div className="flex items-center gap-3 text-yellow-600 dark:text-yellow-400 font-bold text-lg">
                                         <AlertCircle className="w-6 h-6" />
