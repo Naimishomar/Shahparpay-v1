@@ -190,22 +190,27 @@ export const registerBiometricPsa = async (req, res) => {
             return res.status(404).json({ success: false, message: "Retailer not found" });
         }
 
-        // Check if retailer already registered
+        // Check if retailer already has an active/pending registration
         const existingTxn = await Transaction.findOne({
             userId: retailer._id,
             type: 'PAN_CARD',
             'metadata.psa_id': { $exists: true, $ne: null }
-        });
+        }).sort({ createdAt: -1 });
 
         if (existingTxn && existingTxn.metadata?.psa_id) {
-            return res.status(200).json({
-                success: true,
-                message: `You are already registered with PSA ID: ${existingTxn.metadata.psa_id}`,
-                data: {
-                    psa_id: existingTxn.metadata.psa_id,
-                    status: existingTxn.status
-                }
-            });
+            // Allow re-registration if previous was REJECTED or FAILED
+            if (existingTxn.status === 'REJECTED' || existingTxn.status === 'FAILED') {
+                console.log(`[Biometric PSA] Previous registration ${existingTxn.metadata.psa_id} was ${existingTxn.status}. Allowing fresh registration.`);
+            } else {
+                return res.status(200).json({
+                    success: true,
+                    message: `You are already registered with PSA ID: ${existingTxn.metadata.psa_id}`,
+                    data: {
+                        psa_id: existingTxn.metadata.psa_id,
+                        status: existingTxn.status
+                    }
+                });
+            }
         }
 
         // Ref ID MUST be numeric only and max 20 chars
