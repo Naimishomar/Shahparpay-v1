@@ -424,3 +424,402 @@ export const panCallback = async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
+
+// ==========================================
+// STANDARD UTI WEB PSA AGENT APIs
+// ==========================================
+
+export const getStdPsaStatus = async (req, res) => {
+    try {
+        const retailer = await Retailer.findById(req.user.id);
+        if (!retailer) {
+            return res.status(404).json({ success: false, message: "Retailer not found" });
+        }
+
+        const existingTxn = await Transaction.findOne({
+            userId: retailer._id,
+            type: 'STD_PAN_CARD',
+            'metadata.psa_id': { $exists: true, $ne: null }
+        }).sort({ createdAt: -1 });
+
+        if (!existingTxn) {
+            return res.status(200).json({
+                success: true,
+                hasPsa: false,
+                message: "No Standard PSA Registration found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            hasPsa: true,
+            data: {
+                psa_id: existingTxn.metadata?.psa_id || null,
+                status: existingTxn.status,
+                shop_name: existingTxn.metadata?.shop_name,
+                name: existingTxn.metadata?.name,
+                mobile: existingTxn.metadata?.mobile,
+                email: existingTxn.metadata?.email,
+                pan_no: existingTxn.metadata?.pan_no,
+                createdAt: existingTxn.createdAt,
+                txnId: existingTxn._id
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching Standard PSA status:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
+export const registerStdPsa = async (req, res) => {
+    try {
+        const {
+            shop_name,
+            name,
+            state,
+            district,
+            address,
+            pincode,
+            mobile,
+            email,
+            dob,
+            pan_no,
+            aadhar_no
+        } = req.body;
+
+        if (!shop_name || !name || !state || !district || !address || !pincode || !mobile || !email || !dob || !pan_no || !aadhar_no) {
+            return res.status(400).json({ success: false, message: "Missing required fields for Standard PSA registration" });
+        }
+
+        const retailer = await Retailer.findById(req.user.id);
+        if (!retailer) {
+            return res.status(404).json({ success: false, message: "Retailer not found" });
+        }
+
+        const existingTxn = await Transaction.findOne({
+            userId: retailer._id,
+            type: 'STD_PAN_CARD',
+            'metadata.psa_id': { $exists: true, $ne: null }
+        }).sort({ createdAt: -1 });
+
+        if (existingTxn && existingTxn.metadata?.psa_id) {
+            if (existingTxn.status === 'REJECTED' || existingTxn.status === 'FAILED') {
+                console.log(`[Std PSA] Previous registration ${existingTxn.metadata.psa_id} was ${existingTxn.status}. Allowing fresh registration.`);
+            } else {
+                return res.status(200).json({
+                    success: true,
+                    message: `You are already registered with Standard PSA ID: ${existingTxn.metadata.psa_id}`,
+                    data: {
+                        psa_id: existingTxn.metadata.psa_id,
+                        status: existingTxn.status
+                    }
+                });
+            }
+        }
+
+        const ref_id = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+        const token = process.env.BHARATPAYS_TOKEN;
+
+        const formData = new URLSearchParams({
+            shop_name,
+            name,
+            state,
+            district,
+            address,
+            pincode,
+            mobile,
+            email,
+            dob,
+            pan_no,
+            aadhar_no,
+            ref_id
+        });
+
+        const targetUrl = `https://api.bharatpays.in/api/psa/register`;
+
+        const response = await axios.post(targetUrl, formData.toString(), {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            validateStatus: () => true
+        });
+
+        console.log("[Std PSA Registration] Response:", response.status, response.data);
+
+        const data = response.data;
+
+        if (data && data.success === 1) {
+            const psaId = data.data?.psa_id;
+            const psaStatus = data.data?.status || 'PENDING';
+
+            const transaction = new Transaction({
+                transactionId: ref_id,
+                userId: retailer._id,
+                type: 'STD_PAN_CARD',
+                amount: 0,
+                status: psaStatus,
+                metadata: {
+                    psa_id: psaId,
+                    name,
+                    shop_name,
+                    mobile,
+                    email,
+                    pan_no,
+                    apiProvider: 'BharatPays_Standard_PSA'
+                }
+            });
+            await transaction.save();
+
+            return res.status(200).json({
+                success: true,
+                message: data.message || "Standard PSA Agent Added Successfully",
+                data: data.data
+            });
+        } else {
+            let cleanMsg = data?.message || "Failed to register Standard PSA Agent";
+            if (typeof cleanMsg === 'string') {
+                cleanMsg = cleanMsg.replace(/<[^>]*>?/gm, '').replace(/\n/g, ' ').trim();
+            }
+
+            return res.status(400).json({
+                success: false,
+                message: cleanMsg
+            });
+        }
+    } catch (error) {
+        console.error("Error registering Standard PSA:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
+export const updateStdPsa = async (req, res) => {
+    try {
+        const {
+            psa_id,
+            shop_name,
+            name,
+            state,
+            district,
+            address,
+            pincode,
+            mobile,
+            email,
+            dob,
+            pan_no,
+            aadhar_no
+        } = req.body;
+
+        if (!psa_id || !shop_name || !name || !state || !district || !address || !pincode || !mobile || !email || !dob || !pan_no || !aadhar_no) {
+            return res.status(400).json({ success: false, message: "Missing required fields for updating Standard PSA registration" });
+        }
+
+        const retailer = await Retailer.findById(req.user.id);
+        if (!retailer) {
+            return res.status(404).json({ success: false, message: "Retailer not found" });
+        }
+
+        const existingTxn = await Transaction.findOne({
+            userId: retailer._id,
+            type: 'STD_PAN_CARD',
+            'metadata.psa_id': psa_id
+        }).sort({ createdAt: -1 });
+
+        if (!existingTxn) {
+            return res.status(404).json({ success: false, message: "Standard PSA Registration not found" });
+        }
+
+        if (existingTxn.status !== 'REJECTED' && existingTxn.status !== 'FAILED') {
+            return res.status(400).json({ success: false, message: "Only rejected applications can be updated." });
+        }
+
+        const token = process.env.BHARATPAYS_TOKEN;
+
+        const formData = new URLSearchParams({
+            psa_id,
+            shop_name,
+            name,
+            state,
+            district,
+            address,
+            pincode,
+            mobile,
+            email,
+            dob,
+            pan_no,
+            aadhar_no
+        });
+
+        const targetUrl = `https://api.bharatpays.in/api/psa/update_registration`;
+
+        const response = await axios.post(targetUrl, formData.toString(), {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            validateStatus: () => true
+        });
+
+        console.log("[Std PSA Update] Response:", response.status, response.data);
+
+        const data = response.data;
+
+        if (data && data.success === 1) {
+            existingTxn.status = data.data?.status || 'PENDING';
+            existingTxn.metadata = {
+                ...existingTxn.metadata,
+                name,
+                shop_name,
+                mobile,
+                email,
+                pan_no,
+                updatedAt: new Date()
+            };
+            existingTxn.markModified('metadata');
+            await existingTxn.save();
+
+            return res.status(200).json({
+                success: true,
+                message: data.message || "PSA Request Data Update Successfully.",
+                data: data.data
+            });
+        } else {
+            let cleanMsg = data?.message || "Failed to update Standard PSA Agent";
+            if (typeof cleanMsg === 'string') {
+                cleanMsg = cleanMsg.replace(/<[^>]*>?/gm, '').replace(/\n/g, ' ').trim();
+            }
+
+            return res.status(400).json({
+                success: false,
+                message: cleanMsg
+            });
+        }
+    } catch (error) {
+        console.error("Error updating Standard PSA:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
+export const purchaseStdCoupons = async (req, res) => {
+    try {
+        const { psa_id, coupon } = req.body;
+
+        if (!psa_id || !coupon || Number(coupon) <= 0) {
+            return res.status(400).json({ success: false, message: "Valid PSA ID and number of coupons are required" });
+        }
+
+        const retailer = await Retailer.findById(req.user.id);
+        if (!retailer) {
+            return res.status(404).json({ success: false, message: "Retailer not found" });
+        }
+
+        const ref_id = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+
+        const transaction = new Transaction({
+            transactionId: ref_id,
+            userId: retailer._id,
+            type: 'STD_PAN_CARD',
+            amount: Number(coupon) * 107, // Assuming 107 per coupon for tracking logic, though API just takes quantity
+            status: 'PENDING',
+            metadata: {
+                psa_id,
+                coupon_qty: coupon,
+                action: 'COUPON_PURCHASE',
+                apiProvider: 'BharatPays_Standard_PSA'
+            }
+        });
+        await transaction.save();
+
+        const token = process.env.BHARATPAYS_TOKEN;
+
+        const formData = new URLSearchParams({
+            psa_id,
+            coupon: String(coupon),
+            ref_id
+        });
+
+        const targetUrl = `https://api.bharatpays.in/api/psa/purchase_coupon`;
+
+        console.log(`[Std PSA Coupon Purchase] Ref: ${ref_id}, PSA ID: ${psa_id}, Qty: ${coupon}`);
+
+        const response = await axios.post(targetUrl, formData.toString(), {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            validateStatus: () => true
+        });
+
+        console.log("[Std PSA Coupon Purchase] Response:", response.status, response.data);
+
+        const data = response.data;
+
+        if (data && data.success === 1) {
+            transaction.status = data.data?.status || 'SUCCESS';
+            transaction.metadata = {
+                ...transaction.metadata,
+                request_id: data.data?.request_id
+            };
+            transaction.markModified('metadata');
+            await transaction.save();
+
+            return res.status(200).json({
+                success: true,
+                message: data.message || "PSA Coupon Purchased Successfully.",
+                data: data.data
+            });
+        } else {
+            transaction.status = 'FAILED';
+            await transaction.save();
+
+            let cleanMsg = data?.message || "Coupon purchase failed";
+            if (typeof cleanMsg === 'string') {
+                cleanMsg = cleanMsg.replace(/<[^>]*>?/gm, '').replace(/\n/g, ' ').trim();
+            }
+
+            return res.status(400).json({
+                success: false,
+                message: cleanMsg
+            });
+        }
+
+    } catch (error) {
+        console.error("Error submitting Std PSA coupon purchase:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
+export const requestStdPsaPassword = async (req, res) => {
+    try {
+        const { psa_id } = req.query;
+
+        if (!psa_id) {
+            return res.status(400).json({ success: false, message: "PSA ID is required" });
+        }
+
+        const token = process.env.BHARATPAYS_TOKEN;
+        const targetUrl = `https://api.bharatpays.in/api/psa_get?token=${token}&psa_id=${psa_id}`;
+
+        const response = await axios.get(targetUrl, {
+            validateStatus: () => true
+        });
+
+        const data = response.data;
+
+        if (data && data.success === 1) {
+            return res.status(200).json({
+                success: true,
+                message: data.message || "PSA Password request is Submitted Successfully.",
+                data: data.data
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: data?.message || "Failed to request PSA Password"
+            });
+        }
+    } catch (error) {
+        console.error("Error requesting PSA password:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};

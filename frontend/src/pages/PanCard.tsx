@@ -4,9 +4,12 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import locationsData from '../data/locations.json';
+import StandardPsaTab from '../components/pancard/StandardPsaTab';
 
 const PanCard: React.FC = () => {
     const { token } = useAuth();
+    const [activeTab, setActiveTab] = useState<'BIOMETRIC' | 'STANDARD'>('BIOMETRIC');
+    
     const [fetchingStatus, setFetchingStatus] = useState(true);
     const [hasPsa, setHasPsa] = useState(false);
     const [existingPsa, setExistingPsa] = useState<{
@@ -192,12 +195,32 @@ const PanCard: React.FC = () => {
                 <div className="flex flex-col gap-2">
                     <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
                         <CreditCard className="w-8 h-8 text-primary" />
-                        Biometric PSA Agent Services
+                        UTI PAN Card Services
                     </h1>
-                    <p className="text-muted-foreground">UTI Biometric PAN Service Agent Onboarding & Application Tokens.</p>
+                    <p className="text-muted-foreground">Become a UTI Agent and purchase application tokens.</p>
                 </div>
 
-                {fetchingStatus ? (
+                {/* Tabs Navigation */}
+                <div className="flex bg-muted/50 p-1 rounded-xl w-full max-w-sm border border-border/50">
+                    <button
+                        onClick={() => setActiveTab('BIOMETRIC')}
+                        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'BIOMETRIC' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                        Biometric PSA
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('STANDARD')}
+                        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'STANDARD' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                        Standard Web PSA
+                    </button>
+                </div>
+
+                {activeTab === 'STANDARD' ? (
+                    <StandardPsaTab />
+                ) : (
+                    <>
+                        {fetchingStatus ? (
                     <div className="flex items-center justify-center p-12 bg-card border border-border/50 rounded-2xl">
                         <Loader2 className="w-8 h-8 animate-spin text-primary mr-3" />
                         <span className="text-muted-foreground">Checking PSA Registration Status...</span>
@@ -709,7 +732,8 @@ const PanCard: React.FC = () => {
                         </div>
                     </div>
                 )}
-
+                </>
+                )}
             </div>
         </div>
     );
