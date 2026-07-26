@@ -3,6 +3,7 @@ import { CreditCard, User, Mail, ChevronRight, Loader2, Store, MapPin, Phone, Ch
 import { toast } from 'sonner';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import locationsData from '../data/locations.json';
 
 const PanCard: React.FC = () => {
     const { token } = useAuth();
@@ -32,8 +33,8 @@ const PanCard: React.FC = () => {
         email: '',
         pan_no: '',
         pin: '',
-        state_id: '13',
-        district_id: '260',
+        state_id: '',
+        district_id: '',
         location: '',
         address_line_1: '',
         address_line_2: ''
@@ -575,17 +576,50 @@ const PanCard: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    <div>
-                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Location / City</label>
-                                        <input
-                                            type="text"
-                                            name="location"
-                                            value={formData.location}
-                                            onChange={handleChange}
-                                            className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                                            placeholder="City / Area"
-                                            required
-                                        />
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className="text-sm font-medium text-foreground mb-1.5 block">State</label>
+                                            <select
+                                                name="state_id"
+                                                value={formData.state_id}
+                                                onChange={(e) => setFormData({ ...formData, state_id: e.target.value, district_id: '' })}
+                                                className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                                                required
+                                            >
+                                                <option value="" disabled>Select State</option>
+                                                {locationsData.map((state) => (
+                                                    <option key={state.id} value={state.id}>{state.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-foreground mb-1.5 block">District</label>
+                                            <select
+                                                name="district_id"
+                                                value={formData.district_id}
+                                                onChange={handleChange}
+                                                className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                                                required
+                                                disabled={!formData.state_id}
+                                            >
+                                                <option value="" disabled>Select District</option>
+                                                {locationsData.find(s => s.id === formData.state_id)?.districts.map((district) => (
+                                                    <option key={district.id} value={district.id}>{district.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-foreground mb-1.5 block">Location / City</label>
+                                            <input
+                                                type="text"
+                                                name="location"
+                                                value={formData.location}
+                                                onChange={handleChange}
+                                                className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                                                placeholder="City / Area"
+                                                required
+                                            />
+                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
