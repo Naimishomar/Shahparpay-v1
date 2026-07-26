@@ -153,7 +153,34 @@ const AEPS = () => {
                 const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/banks`);
                 const data = await res.json();
                 if (data.success && data.data) {
-                    setDynamicBanks(data.data);
+                    const popularBanks = [
+                        "State Bank", 
+                        "Bank of Baroda", 
+                        "Punjab National Bank", 
+                        "HDFC", 
+                        "ICICI", 
+                        "Union Bank", 
+                        "Axis Bank", 
+                        "Canara Bank", 
+                        "Bank of India", 
+                        "Central Bank"
+                    ];
+                    
+                    const sortedBanks = [...data.data].sort((a, b) => {
+                        const aName = (a.name || a.bankName || a.bank_name || "").toLowerCase();
+                        const bName = (b.name || b.bankName || b.bank_name || "").toLowerCase();
+                        
+                        const aIndex = popularBanks.findIndex(pb => aName.includes(pb.toLowerCase()));
+                        const bIndex = popularBanks.findIndex(pb => bName.includes(pb.toLowerCase()));
+                        
+                        if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+                        if (aIndex !== -1) return -1;
+                        if (bIndex !== -1) return 1;
+                        
+                        return aName.localeCompare(bName);
+                    });
+                    
+                    setDynamicBanks(sortedBanks);
                 }
             } catch(err) {
                 console.error("Failed to fetch bank list", err);
