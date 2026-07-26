@@ -655,6 +655,27 @@ const AEPS = () => {
                                             {numberToWords(amount)}
                                         </span>
                                     )}
+
+                                    {/* Quick Amount Buttons */}
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        {[100, 200, 500, 1000, 2000, 3000, 5000, 10000].map((val) => (
+                                            <button
+                                                key={val}
+                                                type="button"
+                                                onClick={() => setAmount(prev => (Number(prev) || 0) + val + "")}
+                                                className="px-3 py-1.5 text-xs font-medium rounded-md border border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-white transition-colors"
+                                            >
+                                                +₹{val}
+                                            </button>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            onClick={() => setAmount("")}
+                                            className="px-3 py-1.5 text-xs font-medium rounded-md border border-red-500/20 bg-red-500/5 text-red-500 hover:bg-red-500 hover:text-white transition-colors"
+                                        >
+                                            Clear
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                         </div>

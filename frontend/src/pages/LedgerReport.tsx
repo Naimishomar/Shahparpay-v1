@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { FileText, Search, Download, FileDown, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { FileText, Search, Download, FileDown, Loader2, ChevronLeft, ChevronRight, XCircle } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -30,6 +30,7 @@ const LedgerReport = () => {
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
+    const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
     const itemsPerPage = 20;
 
     useEffect(() => {
@@ -239,7 +240,11 @@ const LedgerReport = () => {
                                         const isCr = getCrDr(tx) === 'CR';
                                         const serialNumber = ((currentPage - 1) * itemsPerPage) + idx + 1;
                                         return (
-                                            <TableRow key={idx} className="hover:bg-muted/50 transition-colors">
+                                            <TableRow 
+                                                key={idx} 
+                                                className="hover:bg-muted/50 transition-colors cursor-pointer"
+                                                onClick={() => setSelectedTransaction(tx)}
+                                            >
                                                 <TableCell className="px-4 py-2 text-center text-sm font-medium text-muted-foreground">
                                                     {serialNumber}
                                                 </TableCell>
@@ -343,6 +348,109 @@ const LedgerReport = () => {
                     )}
                 </div>
             </div>
+
+            {/* Transaction Detail Modal */}
+            {selectedTransaction && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setSelectedTransaction(null)}>
+                    <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="flex justify-between items-start p-4 bg-muted/30 border-b border-border">
+                            <div className="flex flex-col gap-1">
+                                <h3 className="text-lg font-black text-foreground">Transaction Details</h3>
+                                <p className="text-xs text-muted-foreground font-medium">Ref: {selectedTransaction.transactionId || selectedTransaction._id}</p>
+                            </div>
+                            <button onClick={() => setSelectedTransaction(null)} className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors">
+                                <XCircle className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-6 space-y-5">
+                            {/* Amount & Status */}
+                            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border/50">
+                                <div>
+                                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Amount</p>
+                                    <p className="text-2xl font-black text-foreground">₹ {selectedTransaction.amount || 0}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Status</p>
+                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                                        selectedTransaction.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 
+                                        selectedTransaction.status === 'FAILED' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 
+                                        'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
+                                    }`}>
+                                        {selectedTransaction.status || "UNKNOWN"}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Details Grid */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase">Date & Time</p>
+                                    <p className="text-sm font-medium text-foreground">{new Date(selectedTransaction.createdAt).toLocaleString()}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase">Type</p>
+                                    <p className="text-sm font-medium text-foreground">{selectedTransaction.type?.replace(/_/g, ' ')}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase">Customer Name</p>
+                                    <p className="text-sm font-medium text-foreground">{selectedTransaction.metadata?.name || selectedTransaction.metadata?.customerName || "N/A"}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase">Mobile Number</p>
+                                    <p className="text-sm font-medium text-foreground">{selectedTransaction.metadata?.mobile || "N/A"}</p>
+                                </div>
+                                {selectedTransaction.metadata?.bankName && (
+                                    <div className="space-y-1 col-span-2">
+                                        <p className="text-[10px] text-muted-foreground font-semibold uppercase">Bank Name</p>
+                                        <p className="text-sm font-medium text-foreground">{selectedTransaction.metadata.bankName}</p>
+                                    </div>
+                                )}
+                                {selectedTransaction.metadata?.rrn && (
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] text-muted-foreground font-semibold uppercase">Bank RRN</p>
+                                        <p className="text-sm font-medium text-foreground">{selectedTransaction.metadata.rrn}</p>
+                                    </div>
+                                )}
+                                {selectedTransaction.metadata?.aadhar && (
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] text-muted-foreground font-semibold uppercase">Aadhaar (Last 4)</p>
+                                        <p className="text-sm font-medium text-foreground">**** {selectedTransaction.metadata.aadhar.slice(-4)}</p>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* Metadata Dump (for debugging/extra details) */}
+                            {selectedTransaction.metadata && Object.keys(selectedTransaction.metadata).length > 0 && (
+                                <div className="mt-4 pt-4 border-t border-border">
+                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase mb-2">Additional Metadata</p>
+                                    <div className="bg-muted/50 p-3 rounded-lg overflow-x-auto">
+                                        <pre className="text-[10px] text-foreground/80 font-mono whitespace-pre-wrap">
+                                            {JSON.stringify(
+                                                Object.fromEntries(
+                                                    Object.entries(selectedTransaction.metadata).filter(
+                                                        ([k]) => !['name', 'customerName', 'mobile', 'bankName', 'rrn', 'aadhar', 'latitude', 'longitude'].includes(k)
+                                                    )
+                                                ), 
+                                                null, 2
+                                            )}
+                                        </pre>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 bg-muted/30 border-t border-border flex justify-end">
+                            <button onClick={() => setSelectedTransaction(null)} className="px-5 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold shadow-sm hover:bg-primary/90 transition-colors">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

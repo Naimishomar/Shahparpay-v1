@@ -32,8 +32,8 @@ const PanCard: React.FC = () => {
         email: '',
         pan_no: '',
         pin: '',
-        state_id: '',
-        district_id: '',
+        state_id: '13',
+        district_id: '260',
         location: '',
         address_line_1: '',
         address_line_2: ''
@@ -575,43 +575,17 @@ const PanCard: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div>
-                                            <label className="text-sm font-medium text-foreground mb-1.5 block">State ID</label>
-                                            <input
-                                                type="number"
-                                                name="state_id"
-                                                value={formData.state_id}
-                                                onChange={handleChange}
-                                                className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                                                placeholder="State ID (e.g. 13)"
-                                                required
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-sm font-medium text-foreground mb-1.5 block">District ID</label>
-                                            <input
-                                                type="number"
-                                                name="district_id"
-                                                value={formData.district_id}
-                                                onChange={handleChange}
-                                                className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                                                placeholder="District ID (e.g. 260)"
-                                                required
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-sm font-medium text-foreground mb-1.5 block">Location / City</label>
-                                            <input
-                                                type="text"
-                                                name="location"
-                                                value={formData.location}
-                                                onChange={handleChange}
-                                                className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                                                placeholder="City / Area"
-                                                required
-                                            />
-                                        </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-foreground mb-1.5 block">Location / City</label>
+                                        <input
+                                            type="text"
+                                            name="location"
+                                            value={formData.location}
+                                            onChange={handleChange}
+                                            className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                                            placeholder="City / Area"
+                                            required
+                                        />
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
