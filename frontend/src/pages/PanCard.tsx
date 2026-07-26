@@ -298,12 +298,47 @@ const PanCard: React.FC = () => {
                                     <p className="text-xs text-muted-foreground">
                                         Please contact BharatPays support to understand the reason for rejection and re-apply with corrected details. You may need to submit a fresh registration.
                                     </p>
+                                    
                                     <button
                                         onClick={() => { setHasPsa(false); setExistingPsa(null); }}
                                         className="mt-2 px-4 py-2 bg-red-500/10 text-red-500 border border-red-500/30 rounded-xl text-sm font-medium hover:bg-red-500/20 transition-colors"
                                     >
                                         Apply for New Registration
                                     </button>
+
+                                    {/* Manual Status Sync */}
+                                    <div className="pt-4 border-t border-red-500/20 space-y-3 mt-4">
+                                        <p className="text-xs font-semibold text-red-500/80 uppercase tracking-wide">Did BharatPays approve you after rejection?</p>
+                                        <form onSubmit={handleSyncStatus} className="flex flex-col gap-3">
+                                            <div className="flex gap-3">
+                                                <input
+                                                    type="text"
+                                                    value={manualPsaId}
+                                                    onChange={(e) => setManualPsaId(e.target.value)}
+                                                    className="flex-1 px-3 py-2 bg-background border border-border/50 rounded-xl text-sm text-foreground font-mono focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                                                    placeholder={`PSA ID (e.g. ${existingPsa.psa_id || 'ANNECHM-808'})`}
+                                                    defaultValue={existingPsa.psa_id || ''}
+                                                />
+                                                <select
+                                                    value={manualStatus}
+                                                    onChange={(e) => setManualStatus(e.target.value)}
+                                                    className="px-3 py-2 bg-background border border-border/50 rounded-xl text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                                                >
+                                                    <option value="REJECTED">REJECTED</option>
+                                                    <option value="PENDING">PENDING</option>
+                                                    <option value="APPROVED">APPROVED</option>
+                                                </select>
+                                            </div>
+                                            <button
+                                                type="submit"
+                                                disabled={syncLoading}
+                                                className="w-full px-4 py-2 bg-red-500/10 text-red-500 border border-red-500/30 rounded-xl text-sm font-medium hover:bg-red-500/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                            >
+                                                {syncLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                                Manually Sync Status
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             ) : existingPsa.status === 'PENDING' ? (
                                 <div className="bg-card border border-yellow-500/30 bg-yellow-500/5 rounded-2xl p-6 shadow-sm space-y-4">
