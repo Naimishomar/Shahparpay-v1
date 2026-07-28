@@ -10,18 +10,14 @@ import { toast } from "sonner";
 import { useLocationContext } from "../context/LocationContext";
 import { z } from "zod";
 const banks = [
-    { name: 'ICICI Bank', displayName: 'ICICI Bank', logo: 'https://www.google.com/s2/favicons?domain=icicibank.com&sz=128' },
     { name: 'SBI', displayName: 'State Bank of India (SBI)', logo: 'https://www.google.com/s2/favicons?domain=onlinesbi.sbi&sz=128' },
     { name: 'PNB', displayName: 'Punjab National Bank (PNB)', logo: 'https://www.google.com/s2/favicons?domain=pnbindia.in&sz=128' },
-    { name: 'HDFC Bank', displayName: 'HDFC Bank', logo: 'https://www.google.com/s2/favicons?domain=hdfcbank.com&sz=128' },
-    { name: 'Kotak', displayName: 'Kotak Mahindra Bank', logo: 'https://www.google.com/s2/favicons?domain=kotak.com&sz=128' },
-    { name: 'Axis Bank', displayName: 'Axis Bank', logo: 'https://www.google.com/s2/favicons?domain=axisbank.com&sz=128' },
-    { name: 'Bank of India', displayName: 'Bank of India (BoI)', logo: 'https://www.google.com/s2/favicons?domain=bankofindia.co.in&sz=128' },
     { name: 'BoB', displayName: 'Bank of Baroda (BoB)', logo: 'https://www.google.com/s2/favicons?domain=bankofbaroda.in&sz=128' },
     { name: 'Canara Bank', displayName: 'Canara Bank', logo: 'https://www.google.com/s2/favicons?domain=canarabank.com&sz=128' },
     { name: 'Union Bank of India', displayName: 'Union Bank of India', logo: 'https://www.google.com/s2/favicons?domain=unionbankofindia.co.in&sz=128' },
+    { name: 'Bank of India', displayName: 'Bank of India (BoI)', logo: 'https://www.google.com/s2/favicons?domain=bankofindia.co.in&sz=128' },
     { name: 'Indian Bank', displayName: 'Indian Bank', logo: 'https://www.google.com/s2/favicons?domain=indianbank.in&sz=128' },
-    { name: 'Central Bank of India', displayName: 'Central Bank of India', logo: 'https://www.google.com/s2/favicons?domain=centralbankofindia.co.in&sz=128' },
+    { name: 'Central Bank of India', displayName: 'Central Bank of India', logo: 'https://www.google.com/s2/favicons?domain=centralbankofindia.co.in&sz=128' }
 ];
 
 const numberToWords = (num: string | number) => {
