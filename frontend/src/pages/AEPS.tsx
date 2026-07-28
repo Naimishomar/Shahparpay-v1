@@ -10,14 +10,18 @@ import { toast } from "sonner";
 import { useLocationContext } from "../context/LocationContext";
 import { z } from "zod";
 const banks = [
-    { name: 'ICICI Bank', logo: 'https://www.google.com/s2/favicons?domain=icicibank.com&sz=128' },
-    { name: 'SBI', logo: 'https://www.google.com/s2/favicons?domain=onlinesbi.sbi&sz=128' },
-    { name: 'PNB', logo: 'https://www.google.com/s2/favicons?domain=pnbindia.in&sz=128' },
-    { name: 'HDFC BANK', logo: 'https://www.google.com/s2/favicons?domain=hdfcbank.com&sz=128' },
-    { name: 'Kotak', logo: 'https://www.google.com/s2/favicons?domain=kotak.com&sz=128' },
-    { name: 'AXIS BANK', logo: 'https://www.google.com/s2/favicons?domain=axisbank.com&sz=128' },
-    { name: 'Bank of India', logo: 'https://www.google.com/s2/favicons?domain=bankofindia.co.in&sz=128' },
-    { name: 'BoB', logo: 'https://www.google.com/s2/favicons?domain=bankofbaroda.in&sz=128' },
+    { name: 'ICICI Bank', displayName: 'ICICI Bank', logo: 'https://www.google.com/s2/favicons?domain=icicibank.com&sz=128' },
+    { name: 'SBI', displayName: 'State Bank of India (SBI)', logo: 'https://www.google.com/s2/favicons?domain=onlinesbi.sbi&sz=128' },
+    { name: 'PNB', displayName: 'Punjab National Bank (PNB)', logo: 'https://www.google.com/s2/favicons?domain=pnbindia.in&sz=128' },
+    { name: 'HDFC Bank', displayName: 'HDFC Bank', logo: 'https://www.google.com/s2/favicons?domain=hdfcbank.com&sz=128' },
+    { name: 'Kotak', displayName: 'Kotak Mahindra Bank', logo: 'https://www.google.com/s2/favicons?domain=kotak.com&sz=128' },
+    { name: 'Axis Bank', displayName: 'Axis Bank', logo: 'https://www.google.com/s2/favicons?domain=axisbank.com&sz=128' },
+    { name: 'Bank of India', displayName: 'Bank of India (BoI)', logo: 'https://www.google.com/s2/favicons?domain=bankofindia.co.in&sz=128' },
+    { name: 'BoB', displayName: 'Bank of Baroda (BoB)', logo: 'https://www.google.com/s2/favicons?domain=bankofbaroda.in&sz=128' },
+    { name: 'Canara Bank', displayName: 'Canara Bank', logo: 'https://www.google.com/s2/favicons?domain=canarabank.com&sz=128' },
+    { name: 'Union Bank of India', displayName: 'Union Bank of India', logo: 'https://www.google.com/s2/favicons?domain=unionbankofindia.co.in&sz=128' },
+    { name: 'Indian Bank', displayName: 'Indian Bank', logo: 'https://www.google.com/s2/favicons?domain=indianbank.in&sz=128' },
+    { name: 'Central Bank of India', displayName: 'Central Bank of India', logo: 'https://www.google.com/s2/favicons?domain=centralbankofindia.co.in&sz=128' },
 ];
 
 const numberToWords = (num: string | number) => {
@@ -131,8 +135,13 @@ const AEPS = () => {
 
     // Sync dropdown with grid selection if desired
     const handleGridBankSelect = (bank: string) => {
-        setSelectedBank(bank);
-        setBankName(bank.toLowerCase()); 
+        const matchedBank = banks.find((entry) =>
+            entry.name.toLowerCase() === bank.toLowerCase() ||
+            entry.displayName.toLowerCase() === bank.toLowerCase()
+        );
+        const bankValue = matchedBank?.name || bank;
+        setSelectedBank(bankValue);
+        setBankName(bankValue);
     };
 
     const handleReset = () => {
@@ -329,7 +338,9 @@ const AEPS = () => {
     };
 
     const handleSubmit = async () => {
-        if (!aadhaarNo || !bankName || !mobileNo) {
+        const isBalanceEnquiry = activeTab === 'balance_enquiry';
+
+        if (!aadhaarNo || !bankName || (!isBalanceEnquiry && !mobileNo)) {
             alert("Please fill all required fields.");
             return;
         }
@@ -341,10 +352,12 @@ const AEPS = () => {
         // Zod validation for 12 digit Aadhaar and 10 digit Mobile
         const validationSchema = z.object({
             aadhaarNo: z.string().regex(/^\d{12}$/, "Aadhaar number must be exactly 12 digits."),
-            mobileNo: z.string().regex(/^\d{10}$/, "Mobile number must be exactly 10 digits.")
+            ...(isBalanceEnquiry ? {} : {
+                mobileNo: z.string().regex(/^\d{10}$/, "Mobile number must be exactly 10 digits.")
+            })
         });
 
-        const validationResult = validationSchema.safeParse({ aadhaarNo, mobileNo });
+        const validationResult = validationSchema.safeParse({ aadhaarNo, ...(isBalanceEnquiry ? {} : { mobileNo }) });
         if (!validationResult.success) {
             toast.error(validationResult.error.issues[0].message);
             return;
@@ -369,7 +382,6 @@ const AEPS = () => {
             const apiPayload: any = {
                 latitude: location?.latitude?.toString(),
                 longitude: location?.longitude?.toString(),
-                mobileNumber: mobileNo,
                 aadhaarNumber: aadhaarNo,
                 bankIIN: actualIIN,
                 pidData: pidData,
@@ -377,6 +389,10 @@ const AEPS = () => {
                 customerName: name,
                 pipe: selectedPipe
             };
+
+            if (!isBalanceEnquiry) {
+                apiPayload.mobileNumber = mobileNo;
+            }
 
             let res;
             const token = localStorage.getItem('token');
@@ -596,35 +612,6 @@ const AEPS = () => {
                             </div>
 
                             <div className="flex flex-col gap-1.5">
-                                <div className="flex items-center gap-2">
-                                    <label className="text-sm font-medium text-foreground">Select AEPS Bank Route (Pipe)</label>
-                                    <button 
-                                        onClick={refreshMerchantStatus}
-                                        disabled={isRefreshingStatus}
-                                        className="p-1 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
-                                        title="Refresh verified pipes"
-                                    >
-                                        <RefreshCcw size={14} className={isRefreshingStatus ? 'animate-spin' : ''} />
-                                    </button>
-                                </div>
-                                <select 
-                                    value={selectedPipe}
-                                    onChange={(e) => setSelectedPipe(e.target.value)}
-                                    className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
-                                >
-                                    {merchantStatus.activePipes && merchantStatus.activePipes.length > 0 ? (
-                                        merchantStatus.activePipes.map((pipe: string) => (
-                                            <option key={pipe} value={pipe}>
-                                                {pipe.toUpperCase()} (Verified)
-                                            </option>
-                                        ))
-                                    ) : (
-                                        <option value="" disabled>No Verified Pipes Available</option>
-                                    )}
-                                </select>
-                            </div>
-
-                            <div className="flex flex-col gap-1.5">
                                 <label className="text-sm font-medium text-foreground">Customer Bank Name</label>
                                 <select 
                                     value={bankName}
@@ -633,9 +620,10 @@ const AEPS = () => {
                                 >
                                     <option value="">Choose Your Bank</option>
                                     {(dynamicBanks.length > 0 ? dynamicBanks : banks).map((b: any) => {
-                                        const bName = b.name || b.bankName || b.bank_name;
+                                        const bName = b.displayName || b.name || b.bankName || b.bank_name;
+                                        const optionValue = b.name || b.bankName || b.bank_name || bName;
                                         return (
-                                            <option key={bName} value={bName.toLowerCase()}>
+                                            <option key={optionValue} value={optionValue}>
                                                 {bName}
                                             </option>
                                         );
@@ -643,23 +631,25 @@ const AEPS = () => {
                                 </select>
                             </div>
 
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-medium text-foreground">Mobile Number</label>
-                                <input 
-                                    type="text" 
-                                    value={mobileNo}
-                                    onChange={(e) => {
-                                        const val = e.target.value.replace(/\D/g, ''); // Ensure only digits
-                                        if (val.length > 10) {
-                                            toast.error("Mobile number cannot exceed 10 digits");
-                                            return;
-                                        }
-                                        setMobileNo(val);
-                                    }}
-                                    placeholder="Enter your mobile number" 
-                                    className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors" 
-                                />
-                            </div>
+                            {activeTab !== 'balance_enquiry' && (
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-sm font-medium text-foreground">Mobile Number</label>
+                                    <input 
+                                        type="text" 
+                                        value={mobileNo}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, ''); // Ensure only digits
+                                            if (val.length > 10) {
+                                                toast.error("Mobile number cannot exceed 10 digits");
+                                                return;
+                                            }
+                                            setMobileNo(val);
+                                        }}
+                                        placeholder="Enter your mobile number" 
+                                        className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors" 
+                                    />
+                                </div>
+                            )}
 
                             {(activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit' || activeTab === 'aadhaar_pay') && (
                                 <div className="flex flex-col gap-1.5">
@@ -718,7 +708,7 @@ const AEPS = () => {
                                 <div className="h-10 flex items-center justify-center">
                                     <img 
                                         src={bank.logo} 
-                                        alt={bank.name} 
+                                        alt={bank.displayName} 
                                         className="max-h-8 object-contain drop-shadow-sm rounded-sm"
                                         onError={(e) => {
                                             (e.target as HTMLImageElement).style.display = 'none';
@@ -734,7 +724,7 @@ const AEPS = () => {
                                         onChange={() => handleGridBankSelect(bank.name)}
                                         className="w-3.5 h-3.5 text-primary focus:ring-primary accent-primary"
                                     />
-                                    <span className="text-xs font-semibold text-center text-foreground">{bank.name}</span>
+                                    <span className="text-xs font-semibold text-center text-foreground">{bank.displayName}</span>
                                 </div>
                             </label>
                         ))}
