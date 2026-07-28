@@ -544,14 +544,6 @@ const AEPS = () => {
                             </div>
                         ) : (
                             <>
-                                <button 
-                                    onClick={() => setShowKycModal(true)} 
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 border border-blue-200 transition-all text-sm font-semibold shadow-sm"
-                                    title="Add New Bank Pipe"
-                                >
-                                    <ShieldCheck size={16} />
-                                    {merchantStatus.isMerchantKycComplete ? "Add New Pipe" : "Complete eKYC"}
-                                </button>
                                 {!merchantStatus.isDailyAuthDoneToday ? (
                                     <button 
                                         onClick={() => setShowDailyAuthModal(true)} 
