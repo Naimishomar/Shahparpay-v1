@@ -18,6 +18,7 @@ import PayoutReport from "./pages/PayoutReport"
 import UpiReport from "./pages/UpiReport"
 import LeadGeneration from "./pages/LeadGeneration"
 import PanCard from "./pages/PanCard"
+import ITR from "./pages/ITR"
 
 // New Pages
 import Login from "./pages/Login"
@@ -45,7 +46,7 @@ function App() {
         {/* Distributor Routes */}
         <Route path="distributor" element={<DistributorPortal/>}/>
         <Route path="distributor/:tab" element={<DistributorPortal/>}/>
-
+ 
         <Route path="aeps" element={<AEPS/>}/>
         <Route path="aeps-settlement" element={<AepsSettlement/>}/>
         <Route path="direct-payout" element={<DirectPayout/>}/>
@@ -56,6 +57,7 @@ function App() {
         <Route path="upi-payments" element={<UPI_Payments/>}/>
         <Route path="lead-generation" element={<LeadGeneration/>}/>
         <Route path="pan" element={<PanCard/>}/>
+        <Route path="itr" element={<ITR/>}/>
         
         {/* Reports Routes */}
         <Route path="reports/ledger" element={<LedgerReport/>}/>

@@ -23,6 +23,7 @@ const retailerProjects = [
   { name: "UPI Payments", url: "/upi-payments", icon: Wallet },
   { name: "Lead Generation", url: "/lead-generation", icon: UserPlus },
   { name: "PAN Card", url: "/pan", icon: FileText },
+  { name: "ITR Filing", url: "/itr", icon: FileText },
   {
     name: "Reports",
     icon: BarChart3,

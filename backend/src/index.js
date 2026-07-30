@@ -65,6 +65,7 @@ import fundRequestRouter from './routes/fundRequest.route.js';
 import dashboardRouter from './routes/dashboard.route.js';
 import leadRouter from './routes/lead.route.js';
 import panRouter from './routes/pan.route.js';
+import itrRouter from './routes/itr.route.js';
 import { startReconciliationWorker } from './workers/reconciliation.worker.js';
 
 app.use('/api/aeps', aepsRoutes);
@@ -79,6 +80,7 @@ app.use('/api/fund-request', fundRequestRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/lead', leadRouter);
 app.use('/api/pan', panRouter);
+app.use('/api/itr', itrRouter);
 
 const startServer = async () => {
     try {
