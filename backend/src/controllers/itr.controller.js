@@ -65,22 +65,23 @@ export const launchItrFiling = async (req, res) => {
  */
 export const checkAgentWallet = async (req, res) => {
     try {
-        const { partner_unique_id, agent_unique_id, required_amount } = req.body;
-        console.log(`[ITR Wallet Check] Received check request:`, req.body);
+        const payload = req.method === 'GET' ? req.query : req.body;
+        const { partner_unique_id, agent_unique_id, required_amount } = payload;
+        console.log(`[ITR Wallet Check] Received check request (${req.method}):`, payload);
 
         if (!agent_unique_id || required_amount === undefined) {
-            return res.status(400).json({ success: false, message: "Missing required parameters" });
+            return res.status(200).json({ success: false, message: "Missing required parameters" });
         }
 
         // Validate Partner ID
         if (partner_unique_id !== process.env.ESEVATECH_PARTNER_UNIQUE_ID) {
-            return res.status(400).json({ success: false, message: "Invalid partner_unique_id" });
+            return res.status(200).json({ success: false, message: "Invalid partner_unique_id" });
         }
 
         // Find agent (retailer) in our DB
         const retailer = await Retailer.findOne({ retailerId: agent_unique_id });
         if (!retailer) {
-            return res.status(404).json({ success: false, error: "AGENT_NOT_FOUND", message: "Agent not found" });
+            return res.status(200).json({ success: false, error: "AGENT_NOT_FOUND", message: "Agent not found" });
         }
 
         // Get main wallet balance
@@ -98,7 +99,7 @@ export const checkAgentWallet = async (req, res) => {
         });
     } catch (error) {
         console.error("Error in checkAgentWallet:", error);
-        return res.status(500).json({
+        return res.status(200).json({
             success: false,
             error: "INTERNAL_ERROR",
             message: error.message || "Internal server error during wallet check"
