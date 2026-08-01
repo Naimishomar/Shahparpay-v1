@@ -76,7 +76,6 @@ const AEPS = () => {
         activePipes: [] as string[]
     });
     const [selectedPipe, setSelectedPipe] = useState('');
-    const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
     const [isLoadingStatus, setIsLoadingStatus] = useState(true);
 
     // Fetch Merchant Status on Load
@@ -94,36 +93,14 @@ const AEPS = () => {
                     if (!selectedPipe && data.data.activePipes && data.data.activePipes.length > 0) {
                         setSelectedPipe(data.data.activePipes[0]);
                     }
+                    if (!data.data.isDailyAuthDoneToday) {
+                        setShowDailyAuthModal(true);
+                    }
                 }
             })
             .catch(err => console.error("Failed to fetch merchant status", err))
             .finally(() => setIsLoadingStatus(false));
     }, [merchantCode, selectedPipe]);
-
-    const refreshMerchantStatus = async () => {
-        if (!merchantCode) return;
-        setIsRefreshingStatus(true);
-        try {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/merchant-status?merchantcode=${merchantCode}&forceRefresh=true`);
-            const data = await res.json();
-            if (data.success && data.data) {
-                setMerchantStatus(data.data);
-                if (data.data.activePipes && data.data.activePipes.length > 0) {
-                    setSelectedPipe(data.data.activePipes[0]);
-                } else {
-                    setSelectedPipe('');
-                }
-                toast.success("Bank routes refreshed successfully!");
-            } else {
-                toast.error("Failed to refresh bank routes");
-            }
-        } catch (err) {
-            console.error("Failed to refresh merchant status", err);
-            toast.error("An error occurred while refreshing routes");
-        } finally {
-            setIsRefreshingStatus(false);
-        }
-    };
     
     // Biometric Capture State
     const [pidData, setPidData] = useState<string | null>(null);
@@ -527,14 +504,6 @@ const AEPS = () => {
 
                 {/* Action Buttons Row */}
                 <div className="flex flex-wrap items-center justify-end w-full gap-3">
-                    <button 
-                        onClick={handleReset} 
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 border border-red-200 transition-all text-sm font-semibold shadow-sm"
-                        title="Reset all fields"
-                    >
-                        <RefreshCcw size={16} />
-                        Reset
-                    </button>
                     <div className="flex flex-wrap gap-2">
                         {/* Tracker UI logic: Hides KYC if complete, changes Daily Auth appearance if done */}
                         {isLoadingStatus ? (
@@ -544,7 +513,7 @@ const AEPS = () => {
                             </div>
                         ) : (
                             <>
-                                {!merchantStatus.isDailyAuthDoneToday ? (
+                                {!merchantStatus.isDailyAuthDoneToday && (
                                     <button 
                                         onClick={() => setShowDailyAuthModal(true)} 
                                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 transition-all text-sm font-semibold shadow-sm animate-pulse"
@@ -553,11 +522,6 @@ const AEPS = () => {
                                         <KeyRound size={16} />
                                         Pending Daily Auth
                                     </button>
-                                ) : (
-                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 text-green-600 border border-green-200 text-sm font-semibold shadow-sm">
-                                        <CheckCircle2 size={16} />
-                                        Auth Done
-                                    </div>
                                 )}
                             </>
                         )}
@@ -718,8 +682,8 @@ const AEPS = () => {
                         ))}
                     </div>
 
-                    {/* Device Selection */}
-                    <div className="flex flex-col gap-4 border border-border p-4 rounded-xl bg-background/30 backdrop-blur-sm">
+                    {/* Device Selection and Reset */}
+                    <div className="flex items-center justify-between gap-4 border border-border p-4 rounded-xl bg-background/30 backdrop-blur-sm flex-wrap">
                         <div className="flex flex-wrap gap-8">
                             {[
                                 { name: 'Mantra', logo: 'Mantra' },
@@ -746,6 +710,14 @@ const AEPS = () => {
                                 </label>
                             ))}
                         </div>
+                        <button 
+                            onClick={handleReset} 
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 border border-red-200 transition-all text-sm font-semibold shadow-sm h-fit"
+                            title="Reset all fields"
+                        >
+                            <RefreshCcw size={16} />
+                            Reset
+                        </button>
                     </div>
 
                     {/* Consent */}
