@@ -534,8 +534,10 @@ const AEPS = () => {
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-50 pointer-events-none"></div>
 
                 <div className="relative z-10 flex flex-col gap-6">
-                    {/* Inputs Row */}
-                    <div className="flex flex-col gap-4 bg-primary/5 p-5 border-l-4 border-primary rounded-lg">
+                    
+                    <div className="flex flex-col xl:flex-row justify-between gap-6 w-full">
+{/* Inputs Row */}
+                    <div className="flex flex-col gap-4 bg-primary/5 p-5 border-l-4 border-primary rounded-lg flex-1">
                         <h2 className="text-lg font-bold text-foreground border-b border-border/50 pb-2">
                             {activeTab === 'balance_enquiry' ? 'Balance Enquiry' : activeTab === 'mini_statement' ? 'Mini Statement' : activeTab === 'cash_deposit' ? 'Cash Deposit' : activeTab === 'aadhaar_pay' ? 'Aadhaar Pay' : 'Cash Withdrawal'}
                         </h2>
@@ -650,6 +652,67 @@ const AEPS = () => {
                         </div>
                     </div>
 
+                        {/* Right Column: Scan & Action Area */}
+                        <div className="flex flex-col items-center justify-center gap-6 bg-primary/5 p-5 border-r-4 border-primary rounded-lg w-full lg:w-[400px]">
+                            {/* Consent */}
+                            <label className="flex items-start gap-3 cursor-pointer group w-full bg-background p-4 rounded-xl border border-border">
+                                <input 
+                                    type="checkbox" 
+                                    checked={consent}
+                                    onChange={(e) => setConsent(e.target.checked)}
+                                    className="w-5 h-5 rounded border-border text-primary focus:ring-primary accent-primary mt-1 cursor-pointer shrink-0" 
+                                />
+                                <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors leading-tight">
+                                    I hereby provide my consent to CSP to use my Aadhaar number/ VID to complete AEPS transaction authorisation.
+                                </span>
+                            </label>
+
+                            {/* Scan Button */}
+                            <button 
+                                onClick={captureFingerprint} 
+                                disabled={isScanning || !!pidData}
+                                className={`flex flex-col items-center justify-center gap-3 p-6 rounded-xl border-2 transition-all w-full
+                                    ${pidData 
+                                        ? 'border-green-500 bg-green-50 dark:bg-green-500/10' 
+                                        : 'border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 cursor-pointer bg-background'}`}
+                            >
+                                <div className="relative">
+                                    <Fingerprint className={`w-12 h-12 ${pidData ? 'text-green-500' : 'text-primary'} ${isScanning ? 'animate-pulse' : ''}`} />
+                                    {isScanning && (
+                                        <div className="absolute inset-0 bg-primary/20 animate-ping rounded-full"></div>
+                                    )}
+                                </div>
+                                <div className="text-center">
+                                    <h3 className={`font-semibold ${pidData ? 'text-green-600 dark:text-green-400' : 'text-foreground'}`}>
+                                        {isScanning ? 'Scanning...' : (pidData ? 'Fingerprint Captured' : 'Scan Fingerprint')}
+                                    </h3>
+                                    {!pidData && !isScanning && (
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                            Click to capture customer biometric
+                                        </p>
+                                    )}
+                                </div>
+                            </button>
+
+                            {/* Clear/Submit Buttons */}
+                            <div className="flex gap-4 w-full">
+                                <button onClick={() => {
+                                    setAadhaarNo('');
+                                    setMobileNo('');
+                                    setAmount('');
+                                    setPidData(null);
+                                    setBankName('');
+                                }} className="flex-1 py-3 rounded-lg border border-border hover:bg-muted font-medium transition-colors">
+                                    Clear
+                                </button>
+                                <button onClick={handleSubmit} disabled={loading || !pidData} className="flex-1 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-bold shadow-[0_0_15px_rgba(139,92,246,0.4)] hover:shadow-[0_0_20px_rgba(139,92,246,0.6)] transition-all duration-300 disabled:opacity-50">
+                                    {loading ? <RefreshCcw className="animate-spin mx-auto" size={20} /> : "Submit"}
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+
                     {/* Popular Banks Selection */}
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
                         {banks.map((bank) => (
@@ -717,62 +780,6 @@ const AEPS = () => {
                         >
                             <RefreshCcw size={16} />
                             Reset
-                        </button>
-                    </div>
-
-                    {/* Consent */}
-                    <label className="flex items-start md:items-center gap-3 cursor-pointer mt-2 group">
-                        <input 
-                            type="checkbox" 
-                            checked={consent}
-                            onChange={(e) => setConsent(e.target.checked)}
-                            className="w-5 h-5 rounded border-border text-primary focus:ring-primary accent-primary mt-1 md:mt-0 cursor-pointer" 
-                        />
-                        <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                            I hereby provide my consent to CSP to use my Aadhaar number/ VID to complete AEPS transaction authorisation.
-                        </span>
-                    </label>
-
-                    <div className="flex flex-col md:flex-row justify-center gap-4 mt-4">
-                        <button 
-                            onClick={captureFingerprint} 
-                            disabled={isScanning || !!pidData}
-                            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-xl border-2 transition-all 
-                                ${pidData 
-                                    ? 'border-green-500 bg-green-50 dark:bg-green-500/10' 
-                                    : 'border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 cursor-pointer bg-background'}`}
-                        >
-                            <div className="relative">
-                                <Fingerprint className={`w-12 h-12 ${pidData ? 'text-green-500' : 'text-primary'} ${isScanning ? 'animate-pulse' : ''}`} />
-                                {isScanning && (
-                                    <div className="absolute inset-0 bg-primary/20 animate-ping rounded-full"></div>
-                                )}
-                            </div>
-                            <div className="text-center">
-                                <h3 className={`font-semibold ${pidData ? 'text-green-600 dark:text-green-400' : 'text-foreground'}`}>
-                                    {isScanning ? 'Scanning...' : (pidData ? 'Fingerprint Captured' : 'Scan Fingerprint')}
-                                </h3>
-                                {!pidData && !isScanning && (
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        Click to capture customer biometric
-                                    </p>
-                                )}
-                            </div>
-                        </button>
-                    </div>
-
-                    <div className="flex gap-4">
-                        <button onClick={() => {
-                            setAadhaarNo('');
-                            setMobileNo('');
-                            setAmount('');
-                            setPidData(null);
-                            setBankName('');
-                        }} className="px-6 py-2.5 rounded-lg border border-border hover:bg-muted font-medium transition-colors">
-                            Clear
-                        </button>
-                        <button onClick={handleSubmit} disabled={loading || !pidData} className="px-10 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-bold shadow-[0_0_15px_rgba(139,92,246,0.4)] hover:shadow-[0_0_20px_rgba(139,92,246,0.6)] transition-all duration-300 disabled:opacity-50">
-                            {loading ? <RefreshCcw className="animate-spin mx-auto" size={20} /> : "Submit"}
                         </button>
                     </div>
 
