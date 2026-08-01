@@ -13,7 +13,7 @@ import { useAuth } from "../context/AuthContext"
 
 const retailerProjects = [
   { name: "Dashboard", url: "/", icon: BarChart3 },
-  { name: "Wallet Transfer", url: "/wallet-transfer", icon: Wallet },
+  // { name: "Wallet Transfer", url: "/wallet-transfer", icon: Wallet },
   { name: "DMT", url: "/dmt", icon: Send },
   { name: "Recharge", url: "/recharge", icon: Zap },
   { name: "AEPS", url: "/aeps", icon: ScanFace },
