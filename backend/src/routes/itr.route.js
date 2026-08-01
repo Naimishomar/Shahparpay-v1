@@ -11,5 +11,7 @@ router.get('/history', authMiddlewares, getItrHistory);
 // Public callback routes from eSevaTech
 router.all('/check-agent-wallet', checkAgentWallet);
 router.post('/webhook', itrWebhook);
+// eSevaTech appends /check-agent-wallet to the webhook URL for wallet checks
+router.all('/webhook/check-agent-wallet', checkAgentWallet);
 
 export default router;
