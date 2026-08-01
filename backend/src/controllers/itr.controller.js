@@ -138,6 +138,14 @@ export const itrWebhook = async (req, res) => {
 
         console.log(`[ITR Webhook] Received Event: "${event}" for service "${service_type}". Payload:`, payload);
 
+        // 0. WALLET CHECK FLOW
+        // If eSevaTech only uses a single webhook URL, wallet checks will arrive here.
+        // We can identify a wallet check request by the presence of `required_amount`.
+        if (payload.required_amount !== undefined) {
+            console.log(`[ITR Webhook] Delegating to checkAgentWallet because required_amount is present.`);
+            return checkAgentWallet(req, res);
+        }
+
         // 1. REFUND FLOW (Credit agent wallet)
         if (event === 'application_refunded') {
             const agent_unique_id = trimString(payload.agent_unique_id);
