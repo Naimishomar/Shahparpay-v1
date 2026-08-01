@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Fingerprint, Loader2, KeyRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface DailyAuthModalProps {
     onClose: () => void;
@@ -11,6 +12,7 @@ interface DailyAuthModalProps {
 }
 
 const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = [], latitude, longitude }) => {
+    const navigate = useNavigate();
     const { user } = useAuth();
     const actualMerchantCode = user?.retailerId || user?.distributorId || user?.adminId || "";
     const actualAadhaar = user?.aadhaarNumber || "";
@@ -184,7 +186,13 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = 
                 </div>
 
                 <div className="border-t border-border p-4 bg-muted/20 flex justify-end">
-                    <button onClick={onClose} className="px-4 py-2 font-medium text-muted-foreground hover:text-foreground">
+                    <button 
+                        onClick={() => {
+                            onClose();
+                            navigate('/');
+                        }} 
+                        className="px-4 py-2 font-medium text-muted-foreground hover:text-foreground"
+                    >
                         Cancel
                     </button>
                 </div>
