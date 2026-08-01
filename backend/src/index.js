@@ -10,7 +10,15 @@ dotenv.config({quiet: true});
 const PORT = process.env.PORT || 5000;
 
 app.use(cors({
-    origin: ['http://localhost:5173', 'https://shahparpay-v1.vercel.app'],
+    origin: function(origin, callback) {
+        // Allow frontend origins + eSevaTech server-to-server (no origin) calls
+        const allowedOrigins = ['http://localhost:5173', 'https://shahparpay-v1.vercel.app'];
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(null, true); // Allow all origins for server-to-server webhooks
+        }
+    },
     credentials: true,
 }));
 
@@ -66,6 +74,7 @@ import dashboardRouter from './routes/dashboard.route.js';
 import leadRouter from './routes/lead.route.js';
 import panRouter from './routes/pan.route.js';
 import itrRouter from './routes/itr.route.js';
+import { checkAgentWallet } from './controllers/itr.controller.js';
 import { startReconciliationWorker } from './workers/reconciliation.worker.js';
 
 app.use('/api/aeps', aepsRoutes);
@@ -81,6 +90,9 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/lead', leadRouter);
 app.use('/api/pan', panRouter);
 app.use('/api/itr', itrRouter);
+
+// eSevaTech may call /api/check-agent-wallet at root level by convention
+app.all('/api/check-agent-wallet', checkAgentWallet);
 
 const startServer = async () => {
     try {
