@@ -70,18 +70,36 @@ export const checkAgentWallet = async (req, res) => {
         console.log(`[ITR Wallet Check] Received check request (${req.method}):`, payload);
 
         if (!agent_unique_id || required_amount === undefined) {
-            return res.status(200).json({ success: false, message: "Missing required parameters" });
+            return res.status(200).json({ 
+                success: true, 
+                sufficient_balance: false, 
+                current_balance: 0,
+                error_code: "INVALID_REQUEST",
+                message: "Missing required parameters" 
+            });
         }
 
         // Validate Partner ID
         if (partner_unique_id !== process.env.ESEVATECH_PARTNER_UNIQUE_ID) {
-            return res.status(200).json({ success: false, message: "Invalid partner_unique_id" });
+            return res.status(200).json({ 
+                success: true, 
+                sufficient_balance: false, 
+                current_balance: 0,
+                error_code: "INVALID_PARTNER",
+                message: "Invalid partner_unique_id" 
+            });
         }
 
         // Find agent (retailer) in our DB
         const retailer = await Retailer.findOne({ retailerId: agent_unique_id });
         if (!retailer) {
-            return res.status(200).json({ success: false, error: "AGENT_NOT_FOUND", message: "Agent not found" });
+            return res.status(200).json({ 
+                success: true, 
+                sufficient_balance: false, 
+                current_balance: 0,
+                error_code: "AGENT_NOT_FOUND", 
+                message: "Agent not found" 
+            });
         }
 
         // Get main wallet balance
@@ -100,8 +118,10 @@ export const checkAgentWallet = async (req, res) => {
     } catch (error) {
         console.error("Error in checkAgentWallet:", error);
         return res.status(200).json({
-            success: false,
-            error: "INTERNAL_ERROR",
+            success: true,
+            sufficient_balance: false,
+            current_balance: 0,
+            error_code: "INTERNAL_ERROR",
             message: error.message || "Internal server error during wallet check"
         });
     }
