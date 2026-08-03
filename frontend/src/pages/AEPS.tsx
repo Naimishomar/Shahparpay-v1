@@ -206,7 +206,7 @@ const AEPS = () => {
 
     const captureFingerprint = async () => {
         if (!aadhaarNo || !bankName) {
-            alert("Please fill Aadhaar Number and Bank Name before scanning your fingerprint.");
+            toast.error("Please fill Aadhaar Number and Bank Name before scanning your fingerprint.");
             return;
         }
         
@@ -288,18 +288,16 @@ const AEPS = () => {
 
             if (capturedData && capturedData.includes('errCode="0"')) {
                 setPidData(capturedData);
-                alert(`Customer Fingerprint captured successfully!`);
             } else if (capturedData && !capturedData.includes('errCode="0"')) {
                 const errMatch = capturedData.match(/errInfo="([^"]+)"/);
                 const errMsg = errMatch ? errMatch[1] : 'Unknown error';
-                alert(`Capture failed.\nError: ${errMsg}\nPlease wipe the scanner and try again.`);
                 setPidData(null);
             } else {
                 throw new Error("No valid data returned from capture endpoint.");
             }
         } catch (error) {
             console.error("RD Service Error:", error);
-            alert(`Could not connect to ${selectedDevice}.
+            toast.error(`Could not connect to ${selectedDevice}.
             
 1. Ensure the RD Service app is running in Windows Services.
 2. Turn off ALL Ad-Blockers (uBlock, AdBlock, Brave Shields) as they block connections to the scanner.
@@ -314,11 +312,11 @@ const AEPS = () => {
         const isBalanceEnquiry = activeTab === 'balance_enquiry';
 
         if (!aadhaarNo || !bankName || (!isBalanceEnquiry && !mobileNo)) {
-            alert("Please fill all required fields.");
+            toast.error("Please fill all required fields.");
             return;
         }
         if (!consent) {
-            alert("Please check the consent box.");
+            toast.error("Please check the consent box.");
             return;
         }
 
@@ -376,13 +374,13 @@ const AEPS = () => {
             } else if (activeTab === 'cash_withdrawal') {
                 // Intercept logic for DB tracker
                 if (!merchantStatus.isMerchantKycComplete) {
-                    alert("Mandatory eKYC is incomplete. Please complete it first.");
+                    toast.error("Mandatory eKYC is incomplete. Please complete it first.");
                     setShowKycModal(true);
                     setLoading(false);
                     return;
                 }
                 if (!merchantStatus.isDailyAuthDoneToday) {
-                    alert("Daily Biometric Authentication is required. Please complete it now.");
+                    toast.error("Daily Biometric Authentication is required. Please complete it now.");
                     setShowDailyAuthModal(true);
                     setLoading(false);
                     return;
@@ -392,13 +390,13 @@ const AEPS = () => {
             } else if (activeTab === 'aadhaar_pay') {
                 // Intercept logic for DB tracker
                 if (!merchantStatus.isMerchantKycComplete) {
-                    alert("Mandatory eKYC is incomplete. Please complete it first.");
+                    toast.error("Mandatory eKYC is incomplete. Please complete it first.");
                     setShowKycModal(true);
                     setLoading(false);
                     return;
                 }
                 if (!merchantStatus.isDailyAuthDoneToday) {
-                    alert("Daily Biometric Authentication is required. Please complete it now.");
+                    toast.error("Daily Biometric Authentication is required. Please complete it now.");
                     setShowDailyAuthModal(true);
                     setLoading(false);
                     return;
@@ -436,12 +434,11 @@ const AEPS = () => {
                 setReceiptData(data);
                 setShowReceiptModal(true);
             } else {
-                alert("Transaction Failed: " + (result.message || "Unknown error"));
+                toast.error("Transaction Failed: " + (result.message || "Unknown error"));
             }
         } catch (error: any) {
             console.error(error);
             const errorMsg = error.response?.data?.message || "Failed to connect to the server.";
-            alert("Transaction Failed: " + errorMsg);
         } finally {
             window.dispatchEvent(new Event('wallet-updated'));
             setLoading(false);

@@ -22,7 +22,7 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = 
     
     const handleCaptureAndAuth = async () => {
         if (!merchantCode || aadhaar.length !== 12) {
-            alert('Please enter valid Merchant Code and 12-digit Aadhaar');
+            toast.error('Please enter valid Merchant Code and 12-digit Aadhaar');
             return;
         }
 
@@ -52,7 +52,7 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = 
             }
 
             if (!activeUrl) {
-                alert("RD Service not found. Please ensure your Biometric scanner is connected and running.");
+                toast.error("RD Service not found. Please ensure your Biometric scanner is connected and running.");
                 setLoading(false);
                 return;
             }
@@ -65,7 +65,7 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = 
             const capturedData = await captureResponse.text();
 
             if (!capturedData.includes('errCode="0"')) {
-                alert("Biometric capture failed. Please clean the scanner and try again.");
+                toast.error("Biometric capture failed. Please clean the scanner and try again.");
                 setLoading(false);
                 return;
             }
@@ -87,15 +87,15 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = 
             const result = await response.json();
             
             if (result.success && result.data?.response_code === 1) {
-                alert("Daily 2FA Authentication Successful! You can now perform transactions.");
+                toast.error("Daily 2FA Authentication Successful! You can now perform transactions.");
                 onClose();
             } else if (result.data?.response_code === 1 && result.data?.errorcode === 2) {
-                alert("Authentication Already Completed for today.");
+                toast.error("Authentication Already Completed for today.");
                 onClose();
             } else {
                 const errorMsg = result.data?.message || result.message;
                 if (errorMsg.includes('Registration Successful')) {
-                    alert(errorMsg);
+                    toast.error(errorMsg);
                 } else if (result.needsWebOnboarding || errorMsg.includes('reset your status') || errorMsg.includes('pending')) {
                     const pipeToOnboard = result.pipe || 'bank2';
                     const dynamicIsNew = activePipes.includes(pipeToOnboard) ? "0" : "1";
@@ -122,18 +122,18 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = 
                             toast.success("Merchant already onboarded. Please try again.");
                             setTimeout(() => { window.location.reload(); }, 1500);
                         } else {
-                            alert("Failed to get Onboarding URL: " + (onboardData.message || "Unknown error"));
+                            toast.error("Failed to get Onboarding URL: " + (onboardData.message || "Unknown error"));
                         }
                     } catch (e) {
-                        alert("Error generating onboarding URL");
+                        toast.error("Error generating onboarding URL");
                     }
                 } else {
-                    alert("Daily Auth Failed: " + errorMsg);
+                    toast.error("Daily Auth Failed: " + errorMsg);
                 }
             }
         } catch (error) {
             console.error(error);
-            alert("Error during Daily Authentication.");
+            toast.error("Error during Daily Authentication.");
         } finally {
             setLoading(false);
         }

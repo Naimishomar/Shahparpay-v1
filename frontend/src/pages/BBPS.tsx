@@ -5,6 +5,7 @@ import axios from "axios";
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
+import { toast } from "sonner";
 
 const bbpsServices = [
     { id: "electricity", name: "Ebill", icon: Zap, color: "text-yellow-500", border: "border-yellow-500/20" },
@@ -66,7 +67,7 @@ const BBPS = () => {
 
     const handleFetchBill = async () => {
         if (!operatorId || !consumerNumber) {
-            alert("Please select an operator and enter the consumer number");
+            toast.error("Please select an operator and enter the consumer number");
             return;
         }
 
@@ -86,10 +87,10 @@ const BBPS = () => {
                 const fetchedAmt = response.data.data.amount || response.data.data.Amount || response.data.data.billAmount;
                 if (fetchedAmt) setAmount(fetchedAmt.toString());
             } else {
-                alert(response.data.message || "Failed to fetch bill details");
+                toast.error(response.data.message || "Failed to fetch bill details");
             }
         } catch (error: any) {
-            alert(error.response?.data?.message || "Error fetching bill");
+            toast.error(error.response?.data?.message || "Error fetching bill");
         } finally {
             setFetchingBill(false);
         }
@@ -97,7 +98,7 @@ const BBPS = () => {
 
     const handlePayment = async () => {
         if (!operatorId || !consumerNumber || !amount || !pin) {
-            alert("Please fill all fields");
+            toast.error("Please fill all fields");
             return;
         }
 

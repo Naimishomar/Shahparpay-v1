@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { MapPinOff } from 'lucide-react';
+import React, { createContext, useActionState, useContext, useEffect, useState } from 'react';
+import { Loader2, MapPinOff } from 'lucide-react';
 
 interface LocationContextType {
     location: { latitude: number; longitude: number } | null;
@@ -12,8 +12,10 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [permissionDenied, setPermissionDenied] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const requestLocation = () => {
+        setLoading(true);
         if (!navigator.geolocation) {
             setError("Geolocation is not supported by your browser");
             setPermissionDenied(true);
@@ -48,6 +50,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     useEffect(() => {
         requestLocation();
+        setLoading(false);
     }, []);
 
     return (
@@ -65,12 +68,9 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                                 Please allow location access in your browser to continue.
                             </p>
                         </div>
-                        <button 
-                            onClick={requestLocation}
-                            className="w-full bg-primary text-primary-foreground font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity"
-                        >
-                            Retry
-                        </button>
+                        { loading ? <button className="w-full bg-primary text-primary-foreground font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity"><Loader2 className='animate-spin'/></button>:                     
+                            <button  onClick={requestLocation} className="w-full bg-primary text-primary-foreground font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity">Retry</button>
+                        }
                     </div>
                 </div>
             )}

@@ -4,6 +4,7 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { Download, CheckCircle, XCircle } from 'lucide-react';
 import logo from '../assets/logo.png';
+import { toast } from 'sonner';
 
 const AepsReceipt = ({ transactionId, onClose }: { transactionId: string, onClose: () => void }) => {
     const [receiptData, setReceiptData] = useState<any>(null);
@@ -47,7 +48,7 @@ const AepsReceipt = ({ transactionId, onClose }: { transactionId: string, onClos
             pdf.save(`Shahparpay_Receipt_${transactionId}.pdf`);
         } catch (error) {
             console.error("Error generating PDF:", error);
-            alert("Failed to download PDF.");
+            toast.error("Failed to download PDF.");
         }
     };
 

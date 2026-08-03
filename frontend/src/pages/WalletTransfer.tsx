@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Wallet, Clock, ArrowRightLeft, CheckCircle2, Lock, X, ArrowRight } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
 
 const WalletTransfer = () => {
     const { token } = useAuth();
@@ -56,7 +57,7 @@ const WalletTransfer = () => {
 
     const handleSetPin = async () => {
         if (!newPin || newPin.length !== 4 || isNaN(Number(newPin))) {
-            alert("Please enter a valid 4-digit PIN.");
+            toast.error("Please enter a valid 4-digit PIN.");
             return;
         }
         setLoading(true);
@@ -66,13 +67,13 @@ const WalletTransfer = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.data.success) {
-                alert("PIN set successfully!");
+                toast.error("PIN set successfully!");
                 setHasPin(true);
                 setShowSetPinModal(false);
                 setNewPin("");
             }
         } catch (error: any) {
-            alert(error.response?.data?.message || "Failed to set PIN.");
+            toast.error(error.response?.data?.message || "Failed to set PIN.");
         } finally {
             setLoading(false);
         }
@@ -85,12 +86,12 @@ const WalletTransfer = () => {
         }
 
         if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-            alert("Please enter a valid amount to transfer.");
+            toast.error("Please enter a valid amount to transfer.");
             return;
         }
         
         if (Number(amount) > Number(aepsBalance)) {
-            alert("Insufficient balance in AEPS Wallet.");
+            toast.error("Insufficient balance in AEPS Wallet.");
             return;
         }
 
@@ -99,7 +100,7 @@ const WalletTransfer = () => {
 
     const handleConfirmTransfer = async () => {
         if (!pin || pin.length !== 4) {
-            alert("Please enter your 4-digit transaction PIN.");
+            toast.error("Please enter your 4-digit transaction PIN.");
             return;
         }
 
@@ -123,10 +124,10 @@ const WalletTransfer = () => {
                 window.dispatchEvent(new Event('wallet-updated'));
                 
                 setShowEnterPinModal(false);
-                alert("Wallet Transfer Successful!");
+                toast.error("Wallet Transfer Successful!");
             }
         } catch (error: any) {
-            alert(error.response?.data?.message || "Transfer failed.");
+            toast.error(error.response?.data?.message || "Transfer failed.");
         } finally {
             setLoading(false);
         }

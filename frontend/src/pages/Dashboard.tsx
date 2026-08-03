@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import MerchantKycModal from '../components/MerchantKycModal';
+import { toast } from "sonner";
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -101,14 +102,14 @@ const Dashboard = () => {
                 } else if (res.data.url) {
                     window.open(res.data.url, '_blank');
                 } else {
-                    alert("Invalid KYC URL returned.");
+                    toast.error("Invalid KYC URL returned.");
                 }
             } else {
-                alert(res.data.message || "Failed to fetch KYC URL");
+                toast.error(res.data.message || "Failed to fetch KYC URL");
             }
         } catch (error: any) {
             console.error(error);
-            alert(error.response?.data?.message || "Failed to fetch KYC URL");
+            toast.error(error.response?.data?.message || "Failed to fetch KYC URL");
         } finally {
             setKycLoading(false);
         }

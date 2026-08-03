@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ShieldAlert, Fingerprint, Loader2, CheckCircle2 } from 'lucide-react';
+import { Fingerprint, Loader2, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
 
 interface MerchantKycModalProps {
     onClose: () => void;
@@ -28,11 +29,11 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
 
     const handleNextStep = async () => {
         if (!merchantCode || aadhaar.length !== 12) {
-            alert('Please enter valid Merchant Code and 12-digit Aadhaar');
+            toast.error('Please enter valid Merchant Code and 12-digit Aadhaar');
             return;
         }
         if (kycMethod === 'bank2' && !dob) {
-            alert('Please enter your Date of Birth for Bank 2 activation');
+            toast.error('Please enter your Date of Birth for Bank 2 activation');
             return;
         }
 
@@ -55,16 +56,16 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
                     setEkycId(result.data.data.otpreqid || result.data.data.ekyc_id);
                     setStateresp(result.data.data.stateresp || 'unknown');
                     setStep(2);
-                    alert("OTP sent successfully to your registered Aadhaar mobile number.");
+                    toast.error("OTP sent successfully to your registered Aadhaar mobile number.");
                 } else if (result.data?.response_code === 2) {
-                    alert("KYC already completed! You can proceed with transactions.");
+                    toast.error("KYC already completed! You can proceed with transactions.");
                     onClose();
                 } else {
-                    alert("Failed to send OTP: " + (result.data?.message || result.message));
+                    toast.error("Failed to send OTP: " + (result.data?.message || result.message));
                 }
             } catch (error) {
                 console.error(error);
-                alert('Server error while sending OTP');
+                toast.error('Server error while sending OTP');
             } finally {
                 setLoading(false);
             }
@@ -102,7 +103,7 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
             }
 
             if (!activeUrl) {
-                alert("RD Service not found. Please ensure Mantra/Morpho is connected and running.");
+                toast.error("RD Service not found. Please ensure Mantra/Morpho is connected and running.");
                 setLoading(false);
                 return;
             }
@@ -116,13 +117,13 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
 
             if (capturedData.includes('errCode="0"')) {
                 setPidData(capturedData);
-                alert("Fingerprint captured successfully!");
+                toast.error("Fingerprint captured successfully!");
             } else {
-                alert("Biometric capture failed. Please clean the scanner and try again.");
+                toast.error("Biometric capture failed. Please clean the scanner and try again.");
             }
         } catch (error) {
             console.error(error);
-            alert("Error during biometric capture.");
+            toast.error("Error during biometric capture.");
         } finally {
             setLoading(false);
         }
@@ -130,11 +131,11 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
 
     const handleVerifyKyc = async () => {
         if (kycMethod === 'bank3' && (!otp || !pidData)) {
-            alert("Please enter OTP and capture your fingerprint first.");
+            toast.error("Please enter OTP and capture your fingerprint first.");
             return;
         }
         if (kycMethod === 'bank2' && !pidData) {
-            alert("Please capture your fingerprint first.");
+            toast.error("Please capture your fingerprint first.");
             return;
         }
 
@@ -177,14 +178,14 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
             result = await response.json();
             
             if (result.success && result.data?.response_code == "1") {
-                alert("Merchant eKYC Completed Successfully! You can now perform transactions.");
+                toast.error("Merchant eKYC Completed Successfully! You can now perform transactions.");
                 onClose();
             } else {
-                alert("KYC Verification Failed: " + (result.data?.message || result.message));
+                toast.error("KYC Verification Failed: " + (result.data?.message || result.message));
             }
         } catch (error) {
             console.error(error);
-            alert('Server error while verifying KYC');
+            toast.error('Server error while verifying KYC');
         } finally {
             setLoading(false);
         }

@@ -71,7 +71,7 @@ const Recharge = () => {
 
     const handleBrowsePlan = async () => {
         if (!mobileNumber || !prepaidOperator) {
-            alert("Please enter mobile number and select operator first.");
+            toast.error("Please enter mobile number and select operator first.");
             return;
         }
         setLoading(true);
@@ -108,7 +108,7 @@ const Recharge = () => {
             }
         } catch (error: any) {
             console.error(error);
-            alert(error.response?.data?.message || "Failed to connect to server");
+            toast.error(error.response?.data?.message || "Failed to connect to server");
         } finally {
             setLoading(false);
         }
@@ -129,13 +129,13 @@ const Recharge = () => {
             pdf.save(`Receipt_${receiptData?.transactionId || 'Txn'}.pdf`);
         } catch (error: any) {
             console.error("PDF generation failed", error);
-            alert(`Failed to generate PDF: ${error?.message || error}`);
+            toast.error(`Failed to generate PDF: ${error?.message || error}`);
         }
     };
 
     const handleFetchDthInfo = async () => {
         if (!dthNumber || !dthOperator) {
-            alert("Please enter DTH number and select operator first.");
+            toast.error("Please enter DTH number and select operator first.");
             return;
         }
         setLoading(true);
@@ -164,7 +164,7 @@ const Recharge = () => {
             }
         } catch (error: any) {
             console.error(error);
-            alert(error.response?.data?.message || "Failed to connect to server");
+            toast.error(error.response?.data?.message || "Failed to connect to server");
         } finally {
             setLoading(false);
         }
@@ -175,13 +175,13 @@ const Recharge = () => {
         
         if (type === 'prepaid') {
             if (!mobileNumber || !prepaidOperator || !prepaidAmount || !prepaidPin) {
-                alert("Please fill all fields.");
+                toast.error("Please fill all fields.");
                 return;
             }
             payload = { ...payload, number: mobileNumber, operator: prepaidOperator, amount: prepaidAmount, pin: prepaidPin };
         } else {
             if (!dthNumber || !dthOperator || !dthAmount || !dthPin) {
-                alert("Please fill all fields.");
+                toast.error("Please fill all fields.");
                 return;
             }
             payload = { ...payload, number: dthNumber, operator: dthOperator, amount: dthAmount, pin: dthPin };
@@ -222,7 +222,7 @@ const Recharge = () => {
             console.error("AXIOS ERROR:", error);
             console.log("AXIOS RESPONSE:", error.response);
             const errMsg = error.response?.data?.message || error.response?.data?.error || error.message || "Failed to process recharge";
-            alert(errMsg);
+            toast.error(errMsg);
         } finally {
             setLoading(false);
         }
