@@ -33,6 +33,7 @@ const retailerProjects = [
       { name: "DMT Reports", url: "/reports/dmt" },
       { name: "Payout Reports", url: "/reports/payout" },
       { name: "UPI Reports", url: "/reports/upi" },
+      { name: "PAN Reports", url: "/reports/pan" },
     ]
   },
   { name: "Fund Request", url: "/fund-request", icon: Send },
