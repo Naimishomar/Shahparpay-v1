@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
-import { CreditCard, ExternalLink, RefreshCw, UserPlus } from 'lucide-react';
+import { CreditCard, UserPlus } from 'lucide-react';
 import { INDIAN_STATES } from '../constants';
 
 const LeadGeneration = () => {
@@ -264,92 +264,6 @@ const LeadGeneration = () => {
                     </div>
                 </div>
 
-                {/* History Section */}
-                <div>
-                    <div className="glass-card rounded-2xl h-full flex flex-col">
-                        <div className="p-6 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
-                            <h2 className="text-xl font-semibold flex items-center gap-2">
-                                Lead History
-                            </h2>
-                            <button
-                                onClick={fetchHistory}
-                                disabled={loading}
-                                className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
-                            >
-                                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                            </button>
-                        </div>
-
-                        <div className="p-0 overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="text-xs text-muted-foreground uppercase bg-black/5 dark:bg-white/5">
-                                    <tr>
-                                        <th className="px-6 py-4">Customer</th>
-                                        <th className="px-6 py-4">Product</th>
-                                        <th className="px-6 py-4">Ref ID</th>
-                                        <th className="px-6 py-4">Status</th>
-                                        <th className="px-6 py-4 text-right">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
-                                                Loading history...
-                                            </td>
-                                        </tr>
-                                    ) : leads.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
-                                                No leads generated yet.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        leads.map((lead, idx) => (
-                                            <tr key={idx} className="border-b border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                                                <td className="px-6 py-4">
-                                                    <div className="font-medium text-foreground">{lead.name}</div>
-                                                    <div className="text-xs text-muted-foreground">{lead.mobile_no}</div>
-                                                </td>
-                                                <td className="px-6 py-4 font-medium">
-                                                    {products.find(p => p.id === lead.product)?.name || lead.product}
-                                                </td>
-                                                <td className="px-6 py-4 text-xs font-mono text-muted-foreground">
-                                                    {lead.refid}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`px-2 py-1 text-xs rounded-full font-medium ${lead.executive_status === 'APPROVED' ? 'bg-green-500/10 text-green-500' :
-                                                            lead.executive_status === 'REJECTED' || lead.executive_status === 'NOT_INTERESTED' ? 'bg-red-500/10 text-red-500' :
-                                                                'bg-yellow-500/10 text-yellow-500'
-                                                        }`}>
-                                                        {lead.executive_status || 'PENDING'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
-                                                    <button
-                                                        onClick={() => handleStatusCheck(lead.refid)}
-                                                        className="text-xs text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-1"
-                                                        title="Check Status"
-                                                    >
-                                                        <RefreshCw className="w-3 h-3" /> Status
-                                                    </button>
-                                                    {lead.url && (
-                                                        <button
-                                                            onClick={() => handleOpenLink(lead.url)}
-                                                            className="text-xs text-primary hover:underline inline-flex items-center gap-1 ml-3"
-                                                        >
-                                                            Link <ExternalLink className="w-3 h-3" />
-                                                        </button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     );

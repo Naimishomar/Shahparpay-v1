@@ -34,6 +34,7 @@ const retailerProjects = [
       { name: "Payout Reports", url: "/reports/payout" },
       { name: "UPI Reports", url: "/reports/upi" },
       { name: "PAN Reports", url: "/reports/pan" },
+      { name: "Lead Generation Reports", url: "/reports/lead-generation" },
     ]
   },
   { name: "Fund Request", url: "/fund-request", icon: Send },

@@ -17,6 +17,7 @@ import AepsReport from "./pages/AepsReport"
 import PayoutReport from "./pages/PayoutReport"
 import UpiReport from "./pages/UpiReport"
 import PanReport from "./pages/PanReport"
+import LeadGenerationReport from "./pages/LeadGenerationReport"
 import LeadGeneration from "./pages/LeadGeneration"
 import PanCard from "./pages/PanCard"
 import ITR from "./pages/ITR"
@@ -67,6 +68,7 @@ function App() {
         <Route path="reports/payout" element={<PayoutReport/>}/>
         <Route path="reports/upi" element={<UpiReport/>}/>
         <Route path="reports/pan" element={<PanReport/>}/>
+        <Route path="reports/lead-generation" element={<LeadGenerationReport/>}/>
 
         <Route path="fund-request" element={<FundRequest/>}/>
         <Route path="biometric-support" element={<BiometricSupport/>}/>
