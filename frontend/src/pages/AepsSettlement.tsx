@@ -4,6 +4,12 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
+const isSettlementWindow = () => {
+    const ist = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+    const mins = ist.getUTCHours() * 60 + ist.getUTCMinutes();
+    return mins >= 9 * 60 && mins < 21 * 60;
+};
+
 const AepsSettlement = () => {
     const { token } = useAuth();
     const [savedBanks, setSavedBanks] = useState<any[]>([]);
@@ -144,6 +150,10 @@ const AepsSettlement = () => {
         e.preventDefault();
         if (!selectedBankId || !amount || !pin) {
             return toast.error("Please fill all required fields");
+        }
+
+        if (!isSettlementWindow()) {
+            return toast.error("AEPS Settlement is available from 9 AM to 9 PM IST only. Please try again during service hours.");
         }
         
         setLoading(true);
@@ -363,6 +373,11 @@ const AepsSettlement = () => {
                             <p className="text-sm text-foreground/80 leading-relaxed mt-1">
                                 All 6 Auto Settlement will credit in this account without charges.<br/>
                                 <strong className="text-foreground">Note :-</strong> 0.2% charges is applicable on each manual settelment transaction.
+                            </p>
+                            <p className={`mt-2 text-sm font-medium ${isSettlementWindow() ? 'text-emerald-600' : 'text-red-500'}`}>
+                                {isSettlementWindow()
+                                    ? '● Service active — transactions accepted until 9 PM IST.'
+                                    : '● Service closed — AEPS Settlement is available 9 AM to 9 PM IST.'}
                             </p>
                         </div>
                     </div>

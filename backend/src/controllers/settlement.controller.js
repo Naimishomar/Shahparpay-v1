@@ -65,6 +65,37 @@ const extractBeneId = (resData, fallback) => {
     return beneId || fallback || null;
 };
 
+// PaySprint Payout (AEPS settlement) only accepts transactions 9 AM - 9 PM IST.
+// Both bounds are configurable via env (HH:mm IST) to adapt to any merchant-specific window.
+const getIstMinutesNow = () => {
+    const now = new Date();
+    const ist = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+    return ist.getUTCHours() * 60 + ist.getUTCMinutes();
+};
+
+const getPayoutWindow = () => {
+    const parse = (v, fallback) => {
+        const [h, m] = (v || fallback).split(':').map(Number);
+        return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+    };
+    return {
+        start: parse(process.env.PAYSPRINT_SETTLEMENT_START, '09:00'),
+        end: parse(process.env.PAYSPRINT_SETTLEMENT_END, '21:00')
+    };
+};
+
+const isPayoutServiceActive = () => {
+    const { start, end } = getPayoutWindow();
+    const nowMin = getIstMinutesNow();
+    return nowMin >= start && nowMin < end;
+};
+
+const getServiceHoursError = () => {
+    const start = process.env.PAYSPRINT_SETTLEMENT_START || '09:00';
+    const end = process.env.PAYSPRINT_SETTLEMENT_END || '21:00';
+    return `AEPS Settlement service is available from ${start} to ${end} IST only. Please try again later.`;
+};
+
 export const getSavedBanks = async (req, res) => {
     try {
         const banks = await BankAccount.find({ userId: req.user.id }).sort({ createdAt: -1 });
@@ -433,6 +464,10 @@ export const initiateSettlement = async (req, res) => {
             return res.status(400).json({ success: false, message: "Invalid parameters" });
         }
 
+        if (!isPayoutServiceActive()) {
+            return res.status(400).json({ success: false, message: getServiceHoursError(), serviceHours: getPayoutWindow() });
+        }
+
         const bank = await BankAccount.findOne({ _id: bankId, userId: req.user.id });
         if (!bank) {
             return res.status(404).json({ success: false, message: "Bank account not found" });
@@ -570,6 +605,10 @@ export const initiateDirectPayout = async (req, res) => {
 
         if (!accountNumber || !ifscCode || !accountHolderName || !amount || amount <= 0 || !pin) {
             return res.status(400).json({ success: false, message: "Invalid parameters for Direct Payout" });
+        }
+
+        if (!isPayoutServiceActive()) {
+            return res.status(400).json({ success: false, message: getServiceHoursError(), serviceHours: getPayoutWindow() });
         }
 
         const aepsWallet = await AepsWallet.findOne({ userId: req.user.id });
