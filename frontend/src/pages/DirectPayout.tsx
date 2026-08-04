@@ -28,10 +28,10 @@ const DirectPayout = () => {
 
     const fetchHistory = async () => {
         try {
-            // Reusing settlement history endpoint but filtering on backend? 
-            // Currently our backend getSettlementHistory only fetches AEPS_SETTLEMENT.
-            // Let's create a specific fetch if needed, or just let it be empty for now and add a history endpoint later.
-            // For now, we'll leave it empty to avoid 404s.
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/settlement/history?type=DIRECT_PAYOUT`, getHeaders());
+            if (res.data.success) {
+                setHistory(res.data.data);
+            }
         } catch (error) {
             console.error("Failed to fetch payout history", error);
         }

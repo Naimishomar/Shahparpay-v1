@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Send, Plus, Building2, Clock, Trash2 } from 'lucide-react';
+import { Send, Plus, Building2, Clock, Trash2, RefreshCw, SearchCheck } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -11,6 +11,8 @@ const AepsSettlement = () => {
     const [history, setHistory] = useState<any[]>([]);
     const [selectedBankId, setSelectedBankId] = useState('');
     const [loading, setLoading] = useState(false);
+    const [syncing, setSyncing] = useState(false);
+    const [checkingId, setCheckingId] = useState('');
 
     // Form states
     const [beneficiaryMobile, setBeneficiaryMobile] = useState('');
@@ -70,6 +72,41 @@ const AepsSettlement = () => {
         } catch (error) {
             console.error("Failed to fetch saved banks", error);
         }
+    };
+
+    const handleSyncBanks = async () => {
+        setSyncing(true);
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/settlement/sync-banks`, getHeaders());
+            if (res.data.success) {
+                toast.success(`Synced ${res.data.synced ?? 0} bank account(s) from PaySprint`);
+                fetchSavedBanks();
+            } else {
+                toast.error(res.data.message || "Failed to sync banks");
+            }
+        } catch (error) {
+            const err = error as { response?: { data?: { message?: string } } };
+            toast.error(err?.response?.data?.message || "Failed to sync banks");
+        }
+        setSyncing(false);
+    };
+
+    const handleCheckStatus = async (txnId: string) => {
+        setCheckingId(txnId);
+        try {
+            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/settlement/status`, { transactionId: txnId }, getHeaders());
+            if (res.data.success) {
+                const msg = res.data.message || "Status checked";
+                toast.success(msg);
+            } else {
+                toast.error(res.data.message || "Status enquiry failed");
+            }
+            fetchHistory();
+        } catch (error) {
+            const err = error as { response?: { data?: { message?: string } } };
+            toast.error(err?.response?.data?.message || "Failed to check settlement status");
+        }
+        setCheckingId('');
     };
 
     const handleDeleteBank = async (id: string) => {
@@ -155,15 +192,26 @@ const AepsSettlement = () => {
 
                 <div className="relative z-10 flex flex-col gap-6">
                     <div className="flex flex-col gap-4 bg-primary/5 p-5 border-l-4 border-primary rounded-lg">
-                        <div className="flex justify-between items-center border-b border-border/50 pb-2">
+                        <div className="flex flex-wrap justify-between items-center gap-3 border-b border-border/50 pb-2">
                             <h2 className="text-lg font-bold text-foreground">Transfer to Bank</h2>
-                            <button 
-                                onClick={() => setShowAddBank(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl text-sm font-medium transition-colors"
-                            >
-                                <Plus className="w-4 h-4" />
-                                Add Bank
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={handleSyncBanks}
+                                    disabled={syncing}
+                                    className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+                                    title="Sync settlement accounts from PaySprint"
+                                >
+                                    <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+                                    {syncing ? 'Syncing...' : 'Sync Banks'}
+                                </button>
+                                <button 
+                                    onClick={() => setShowAddBank(true)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl text-sm font-medium transition-colors"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Add Bank
+                                </button>
+                            </div>
                         </div>
 
                         <form onSubmit={handleSettlement} className="space-y-6 mt-4">
@@ -231,6 +279,16 @@ const AepsSettlement = () => {
                                         placeholder="Beneficiary Name"
                                         className="w-full px-3 py-2.5 bg-background/50 border border-border rounded-md text-muted-foreground cursor-not-allowed shadow-sm"
                                     />
+                                    {selectedBank && (
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full ${
+                                            selectedBank.status === 'VERIFIED' ? 'bg-green-500/10 text-green-500' :
+                                            selectedBank.status === 'PENDING' ? 'bg-yellow-500/10 text-yellow-600' :
+                                            'bg-red-500/10 text-red-500'
+                                        }`}>
+                                            {selectedBank.status === 'VERIFIED' ? '● Active' :
+                                             selectedBank.status === 'PENDING' ? '● Pending Activation' : '● Rejected'}
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* Row 2 */}
@@ -328,13 +386,14 @@ const AepsSettlement = () => {
                                     <th className="px-4 py-3">Reference ID</th>
                                     <th className="px-4 py-3">Bank Details</th>
                                     <th className="px-4 py-3">Amount</th>
-                                    <th className="px-4 py-3 rounded-tr-lg">Status</th>
+                                    <th className="px-4 py-3">Status</th>
+                                    <th className="px-4 py-3 rounded-tr-lg">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {history.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                                        <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                                             No settlement history found.
                                         </td>
                                     </tr>
@@ -345,7 +404,12 @@ const AepsSettlement = () => {
                                                 {new Date(tx.createdAt).toLocaleString()}
                                             </td>
                                             <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                                                {tx.transactionId}
+                                                <div className="flex flex-col">
+                                                    <span>{tx.transactionId}</span>
+                                                    {tx.metadata?.utr && (
+                                                        <span className="text-green-600/80">UTR: {tx.metadata.utr}</span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex flex-col">
@@ -364,6 +428,18 @@ const AepsSettlement = () => {
                                                 }`}>
                                                     {tx.status}
                                                 </span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                {(tx.status === 'PROCESSING' || tx.status === 'PENDING') && (
+                                                    <button
+                                                        onClick={() => handleCheckStatus(tx.transactionId)}
+                                                        disabled={checkingId === tx.transactionId}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
+                                                    >
+                                                        <SearchCheck className="w-3.5 h-3.5" />
+                                                        {checkingId === tx.transactionId ? 'Checking...' : 'Check Status'}
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))

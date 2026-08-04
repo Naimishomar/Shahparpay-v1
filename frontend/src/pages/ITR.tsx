@@ -1,53 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { FileText, Loader2, ArrowRight, CheckCircle2, AlertCircle, Calendar, RefreshCw } from 'lucide-react';
+import React, { useState } from 'react';
+import { FileText, Loader2, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
-interface Transaction {
-    _id: string;
-    transactionId: string;
-    amount: number;
-    status: string;
-    createdAt: string;
-    metadata?: {
-        application_id?: number;
-        eseva_fee?: number;
-        partner_margin?: number;
-        gst_amount?: number;
-        late_fee?: number;
-        timestamp?: string;
-        message?: string;
-    };
-}
-
 const ITR: React.FC = () => {
     const { token } = useAuth();
     const [loading, setLoading] = useState(false);
-    const [history, setHistory] = useState<Transaction[]>([]);
-    const [historyLoading, setHistoryLoading] = useState(true);
-
-    const fetchHistory = async () => {
-        if (!token) return;
-        setHistoryLoading(true);
-        try {
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/itr/history`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.data.success) {
-                setHistory(res.data.transactions || []);
-            }
-        } catch (error: any) {
-            console.error("Failed to fetch ITR history:", error);
-            toast.error("Failed to load ITR history.");
-        } finally {
-            setHistoryLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchHistory();
-    }, [token]);
 
     const handleLaunchPortal = async () => {
         if (!token) return;
@@ -68,29 +27,15 @@ const ITR: React.FC = () => {
             } else {
                 toast.error(res.data.message || "Failed to launch ITR portal.");
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error("ITR Launch Error:", error);
+            const err = error as { response?: { data?: { message?: string } } };
             toast.error(
-                error.response?.data?.message || 
+                err.response?.data?.message || 
                 "An error occurred while generating the ITR portal URL."
             );
         } finally {
             setLoading(false);
-        }
-    };
-
-    const getStatusBadgeClass = (status: string) => {
-        switch (status) {
-            case 'SUCCESS':
-                return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
-            case 'FAILED':
-                return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
-            case 'REFUNDED':
-                return 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
-            case 'PROCESSING':
-            case 'PENDING':
-            default:
-                return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
         }
     };
 
@@ -171,92 +116,6 @@ const ITR: React.FC = () => {
                             <span>Refunds for rejected requests will automatically credit your Main Wallet.</span>
                         </li>
                     </ul>
-                </div>
-            </div>
-
-            {/* Filing History Table */}
-            <div className="glass-card rounded-3xl p-6 border-white/5 relative overflow-hidden">
-                <div className="flex items-center justify-between mb-6">
-                    <div>
-                        <h3 className="text-xl font-bold text-foreground">Filing Ledger</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                            List of all recent ITR filings submitted by your account.
-                        </p>
-                    </div>
-                    <button 
-                        onClick={fetchHistory}
-                        disabled={historyLoading}
-                        className="p-2 hover:bg-white/5 rounded-xl border border-white/10 text-muted-foreground hover:text-foreground transition-all duration-300 cursor-pointer"
-                        title="Refresh History"
-                    >
-                        <RefreshCw className={`h-4 w-4 ${historyLoading ? 'animate-spin' : ''}`} />
-                    </button>
-                </div>
-
-                <div className="overflow-x-auto">
-                    {historyLoading ? (
-                        <div className="py-16 flex flex-col items-center justify-center gap-3">
-                            <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-                            <p className="text-sm text-muted-foreground">Fetching transaction ledger...</p>
-                        </div>
-                    ) : history.length > 0 ? (
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-white/5 text-muted-foreground text-xs font-semibold uppercase tracking-wider">
-                                    <th className="pb-3 pt-2 font-medium">Application ID</th>
-                                    <th className="pb-3 pt-2 font-medium">Transaction ID</th>
-                                    <th className="pb-3 pt-2 font-medium">Amount</th>
-                                    <th className="pb-3 pt-2 font-medium">Date</th>
-                                    <th className="pb-3 pt-2 font-medium">Status</th>
-                                    <th className="pb-3 pt-2 font-medium">Details</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/5 text-sm">
-                                {history.map((txn) => (
-                                    <tr key={txn._id} className="hover:bg-white/[0.01] transition-colors">
-                                        <td className="py-4 font-semibold text-foreground">
-                                            #{txn.metadata?.application_id || 'N/A'}
-                                        </td>
-                                        <td className="py-4 text-muted-foreground text-xs font-mono">
-                                            {txn.transactionId}
-                                        </td>
-                                        <td className="py-4 font-bold text-foreground">
-                                            ₹ {txn.amount.toFixed(2)}
-                                        </td>
-                                        <td className="py-4 text-muted-foreground">
-                                            <span className="flex items-center gap-1.5 text-xs">
-                                                <Calendar className="h-3.5 w-3.5" />
-                                                {new Date(txn.createdAt).toLocaleString('en-IN', {
-                                                    day: '2-digit',
-                                                    month: 'short',
-                                                    year: 'numeric',
-                                                    hour: '2-digit',
-                                                    minute: '2-digit'
-                                                })}
-                                            </span>
-                                        </td>
-                                        <td className="py-4">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusBadgeClass(txn.status)}`}>
-                                                {txn.status}
-                                            </span>
-                                        </td>
-                                        <td className="py-4 text-xs text-muted-foreground max-w-xs truncate">
-                                            {txn.metadata?.message || 
-                                             `Fee: ₹${txn.metadata?.eseva_fee || 0} | Margin: ₹${txn.metadata?.partner_margin || 0} | GST: ₹${txn.metadata?.gst_amount || 0}`}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    ) : (
-                        <div className="py-16 flex flex-col items-center justify-center text-center gap-2">
-                            <div className="p-3 bg-white/5 rounded-2xl text-muted-foreground">
-                                <FileText className="h-8 w-8" />
-                            </div>
-                            <p className="text-sm font-semibold text-foreground">No filing history found</p>
-                            <p className="text-xs text-muted-foreground">Submit your first ITR form to see transaction details here.</p>
-                        </div>
-                    )}
                 </div>
             </div>
         </div>

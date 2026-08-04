@@ -53,6 +53,63 @@ app.use(morgan(function (tokens, req, res) {
         tokens.res(req, res, 'content-length')
     ].join(' ');
 }));
+const SENSITIVE_FIELDS = ['password', 'otp', 'token', 'authorization', 'pin', 'secret', 'api_key', 'apikey'];
+
+function sanitize(body) {
+    if (!body || typeof body !== 'object') return body;
+    const copy = Array.isArray(body) ? [...body] : { ...body };
+    for (const key of Object.keys(copy)) {
+        if (SENSITIVE_FIELDS.some((f) => key.toLowerCase().includes(f))) {
+            copy[key] = '[REDACTED]';
+        } else if (copy[key] && typeof copy[key] === 'object') {
+            copy[key] = sanitize(copy[key]);
+        }
+    }
+    return copy;
+}
+
+function logBody(label, body) {
+    const text = JSON.stringify(body);
+    if (text && text.length > 2000) {
+        console.log(`    ${label}: ${text.slice(0, 2000)}... [truncated, ${text.length} chars total]`);
+    } else {
+        console.log(`    ${label}: ${text}`);
+    }
+}
+
+app.use((req, res, next) => {
+    const started = Date.now();
+    console.log(`\n\x1b[36m>>> REQUEST\x1b[0m \x1b[90m[${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}]\x1b[0m`);
+    console.log(`    ${req.method} ${req.originalUrl}`);
+    if (req.method !== 'GET' && Object.keys(req.body || {}).length) logBody('Body', sanitize(req.body));
+    if (req.query && Object.keys(req.query).length) logBody('Query', sanitize(req.query));
+
+    const originalJson = res.json.bind(res);
+    const originalSend = res.send.bind(res);
+    let responseCaptured = false;
+
+    res.json = (body) => {
+        logBody('Response', sanitize(body));
+        responseCaptured = true;
+        return originalJson(body);
+    };
+    res.send = (body) => {
+        if (!responseCaptured && body !== undefined) {
+            logBody('Response', sanitize(typeof body === 'object' ? JSON.parse(JSON.stringify(body)) : body));
+        }
+        return originalSend(body);
+    };
+
+    res.on('finish', () => {
+        if (!responseCaptured) {
+            console.log(`    Response: [no JSON body - status ${res.statusCode}]`);
+        }
+        console.log(`\x1b[90m<<< RESPONSE\x1b[0m ${req.method} ${req.originalUrl} \x1b[${res.statusCode >= 500 ? 31 : res.statusCode >= 400 ? 33 : res.statusCode >= 300 ? 36 : res.statusCode >= 200 ? 32 : 0}m${res.statusCode}\x1b[0m in ${Date.now() - started}ms\n`);
+    });
+
+    next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({extended:false}));
 app.use(cookieParser());
@@ -74,6 +131,7 @@ import dashboardRouter from './routes/dashboard.route.js';
 import leadRouter from './routes/lead.route.js';
 import panRouter from './routes/pan.route.js';
 import itrRouter from './routes/itr.route.js';
+import paysprintLedgerRouter from './routes/paysprintLedger.route.js';
 import { checkAgentWallet } from './controllers/itr.controller.js';
 import { startReconciliationWorker } from './workers/reconciliation.worker.js';
 
@@ -90,6 +148,7 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/lead', leadRouter);
 app.use('/api/pan', panRouter);
 app.use('/api/itr', itrRouter);
+app.use('/api/paysprint', paysprintLedgerRouter);
 
 // eSevaTech may call /api/check-agent-wallet at root level by convention
 app.all('/api/check-agent-wallet', checkAgentWallet);

@@ -18,7 +18,7 @@ const retailerProjects = [
   { name: "Recharge", url: "/recharge", icon: Zap },
   { name: "AEPS", url: "/aeps", icon: ScanFace },
   { name: "AEPS Settlement", url: "/aeps-settlement", icon: Landmark },
-  { name: "Direct Payout", url: "/direct-payout", icon: ArrowRightLeft },
+  // { name: "Direct Payout", url: "/direct-payout", icon: ArrowRightLeft },
   { name: "BBPS", url: "/bbps", icon: Zap },
   { name: "UPI Payments", url: "/upi-payments", icon: Wallet },
   { name: "Lead Generation", url: "/lead-generation", icon: UserPlus },
@@ -34,7 +34,9 @@ const retailerProjects = [
       { name: "Payout Reports", url: "/reports/payout" },
       { name: "UPI Reports", url: "/reports/upi" },
       { name: "PAN Reports", url: "/reports/pan" },
+      { name: "ITR Reports", url: "/reports/itr" },
       { name: "Lead Generation Reports", url: "/reports/lead-generation" },
+      { name: "Paysprint Credit Ledger", url: "/reports/paysprint-credit-ledger" },
     ]
   },
   { name: "Fund Request", url: "/fund-request", icon: Send },
