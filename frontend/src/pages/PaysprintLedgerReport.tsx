@@ -198,23 +198,6 @@ const PaysprintLedgerReport = () => {
                                     className="pl-9 pr-4 py-2 w-full bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
-                            <select
-                                value={txnTypeFilter}
-                                onChange={(e) => { setTxnTypeFilter(e.target.value); setCurrentPage(1); }}
-                                className="px-3 py-2 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:border-primary"
-                            >
-                                <option value="ALL">All Txn Types</option>
-                                {txnTypes.map(t => <option key={t} value={t}>{t}</option>)}
-                            </select>
-                            <select
-                                value={typeFilter}
-                                onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
-                                className="px-3 py-2 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:border-primary"
-                            >
-                                <option value="ALL">All Types</option>
-                                <option value="credit">Credit</option>
-                                <option value="debit">Debit</option>
-                            </select>
                             <div className="flex gap-2 shrink-0">
                                 <button onClick={handleDownloadCSV} className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap">
                                     <Download className="w-4 h-4" />
@@ -243,26 +226,6 @@ const PaysprintLedgerReport = () => {
                                 className="flex-1 md:flex-none px-3 py-2 bg-card border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
                             />
                         </div>
-                    </div>
-                </div>
-
-                {/* Summary Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="bg-card rounded-xl border border-border shadow-sm p-4">
-                        <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Total Amount</p>
-                        <p className="text-lg font-bold text-foreground">₹ {fmt(totals.amount)}</p>
-                    </div>
-                    <div className="bg-card rounded-xl border border-border shadow-sm p-4">
-                        <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Commission</p>
-                        <p className="text-lg font-bold text-emerald-500">₹ {fmt(totals.commission)}</p>
-                    </div>
-                    <div className="bg-card rounded-xl border border-border shadow-sm p-4">
-                        <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">TDS</p>
-                        <p className="text-lg font-bold text-rose-500">₹ {fmt(totals.tds)}</p>
-                    </div>
-                    <div className="bg-card rounded-xl border border-border shadow-sm p-4">
-                        <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">GST</p>
-                        <p className="text-lg font-bold text-rose-500">₹ {fmt(totals.gst)}</p>
                     </div>
                 </div>
 
