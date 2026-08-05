@@ -27,7 +27,14 @@ const KycStatus = () => {
                     });
                     
                     const resData = await res.json();
-                    if (!resData.success) throw new Error("Backend verification failed");
+                    if (!resData.success) {
+                        if (resData.isPending) {
+                            // Onboarding still pending at PaySprint — don't loop.
+                            setStatus('error');
+                            throw new Error("Onboarding is still pending at PaySprint. Please complete onboarding again.");
+                        }
+                        throw new Error("Backend verification failed");
+                    }
                 }
 
                 // Refresh the user session to pull the latest isMerchantKycComplete from the DB

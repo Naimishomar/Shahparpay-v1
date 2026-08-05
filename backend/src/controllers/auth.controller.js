@@ -11,7 +11,8 @@ import { uploadOnR2 } from "../utils/r2.js";
 import bcrypt from "bcrypt";
 import Otp from "../models/otp.model.js";
 import { sendEmailOTP } from "../utils/email.js";
-import { onboardMerchant, sendAadhaarOtp, verifyAadhaarOtp as verifyAadhaarOtpApi, verifyPanDetails, getWebOnboardingUrl } from "../utils/paysprint.util.js";
+import { onboardMerchant, sendAadhaarOtp, verifyAadhaarOtp as verifyAadhaarOtpApi, verifyPanDetails, getWebOnboardingUrl, decryptPayload, generatePaySprintToken, getOnboardStatusEndpoint } from "../utils/paysprint.util.js";
+import axios from "axios";
 
 export const registerAdmin = async(req,res)=>{
     try {
@@ -607,6 +608,46 @@ export const generateOnboardUrl = async (req, res) => {
             callbackUrl: callbackUrl || `${process.env.FRONTEND_URL || 'http://localhost:5173'}/kyc-status`
         };
 
+        // ──────────────────────────────────────────────────────────────────────
+        // PRE-CHECK: If the merchant is ALREADY onboarded/accepted on this pipe at
+        // PaySprint, don't bounce them to the onboarding page and back (the loop).
+        // Mark KYC complete locally and return alreadyOnboarded so the frontend
+        // can proceed/closes cleanly.
+        // ──────────────────────────────────────────────────────────────────────
+        const pipesToCheck = pipe ? [String(pipe).toLowerCase()] : ['bank3', 'bank2', 'bank4', 'bank5', 'bank6'];
+        const acceptedPipes = [];
+        for (const p of pipesToCheck) {
+            try {
+                const checkToken = generatePaySprintToken();
+                const checkRes = await axios.post(
+                    getOnboardStatusEndpoint(p),
+                    { merchantcode: merchantCodeFinal.toString(), mobile: String(user.contactNumber), pipe: p },
+                    { headers: { 'Token': checkToken, 'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY, 'Content-Type': 'application/json' }, validateStatus: () => true, timeout: 10000 }
+                );
+                console.log(`[generateOnboardUrl] Pipe ${p} status:`, JSON.stringify(checkRes.data));
+                if (checkRes.data && checkRes.data.response_code === 1 && checkRes.data.is_approved === 'Accepted') {
+                    acceptedPipes.push(p);
+                }
+            } catch (e) {
+                console.warn(`[generateOnboardUrl] Could not pre-check pipe ${p}:`, e.message);
+            }
+        }
+
+        if (acceptedPipes.length > 0) {
+            // Mark KYC complete locally + store the pipes that are actually active.
+            const updateObj = {
+                isMerchantKycComplete: true,
+                activeAepsPipes: acceptedPipes,
+                lastPipeCheckDate: new Date()
+            };
+            if (user.retailerId) {
+                await Retailer.findOneAndUpdate({ retailerId: merchantCodeFinal }, updateObj);
+            } else if (user.distributorId) {
+                await Distributor.findOneAndUpdate({ distributorId: merchantCodeFinal }, updateObj);
+            }
+            return res.status(200).json({ success: true, alreadyOnboarded: true, message: "Merchant already onboarded", pipes: acceptedPipes });
+        }
+
         const result = await getWebOnboardingUrl(merchantData);
         if (result.success) {
             if (result.alreadyOnboarded) {
@@ -617,7 +658,7 @@ export const generateOnboardUrl = async (req, res) => {
                     await Distributor.findOneAndUpdate({ distributorId: merchantCodeFinal }, { isMerchantKycComplete: true });
                 }
                 // Return callback URL so frontend redirects back gracefully
-                return res.status(200).json({ success: true, url: merchantData.callbackUrl });
+                return res.status(200).json({ success: true, alreadyOnboarded: true });
             }
             return res.status(200).json({ success: true, url: result.url });
         } else {
@@ -629,19 +670,51 @@ export const generateOnboardUrl = async (req, res) => {
     }
 };
 
+// Paysprint's onboarding callback sends `?data=<payload>` where payload can be
+// a signed JWT, an AES-encrypted JSON string, or plain JSON. Try each strategy.
+const parseOnboardCallbackData = (tokenStr) => {
+    // 1) Signed JWT
+    try {
+        const decoded = jwt.verify(tokenStr, process.env.PAYSPRINT_JWT_KEY);
+        if (decoded && decoded.merchantcode) return decoded;
+    } catch (e) {
+        // fall through
+    }
+
+    // 2) Unsigned JWT (decode without verification)
+    try {
+        const decoded = jwt.decode(tokenStr);
+        if (decoded && typeof decoded === 'object' && decoded.merchantcode) return decoded;
+    } catch (e) {
+        // fall through
+    }
+
+    // 3) AES-decrypted JSON blob
+    try {
+        const decrypted = decryptPayload(tokenStr);
+        const parsed = JSON.parse(decrypted);
+        if (parsed && parsed.merchantcode) return parsed;
+    } catch (e) {
+        // fall through
+    }
+
+    // 4) Plain JSON string
+    try {
+        const parsed = JSON.parse(tokenStr);
+        if (parsed && parsed.merchantcode) return parsed;
+    } catch (e) {
+        // fall through
+    }
+
+    return null;
+};
+
 export const updateKycStatus = async (req, res) => {
     try {
         const { jwt: tokenStr } = req.body;
-        if (!tokenStr) return res.status(400).json({ success: false, message: "JWT is required" });
+        if (!tokenStr) return res.status(400).json({ success: false, message: "JWT/Data is required" });
 
-        const jwtKeyBase64 = process.env.PAYSPRINT_JWT_KEY;
-        let decoded;
-        try {
-            decoded = jwt.verify(tokenStr, jwtKeyBase64);
-        } catch (err) {
-            console.error("JWT Verification failed, attempting to decode without verification:", err.message);
-            decoded = jwt.decode(tokenStr);
-        }
+        const decoded = parseOnboardCallbackData(tokenStr);
 
         if (!decoded || !decoded.merchantcode) {
             return res.status(400).json({ success: false, message: "Invalid payload from PaySprint" });
@@ -649,12 +722,39 @@ export const updateKycStatus = async (req, res) => {
 
         const merchantCode = decoded.merchantcode;
 
-        // Find the user and update
-        const retailer = await Retailer.findOneAndUpdate({ retailerId: merchantCode }, { isMerchantKycComplete: true }, { new: true });
-        if (retailer) return res.status(200).json({ success: true, message: "KYC Status updated" });
+        // status "0" means onboarding is still PENDING -> must not be marked complete.
+        const status = String(decoded.status ?? '1');
+        const isSuccess = status === '1' || status === 'true' || status === '2';
 
-        const distributor = await Distributor.findOneAndUpdate({ distributorId: merchantCode }, { isMerchantKycComplete: true }, { new: true });
-        if (distributor) return res.status(200).json({ success: true, message: "KYC Status updated" });
+        // Persist the same pipe(s) reported as bank / active pipes.
+        const updateData = { isMerchantKycComplete: isSuccess };
+        if (decoded.bank) {
+            const activePipes = [];
+            if (decoded.bank.Bank2 === 1 || decoded.bank.Bank2 === '1') activePipes.push('bank2');
+            if (decoded.bank.Bank3 === 1 || decoded.bank.Bank3 === '1') activePipes.push('bank3');
+            if (decoded.bank.Bank4 === 1 || decoded.bank.Bank4 === '1') activePipes.push('bank4');
+            if (decoded.bank.Bank5 === 1 || decoded.bank.Bank5 === '1') activePipes.push('bank5');
+            if (decoded.bank.Bank6 === 1 || decoded.bank.Bank6 === '1') activePipes.push('bank6');
+            if (activePipes.length) updateData.activeAepsPipes = activePipes;
+        }
+
+        const retailer = await Retailer.findOneAndUpdate({ retailerId: merchantCode }, updateData, { new: true });
+        if (retailer) {
+            return res.status(200).json({
+                success: isSuccess,
+                message: isSuccess ? "KYC Status updated" : "Onboarding is still pending. Please complete onboarding again.",
+                isPending: !isSuccess
+            });
+        }
+
+        const distributor = await Distributor.findOneAndUpdate({ distributorId: merchantCode }, updateData, { new: true });
+        if (distributor) {
+            return res.status(200).json({
+                success: isSuccess,
+                message: isSuccess ? "KYC Status updated" : "Onboarding is still pending. Please complete onboarding again.",
+                isPending: !isSuccess
+            });
+        }
 
         return res.status(404).json({ success: false, message: "Merchant not found" });
     } catch (error) {

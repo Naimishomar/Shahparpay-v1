@@ -41,6 +41,22 @@ const numberToWords = (num: string | number) => {
     return str.replace(/Only$/, 'Only').trim();
 };
 
+// Extracts the most descriptive error text from a failed AEPS/PaySprint response.
+const extractPaySprintError = (result: any) => {
+    const raw = result?.data || result?.error || {};
+    const candidates = [
+        raw?.statusDescription,
+        raw?.statusdescription,
+        raw?.message,
+        raw?.response_description,
+        raw?.errmsg,
+        raw?.reason,
+        result?.message,
+        result?.error,
+    ];
+    return candidates.find((c: any) => c && typeof c === 'string' && c.trim()) || "Transaction failed. Please try again.";
+};
+
 
 // Removed mock transactions
 
@@ -63,6 +79,8 @@ const AEPS = () => {
 
     // Modal State
     const [showReceiptModal, setShowReceiptModal] = useState(false);
+    const [showFailureModal, setShowFailureModal] = useState(false);
+    const [failureData, setFailureData] = useState<any>(null);
     const [showKycModal, setShowKycModal] = useState(false);
     const [showDailyAuthModal, setShowDailyAuthModal] = useState(false);
     const [receiptData, setReceiptData] = useState<any>(null);
@@ -341,6 +359,7 @@ const AEPS = () => {
         }
 
         setLoading(true);
+        let succeeded = false;
 
         try {
             // Find the selected bank from dynamic list to get the actual IIN, fallback to 607152 if not found
@@ -433,17 +452,48 @@ const AEPS = () => {
                 };
                 setReceiptData(data);
                 setShowReceiptModal(true);
+                succeeded = true;
             } else {
-                toast.error("Transaction Failed: " + (result.message || "Unknown error"));
+                const paysprintError = extractPaySprintError(result);
+                setFailureData({
+                    title: "Transaction Failed",
+                    message: paysprintError,
+                    paysprintMessage: paysprintError,
+                    rrn: result.data?.rrn || result.data?.bankrrn || result.data?.data?.rrn || 'N/A',
+                    stan: result.data?.stan || result.data?.ackno || result.data?.data?.stan || 'N/A',
+                    aadhaarNo: '********' + (aadhaarNo.slice(-4) || ''),
+                    bankName: bankName ? bankName.toUpperCase() : 'BANK',
+                    txnAmount: (activeTab !== 'balance_enquiry' && activeTab !== 'mini_statement') ? amount : '0.00',
+                    mobileNo: mobileNo || '',
+                    dateTime: new Date().toLocaleString(),
+                });
+                setShowFailureModal(true);
             }
         } catch (error: any) {
             console.error(error);
-            const errorMsg = error.response?.data?.message || "Failed to connect to the server.";
+            const paysprintError = extractPaySprintError(error?.response?.data);
+            setFailureData({
+                title: "Transaction Failed",
+                message: paysprintError,
+                paysprintMessage: paysprintError,
+                rrn: error?.response?.data?.data?.rrn || error?.response?.data?.data?.bankrrn || 'N/A',
+                stan: error?.response?.data?.data?.stan || error?.response?.data?.data?.ackno || 'N/A',
+                aadhaarNo: '********' + (aadhaarNo.slice(-4) || ''),
+                bankName: bankName ? bankName.toUpperCase() : 'BANK',
+                txnAmount: (activeTab !== 'balance_enquiry' && activeTab !== 'mini_statement') ? amount : '0.00',
+                mobileNo: mobileNo || '',
+                dateTime: new Date().toLocaleString(),
+            });
+            setShowFailureModal(true);
         } finally {
             window.dispatchEvent(new Event('wallet-updated'));
             setLoading(false);
-            if (activeTab !== 'balance_enquiry') {
-                handleReset();
+            if (succeeded) {
+                if (activeTab !== 'balance_enquiry') {
+                    handleReset();
+                } else {
+                    setPidData(null);
+                }
             } else {
                 setPidData(null);
             }
@@ -958,6 +1008,83 @@ const AEPS = () => {
                 </div>
                 );
             })()}
+
+            {/* Transaction Failed Modal */}
+            {showFailureModal && failureData && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 text-slate-800">
+                        {/* Header */}
+                        <div className="flex justify-between items-start p-4 bg-white border-b border-gray-100">
+                            <div>
+                                <img src={logo} alt="Logo" className="h-10 object-contain dark:brightness-0 dark:invert" />
+                            </div>
+                            <div className="flex flex-col items-end text-xs text-slate-600 gap-1 relative pr-8">
+                                <button 
+                                    onClick={() => { setShowFailureModal(false); setFailureData(null); }} 
+                                    className="absolute -top-2 -right-2 text-primary hover:text-primary/80 transition-colors bg-white rounded-full p-1"
+                                >
+                                    <XCircle className="w-6 h-6 fill-primary text-white" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Status Area */}
+                        <div className="flex flex-col items-center justify-center py-6 bg-white">
+                            <h2 className={`font-bold text-lg mb-4 uppercase tracking-wide text-rose-500`}>
+                                {failureData.title}
+                            </h2>
+                            <div className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg relative bg-rose-500 shadow-rose-500/20">
+                                <div className="absolute inset-0 rounded-full animate-ping opacity-20 bg-rose-500"></div>
+                                <XCircle className="w-12 h-12 text-white" />
+                            </div>
+                        </div>
+
+                        {/* Paysprint Error Message */}
+                        <div className="px-5">
+                            <div className="flex items-start gap-2.5 rounded-lg bg-red-50 border border-red-200 p-4">
+                                <XCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="text-sm font-bold text-rose-600">Response from PaySprint</p>
+                                    <p className="text-sm text-slate-700 mt-0.5 leading-relaxed">{failureData.paysprintMessage}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Details List */}
+                        <div className="p-5 bg-white">
+                            <div className="flex flex-col gap-2.5">
+                                {[
+                                    ...(failureData.txnAmount !== '0.00' ? [{ label: 'Transaction Amount', value: `₹ ${failureData.txnAmount}`, isBold: true }] : []),
+                                    { label: 'Customer Mobile No', value: failureData.mobileNo },
+                                    { label: 'Bank Name', value: failureData.bankName },
+                                    { label: 'Aadhaar No', value: failureData.aadhaarNo },
+                                    { label: 'Transaction Date & Time', value: failureData.dateTime },
+                                    { label: 'Utr No', value: failureData.rrn },
+                                ].map((row: any) => (
+                                    <div key={row.label} className="flex justify-between items-start text-[13px] border-b border-dashed border-gray-200 pb-2 last:border-0 last:pb-0">
+                                        <span className={`font-semibold text-slate-700 ${row.isBold ? 'text-black text-[14px]' : ''}`}>{row.label}</span>
+                                        <span className={`text-right max-w-[60%] break-all ${row.isBold ? 'font-bold text-black text-[15px]' : 'text-slate-600'}`}>{row.value}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <p className="text-[10px] text-amber-500/80 text-center pb-4 bg-white">
+                            Your entered details have been preserved. Please review and re-scan to retry.
+                        </p>
+
+                        {/* Actions */}
+                        <div className="bg-slate-50 p-4 border-t border-slate-100 flex justify-center print:hidden gap-4">
+                            <button 
+                                onClick={() => { setShowFailureModal(false); setFailureData(null); }}
+                                className="flex items-center gap-2 px-8 py-2.5 rounded-full bg-rose-500 text-white hover:bg-rose-600 shadow-md transition-colors text-sm font-semibold"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Merchant KYC Modal */}
             {showKycModal && (

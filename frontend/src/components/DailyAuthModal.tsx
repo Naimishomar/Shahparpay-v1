@@ -116,11 +116,11 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = 
                             })
                         });
                         const onboardData = await onboardRes.json();
-                        if (onboardData.success && onboardData.url) {
+                        if (onboardData.success && onboardData.alreadyOnboarded) {
+                            toast.success("Merchant already onboarded. Proceeding...");
+                            setTimeout(() => { window.location.reload(); }, 1200);
+                        } else if (onboardData.success && onboardData.url) {
                             setTimeout(() => { window.location.href = onboardData.url; }, 1500);
-                        } else if (onboardData.success && onboardData.alreadyOnboarded) {
-                            toast.success("Merchant already onboarded. Please try again.");
-                            setTimeout(() => { window.location.reload(); }, 1500);
                         } else {
                             toast.error("Failed to get Onboarding URL: " + (onboardData.message || "Unknown error"));
                         }

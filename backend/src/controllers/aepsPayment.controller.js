@@ -1,6 +1,6 @@
 import axios from 'axios';
 import mongoose from 'mongoose';
-import { generatePaySprintToken, encryptPayload } from '../utils/paysprint.util.js';
+import { generatePaySprintToken, encryptPayload, getOnboardStatusEndpoint } from '../utils/paysprint.util.js';
 import Retailer from "../models/users/retailer.model.js";
 import Distributor from "../models/users/distributor.model.js";
 import Transaction from "../models/transaction.model.js";
@@ -13,8 +13,8 @@ import Admin from '../models/users/admin.model.js';
 export const getVerifiedPipe = async (merchantcode, mobile) => {
     // Check pipes in order of preference. We prioritize bank1 and bank5
     // because bank2 (older gateway) often rejects L1 scanners providing FIR+FMR data.
-    const pipesToCheck = ['bank2', 'bank3', 'bank1', 'bank5', 'bank6'];
-    const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+    // Note: bank1 is UAT-only and intentionally excluded.
+    const pipesToCheck = ['bank2', 'bank3', 'bank4', 'bank5', 'bank6'];
 
     for (const pipe of pipesToCheck) {
         try {
@@ -27,7 +27,7 @@ export const getVerifiedPipe = async (merchantcode, mobile) => {
                 'Accept': 'application/json'
             };
 
-            const res = await axios.post(`${baseUrl}/service/onboard/onboard/getonboardstatus`, {
+            const res = await axios.post(getOnboardStatusEndpoint(pipe), {
                 merchantcode: merchantcode,
                 mobile: String(mobile),
                 pipe: pipe
@@ -950,7 +950,7 @@ export const sendMerchantOtp = async (req, res) => {
                 'Content-Type': 'application/json'
             };
             const statusRes = await axios.post(
-                `${baseUrl}/service/onboard/onboard/getonboardstatus`,
+                getOnboardStatusEndpoint(selectedPipe),
                 { merchantcode, mobile, pipe: selectedPipe },
                 { headers: checkHeaders, validateStatus: () => true }
             );
@@ -985,18 +985,14 @@ export const sendMerchantOtp = async (req, res) => {
 
         // ──────────────────────────────────────────────────────────────────────
         // STEP 2: Send OTP for KYC
+        // Endpoint + payload match PaySprint /aeps/v3/merchantkyc/send_otp docs.
         // ──────────────────────────────────────────────────────────────────────
         const payload = {
             merchantcode,
-            submerchantid: merchantcode,
-            mobile: mobile,
-            mobilenumber: mobile,
             accessmode: "SITE",
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025",
-            aadhaar,
-            adhaarnumber: aadhaar,
-            pipe: selectedPipe
+            aadhaar
         };
 
         const token = generatePaySprintToken();
@@ -1043,24 +1039,15 @@ export const resendMerchantOtp = async (req, res) => {
         }
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
-        let mobile = "9999999999";
-        const user = await Retailer.findOne({ retailerId: merchantcode }) || 
-                     await Distributor.findOne({ distributorId: merchantcode });
-        if (user && user.contactNumber) mobile = user.contactNumber;
 
         const payload = {
             merchantcode,
-            submerchantid: merchantcode,
-            mobile: mobile,
-            mobilenumber: mobile,
             aadhaar,
-            adhaarnumber: aadhaar,
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025",
             stateresp,
             ekyc_id,
-            accessmode: "SITE",
-            pipe: pipe || "bank3"
+            accessmode: "SITE"
         };
 
         const token = generatePaySprintToken();
@@ -1105,19 +1092,17 @@ export const verifyMerchantOtp = async (req, res) => {
         // pidData needs to be AES encrypted for this specific endpoint.
         const encryptedPidData = encryptPayload(pidData);
 
+        // Endpoint + payload match PaySprint /aeps/v3/merchantkyc/verify_otp docs.
         const payload = {
             merchantcode,
-            submerchantid: merchantcode,
             aadhaar,
-            adhaarnumber: aadhaar,
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025",
             otp,
             stateresp,
             ekyc_id,
             accessmode: "SITE",
-            piddata: encryptedPidData,
-            pipe: pipe || "bank3"
+            piddata: encryptedPidData
         };
 
         const token = generatePaySprintToken();
@@ -1155,6 +1140,43 @@ export const verifyMerchantOtp = async (req, res) => {
             message: "Internal Error", 
             error: error.message 
         });
+    }
+};
+
+// Charges ₹1 (configurable via DAILY_AUTH_CHARGE_AMOUNT env) from the merchant's
+// MAIN wallet once per day after a successful daily 2FA auth. Set amount to 0 to disable.
+const deductDailyAuthCharge = async (merchantcode, pipe) => {
+    const amount = Number(process.env.DAILY_AUTH_CHARGE_AMOUNT || 1);
+    if (!amount || amount <= 0) return { status: 'DISABLED', amount: 0 };
+
+    const retailer = await Retailer.findOne({ retailerId: merchantcode });
+    if (!retailer) return { status: 'SKIPPED', amount, message: 'Retailer not found' };
+
+    // Idempotency: only charge once per day (regardless of pipe re-auth)
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const alreadyCharged = await Transaction.findOne({
+        userId: retailer._id,
+        type: 'DAILY_AUTH_CHARGE',
+        createdAt: { $gte: todayStart }
+    });
+    if (alreadyCharged) return { status: 'SKIPPED', amount, message: 'Already charged today' };
+
+    const { updateWalletAtomically } = await import('../utils/wallet.util.js');
+    const chargeTxnId = `AUTHCHG${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    try {
+        await updateWalletAtomically(retailer._id, 'MAIN', -amount, {
+            transactionId: chargeTxnId,
+            userId: retailer._id,
+            type: 'DAILY_AUTH_CHARGE',
+            amount,
+            status: 'SUCCESS',
+            metadata: { pipe, note: `Daily 2FA auth charge (₹${amount})` }
+        });
+        return { status: 'SUCCESS', amount, transactionId: chargeTxnId };
+    } catch (err) {
+        console.warn(`[DailyAuth] ₹${amount} charge failed for ${merchantcode}:`, err.message);
+        return { status: 'FAILED', amount, message: err.message };
     }
 };
 
@@ -1301,11 +1323,15 @@ export const dailyAuth = async (req, res) => {
                             { retailerId: merchantcode },
                             updateData
                         );
-                        
+
+                        // Cut ₹1 from the merchant's MAIN wallet for the daily 2FA auth
+                        const dailyAuthCharge = await deductDailyAuthCharge(merchantcode, pipe);
+
                         return res.status(200).json({ 
                             success: true, 
                             message: "Registration and Daily Auth Successful!", 
-                            data: secondResult 
+                            data: secondResult,
+                            dailyAuthCharge
                         });
                     } else {
                         // If second auth fails, the merchant might need to complete web onboarding
@@ -1357,10 +1383,15 @@ export const dailyAuth = async (req, res) => {
                 { retailerId: merchantcode },
                 updateData
             );
+
+            // Cut ₹1 from the merchant's MAIN wallet for the daily 2FA auth
+            const dailyAuthCharge = await deductDailyAuthCharge(merchantcode, pipe);
+
             return res.status(200).json({ 
                 success: true, 
                 message: "Daily Auth Successful", 
-                data: resultData 
+                data: resultData,
+                dailyAuthCharge
             });
         } else {
             // Login failed for other reasons
@@ -1401,7 +1432,7 @@ export const syncMerchantPipes = async (merchantcode) => {
             'Content-Type': 'application/json'
         };
 
-        const pipesToCheck = ['bank2', 'bank1', 'bank5', 'bank6', 'bank3'];
+        const pipesToCheck = ['bank2', 'bank4', 'bank5', 'bank6', 'bank3'];
         const activePipes = [];
         let isActuallyOnboarded = false;
 
@@ -1413,7 +1444,7 @@ export const syncMerchantPipes = async (merchantcode) => {
                 'Content-Type': 'application/json'
             };
             return axios.post(
-                `${baseUrl}/service/onboard/onboard/getonboardstatus`,
+                getOnboardStatusEndpoint(pipe),
                 {
                     merchantcode: merchantcode,
                     mobile: String(retailer.contactNumber),
@@ -1545,12 +1576,22 @@ export const getPidOptions = async (req, res) => {
 
 export const activateMerchant = async (req, res) => {
     try {
-        const { merchantcode, aadhaar, dob, pidData, pipe, latitude, longitude } = req.body;
+        const { merchantcode, aadhaar, dob, pidData, pipe, latitude, longitude, annual_income, nature_of_bussiness } = req.body;
         if (!merchantcode || !aadhaar || !dob || !pidData || !pipe) {
             return res.status(400).json({ 
                 success: false, 
                 message: "Required fields missing (merchantcode, aadhaar, dob, pidData, pipe)" 
             });
+        }
+
+        const pipeNorm = String(pipe).toLowerCase();
+
+        // Bank5 mandates annual_income & nature_of_bussiness; Bank6 mandates accessmode.
+        if (pipeNorm === 'bank5' && !annual_income) {
+            return res.status(400).json({ success: false, message: "annual_income is required for bank5 activation" });
+        }
+        if (pipeNorm === 'bank5' && !nature_of_bussiness) {
+            return res.status(400).json({ success: false, message: "nature_of_bussiness is required for bank5 activation" });
         }
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
@@ -1563,11 +1604,19 @@ export const activateMerchant = async (req, res) => {
             piddata: encryptedPidData,
             dob, // YYYY/MM/DD
             is_casa: "0",
-            pipe, // bank2, bank5, bank6
-            accessmode: "SITE",
+            pipe: pipeNorm, // bank2, bank5, bank6
             latitude: latitude || "28.7041",
             longitude: longitude || "77.1025"
         };
+
+        // bank6 requires accessmode; bank5 requires annual_income & nature_of_bussiness.
+        if (pipeNorm === 'bank5') {
+            payload.annual_income = annual_income;
+            payload.nature_of_bussiness = nature_of_bussiness;
+        }
+        if (pipeNorm === 'bank6') {
+            payload.accessmode = "SITE";
+        }
 
         const headers = {
             'Token': currentToken,
@@ -1583,7 +1632,7 @@ export const activateMerchant = async (req, res) => {
                 { retailerId: merchantcode },
                 { 
                     isMerchantKycComplete: true,
-                    $addToSet: { activeAepsPipes: pipe }
+                    $addToSet: { activeAepsPipes: pipeNorm }
                 }
             );
             return res.status(200).json({

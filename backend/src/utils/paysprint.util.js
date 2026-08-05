@@ -1,5 +1,27 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import axios from 'axios';
+
+// Pipes that use the City Union / v2 onboarding endpoints.
+// Bank4 is onboarded via /onboard/v2/onboard/* , all others via /onboard/onboard/*.
+// (bank1 is UAT-only and intentionally not implemented.)
+const ONBOARD_V2_PIPES = ['bank4'];
+
+export const isV2OnboardPipe = (pipe) => ONBOARD_V2_PIPES.includes(String(pipe || '').toLowerCase());
+
+export const getOnboardStatusEndpoint = (pipe) => {
+    const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+    return isV2OnboardPipe(pipe)
+        ? `${baseUrl}/service/onboard/v2/onboard/getonboardstatus`
+        : `${baseUrl}/service/onboard/onboard/getonboardstatus`;
+};
+
+export const getOnboardUrlEndpoint = (pipe) => {
+    const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+    return isV2OnboardPipe(pipe)
+        ? `${baseUrl}/service/onboard/v2/onboard/getonboardurl`
+        : `${baseUrl}/service/onboard/onboard/getonboardurl`;
+};
 
 export const generatePaySprintToken = () => {
     const jwtKeyBase64 = process.env.PAYSPRINT_JWT_KEY;
@@ -220,18 +242,17 @@ export const verifyPanDetails = async (merchantcode, name, pan, dob) => {
 
 export const getWebOnboardingUrl = async (merchantData) => {
     try {
-        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://sit.paysprint.in/service-api/api/v1';
+        const pipe = merchantData.pipe || "bank2";
         const payload = {
             merchantcode: merchantData.merchantcode,
             mobile: merchantData.mobile,
             is_new: merchantData.is_new ? "1" : "0",
-            register_type: merchantData.is_new ? "1" : "0",
             email: merchantData.email,
             firm: merchantData.businessName || merchantData.name,
-            pipe: merchantData.pipe || "bank2",
             callback: merchantData.callbackUrl || (process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/kyc-status` : "https://your-production-url.com/kyc-status")
         };
 
+        // v2 (bank1/bank4) expects the same RAW body shape.
         const token = generatePaySprintToken();
         const headers = {
             'Token': token,
@@ -241,7 +262,7 @@ export const getWebOnboardingUrl = async (merchantData) => {
             'Accept': 'application/json'
         };
 
-        const requestUrl = `${baseUrl}/service/onboard/onboard/getonboardurl`;
+        const requestUrl = getOnboardUrlEndpoint(pipe);
         const requestBody = JSON.stringify(payload);
 
         console.log("========== PAYSPRINT REQUEST LOGS ==========");
@@ -268,7 +289,8 @@ export const getWebOnboardingUrl = async (merchantData) => {
         console.log("PAYSPRINT RESPONSE:", data);
         
         if (data.status || data.response_code === 1) {
-            if (data.onboard_pending === 0) {
+            // Already onboarded on the requested pipe(s) — no redirect needed.
+            if (data.onboard_pending === 0 || data.onboard_pending === "0") {
                 return { success: true, alreadyOnboarded: true, message: data.message };
             }
             

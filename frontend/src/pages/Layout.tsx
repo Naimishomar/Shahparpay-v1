@@ -73,6 +73,7 @@ const Layout = () => {
             if (res.data.success) {
                 if (res.data.alreadyOnboarded) {
                     if (newWindow) newWindow.close();
+                    toast.success("Merchant already onboarded. Proceeding to biometric activation.");
                     setShowMerchantKyc(true);
                     setShowKyc(false);
                     setIsGenerating(false);

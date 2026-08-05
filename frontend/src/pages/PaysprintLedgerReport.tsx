@@ -41,7 +41,12 @@ const getTxnTypeColor = (type: string) => {
     return map[type] || 'bg-gray-500/10 text-gray-500 border-gray-500/30';
 };
 
-const fmt = (v: number) => v.toFixed(2);
+const toNum = (v: unknown): number => {
+    const n = typeof v === 'number' ? v : Number(v);
+    return Number.isFinite(n) ? n : 0;
+};
+
+const fmt = (v: unknown) => toNum(v).toFixed(2);
 
 const PaysprintLedgerReport = () => {
     const [rows, setRows] = useState<LedgerRow[]>([]);
@@ -115,10 +120,10 @@ const PaysprintLedgerReport = () => {
 
     const totals = useMemo(() => {
         return filteredRows.reduce((acc, r) => ({
-            amount: acc.amount + r.AMOUNT,
-            commission: acc.commission + r.COMMISSION,
-            tds: acc.tds + r.TDS,
-            gst: acc.gst + r.GST,
+            amount: acc.amount + toNum(r.AMOUNT),
+            commission: acc.commission + toNum(r.COMMISSION),
+            tds: acc.tds + toNum(r.TDS),
+            gst: acc.gst + toNum(r.GST),
         }), { amount: 0, commission: 0, tds: 0, gst: 0 });
     }, [filteredRows]);
 
