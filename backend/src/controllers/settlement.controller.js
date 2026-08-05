@@ -456,12 +456,34 @@ const executeSettlementTransaction = async ({ merchantCode, bank, beneId, accoun
     }
 };
 
+// AEPS Settlement flat fee: ₹5 base charge + 18% GST on that charge (₹0.90).
+// All values configurable via env.
+const getSettlementFee = () => {
+    const baseCharge = Number(process.env.AEPS_SETTLEMENT_BASE_CHARGE || 5);
+    const gstRate = Number(process.env.AEPS_SETTLEMENT_GST_RATE || 18) / 100;
+    const gstAmount = Math.round(baseCharge * gstRate * 100) / 100;
+    return { baseCharge, gstRate, gstAmount, total: Math.round((baseCharge + gstAmount) * 100) / 100 };
+};
+
+const getSettlementAmountLimits = () => ({
+    min: Number(process.env.AEPS_SETTLEMENT_MIN_AMOUNT || 100),
+    max: Number(process.env.AEPS_SETTLEMENT_MAX_AMOUNT || 25000)
+});
+
 export const initiateSettlement = async (req, res) => {
     try {
         const { bankId, amount, pin, mode } = req.body;
 
         if (!bankId || !amount || amount <= 0 || !pin) {
             return res.status(400).json({ success: false, message: "Invalid parameters" });
+        }
+
+        const { min, max } = getSettlementAmountLimits();
+        if (amount < min || amount > max) {
+            return res.status(400).json({
+                success: false,
+                message: `Settlement amount must be between ₹${min} and ₹${max}`
+            });
         }
 
         if (!isPayoutServiceActive()) {
@@ -483,12 +505,12 @@ export const initiateSettlement = async (req, res) => {
             return res.status(401).json({ success: false, message: "Incorrect PIN" });
         }
 
-        // 0.2% charges is applicable on each manual settlement transaction.
-        const fee = Number(amount) * 0.002;
+        // Flat fee: ₹5 base charge + 18% GST on that charge (e.g. ₹5 + ₹0.90 = ₹5.90)
+        const { baseCharge, gstAmount, total: fee } = getSettlementFee();
         const totalDeduction = Number(amount) + fee;
 
         if (aepsWallet.balance < totalDeduction) {
-            return res.status(400).json({ success: false, message: `Insufficient AEPS Wallet balance. (Amount: ₹${amount} + Fee: ₹${fee})` });
+            return res.status(400).json({ success: false, message: `Insufficient AEPS Wallet balance. (Amount: ₹${amount} + Charge: ₹${fee})` });
         }
 
         const transactionId = `SETTLE${Date.now()}${Math.floor(Math.random() * 1000)}`;
@@ -507,7 +529,10 @@ export const initiateSettlement = async (req, res) => {
                     bankName: bank.bankName,
                     beneficiaryName: bank.accountHolderName,
                     mode,
-                    fee
+                    fee,
+                    baseCharge,
+                    gstAmount,
+                    gstRate: Number(process.env.AEPS_SETTLEMENT_GST_RATE || 18)
                 }
             });
         } catch (walletError) {

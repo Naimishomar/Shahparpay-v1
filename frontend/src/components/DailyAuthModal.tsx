@@ -96,6 +96,8 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = 
                 const errorMsg = result.data?.message || result.message;
                 if (errorMsg.includes('Registration Successful')) {
                     toast.error(errorMsg);
+                } else if (result.deviceMapped || errorMsg.includes('already mapped') || errorMsg.includes('mapped with other merchant')) {
+                    toast.error("Your biometric scanner is already mapped to another merchant on this pipe. Contact your service provider to unbind the device, or use a different scanner.");
                 } else if (result.needsWebOnboarding || errorMsg.includes('reset your status') || errorMsg.includes('pending')) {
                     const pipeToOnboard = result.pipe || 'bank2';
                     const dynamicIsNew = activePipes.includes(pipeToOnboard) ? "0" : "1";

@@ -10,6 +10,13 @@ const isSettlementWindow = () => {
     return mins >= 9 * 60 && mins < 21 * 60;
 };
 
+const SETTLEMENT_BASE_CHARGE = 5;
+const SETTLEMENT_GST_RATE = 18;
+const SETTLEMENT_GST_AMOUNT = Math.round(SETTLEMENT_BASE_CHARGE * (SETTLEMENT_GST_RATE / 100) * 100) / 100;
+const SETTLEMENT_FEE = SETTLEMENT_BASE_CHARGE + SETTLEMENT_GST_AMOUNT;
+const SETTLEMENT_MIN = 100;
+const SETTLEMENT_MAX = 25000;
+
 const AepsSettlement = () => {
     const { token } = useAuth();
     const [savedBanks, setSavedBanks] = useState<any[]>([]);
@@ -152,6 +159,11 @@ const AepsSettlement = () => {
             return toast.error("Please fill all required fields");
         }
 
+        const amt = Number(amount);
+        if (amt < SETTLEMENT_MIN || amt > SETTLEMENT_MAX) {
+            return toast.error(`Settlement amount must be between ₹${SETTLEMENT_MIN} and ₹${SETTLEMENT_MAX}`);
+        }
+
         if (!isSettlementWindow()) {
             return toast.error("AEPS Settlement is available from 9 AM to 9 PM IST only. Please try again during service hours.");
         }
@@ -160,7 +172,7 @@ const AepsSettlement = () => {
         try {
             const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/settlement/initiate`, {
                 bankId: selectedBankId,
-                amount: Number(amount),
+                amount: amt,
                 pin,
                 mode,
                 beneficiaryMobile
@@ -326,9 +338,27 @@ const AepsSettlement = () => {
                                             onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                             placeholder="0.00"
                                             required
+                                            min={SETTLEMENT_MIN}
+                                            max={SETTLEMENT_MAX}
                                             className="w-full pl-8 pr-3 py-2.5 bg-background border border-border rounded-md focus:border-primary outline-none shadow-sm transition-colors text-foreground"
                                         />
                                     </div>
+                                    {Number(amount) >= SETTLEMENT_MIN && Number(amount) <= SETTLEMENT_MAX && (
+                                        <div className="text-xs text-muted-foreground mt-1.5 space-y-0.5">
+                                            <div className="flex justify-between">
+                                                <span>Amount credited to bank</span>
+                                                <span className="text-foreground font-medium">₹{Number(amount).toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Settlement charge (₹{SETTLEMENT_BASE_CHARGE} + {SETTLEMENT_GST_RATE}% GST)</span>
+                                                <span className="text-foreground font-medium">₹{SETTLEMENT_FEE.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between border-t border-border/40 pt-1 font-semibold">
+                                                <span>Total deduction from AEPS Wallet</span>
+                                                <span className="text-primary">₹{(Number(amount) + SETTLEMENT_FEE).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="space-y-1.5">

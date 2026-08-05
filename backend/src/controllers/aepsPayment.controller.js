@@ -1520,12 +1520,19 @@ export const dailyAuth = async (req, res) => {
                     });
                 } else {
                     // Registration failed for other reasons
-                    const isDeviceError = regData?.message?.toLowerCase().includes('device') || regData?.message?.toLowerCase().includes('mapped');
+                    const regMsg = (regData?.message || '').toLowerCase();
+                    const isDeviceMapped = regData?.response_code === 26 ||
+                        (regData?.response_code === 27 && regMsg.includes('mapped')) ||
+                        regMsg.includes('already mapped') || regMsg.includes('mapped with other merchant');
+                    const isDeviceError = isDeviceMapped || regMsg.includes('device') || regMsg.includes('capture failed');
                     return res.status(400).json({ 
                         success: false, 
-                        message: regData?.message || "2FA Registration Failed.", 
+                        message: isDeviceMapped
+                            ? "Your biometric scanner is already mapped to another merchant on this pipe. Please contact your service provider to unbind the device, or use a different scanner."
+                            : (regData?.message || "2FA Registration Failed."), 
                         data: regData,
                         needsWebOnboarding: !isDeviceError,
+                        deviceMapped: isDeviceMapped,
                         pipe: pipe
                     });
                 }
