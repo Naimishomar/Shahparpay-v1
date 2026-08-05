@@ -20,6 +20,10 @@ const banks = [
     { name: 'Central Bank of India', displayName: 'Central Bank of India', logo: 'https://www.google.com/s2/favicons?domain=centralbankofindia.co.in&sz=128' }
 ];
 
+// AEPS transaction OTP is required only when the withdrawal amount is >= this
+// threshold. Below it, no OTP is needed.
+const AEPS_OTP_THRESHOLD = 5000;
+
 const numberToWords = (num: string | number) => {
     const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
     const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
@@ -76,6 +80,21 @@ const AEPS = () => {
     const [amount, setAmount] = useState("");
     const [selectedBank, setSelectedBank] = useState("");
     const [consent, setConsent] = useState(true);
+
+    // AEPS Transaction OTP state - required only for withdrawals >= ₹5000
+    const [otp, setOtp] = useState("");
+    const [otpRefId, setOtpRefId] = useState("");
+    const [otpTxnReference, setOtpTxnReference] = useState("");
+    const [otpSent, setOtpSent] = useState(false);
+    const [sendingOtp, setSendingOtp] = useState(false);
+
+    // Clears the AEPS transaction OTP flow (used on reset / tab switch / retry)
+    const invalidateOtp = () => {
+        setOtp("");
+        setOtpRefId("");
+        setOtpTxnReference("");
+        setOtpSent(false);
+    };
 
     // Modal State
     const [showReceiptModal, setShowReceiptModal] = useState(false);
@@ -143,6 +162,7 @@ const AEPS = () => {
         setAmount("");
         setSelectedBank("");
         setPidData(null);
+        invalidateOtp();
     };
 
     const [dynamicBanks, setDynamicBanks] = useState<any[]>([]);
@@ -227,6 +247,15 @@ const AEPS = () => {
             toast.error("Please fill Aadhaar Number and Bank Name before scanning your fingerprint.");
             return;
         }
+
+        // AEPS transaction OTP is required only for withdrawals >= ₹5000.
+        // The customer's OTP must be embedded in the captured PID block.
+        if (activeTab === 'cash_withdrawal' && Number(amount) >= AEPS_OTP_THRESHOLD) {
+            if (!otpSent || !otp || !otpRefId) {
+                toast.error("Please send the AEPS transaction OTP and enter it before scanning the customer's fingerprint.");
+                return;
+            }
+        }
         
         const proceed = window.confirm("CUSTOMER must place their finger on the scanner.");
         if (!proceed) return;
@@ -253,9 +282,12 @@ const AEPS = () => {
             // High-security L1 options package (fType="2")
             // Removing WADH from Balance Enquiry payload because it causes "WADH validation fail" 
             // when fType="2" is used, and Bank 2 strictly rejects fType="0" (FIR+FMR).
+            // The customer's AEPS transaction OTP is passed via the `otp` attribute so it gets
+            // bound inside the captured PID data (required only for withdrawals >= ₹5000).
+            const otpAttr = (activeTab === 'cash_withdrawal' && Number(amount) >= AEPS_OTP_THRESHOLD && otp) ? ` otp="${otp}"` : "";
             const captureXml = `<?xml version="1.0"?>
             <PidOptions ver="1.0">
-            <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN" />
+            <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN"${otpAttr} />
             <CustOpts>
                 <Param name="Param1" value="" />
             </CustOpts>
@@ -323,6 +355,62 @@ const AEPS = () => {
             setPidData(null);
         } finally {
             setIsScanning(false);
+        }
+    };
+
+    const handleSendOtp = async () => {
+        if (activeTab !== 'cash_withdrawal') return;
+        if (!aadhaarNo || !bankName || !mobileNo) {
+            toast.error("Please fill Aadhaar Number, Bank Name, and Mobile Number before sending OTP.");
+            return;
+        }
+        if (!amount || Number(amount) <= 0) {
+            toast.error("Please enter a valid withdrawal amount before sending OTP.");
+            return;
+        }
+        if (sendingOtp) return;
+        setSendingOtp(true);
+        try {
+            const selectedBankObj = dynamicBanks.find((b: any) => 
+                (b.bankName || "").toLowerCase() === bankName.toLowerCase() || 
+                (b.bank_name || "").toLowerCase() === bankName.toLowerCase()
+            );
+            const actualIIN = selectedBankObj?.iinno || selectedBankObj?.bank_iin || '607152';
+
+            const payload: any = {
+                latitude: location?.latitude?.toString(),
+                longitude: location?.longitude?.toString(),
+                aadhaarNumber: aadhaarNo,
+                bankIIN: actualIIN,
+                mobileNumber: mobileNo,
+                amount: Number(amount),
+                pipe: selectedPipe
+            };
+            // Reuse the reference on resend so we don't leave orphaned PENDING transactions
+            if (otpTxnReference) payload.referenceNo = otpTxnReference;
+
+            const token = localStorage.getItem('token');
+            const res = await axios.post(
+                `${import.meta.env.VITE_BACKEND_URL}/api/aeps/initiate-otp`,
+                payload,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            const result = res.data;
+
+            if (result.success && result.data?.otpRefId) {
+                setOtpRefId(result.data.otpRefId);
+                setOtpTxnReference(result.data.referenceNo);
+                setOtpSent(true);
+                setOtp("");
+                toast.success("OTP sent to the customer's registered mobile number.");
+            } else {
+                toast.error(extractPaySprintError(result) || "Failed to send OTP. Please try again.");
+            }
+        } catch (error: any) {
+            console.error("Failed to send AEPS transaction OTP", error);
+            toast.error(extractPaySprintError(error?.response?.data) || "Failed to send OTP. Please try again.");
+        } finally {
+            setSendingOtp(false);
         }
     };
 
@@ -403,6 +491,15 @@ const AEPS = () => {
                     setShowDailyAuthModal(true);
                     setLoading(false);
                     return;
+                }
+                if (Number(amount) >= AEPS_OTP_THRESHOLD) {
+                    if (!otpSent || !otp || !otpRefId || !otpTxnReference) {
+                        toast.error(`AEPS transaction OTP is mandatory for withdrawals of ₹${AEPS_OTP_THRESHOLD} or more. Please send OTP and enter it.`);
+                        setLoading(false);
+                        return;
+                    }
+                    apiPayload.referenceNo = otpTxnReference;
+                    apiPayload.otpRefId = otpRefId;
                 }
                 apiPayload.amount = amount;
                 res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/cash-withdrawal`, apiPayload, config);
@@ -496,6 +593,7 @@ const AEPS = () => {
                 }
             } else {
                 setPidData(null);
+                invalidateOtp();
             }
         }
     };
@@ -512,28 +610,28 @@ const AEPS = () => {
                     </h1>
                     <div className="flex items-center gap-6 border-b border-border hidden md:flex">
                         <button 
-                            onClick={() => setActiveTab('balance_enquiry')}
+                            onClick={() => { invalidateOtp(); setActiveTab('balance_enquiry'); }}
                             className={`pb-2 px-2 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'balance_enquiry' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             <Wallet size={16} />
                             Balance Enquiry
                         </button>
                         <button 
-                            onClick={() => setActiveTab('mini_statement')}
+                            onClick={() => { invalidateOtp(); setActiveTab('mini_statement'); }}
                             className={`pb-2 px-2 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'mini_statement' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             <FileText size={16} />
                             Mini Statement
                         </button>
                         <button 
-                            onClick={() => setActiveTab('cash_withdrawal')}
+                            onClick={() => { invalidateOtp(); setActiveTab('cash_withdrawal'); }}
                             className={`pb-2 px-2 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'cash_withdrawal' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             <IndianRupee size={16} />
                             Cash Withdrawal
                         </button>
                         <button 
-                            onClick={() => setActiveTab('cash_deposit')}
+                            onClick={() => { invalidateOtp(); setActiveTab('cash_deposit'); }}
                             className={`pb-2 px-2 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'cash_deposit' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             <CreditCard size={16} />
@@ -662,7 +760,13 @@ const AEPS = () => {
                                         <input 
                                             type="number" 
                                             value={amount}
-                                            onChange={(e) => setAmount(e.target.value)}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (otpSent && val !== amount) {
+                                                    invalidateOtp();
+                                                }
+                                                setAmount(val);
+                                            }}
                                             onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                             placeholder="Enter amount" 
                                             className="w-full pl-8 p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors" 
@@ -680,7 +784,10 @@ const AEPS = () => {
                                             <button
                                                 key={val}
                                                 type="button"
-                                                onClick={() => setAmount(prev => (Number(prev) || 0) + val + "")}
+                                                onClick={() => {
+                                                    if (otpSent) invalidateOtp();
+                                                    setAmount(prev => (Number(prev) || 0) + val + "");
+                                                }}
                                                 className="px-3 py-1.5 text-xs font-medium rounded-md border border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-white transition-colors"
                                             >
                                                 +₹{val}
@@ -688,12 +795,57 @@ const AEPS = () => {
                                         ))}
                                         <button
                                             type="button"
-                                            onClick={() => setAmount("")}
+                                            onClick={() => {
+                                                if (otpSent) invalidateOtp();
+                                                setAmount("");
+                                            }}
                                             className="px-3 py-1.5 text-xs font-medium rounded-md border border-red-500/20 bg-red-500/5 text-red-500 hover:bg-red-500 hover:text-white transition-colors"
                                         >
                                             Clear
                                         </button>
                                     </div>
+
+                                    {/* AEPS Transaction OTP - required only for withdrawals >= ₹5000 */}
+                                    {activeTab === 'cash_withdrawal' && Number(amount) >= AEPS_OTP_THRESHOLD && (
+                                        <div className="flex flex-col gap-2 mt-2 border-t border-border/60 pt-3">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                                                    <KeyRound size={14} className="text-primary" />
+                                                    AEPS Transaction OTP
+                                                </label>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleSendOtp}
+                                                    disabled={sendingOtp}
+                                                    className="px-3 py-1.5 text-xs font-medium rounded-md border border-primary/30 bg-primary/5 text-primary hover:bg-primary hover:text-white transition-colors disabled:opacity-50"
+                                                >
+                                                    {sendingOtp ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : (otpSent ? "Resend OTP" : "Send OTP")}
+                                                </button>
+                                            </div>
+                                            {otpSent && (
+                                                <>
+                                                    <p className="text-xs text-emerald-600 font-medium">
+                                                        OTP sent to the customer's registered mobile number.
+                                                    </p>
+                                                    <input
+                                                        type="text"
+                                                        value={otp}
+                                                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                                        placeholder="Enter 6-digit OTP"
+                                                        className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors text-center tracking-[0.4em] font-bold"
+                                                    />
+                                                    <p className="text-[11px] text-muted-foreground">
+                                                        The OTP is bound to the customer's fingerprint capture and is required by the bank for this withdrawal.
+                                                    </p>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                    {activeTab === 'cash_withdrawal' && amount && Number(amount) > 0 && Number(amount) < AEPS_OTP_THRESHOLD && (
+                                        <p className="text-[11px] text-muted-foreground mt-2">
+                                            No transaction OTP required for amounts below ₹{AEPS_OTP_THRESHOLD}.
+                                        </p>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -749,6 +901,7 @@ const AEPS = () => {
                                     setAmount('');
                                     setPidData(null);
                                     setBankName('');
+                                    invalidateOtp();
                                 }} className="flex-1 py-3 rounded-lg border border-border hover:bg-muted font-medium transition-colors">
                                     Clear
                                 </button>

@@ -367,19 +367,6 @@ const AepsSettlement = () => {
                                 </button>
                             </div>
                         </form>
-
-                        <div className="mt-4 pt-4 border-t border-border/50">
-                            <p className="text-sm font-semibold text-foreground/90">Primary</p>
-                            <p className="text-sm text-foreground/80 leading-relaxed mt-1">
-                                All 6 Auto Settlement will credit in this account without charges.<br/>
-                                <strong className="text-foreground">Note :-</strong> 0.2% charges is applicable on each manual settelment transaction.
-                            </p>
-                            <p className={`mt-2 text-sm font-medium ${isSettlementWindow() ? 'text-emerald-600' : 'text-red-500'}`}>
-                                {isSettlementWindow()
-                                    ? '● Service active — transactions accepted until 9 PM IST.'
-                                    : '● Service closed — AEPS Settlement is available 9 AM to 9 PM IST.'}
-                            </p>
-                        </div>
                     </div>
                 </div>
             </div>

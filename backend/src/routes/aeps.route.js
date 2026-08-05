@@ -13,7 +13,8 @@ import {
     getMerchantStatus,
     aadhaarPay,
     getPidOptions,
-    activateMerchant
+    activateMerchant,
+    initiateAepsTxnOtp
 } from '../controllers/aepsPayment.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 
@@ -26,6 +27,7 @@ router.post('/get-pid-options', authMiddlewares, getPidOptions);
 // Core AEPS Services
 router.get('/banks', getBankList);
 router.post('/balance-enquiry', authMiddlewares, balanceEnquiry);
+router.post('/initiate-otp', authMiddlewares, initiateAepsTxnOtp);
 router.post('/cash-withdrawal', authMiddlewares, cashWithdrawal);
 router.post('/cash-deposit', authMiddlewares, cashDeposit);
 router.post('/aadhaar-pay', authMiddlewares, aadhaarPay);

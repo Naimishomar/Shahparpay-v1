@@ -9,6 +9,10 @@ import AepsWallet from '../models/aepsWallet.model.js';
 import AdminWallet from '../models/adminWallet.model.js';
 import Admin from '../models/users/admin.model.js';
 
+// AEPS transaction OTP is required when the withdrawal amount is equal to or
+// greater than this threshold (PaySprint rule). Below it, no OTP is needed.
+export const AEPS_OTP_THRESHOLD = 5000;
+
 // Helper function to resolve which bank pipe is verified for the merchant
 export const getVerifiedPipe = async (merchantcode, mobile) => {
     // Check pipes in order of preference. We prioritize bank1 and bank5
@@ -308,14 +312,158 @@ export const getBankList = async (req, res) => {
     }
 };
 
+// Initiates the AEPS transaction OTP (AePS Transaction Initiate OTP API).
+// Required for AEPS cash withdrawals of ₹5000 or more (see AEPS_OTP_THRESHOLD).
+// The OTP is delivered to the customer's registered mobile number. The SAME
+// referenceNo must be reused in the subsequent cash-withdrawal call so
+// PaySprint can match the otp_refid.
+export const initiateAepsTxnOtp = async (req, res) => {
+    try {
+        const { aadhaarNumber, bankIIN, mobileNumber, amount, latitude, longitude, pipe, transactiontype, referenceNo: txnReferenceNo } = req.body;
+        if (!aadhaarNumber || !bankIIN || !mobileNumber || !amount) {
+            return res.status(400).json({
+                success: false,
+                message: "Aadhaar number, Bank IIN, Mobile number, and Amount are required."
+            });
+        }
+
+        const retailer = await Retailer.findById(req.user.id);
+        if (!retailer) {
+            return res.status(404).json({ success: false, message: "Retailer not found" });
+        }
+
+        const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+        const txnType = transactiontype || 'CW';
+        const referenceNo = txnReferenceNo || `${txnType}${Date.now()}`;
+
+        // Reserve/reuse the PENDING transaction with the same reference used by the withdrawal,
+        // so OTP retries (resend) don't leave orphaned PENDING transactions behind.
+        let newTxn = null;
+        if (txnReferenceNo) {
+            newTxn = await Transaction.findOne({ transactionId: txnReferenceNo, userId: req.user.id });
+        }
+        if (!newTxn) {
+            newTxn = await Transaction.create({
+                transactionId: referenceNo,
+                userId: req.user.id,
+                type: txnType === 'AP' ? 'AADHAAR_PAY' : 'AEPS_WITHDRAWAL',
+                amount: Number(amount),
+                status: 'PENDING',
+                metadata: {
+                    aadhaar: aadhaarNumber,
+                    bankIIN: bankIIN,
+                    mobile: mobileNumber,
+                    otpInitiated: true
+                }
+            });
+        } else {
+            newTxn.status = 'PENDING';
+            newTxn.amount = Number(amount);
+            newTxn.metadata = {
+                ...newTxn.metadata,
+                aadhaar: aadhaarNumber,
+                bankIIN: bankIIN,
+                mobile: mobileNumber,
+                otpInitiated: true
+            };
+            await newTxn.save();
+        }
+
+        const resolvedPipe = pipe || await getVerifiedPipe(retailer.retailerId, retailer.contactNumber);
+
+        const payload = {
+            latitude: String(latitude || "28.7041"),
+            longitude: String(longitude || "77.1025"),
+            mobilenumber: String(mobileNumber || retailer.contactNumber || "9999999999"),
+            referenceno: referenceNo,
+            ipaddress: req.ip === '::1' ? '127.0.0.1' : (req.ip || "127.0.0.1"),
+            adhaarnumber: String(aadhaarNumber),
+            nationalbankidentification: Number(bankIIN),
+            pipe: resolvedPipe,
+            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            transactiontype: txnType,
+            submerchantid: String(retailer.retailerId),
+            amount: Number(amount)
+        };
+
+        const token = generatePaySprintToken();
+        const encryptedData = encryptPayload(JSON.stringify(payload));
+
+        const headers = {
+            'Token': token,
+            'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+            'Content-Type': 'application/json'
+        };
+
+        console.log(`[AePS Transaction OTP Request] Payload:`, JSON.stringify(payload, null, 2));
+
+        const response = await axios.post(
+            `${baseUrl}/service/aeps/txnotp/index`,
+            { body: encryptedData },
+            { headers, validateStatus: () => true }
+        );
+
+        console.log(`[AePS Transaction OTP Response]`, JSON.stringify(response.data, null, 2));
+
+        const otpRefId = response.data?.otp_refid || response.data?.data?.otp_refid;
+
+        // PaySprint may report success via `status: true` or `response_code: 1`
+        const isOtpSuccess = response.data && (
+            response.data.status === true ||
+            response.data.response_code === 1 ||
+            response.data.response_code === "1"
+        );
+
+        if (isOtpSuccess && otpRefId) {
+            newTxn.metadata = { ...newTxn.metadata, otpRefId, otpInitiatedAt: new Date().toISOString() };
+            await newTxn.save();
+
+            return res.status(200).json({
+                success: true,
+                message: response.data.message || "OTP sent successfully",
+                data: {
+                    otpRefId,
+                    referenceNo
+                }
+            });
+        }
+
+        // OTP initiation failed - don't leave a dangling PENDING transaction
+        newTxn.status = 'FAILED';
+        await newTxn.save();
+
+        return res.status(400).json({
+            success: false,
+            message: response.data?.message || "Failed to initiate AEPS transaction OTP",
+            data: response.data
+        });
+    } catch (error) {
+        console.error("AEPS Transaction OTP Error:", error?.response?.data || error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error during AEPS OTP initiation",
+            error: error?.response?.data || error.message
+        });
+    }
+};
+
 export const cashWithdrawal = async (req, res) => {
     let session = null;
     try {
-        const { mobileNumber, aadhaarNumber, bankIIN, pidData, merchantPidData, amount, latitude, longitude, bankName, customerName, pipe } = req.body;
+        const { mobileNumber, aadhaarNumber, bankIIN, pidData, merchantPidData, amount, latitude, longitude, bankName, customerName, pipe, referenceNo: txnReferenceNo, otpRefId } = req.body;
         if (!aadhaarNumber || !bankIIN || !pidData || !amount) {
             return res.status(400).json({ 
                 success: false,
                 message: "Aadhaar number, Bank IIN, Biometric PidData, and Amount are required." 
+            });
+        }
+
+        // AEPS transaction OTP is mandatory only for withdrawals >= ₹5000.
+        // Enforce it server-side so the OTP flow can't be bypassed.
+        if (Number(amount) >= AEPS_OTP_THRESHOLD && !otpRefId) {
+            return res.status(400).json({
+                success: false,
+                message: `AEPS transaction OTP is mandatory for withdrawals of ₹${AEPS_OTP_THRESHOLD} or more. Please send the OTP and try again.`
             });
         }
 
@@ -326,23 +474,40 @@ export const cashWithdrawal = async (req, res) => {
         }
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
-        const referenceNo = `CW${Date.now()}`;
+        const referenceNo = txnReferenceNo || `CW${Date.now()}`;
 
-        // 2. Create PENDING Transaction (Idempotency)
-        let newTxn = await Transaction.create({
-            transactionId: referenceNo,
-            userId: req.user.id,
-            type: 'AEPS_WITHDRAWAL',
-            amount: Number(amount),
-            status: 'PENDING',
-            metadata: {
+        // 2. Create/Reuse PENDING Transaction (Idempotency). When initiated via the AEPS OTP flow,
+        // the SAME referenceNo is reused so PaySprint's otp_refid matches this transaction.
+        let newTxn = null;
+        if (txnReferenceNo) {
+            newTxn = await Transaction.findOne({ transactionId: txnReferenceNo, userId: req.user.id });
+        }
+        if (!newTxn) {
+            newTxn = await Transaction.create({
+                transactionId: referenceNo,
+                userId: req.user.id,
+                type: 'AEPS_WITHDRAWAL',
+                amount: Number(amount),
+                status: 'PENDING',
+                metadata: {
+                    aadhaar: aadhaarNumber,
+                    bankIIN: bankIIN,
+                    bankName: bankName,
+                    name: customerName,
+                    mobile: mobileNumber
+                }
+            });
+        } else {
+            newTxn.amount = Number(amount);
+            newTxn.metadata = {
+                ...newTxn.metadata,
                 aadhaar: aadhaarNumber,
                 bankIIN: bankIIN,
                 bankName: bankName,
                 name: customerName,
                 mobile: mobileNumber
-            }
-        });
+            };
+        }
 
         const payload = {
             latitude: String(latitude || "28.7041"),
@@ -360,6 +525,7 @@ export const cashWithdrawal = async (req, res) => {
             submerchantid: String(retailer.retailerId),
             amount: Number(amount),
             is_iris: "No",
+            otp_refid: otpRefId || undefined,
             pipe: pipe || await getVerifiedPipe(retailer.retailerId, retailer.contactNumber)
         };
 
