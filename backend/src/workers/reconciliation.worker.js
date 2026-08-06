@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import Transaction from '../models/transaction.model.js';
-import { resolveTransaction } from '../utils/wallet.util.js';
+import { resolveTransaction, applyAepsWithdrawalSuccess, queryAepsTransactionStatus } from '../utils/wallet.util.js';
 import axios from 'axios';
 import crypto from 'crypto';
 import { generatePaySprintToken } from '../utils/paysprint.util.js';
@@ -50,6 +50,60 @@ const verifyPayoutStatus = async (transaction) => {
 };
 
 /**
+ * Resolves a stuck AEPS_WITHDRAWAL transaction against the AEPS status query
+ * endpoint. The gateway's original response was ambiguous (bank acknowledged
+ * but reported failure), so the bank is the source of truth here.
+ *
+ * - SUCCESS  -> credit wallets (idempotent — cannot double-credit)
+ * - FAILED   -> finalize FAILED (nothing was locked, so no refund)
+ * - PROCESSING / query error -> leave PROCESSING for the next run
+ *
+ * Returns a human-readable result string for the cron log.
+ */
+const resolveAepsWithdrawal = async (txn) => {
+    const reconciled = await queryAepsTransactionStatus(txn.transactionId);
+
+    if (reconciled.status === 'SUCCESS') {
+        const paysprintRef = txn.metadata?.paysprintRef || reconciled.data?.ackno || reconciled.data?.bankrrn || undefined;
+        const credited = await applyAepsWithdrawalSuccess({
+            transactionId: txn._id,
+            userId: txn.userId,
+            amount: txn.amount,
+            paysprintRef,
+            message: reconciled.data?.message || "Cash withdrawal successful"
+        });
+        return credited
+            ? `AEPS withdrawal ${txn.transactionId} resolved as SUCCESS — bank debited, wallets credited.`
+            : `AEPS withdrawal ${txn.transactionId} already resolved; skipped.`;
+    }
+
+    if (reconciled.status === 'FAILED') {
+        const reconciledData = reconciled.data || {};
+        const updated = await Transaction.findOneAndUpdate(
+            { _id: txn._id, status: 'PROCESSING' },
+            {
+                $set: {
+                    status: 'FAILED',
+                    metadata: {
+                        ...(txn.metadata || {}),
+                        reconciledAt: new Date().toISOString(),
+                        reconciledStatus: 'FAILED',
+                        apiMessage: reconciledData.message || 'Resolved by reconciliation cron. AEPS status: FAILED',
+                        ...(reconciledData.ackno ? { ackno: reconciledData.ackno } : {}),
+                        ...(reconciledData.bankrrn ? { bankrrn: reconciledData.bankrrn } : {})
+                    }
+                }
+            }
+        );
+        return updated
+            ? `AEPS withdrawal ${txn.transactionId} resolved as FAILED by AEPS status query.`
+            : `AEPS withdrawal ${txn.transactionId} already resolved; skipped.`;
+    }
+
+    return `AEPS withdrawal ${txn.transactionId} still in process; keeping PROCESSING.`;
+};
+
+/**
  * The main Reconciliation Job
  * Runs every 5 minutes
  */
@@ -76,6 +130,25 @@ export const startReconciliationWorker = () => {
 
             for (const txn of stuckTransactions) {
                 let finalStatus = 'PROCESSING';
+
+                // AEPS transactions are reconciled against the AEPS status
+                // query endpoint — never auto-FAILED/refunded here. Auto-FAILING
+                // an AEPS withdrawal would wrongly refund money the bank may
+                // have actually debited. AEPS_WITHDRAWAL is fully wired; the
+                // remaining AEPS types have no reconciler yet and are skipped.
+                const AEPS_TYPES = ['AEPS_WITHDRAWAL', 'AEPS_DEPOSIT', 'AEPS_DEPOSIT_REFUND', 'AEPSTOMAIN', 'AEPS_SETTLEMENT'];
+                if (AEPS_TYPES.includes(txn.type)) {
+                    try {
+                        if (txn.type === 'AEPS_WITHDRAWAL') {
+                            console.log(`CRON: ${await resolveAepsWithdrawal(txn)}`);
+                        } else {
+                            console.log(`CRON: Skipping AEPS transaction ${txn.transactionId} (${txn.type}) — no reconciler wired yet.`);
+                        }
+                    } catch (error) {
+                        console.error(`CRON: AEPS reconciliation failed for ${txn.transactionId}:`, error.message);
+                    }
+                    continue;
+                }
 
                 if (txn.type === 'DIRECT_PAYOUT') {
                     finalStatus = await verifyPayoutStatus(txn);

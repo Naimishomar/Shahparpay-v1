@@ -4,10 +4,7 @@ import { generatePaySprintToken, encryptPayload, getOnboardStatusEndpoint } from
 import Retailer from "../models/users/retailer.model.js";
 import Distributor from "../models/users/distributor.model.js";
 import Transaction from "../models/transaction.model.js";
-import GlobalSettings from '../models/globalSettings.model.js';
-import AepsWallet from '../models/aepsWallet.model.js';
-import AdminWallet from '../models/adminWallet.model.js';
-import Admin from '../models/users/admin.model.js';
+import { applyAepsWithdrawalSuccess, queryAepsTransactionStatus } from '../utils/wallet.util.js';
 
 // AEPS transaction OTP is required when the withdrawal amount is equal to or
 // greater than this threshold (PaySprint rule). Below it, no OTP is needed.
@@ -448,7 +445,6 @@ export const initiateAepsTxnOtp = async (req, res) => {
 };
 
 export const cashWithdrawal = async (req, res) => {
-    let session = null;
     try {
         const { mobileNumber, aadhaarNumber, bankIIN, pidData, merchantPidData, amount, latitude, longitude, bankName, customerName, pipe, referenceNo: txnReferenceNo, otpRefId } = req.body;
         if (!aadhaarNumber || !bankIIN || !pidData || !amount) {
@@ -548,102 +544,143 @@ export const cashWithdrawal = async (req, res) => {
         
         console.log(`[Cash Withdrawal Response]`, JSON.stringify(response.data, null, 2));
 
-        let txnStatus = (response.data && response.data.status) ? 'SUCCESS' : 'FAILED';
-        let paysprintRef = response.data?.data?.ackno || response.data?.data?.rrn || null;
-        
-        // 3. Atomically update Wallet & Transaction if SUCCESS
-        if (txnStatus === 'SUCCESS') {
-            session = await mongoose.startSession();
-            session.startTransaction();
-            
-            // Fetch GlobalSettings for Commission Rates
-            let settings = await GlobalSettings.findOne({});
-            let retailerPct = 0;
-            let distributorPct = 0;
-            let totalApiPct = 0.45;
-            if (settings && settings.aepsCommission) {
-                retailerPct = settings.aepsCommission.retailerPercentage || 0;
-                distributorPct = settings.aepsCommission.distributorPercentage || 0;
-                totalApiPct = settings.aepsCommission.totalApiPercentage || 0.45;
+        const responseData = response.data || {};
+        const gatewayOk = responseData.status === true ||
+            responseData.response_code === 1 ||
+            responseData.response_code === "1";
+        const paysprintRef = responseData?.data?.ackno || responseData?.data?.rrn || null;
+        // Bank-level acknowledgement means the request reached the bank, so a
+        // gateway failure is ambiguous (the debit may still have happened).
+        const bankTouched = Boolean(responseData.ackno || responseData.bankrrn ||
+            responseData.data?.ackno || responseData.data?.rrn);
+
+        // 3a. Gateway confirmed SUCCESS — atomically credit wallets & finalize.
+        if (gatewayOk) {
+            const credited = await applyAepsWithdrawalSuccess({
+                transactionId: newTxn._id,
+                userId: req.user.id,
+                amount,
+                paysprintRef: paysprintRef || undefined,
+                message: responseData.message || "Cash withdrawal successful"
+            });
+
+            if (!credited) {
+                // Already resolved elsewhere — never double-credit.
+                return res.status(409).json({
+                    success: false,
+                    message: "Transaction was already resolved.",
+                    data: responseData
+                });
             }
-
-            const numericAmount = Number(amount);
-            const totalCommission = numericAmount * (totalApiPct / 100);
-            const retailerCommission = numericAmount * (retailerPct / 100);
-            const distributorCommission = numericAmount * (distributorPct / 100);
-            const adminCommission = totalCommission - retailerCommission - distributorCommission;
-
-            // Fetch Retailer to get distributorId
-            const retailer = await Retailer.findById(req.user.id);
-            const distId = retailer ? retailer.distributorId : null;
-
-            // Update Retailer AepsWallet (Principal + Retailer Commission)
-            await AepsWallet.findOneAndUpdate(
-                { userId: req.user.id, userModel: 'Retailer' },
-                { $inc: { balance: numericAmount + retailerCommission } },
-                { upsert: true, session }
-            );
-
-            // Update Distributor AepsWallet
-            if (distId && distributorCommission > 0) {
-                await AepsWallet.findOneAndUpdate(
-                    { userId: distId, userModel: 'Distributor' },
-                    { $inc: { balance: distributorCommission } },
-                    { upsert: true, session }
-                );
-            }
-
-            // Update AdminWallet
-            const admin = await Admin.findOne({});
-            if (admin && adminCommission > 0) {
-                await AdminWallet.findOneAndUpdate(
-                    { userId: admin._id },
-                    { $inc: { balance: adminCommission } },
-                    { upsert: true, session }
-                );
-            }
-
-            // Update Transaction
-            newTxn.status = 'SUCCESS';
-            newTxn.transactionId = paysprintRef || newTxn.transactionId;
-            newTxn.commissions = {
-                ...newTxn.commissions,
-                retailerEarned: retailerCommission,
-                distributorEarned: distributorCommission,
-                adminEarned: adminCommission
-            };
-            if (paysprintRef) {
-                newTxn.metadata = { ...newTxn.metadata, paysprintRef };
-            }
-            await newTxn.save({ session });
-
-            await session.commitTransaction();
-            session.endSession();
 
             return res.status(200).json({
                 success: true,
                 message: "Cash withdrawal successful",
-                data: response.data
+                data: responseData
             });
-        } else {
-            // Update Transaction to FAILED (No session needed as wallet is unaffected)
-            newTxn.status = 'FAILED';
+        }
+
+        // 3b. Gateway reported a failure. AEPS is asynchronous at the bank
+        // level: a `status:false` response that still carries a bank
+        // acknowledgement (ackno/bankrrn) does NOT prove the debit didn't
+        // happen. Reconcile against the transaction-status API instead of
+        // finalizing as FAILED.
+        if (bankTouched) {
+            newTxn.status = 'PROCESSING';
+            newTxn.metadata = {
+                ...newTxn.metadata,
+                needsReconciliation: true,
+                gatewayMessage: responseData.message || 'Gateway reported failure, bank acknowledgement received',
+                ackno: responseData.ackno,
+                bankrrn: responseData.bankrrn
+            };
             if (paysprintRef) {
-                newTxn.metadata = { ...newTxn.metadata, paysprintRef };
+                newTxn.metadata.paysprintRef = paysprintRef;
             }
             await newTxn.save();
 
-            return res.status(400).json({
+            let reconciled;
+            try {
+                reconciled = await queryAepsTransactionStatus(newTxn.transactionId);
+            } catch (reconErr) {
+                console.error("AEPS Cash Withdrawal status query error:", reconErr.message);
+                reconciled = { status: 'PROCESSING' };
+            }
+
+            if (reconciled.status === 'SUCCESS') {
+                const credited = await applyAepsWithdrawalSuccess({
+                    transactionId: newTxn._id,
+                    userId: req.user.id,
+                    amount,
+                    paysprintRef: paysprintRef || undefined,
+                    message: reconciled.data?.message || responseData.message || "Cash withdrawal successful"
+                });
+
+                if (credited) {
+                    return res.status(200).json({
+                        success: true,
+                        message: "Cash withdrawal successful",
+                        data: responseData
+                    });
+                }
+
+                return res.status(409).json({
+                    success: false,
+                    message: "Transaction was already resolved.",
+                    data: responseData
+                });
+            }
+
+            if (reconciled.status === 'FAILED') {
+                newTxn.status = 'FAILED';
+                newTxn.metadata = {
+                    ...newTxn.metadata,
+                    gatewayMessage: reconciled.data?.message || responseData.message || "Cash withdrawal failed"
+                };
+                if (paysprintRef) {
+                    newTxn.metadata = { ...newTxn.metadata, paysprintRef };
+                }
+                await newTxn.save();
+
+                return res.status(400).json({
+                    success: false,
+                    message: responseData.message || "Cash withdrawal failed",
+                    data: responseData
+                });
+            }
+
+            // Still in process at the bank or status query was inconclusive —
+            // keep PROCESSING for the reconciliation cron and tell the client
+            // the outcome is being verified, not that it failed.
+            return res.status(200).json({
                 success: false,
-                message: response.data?.message || "Cash withdrawal failed",
-                data: response.data
+                message: "Transaction is being verified. It may have been processed by the bank — status will be updated shortly.",
+                data: {
+                    ...responseData,
+                    verification: 'PENDING',
+                    referenceNo: newTxn.transactionId
+                }
             });
         }
-    } catch (error) {
-        if (session) {
-            await session.abortTransaction();
-            session.endSession();
+
+        // 3c. Clean failure (no bank acknowledgement — validation/auth errors):
+        // finalize as FAILED.
+        newTxn.status = 'FAILED';
+        newTxn.metadata = {
+            ...newTxn.metadata,
+            gatewayMessage: responseData.message || "Cash withdrawal failed"
+        };
+        if (paysprintRef) {
+            newTxn.metadata = { ...newTxn.metadata, paysprintRef };
         }
+        await newTxn.save();
+
+        return res.status(400).json({
+            success: false,
+            message: responseData.message || "Cash withdrawal failed",
+            data: responseData
+        });
+    } catch (error) {
         console.error("AEPS Cash Withdrawal Error:", error?.response?.data || error.message);
         return res.status(500).json({
             success: false,
@@ -766,6 +803,10 @@ export const aadhaarPay = async (req, res) => {
         } else {
             // Update Transaction to FAILED (No session needed as wallet is unaffected)
             newTxn.status = 'FAILED';
+            newTxn.metadata = {
+                ...newTxn.metadata,
+                gatewayMessage: response.data?.message || "Aadhaar Pay failed"
+            };
             if (paysprintRef) {
                 newTxn.metadata = { ...newTxn.metadata, paysprintRef };
             }

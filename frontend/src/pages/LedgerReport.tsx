@@ -421,6 +421,16 @@ const LedgerReport = () => {
                                     </div>
                                 )}
                             </div>
+
+                            {/* PaySprint / Gateway Message */}
+                            {(selectedTransaction.metadata?.gatewayMessage || selectedTransaction.metadata?.apiMessage || selectedTransaction.metadata?.message) && (
+                                <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
+                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase mb-1">Message</p>
+                                    <p className="text-sm font-medium text-foreground">
+                                        {selectedTransaction.metadata?.gatewayMessage || selectedTransaction.metadata?.apiMessage || selectedTransaction.metadata?.message}
+                                    </p>
+                                </div>
+                            )}
                             
                             {/* Metadata Dump (for debugging/extra details) */}
                             {selectedTransaction.metadata && Object.keys(selectedTransaction.metadata).length > 0 && (
