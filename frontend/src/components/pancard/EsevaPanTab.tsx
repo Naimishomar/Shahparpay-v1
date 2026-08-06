@@ -310,29 +310,6 @@ const EsevaPanTab: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            {/* Wallet + Info Banner */}
-            <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1 bg-card border border-border/50 rounded-2xl p-5 flex items-center gap-4">
-                    <div className="p-3 bg-primary/10 rounded-xl">
-                        <Wallet className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                        <p className="text-xs text-muted-foreground uppercase font-bold">Main Wallet Balance</p>
-                        <p className="text-2xl font-black text-foreground">
-                            {mainBalance === null ? "—" : formatINR(mainBalance)}
-                        </p>
-                    </div>
-                </div>
-                <div className="flex-1 bg-card border border-border/50 rounded-2xl p-5 flex items-center gap-4">
-                    <div className="p-3 bg-yellow-500/10 rounded-xl">
-                        <KeyRound className="w-6 h-6 text-yellow-500" />
-                    </div>
-                    <div className="text-sm text-muted-foreground leading-relaxed">
-                        Wallet is automatically debited (Admin Fee + 18% GST) and commission is credited after 2% TDS on every successful application.
-                    </div>
-                </div>
-            </div>
-
             {/* Sub-tabs Navigation */}
             <div className="flex bg-muted/50 p-1 rounded-xl w-full max-w-md border border-border/50">
                 <button
