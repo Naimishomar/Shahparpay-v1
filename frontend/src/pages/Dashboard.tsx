@@ -251,27 +251,6 @@ const Dashboard = () => {
                             <h4 className="font-bold text-lg mb-1">AEPS Services</h4>
                             <p className="text-xs text-muted-foreground">Cash Withdrawal & Inquiry</p>
                         </div>
-                        <div onClick={() => navigate('/direct-payout')} className="p-6 rounded-2xl bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-purple-500/20 transition-all hover:scale-105 group">
-                            <div className="w-16 h-16 rounded-full bg-purple-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                <Banknote className="text-purple-500" size={32} />
-                            </div>
-                            <h4 className="font-bold text-lg mb-1">Direct Payout</h4>
-                            <p className="text-xs text-muted-foreground">Instant Bank Settlement</p>
-                        </div>
-                        <div onClick={() => navigate('/recharge')} className="p-6 rounded-2xl bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-green-500/20 transition-all hover:scale-105 group">
-                            <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                <Smartphone className="text-green-500" size={32} />
-                            </div>
-                            <h4 className="font-bold text-lg mb-1">Recharge & BBPS</h4>
-                            <p className="text-xs text-muted-foreground">Mobile, DTH & Utility Bills</p>
-                        </div>
-                        <div onClick={() => navigate('/dmt')} className="p-6 rounded-2xl bg-gradient-to-br from-orange-500/10 to-orange-600/10 border border-orange-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-orange-500/20 transition-all hover:scale-105 group">
-                            <div className="w-16 h-16 rounded-full bg-orange-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                <Building2 className="text-orange-500" size={32} />
-                            </div>
-                            <h4 className="font-bold text-lg mb-1">Domestic Money</h4>
-                            <p className="text-xs text-muted-foreground">Money Transfer (DMT)</p>
-                        </div>
                         <div onClick={() => navigate('/lead-generation')} className="p-6 rounded-2xl bg-gradient-to-br from-teal-500/10 to-teal-600/10 border border-teal-500/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-teal-500/20 transition-all hover:scale-105 group">
                             <div className="w-16 h-16 rounded-full bg-teal-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                                 <Users className="text-teal-500" size={32} />
