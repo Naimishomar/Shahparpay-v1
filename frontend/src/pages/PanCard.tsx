@@ -5,10 +5,11 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import locationsData from '../data/locations.json';
 import StandardPsaTab from '../components/pancard/StandardPsaTab';
+import EsevaPanTab from '../components/pancard/EsevaPanTab';
 
 const PanCard: React.FC = () => {
     const { token } = useAuth();
-    const [activeTab, setActiveTab] = useState<'BIOMETRIC' | 'STANDARD'>('BIOMETRIC');
+    const [activeTab, setActiveTab] = useState<'BIOMETRIC' | 'STANDARD' | 'ESEVATECH'>('BIOMETRIC');
     
     const [fetchingStatus, setFetchingStatus] = useState(true);
     const [hasPsa, setHasPsa] = useState(false);
@@ -197,11 +198,11 @@ const PanCard: React.FC = () => {
                         <CreditCard className="w-8 h-8 text-primary" />
                         UTI PAN Card Services
                     </h1>
-                    <p className="text-muted-foreground">Become a UTI Agent and purchase application tokens.</p>
+                    <p className="text-muted-foreground">Become a UTI Agent, purchase application tokens, or apply via eSevaTech.</p>
                 </div>
 
                 {/* Tabs Navigation */}
-                <div className="flex bg-muted/50 p-1 rounded-xl w-full max-w-sm border border-border/50">
+                <div className="flex bg-muted/50 p-1 rounded-xl w-full max-w-md border border-border/50">
                     <button
                         onClick={() => setActiveTab('BIOMETRIC')}
                         className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'BIOMETRIC' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
@@ -214,10 +215,18 @@ const PanCard: React.FC = () => {
                     >
                         Standard Web PSA
                     </button>
+                    <button
+                        onClick={() => setActiveTab('ESEVATECH')}
+                        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'ESEVATECH' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                        eSevaTech PAN
+                    </button>
                 </div>
 
                 {activeTab === 'STANDARD' ? (
                     <StandardPsaTab />
+                ) : activeTab === 'ESEVATECH' ? (
+                    <EsevaPanTab />
                 ) : (
                     <>
                         {fetchingStatus ? (

@@ -74,6 +74,7 @@ import fundRequestRouter from './routes/fundRequest.route.js';
 import dashboardRouter from './routes/dashboard.route.js';
 import leadRouter from './routes/lead.route.js';
 import panRouter from './routes/pan.route.js';
+import panEsevaRouter from './routes/panEseva.route.js';
 import itrRouter from './routes/itr.route.js';
 import paysprintLedgerRouter from './routes/paysprintLedger.route.js';
 import { checkAgentWallet } from './controllers/itr.controller.js';
@@ -91,6 +92,7 @@ app.use('/api/fund-request', fundRequestRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/lead', leadRouter);
 app.use('/api/pan', panRouter);
+app.use('/api/pan', panEsevaRouter);
 app.use('/api/itr', itrRouter);
 app.use('/api/paysprint', paysprintLedgerRouter);
 

@@ -14,7 +14,7 @@ import autoTable from "jspdf-autotable"
 
 const getCrDr = (type: string) => {
     const credits = ['WALLET_TOPUP'];
-    const debits = ['PAN_CARD', 'STD_PAN_CARD', 'RECHARGE', 'BILL_PAYMENT', 'AEPS_SETTLEMENT', 'AEPS', 'DMT'];
+    const debits = ['PAN_CARD', 'STD_PAN_CARD', 'PAN_SERVICE', 'PAN_COUPON', 'RECHARGE', 'BILL_PAYMENT', 'AEPS_SETTLEMENT', 'AEPS', 'DMT'];
     if (credits.includes(type)) return 'CR';
     if (debits.includes(type)) return 'DR';
     return 'DR';
@@ -23,12 +23,16 @@ const getCrDr = (type: string) => {
 const getPanTypeLabel = (type: string) => {
     if (type === 'PAN_CARD') return 'Biometric PSA';
     if (type === 'STD_PAN_CARD') return 'Standard Web PSA';
+    if (type === 'PAN_SERVICE') return 'eSevaTech PAN Service';
+    if (type === 'PAN_COUPON') return 'eSevaTech PAN Coupon';
     return type;
 };
 
 const getPanTypeColor = (type: string) => {
     if (type === 'PAN_CARD') return 'bg-blue-500/10 text-blue-500 border-blue-500/30';
     if (type === 'STD_PAN_CARD') return 'bg-purple-500/10 text-purple-500 border-purple-500/30';
+    if (type === 'PAN_SERVICE') return 'bg-cyan-500/10 text-cyan-500 border-cyan-500/30';
+    if (type === 'PAN_COUPON') return 'bg-teal-500/10 text-teal-500 border-teal-500/30';
     return 'bg-gray-500/10 text-gray-500 border-gray-500/30';
 };
 
@@ -37,14 +41,14 @@ const PanReport = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const [panTypeFilter, setPanTypeFilter] = useState<'ALL' | 'PAN_CARD' | 'STD_PAN_CARD'>('ALL');
+    const [panTypeFilter, setPanTypeFilter] = useState<'ALL' | 'PAN_CARD' | 'STD_PAN_CARD' | 'PAN_SERVICE' | 'PAN_COUPON'>('ALL');
     const itemsPerPage = 20;
 
     useEffect(() => {
         const fetchTransactions = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/dashboard/recent-transactions?limit=1000&type=PAN_CARD,STD_PAN_CARD`, {
+                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/dashboard/recent-transactions?limit=1000&type=PAN_CARD,STD_PAN_CARD,PAN_SERVICE,PAN_COUPON`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.data.success) {
@@ -64,6 +68,8 @@ const PanReport = () => {
             const matchesSearch = tx.transactionId?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                 tx.metadata?.mobile?.includes(searchTerm) ||
                 tx.metadata?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                tx.metadata?.shop_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                String(tx.metadata?.application_number ?? '').includes(searchTerm) ||
                 tx.metadata?.psa_id?.toLowerCase().includes(searchTerm.toLowerCase());
             
             const matchesType = panTypeFilter === 'ALL' || tx.type === panTypeFilter;
@@ -90,11 +96,11 @@ const PanReport = () => {
                 tx.transactionId || tx._id || "N/A",
                 new Date(tx.createdAt).toLocaleString(),
                 getPanTypeLabel(tx.type),
-                tx.metadata?.psa_id || "N/A",
+                tx.metadata?.psa_id || tx.metadata?.application_number || "N/A",
                 tx.metadata?.name || tx.metadata?.shop_name || tx.metadata?.customerName || "N/A",
                 tx.metadata?.mobile || "N/A",
                 isCr ? tx.amount || 0 : tx.amount || 0,
-                tx.status || "UNKNOWN"
+                tx.metadata?.eseva_status || tx.status || "UNKNOWN"
             ];
             const escapedRow = row.map(v => `"${String(v).replace(/"/g, '""')}"`);
             csvRows.push(escapedRow.join(","));
@@ -124,10 +130,10 @@ const PanReport = () => {
                 tx.transactionId || tx._id || "N/A",
                 new Date(tx.createdAt).toLocaleDateString(),
                 getPanTypeLabel(tx.type),
-                tx.metadata?.psa_id || "N/A",
+                tx.metadata?.psa_id || tx.metadata?.application_number || "N/A",
                 tx.metadata?.name || tx.metadata?.shop_name || tx.metadata?.customerName || "N/A",
                 isCr ? `₹ ${tx.amount || 0}` : `₹ ${tx.amount || 0}`,
-                tx.status || "UNKNOWN"
+                tx.metadata?.eseva_status || tx.status || "UNKNOWN"
             ];
             tableRows.push(txData);
         });
@@ -156,7 +162,7 @@ const PanReport = () => {
                         </div>
                         <div>
                             <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">PAN Reports</h1>
-                            <p className="text-xs md:text-sm text-muted-foreground">View all PAN Card service transactions (Biometric & Standard PSA).</p>
+                            <p className="text-xs md:text-sm text-muted-foreground">View all PAN Card service transactions (Biometric, Standard & eSevaTech).</p>
                         </div>
                     </div>
                     
@@ -202,7 +208,7 @@ const PanReport = () => {
                                     <TableHead className="font-semibold text-foreground px-4 py-3 min-w-[120px]">Txn ID</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 min-w-[100px]">Date</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 min-w-[130px]">PAN Type</TableHead>
-                                    <TableHead className="font-semibold text-foreground px-4 py-3 min-w-[140px]">PSA ID</TableHead>
+                                    <TableHead className="font-semibold text-foreground px-4 py-3 min-w-[140px]">PSA ID / App No.</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 min-w-[140px]">Customer / Shop</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 min-w-[100px]">Mobile</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 text-right">Amount (₹)</TableHead>
@@ -246,7 +252,7 @@ const PanReport = () => {
                                                     </span>
                                                 </TableCell>
                                                 <TableCell className="px-4 py-2">
-                                                    <span className="text-sm font-mono text-foreground/80 truncate block max-w-[140px]">{tx.metadata?.psa_id || "N/A"}</span>
+                                                    <span className="text-sm font-mono text-foreground/80 truncate block max-w-[140px]">{tx.metadata?.psa_id || tx.metadata?.application_number || "N/A"}</span>
                                                 </TableCell>
                                                 <TableCell className="px-4 py-2">
                                                     <span className="text-sm font-medium text-foreground truncate max-w-[140px] block">{tx.metadata?.name || tx.metadata?.shop_name || tx.metadata?.customerName || "N/A"}</span>
@@ -259,12 +265,12 @@ const PanReport = () => {
                                                 </TableCell>
                                                 <TableCell className="px-4 py-2 text-center">
                                                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                                        tx.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' : 
-                                                        tx.status === 'FAILED' ? 'bg-rose-500/10 text-rose-500' : 
-                                                        tx.status === 'PENDING' ? 'bg-yellow-500/10 text-yellow-500' :
+                                                        (tx.metadata?.eseva_status || tx.status) === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' : 
+                                                        (tx.metadata?.eseva_status || tx.status) === 'FAILED' ? 'bg-rose-500/10 text-rose-500' : 
+                                                        (tx.metadata?.eseva_status || tx.status) === 'PENDING' ? 'bg-yellow-500/10 text-yellow-500' :
                                                         'bg-gray-500/10 text-gray-500'
                                                     }`}>
-                                                        {tx.status || "UNKNOWN"}
+                                                        {tx.metadata?.eseva_status || tx.status || "UNKNOWN"}
                                                     </span>
                                                 </TableCell>
                                             </TableRow>
