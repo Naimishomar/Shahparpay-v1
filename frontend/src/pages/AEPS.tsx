@@ -81,7 +81,7 @@ const AEPS = () => {
     const [selectedBank, setSelectedBank] = useState("");
     const [consent, setConsent] = useState(true);
 
-    // AEPS Transaction OTP state - required only for withdrawals >= ₹5000
+    // AEPS Transaction OTP state - required only for withdrawals > ₹5000
     const [otp, setOtp] = useState("");
     const [otpRefId, setOtpRefId] = useState("");
     const [otpTxnReference, setOtpTxnReference] = useState("");
@@ -248,9 +248,9 @@ const AEPS = () => {
             return;
         }
 
-        // AEPS transaction OTP is required only for withdrawals >= ₹5000.
+        // AEPS transaction OTP is required only for withdrawals above ₹5000.
         // The customer's OTP must be embedded in the captured PID block.
-        if (activeTab === 'cash_withdrawal' && Number(amount) >= AEPS_OTP_THRESHOLD) {
+        if (activeTab === 'cash_withdrawal' && Number(amount) > AEPS_OTP_THRESHOLD) {
             if (!otpSent || !otp || !otpRefId) {
                 toast.error("Please send the AEPS transaction OTP and enter it before scanning the customer's fingerprint.");
                 return;
@@ -284,7 +284,7 @@ const AEPS = () => {
             // when fType="2" is used, and Bank 2 strictly rejects fType="0" (FIR+FMR).
             // The customer's AEPS transaction OTP is passed via the `otp` attribute so it gets
             // bound inside the captured PID data (required only for withdrawals >= ₹5000).
-            const otpAttr = (activeTab === 'cash_withdrawal' && Number(amount) >= AEPS_OTP_THRESHOLD && otp) ? ` otp="${otp}"` : "";
+            const otpAttr = (activeTab === 'cash_withdrawal' && Number(amount) > AEPS_OTP_THRESHOLD && otp) ? ` otp="${otp}"` : "";
             const captureXml = `<?xml version="1.0"?>
             <PidOptions ver="1.0">
             <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN"${otpAttr} />
@@ -492,9 +492,9 @@ const AEPS = () => {
                     setLoading(false);
                     return;
                 }
-                if (Number(amount) >= AEPS_OTP_THRESHOLD) {
+                if (Number(amount) > AEPS_OTP_THRESHOLD) {
                     if (!otpSent || !otp || !otpRefId || !otpTxnReference) {
-                        toast.error(`AEPS transaction OTP is mandatory for withdrawals of ₹${AEPS_OTP_THRESHOLD} or more. Please send OTP and enter it.`);
+                        toast.error(`AEPS transaction OTP is mandatory for withdrawals above ₹${AEPS_OTP_THRESHOLD}. Please send OTP and enter it.`);
                         setLoading(false);
                         return;
                     }
@@ -805,8 +805,8 @@ const AEPS = () => {
                                         </button>
                                     </div>
 
-                                    {/* AEPS Transaction OTP - required only for withdrawals >= ₹5000 */}
-                                    {activeTab === 'cash_withdrawal' && Number(amount) >= AEPS_OTP_THRESHOLD && (
+                                    {/* AEPS Transaction OTP - required only for withdrawals > ₹5000 */}
+                                    {activeTab === 'cash_withdrawal' && Number(amount) > AEPS_OTP_THRESHOLD && (
                                         <div className="flex flex-col gap-2 mt-2 border-t border-border/60 pt-3">
                                             <div className="flex items-center justify-between gap-2">
                                                 <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
@@ -841,9 +841,9 @@ const AEPS = () => {
                                             )}
                                         </div>
                                     )}
-                                    {activeTab === 'cash_withdrawal' && amount && Number(amount) > 0 && Number(amount) < AEPS_OTP_THRESHOLD && (
+                                    {activeTab === 'cash_withdrawal' && amount && Number(amount) > 0 && Number(amount) <= AEPS_OTP_THRESHOLD && (
                                         <p className="text-[11px] text-muted-foreground mt-2">
-                                            No transaction OTP required for amounts below ₹{AEPS_OTP_THRESHOLD}.
+                                            No transaction OTP required for amounts up to ₹{AEPS_OTP_THRESHOLD}.
                                         </p>
                                     )}
                                 </div>

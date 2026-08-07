@@ -6,8 +6,8 @@ import Distributor from "../models/users/distributor.model.js";
 import Transaction from "../models/transaction.model.js";
 import { applyAepsWithdrawalSuccess, queryAepsTransactionStatus } from '../utils/wallet.util.js';
 
-// AEPS transaction OTP is required when the withdrawal amount is equal to or
-// greater than this threshold (PaySprint rule). Below it, no OTP is needed.
+// AEPS transaction OTP is required when the withdrawal amount is greater
+// than this threshold (PaySprint rule). At or below it, no OTP is needed.
 export const AEPS_OTP_THRESHOLD = 5000;
 
 // Helper function to resolve which bank pipe is verified for the merchant
@@ -203,7 +203,7 @@ export const balanceEnquiry = async (req, res) => {
         console.log(`[Balance Enquiry Request] Payload:`, JSON.stringify({ ...payload, data: "HIDDEN_PID_DATA" }, null, 2));
 
         const response = await axios.post(
-            `${baseUrl}/service/aeps/balanceenquiry/index`, 
+            `${baseUrl}/service/aeps/v3/balanceenquiry/index`, 
             { body: encryptedData }, 
             { headers, validateStatus: () => true }
         );
@@ -310,7 +310,7 @@ export const getBankList = async (req, res) => {
 };
 
 // Initiates the AEPS transaction OTP (AePS Transaction Initiate OTP API).
-// Required for AEPS cash withdrawals of ₹5000 or more (see AEPS_OTP_THRESHOLD).
+// Required for AEPS cash withdrawals above ₹5000 (see AEPS_OTP_THRESHOLD).
 // The OTP is delivered to the customer's registered mobile number. The SAME
 // referenceNo must be reused in the subsequent cash-withdrawal call so
 // PaySprint can match the otp_refid.
@@ -454,12 +454,12 @@ export const cashWithdrawal = async (req, res) => {
             });
         }
 
-        // AEPS transaction OTP is mandatory only for withdrawals >= ₹5000.
+        // AEPS transaction OTP is mandatory only for withdrawals above ₹5000.
         // Enforce it server-side so the OTP flow can't be bypassed.
-        if (Number(amount) >= AEPS_OTP_THRESHOLD && !otpRefId) {
+        if (Number(amount) > AEPS_OTP_THRESHOLD && !otpRefId) {
             return res.status(400).json({
                 success: false,
-                message: `AEPS transaction OTP is mandatory for withdrawals of ₹${AEPS_OTP_THRESHOLD} or more. Please send the OTP and try again.`
+                message: `AEPS transaction OTP is mandatory for withdrawals above ₹${AEPS_OTP_THRESHOLD}. Please send the OTP and try again.`
             });
         }
 
@@ -873,7 +873,7 @@ export const miniStatement = async (req, res) => {
         };
 
         const response = await axios.post(
-            `${baseUrl}/service/aeps/ministatement/index`, 
+            `${baseUrl}/service/aeps/v3/ministatement/index`, 
             { body: encryptedData }, 
             { headers, validateStatus: () => true }
         );
