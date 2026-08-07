@@ -503,6 +503,11 @@ export const cashWithdrawal = async (req, res) => {
                 name: customerName,
                 mobile: mobileNumber
             };
+            // Persist immediately. Without this save, the customer name/bank
+            // merged above stays in memory only and is dropped on the SUCCESS
+            // path, where applyAepsWithdrawalSuccess re-reads the transaction
+            // from the DB (via findOneAndUpdate) before saving.
+            await newTxn.save();
         }
 
         const payload = {
