@@ -77,16 +77,6 @@ const Header = () => {
                 </div>
             )}
 
-            {/* Search Bar */}
-            <div className="relative hidden md:flex items-center">
-                <Search className="absolute left-3 w-4 h-4 text-muted-foreground" />
-                <input 
-                    type="text" 
-                    placeholder="Search..." 
-                    className="w-64 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full py-2 pl-10 pr-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground backdrop-blur-md"
-                />
-            </div>
-
             {/* Theme Toggle */}
             <button 
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -95,12 +85,6 @@ const Header = () => {
                 <Sun className="h-5 w-5 text-foreground transition-all scale-100 rotate-0 dark:-rotate-90 dark:scale-0 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 <Moon className="h-5 w-5 text-foreground transition-all scale-0 rotate-90 dark:rotate-0 dark:scale-100" />
                 <span className="sr-only">Toggle theme</span>
-            </button>
-
-            {/* Notification Bell */}
-            <button className="relative p-2 rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
-                <Bell className="w-5 h-5 text-foreground" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full shadow-[0_0_8px_rgba(139,92,246,0.8)]"></span>
             </button>
 
             {/* User Profile */}

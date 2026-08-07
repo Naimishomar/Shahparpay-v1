@@ -1,6 +1,20 @@
 import Transaction from "../models/transaction.model.js";
 import Retailer from "../models/users/retailer.model.js";
+import MainWallet from "../models/mainWallet.model.js";
 import axios from "axios";
+
+// Standard UTI PAN token charge per PAN card application / coupon.
+const PAN_COUPON_FEE = 107;
+
+// Atomically deducts `amount` from a retailer's Main Wallet if the balance is
+// sufficient. Returns the updated wallet, or null if the balance is too low.
+const debitMainWallet = async (userId, amount) => {
+    return MainWallet.findOneAndUpdate(
+        { userId, balance: { $gte: amount } },
+        { $inc: { balance: -amount } },
+        { returnDocument: 'after' }
+    );
+};
 
 // @desc Get existing Retailer Biometric PSA Status
 // @route GET /api/pan/my-psa-status
@@ -713,17 +727,31 @@ export const purchaseStdCoupons = async (req, res) => {
             return res.status(404).json({ success: false, message: "Retailer not found" });
         }
 
+        const couponQty = Number(coupon);
+        const totalAmount = couponQty * PAN_COUPON_FEE;
+
+        // Verify the retailer has enough Main Wallet balance BEFORE hitting the
+        // provider, so coupons are never bought without the wallet being debited.
+        const mainWallet = await MainWallet.findOne({ userId: retailer._id });
+        if (!mainWallet || mainWallet.balance < totalAmount) {
+            return res.status(400).json({
+                success: false,
+                message: `Insufficient Main Wallet balance. Required ₹${totalAmount}, available ₹${mainWallet?.balance || 0}.`
+            });
+        }
+
         const ref_id = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
         const transaction = new Transaction({
             transactionId: ref_id,
             userId: retailer._id,
             type: 'STD_PAN_CARD',
-            amount: Number(coupon) * 107, // Assuming 107 per coupon for tracking logic, though API just takes quantity
+            amount: totalAmount,
             status: 'PENDING',
             metadata: {
                 psa_id,
-                coupon_qty: coupon,
+                coupon_qty: couponQty,
+                amount: totalAmount,
                 action: 'COUPON_PURCHASE',
                 apiProvider: 'BharatPays_Standard_PSA'
             }
@@ -734,13 +762,13 @@ export const purchaseStdCoupons = async (req, res) => {
 
         const formData = new URLSearchParams({
             psa_id,
-            coupon: String(coupon),
+            coupon: String(couponQty),
             ref_id
         });
 
         const targetUrl = `https://api.bharatpays.in/api/psa/purchase_coupon`;
 
-        console.log(`[Std PSA Coupon Purchase] Ref: ${ref_id}, PSA ID: ${psa_id}, Qty: ${coupon}`);
+        console.log(`[Std PSA Coupon Purchase] Ref: ${ref_id}, PSA ID: ${psa_id}, Qty: ${couponQty}`);
 
         const response = await axios.post(targetUrl, formData.toString(), {
             headers: {
@@ -755,10 +783,28 @@ export const purchaseStdCoupons = async (req, res) => {
         const data = response.data;
 
         if (data && data.success === 1) {
+            // Coupon purchase succeeded — cut ₹107 per coupon from the Main Wallet.
+            const wallet = await debitMainWallet(retailer._id, totalAmount);
+            if (!wallet) {
+                transaction.status = 'FAILED';
+                transaction.metadata = {
+                    ...transaction.metadata,
+                    gatewayMessage: 'Insufficient Main Wallet balance for coupon purchase'
+                };
+                transaction.markModified('metadata');
+                await transaction.save();
+
+                return res.status(400).json({
+                    success: false,
+                    message: "Insufficient Main Wallet balance for coupon purchase."
+                });
+            }
+
             transaction.status = data.data?.status || 'SUCCESS';
             transaction.metadata = {
                 ...transaction.metadata,
-                request_id: data.data?.request_id
+                request_id: data.data?.request_id,
+                new_wallet_balance: wallet.balance
             };
             transaction.markModified('metadata');
             await transaction.save();
@@ -766,7 +812,9 @@ export const purchaseStdCoupons = async (req, res) => {
             return res.status(200).json({
                 success: true,
                 message: data.message || "PSA Coupon Purchased Successfully.",
-                data: data.data
+                data: data.data,
+                amountDebited: totalAmount,
+                new_wallet_balance: wallet.balance
             });
         } else {
             transaction.status = 'FAILED';

@@ -10,6 +10,10 @@ import Transaction from "../models/transaction.model.js";
 
 const ESEVA_BASE_URL = () => process.env.ESEVATECH_BASE_URL || "https://esevatech.in/api/core/main";
 
+// Fixed per-application PAN service charge. Used as a hard floor for the wallet
+// balance check and as a fallback amount when the provider omits final_amount.
+const PAN_APPLICATION_FEE = 107;
+
 const getEsevaCredentials = () => {
     const partner_unique_id = process.env.ESEVATECH_PARTNER_UNIQUE_ID;
     const secret_key = process.env.ESEVATECH_SECRET_KEY;
@@ -106,11 +110,11 @@ export const applyPanService = async (req, res) => {
             return res.status(404).json({ success: false, message: "Retailer not found" });
         }
 
-        if (balance <= 0) {
+        if (balance < PAN_APPLICATION_FEE) {
             return res.status(400).json({
                 success: false,
-                message: "Insufficient wallet balance",
-                required_amount: 0,
+                message: `Insufficient wallet balance. Required at least ₹${PAN_APPLICATION_FEE}.`,
+                required_amount: PAN_APPLICATION_FEE,
                 current_balance: balance
             });
         }
@@ -145,7 +149,7 @@ export const applyPanService = async (req, res) => {
             });
         }
 
-        const finalAmount = Number(result.final_amount);
+        const finalAmount = Number(result.final_amount) > 0 ? Number(result.final_amount) : PAN_APPLICATION_FEE;
         const netCommission = Number(result.net_commission);
         const applicationNumber = result.application_number;
 
@@ -238,11 +242,11 @@ export const applyPanCoupon = async (req, res) => {
             return res.status(404).json({ success: false, message: "Retailer not found" });
         }
 
-        if (balance <= 0) {
+        if (balance < PAN_APPLICATION_FEE * Number(number_of_coupons)) {
             return res.status(400).json({
                 success: false,
-                message: "Insufficient wallet balance",
-                required_amount: 0,
+                message: `Insufficient wallet balance. Required at least ₹${PAN_APPLICATION_FEE * Number(number_of_coupons)}.`,
+                required_amount: PAN_APPLICATION_FEE * Number(number_of_coupons),
                 current_balance: balance
             });
         }
@@ -274,7 +278,7 @@ export const applyPanCoupon = async (req, res) => {
             });
         }
 
-        const finalAmount = Number(result.final_amount);
+        const finalAmount = Number(result.final_amount) > 0 ? Number(result.final_amount) : (PAN_APPLICATION_FEE * Number(number_of_coupons));
         const netCommission = Number(result.net_commission);
         const applicationNumber = result.application_number;
 
