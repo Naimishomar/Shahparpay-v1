@@ -36,7 +36,6 @@ const retailerProjects = [
       { name: "PAN Reports", url: "/reports/pan" },
       { name: "ITR Reports", url: "/reports/itr" },
       { name: "Lead Generation Reports", url: "/reports/lead-generation" },
-      { name: "Paysprint Credit Ledger", url: "/reports/paysprint-credit-ledger" },
       { name: "Wallet Ledgar", url: "/reports/wallet-ledger" },
     ]
   },

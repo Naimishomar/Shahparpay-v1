@@ -2,8 +2,13 @@ import MainWallet from '../models/mainWallet.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
 import Transaction from '../models/transaction.model.js';
 
-const CREDIT_TYPES = new Set([
-    'AEPS_WITHDRAWAL',
+// Credit types where the wallet receives the transaction amount PLUS the
+// retailer's commission (verified against applyAepsWithdrawalSuccess).
+const CREDIT_WITH_COMMISSION = new Set(['AEPS_WITHDRAWAL']);
+
+// Credit types where the wallet receives only the transaction amount
+// (topups, refunds and AadhaarPay never earn commission on the ledger).
+const CREDIT_AMOUNT_ONLY = new Set([
     'AADHAAR_PAY',
     'WALLET_TOPUP',
     'DIRECT_PAYOUT_REFUND',
@@ -15,6 +20,18 @@ const CREDIT_TYPES = new Set([
 const TRANSFER_TYPES = new Set(['AEPSTOMAIN']);
 
 const MONEY_MOVING_STATUSES = ['SUCCESS', 'REFUNDED', 'APPROVED'];
+
+// Which wallet each transaction actually moves money in/out of.
+// Verified against the controllers: daily auth (MAIN), PAN (debitMainWallet),
+// ITR (MAIN), GST_REGISTRATION (MAIN), AEPS_SETTLEMENT (AEPS), etc.
+const WALLET_LABELS = {
+    AEPS_WITHDRAWAL: 'AEPS',
+    AADHAAR_PAY: 'AEPS',
+    AEPS_SETTLEMENT: 'AEPS',
+    AEPSTOMAIN: 'AEPS→Main',
+};
+
+const getWalletLabel = (tx) => WALLET_LABELS[tx.type] || 'Main';
 
 const TXNTYPE_LABELS = {
     AEPS_WITHDRAWAL: 'AEPS Wallet',
@@ -103,8 +120,12 @@ const getWalletDelta = (tx) => {
 
     if (TRANSFER_TYPES.has(tx.type)) return 0;
 
-    if (CREDIT_TYPES.has(tx.type)) {
+    if (CREDIT_WITH_COMMISSION.has(tx.type)) {
         return round2(amount + commission);
+    }
+
+    if (CREDIT_AMOUNT_ONLY.has(tx.type)) {
+        return round2(amount);
     }
 
     // Debit types: money leaves, retailer commission (if any) is credited back.
@@ -145,23 +166,28 @@ export const getWalletLedger = async (req, res) => {
             const tds = round2(commission * 0.02);
             const gst = round2(commission * 0.18);
             const type = delta > 0 ? 'credit' : delta < 0 ? 'debit' : 'transfer';
+        const isRefundRow = tx.transactionId && String(tx.transactionId).startsWith('REF-');
+        const txntype = isRefundRow
+            ? 'Refund'
+            : (TXNTYPE_LABELS[tx.type] || String(tx.type || '').replace(/_/g, ' '));
 
-            return {
-                SNO: String(tx.transactionId || tx._id || ''),
-                UTR: String(tx.transactionId || tx._id || ''),
-                USERNAME: req.user.retailerId || req.user.distributorId || '',
-                OPENING: opening,
-                AMOUNT: round2(toNumber(tx.amount)),
-                COMMISSION: commission,
-                TDS: tds,
-                GST: gst,
-                CLOSING: running,
-                TYPE: type,
-                NARRATION: getNarration(tx),
-                remarks: tx.status || '',
-                TXNTYPE: TXNTYPE_LABELS[tx.type] || String(tx.type || '').replace(/_/g, ' '),
-                DATE: tx.createdAt ? new Date(tx.createdAt).toISOString() : ''
-            };
+        return {
+            SNO: String(tx.transactionId || tx._id || ''),
+            UTR: String(tx.transactionId || tx._id || ''),
+            USERNAME: req.user.retailerId || req.user.distributorId || '',
+            WALLET: getWalletLabel(tx),
+            OPENING: opening,
+            AMOUNT: round2(toNumber(tx.amount)),
+            COMMISSION: commission,
+            TDS: tds,
+            GST: gst,
+            CLOSING: running,
+            TYPE: type,
+            NARRATION: getNarration(tx),
+            remarks: tx.status || '',
+            TXNTYPE: txntype,
+            DATE: tx.createdAt ? new Date(tx.createdAt).toISOString() : ''
+        };
         });
 
         // Apply date window (balances already account for full history).

@@ -16,6 +16,7 @@ interface LedgerRow {
   SNO: string;
   UTR: string;
   USERNAME: string;
+  WALLET: string;
   OPENING: number;
   AMOUNT: number;
   COMMISSION: number;
@@ -47,6 +48,12 @@ const getTxnTypeColor = (type: string) => {
         'Wallet Transfer': 'bg-sky-500/10 text-sky-500 border-sky-500/30',
     };
     return map[type] || 'bg-gray-500/10 text-gray-500 border-gray-500/30';
+};
+
+const getWalletColor = (wallet: string) => {
+    if (wallet === 'AEPS') return 'bg-blue-500/10 text-blue-500 border-blue-500/30';
+    if (wallet === 'AEPS→Main') return 'bg-sky-500/10 text-sky-500 border-sky-500/30';
+    return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30';
 };
 
 const toNum = (v: unknown): number => {
@@ -136,10 +143,10 @@ const WalletLedger = () => {
     }, [filteredRows]);
 
     const handleDownloadCSV = () => {
-        const headers = ["UTR", "USERNAME", "OPENING", "AMOUNT", "COMMISSION", "TDS", "GST", "CLOSING", "TYPE", "NARRATION", "TXNTYPE", "DATE"];
+        const headers = ["UTR", "USERNAME", "WALLET", "OPENING", "AMOUNT", "COMMISSION", "TDS", "GST", "CLOSING", "TYPE", "NARRATION", "TXNTYPE", "DATE"];
         const csvRows = [headers.join(",")];
         filteredRows.forEach(r => {
-            const row = [r.UTR, r.USERNAME, fmt(r.OPENING), fmt(r.AMOUNT), fmt(r.COMMISSION), fmt(r.TDS), fmt(r.GST), fmt(r.CLOSING), r.TYPE, r.NARRATION, r.TXNTYPE, r.DATE];
+            const row = [r.UTR, r.USERNAME, r.WALLET, fmt(r.OPENING), fmt(r.AMOUNT), fmt(r.COMMISSION), fmt(r.TDS), fmt(r.GST), fmt(r.CLOSING), r.TYPE, r.NARRATION, r.TXNTYPE, r.DATE];
             csvRows.push(row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
         });
         const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
@@ -155,11 +162,11 @@ const WalletLedger = () => {
     const handleDownloadPDF = () => {
         const doc = new jsPDF({ orientation: 'landscape' });
         doc.text("Wallet Ledger", 14, 15);
-        const tableColumn = ["UTR", "USERNAME", "OPENING", "AMOUNT", "COMMISSION", "TDS", "GST", "CLOSING", "TYPE", "NARRATION", "TXNTYPE", "DATE"];
+        const tableColumn = ["UTR", "USERNAME", "WALLET", "OPENING", "AMOUNT", "COMMISSION", "TDS", "GST", "CLOSING", "TYPE", "NARRATION", "TXNTYPE", "DATE"];
         const tableRows: (string | number)[][] = [];
         filteredRows.forEach(r => {
             tableRows.push([
-                r.UTR, r.USERNAME, fmt(r.OPENING), fmt(r.AMOUNT), fmt(r.COMMISSION), fmt(r.TDS), fmt(r.GST), fmt(r.CLOSING), r.TYPE, r.NARRATION, r.TXNTYPE, r.DATE
+                r.UTR, r.USERNAME, r.WALLET, fmt(r.OPENING), fmt(r.AMOUNT), fmt(r.COMMISSION), fmt(r.TDS), fmt(r.GST), fmt(r.CLOSING), r.TYPE, r.NARRATION, r.TXNTYPE, r.DATE
             ]);
         });
         autoTable(doc, {
@@ -264,6 +271,7 @@ const WalletLedger = () => {
                                     <TableHead className="font-semibold text-foreground px-4 py-3 w-16 text-center">SNO</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 min-w-[130px]">UTR No</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 min-w-[90px]">Username</TableHead>
+                                    <TableHead className="font-semibold text-foreground px-4 py-3 text-center min-w-[70px]">Wallet</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 text-right min-w-[90px]">Opening</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 text-right min-w-[90px]">Amount</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 text-right min-w-[90px]">Commission</TableHead>
@@ -305,6 +313,11 @@ const WalletLedger = () => {
                                                 </TableCell>
                                                 <TableCell className="px-4 py-2">
                                                     <span className="text-sm font-mono text-foreground/80 truncate block max-w-[100px]">{r.USERNAME || "N/A"}</span>
+                                                </TableCell>
+                                                <TableCell className="px-4 py-2 text-center">
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${getWalletColor(r.WALLET)}`}>
+                                                        {r.WALLET || "Main"}
+                                                    </span>
                                                 </TableCell>
                                                 <TableCell className="text-sm font-medium text-right px-4 py-2 text-foreground/80">{fmt(r.OPENING)}</TableCell>
                                                 <TableCell className={`text-sm font-bold text-right px-4 py-2 ${isCredit ? 'text-emerald-500' : isTransfer ? 'text-sky-500' : 'text-rose-500'}`}>{isCredit ? '+' : isTransfer ? '' : '-'} {fmt(r.AMOUNT)}</TableCell>

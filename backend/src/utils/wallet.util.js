@@ -17,6 +17,21 @@ const formatAmount = (amount) => {
 };
 
 /**
+ * AEPS cash-withdrawal retailer commission (slab based).
+ *   ₹300–₹3000    → 0.35% of the amount
+ *   ₹3001–₹10000  → flat ₹12
+ *   below ₹300    → ₹0 (no commission)
+ * Amounts above ₹10000 are not supported (blocked at the controller).
+ */
+export const getAepsWithdrawalCommission = (amount) => {
+    const amt = Number(amount) || 0;
+    if (amt < 300) return 0;
+    if (amt <= 3000) return Math.round(amt * 0.0035 * 100) / 100;
+    if (amt <= 10000) return 12;
+    return 12;
+};
+
+/**
  * PHASE 1: PRE-FLIGHT LOCK
  * Atomically deducts funds and creates a PROCESSING transaction.
  * Safe from double-spend since it checks balance atomically.
@@ -237,20 +252,20 @@ export const applyAepsWithdrawalSuccess = async ({ transactionId, userId, amount
 
         // Commission rates from GlobalSettings (defaults mirror the legacy path).
         const settings = await GlobalSettings.findOne({}).session(session);
-        let retailerPct = 0;
         let distributorPct = 0;
         let totalApiPct = 0.45;
         if (settings && settings.aepsCommission) {
-            retailerPct = settings.aepsCommission.retailerPercentage || 0;
             distributorPct = settings.aepsCommission.distributorPercentage || 0;
             totalApiPct = settings.aepsCommission.totalApiPercentage || 0.45;
         }
 
         const numericAmount = Number(amount);
-        const totalCommission = numericAmount * (totalApiPct / 100);
-        const retailerCommission = numericAmount * (retailerPct / 100);
+        // AEPS cash withdrawal retailer commission is slab-based
+        // (₹300–₹3000 → 0.35%, ₹3001–₹10000 → flat ₹12, <₹300 → ₹0).
+        const retailerCommission = getAepsWithdrawalCommission(numericAmount);
         const distributorCommission = numericAmount * (distributorPct / 100);
-        const adminCommission = totalCommission - retailerCommission - distributorCommission;
+        const totalCommission = numericAmount * (totalApiPct / 100);
+        const adminCommission = Math.max(0, totalCommission - retailerCommission - distributorCommission);
 
         const retailer = await Retailer.findById(userId).session(session);
         const distId = retailer ? retailer.distributorId : null;

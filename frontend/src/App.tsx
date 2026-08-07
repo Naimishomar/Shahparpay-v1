@@ -19,7 +19,6 @@ import UpiReport from "./pages/UpiReport"
 import PanReport from "./pages/PanReport"
 import ItrReport from "./pages/ItrReport"
 import LeadGenerationReport from "./pages/LeadGenerationReport"
-import PaysprintLedgerReport from "./pages/PaysprintLedgerReport"
 import WalletLedger from "./pages/WalletLedger"
 import LeadGeneration from "./pages/LeadGeneration"
 import PanCard from "./pages/PanCard"
@@ -73,7 +72,6 @@ function App() {
         <Route path="reports/pan" element={<PanReport/>}/>
         <Route path="reports/itr" element={<ItrReport/>}/>
         <Route path="reports/lead-generation" element={<LeadGenerationReport/>}/>
-        <Route path="reports/paysprint-credit-ledger" element={<PaysprintLedgerReport/>}/>
         <Route path="reports/wallet-ledger" element={<WalletLedger/>}/>
 
         <Route path="fund-request" element={<FundRequest/>}/>

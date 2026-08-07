@@ -324,6 +324,14 @@ export const initiateAepsTxnOtp = async (req, res) => {
             });
         }
 
+        // AEPS cash withdrawals are capped at ₹10000 per transaction.
+        if (Number(amount) > 10000) {
+            return res.status(400).json({
+                success: false,
+                message: "AEPS cash withdrawal amount cannot exceed ₹10000 per transaction."
+            });
+        }
+
         const retailer = await Retailer.findById(req.user.id);
         if (!retailer) {
             return res.status(404).json({ success: false, message: "Retailer not found" });
@@ -451,6 +459,14 @@ export const cashWithdrawal = async (req, res) => {
             return res.status(400).json({ 
                 success: false,
                 message: "Aadhaar number, Bank IIN, Biometric PidData, and Amount are required." 
+            });
+        }
+
+        // AEPS cash withdrawals are capped at ₹10000 per transaction.
+        if (Number(amount) > 10000) {
+            return res.status(400).json({
+                success: false,
+                message: "AEPS cash withdrawal amount cannot exceed ₹10000 per transaction."
             });
         }
 
