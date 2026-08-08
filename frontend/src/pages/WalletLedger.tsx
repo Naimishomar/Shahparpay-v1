@@ -283,7 +283,6 @@ const WalletLedger = () => {
                                 <TableRow>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 w-16 text-center">SNO</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 min-w-[130px]">UTR No</TableHead>
-                                    <TableHead className="font-semibold text-foreground px-4 py-3 min-w-[90px]">Username</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 text-center min-w-[70px]">Wallet</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 text-right min-w-[90px]">Opening</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 text-right min-w-[90px]">Amount</TableHead>
