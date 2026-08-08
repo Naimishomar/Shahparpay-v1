@@ -1,32 +1,31 @@
 import { useState, useEffect, useMemo } from "react"
 import { Search, Download, FileDown, Loader2, ChevronLeft, ChevronRight, Wallet as WalletIcon } from "lucide-react"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table"
 import axios from "axios"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 
 interface LedgerRow {
-  SNO: string;
-  UTR: string;
-  USERNAME: string;
-  WALLET: string;
-  OPENING: number;
-  AMOUNT: number;
-  COMMISSION: number;
-  TDS: number;
-  GST: number;
-  CLOSING: number;
-  TYPE: string;
-  NARRATION: string;
-  TXNTYPE: string;
-  DATE: string;
+    SNO: string;
+    UTR: string;
+    WALLET: string;
+    OPENING: number;
+    AMOUNT: number;
+    COMMISSION: number;
+    TDS: number;
+    GST: number;
+    CLOSING: number;
+    TYPE: string;
+    NARRATION: string;
+    TXNTYPE: string;
+    DATE: string;
 }
 
 const getTxnTypeColor = (type: string) => {
@@ -67,7 +66,6 @@ const WalletLedger = () => {
     const [rows, setRows] = useState<LedgerRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState("");
-    const [currentCombined, setCurrentCombined] = useState(0);
     const [currentMain, setCurrentMain] = useState(0);
     const [currentAeps, setCurrentAeps] = useState(0);
     const [searchTerm, setSearchTerm] = useState("");
@@ -96,8 +94,7 @@ const WalletLedger = () => {
                 });
                 if (res.data.success) {
                     setRows(res.data.data || []);
-                    setCurrentCombined(toNum(res.data.currentCombined));
-                    setCurrentMain(toNum(res.data.currentMain ?? res.data.currentCombined));
+                    setCurrentMain(toNum(res.data.currentMain));
                     setCurrentAeps(toNum(res.data.currentAeps ?? 0));
                     setMessage("");
                 }
@@ -123,7 +120,6 @@ const WalletLedger = () => {
             const term = searchTerm.toLowerCase();
             const matchesSearch = !term ||
                 r.UTR.toLowerCase().includes(term) ||
-                r.USERNAME.toLowerCase().includes(term) ||
                 r.NARRATION.toLowerCase().includes(term) ||
                 r.TXNTYPE.toLowerCase().includes(term);
             const matchesTxn = txnTypeFilter === 'ALL' || r.TXNTYPE === txnTypeFilter;
@@ -149,10 +145,10 @@ const WalletLedger = () => {
     }, [filteredRows]);
 
     const handleDownloadCSV = () => {
-        const headers = ["UTR", "USERNAME", "WALLET", "OPENING", "AMOUNT", "COMMISSION", "TDS", "GST", "CLOSING", "TYPE", "NARRATION", "TXNTYPE", "DATE"];
+        const headers = ["UTR", "WALLET", "OPENING", "AMOUNT", "COMMISSION", "TDS", "GST", "CLOSING", "TYPE", "NARRATION", "TXNTYPE", "DATE"];
         const csvRows = [headers.join(",")];
         filteredRows.forEach(r => {
-            const row = [r.UTR, r.USERNAME, r.WALLET, fmt(r.OPENING), fmt(r.AMOUNT), fmt(r.COMMISSION), fmt(r.TDS), fmt(r.GST), fmt(r.CLOSING), r.TYPE, r.NARRATION, r.TXNTYPE, r.DATE];
+            const row = [r.UTR, r.WALLET, fmt(r.OPENING), fmt(r.AMOUNT), fmt(r.COMMISSION), fmt(r.TDS), fmt(r.GST), fmt(r.CLOSING), r.TYPE, r.NARRATION, r.TXNTYPE, r.DATE];
             csvRows.push(row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
         });
         const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
@@ -168,11 +164,11 @@ const WalletLedger = () => {
     const handleDownloadPDF = () => {
         const doc = new jsPDF({ orientation: 'landscape' });
         doc.text("Wallet Ledger", 14, 15);
-        const tableColumn = ["UTR", "USERNAME", "WALLET", "OPENING", "AMOUNT", "COMMISSION", "TDS", "GST", "CLOSING", "TYPE", "NARRATION", "TXNTYPE", "DATE"];
+        const tableColumn = ["UTR", "WALLET", "OPENING", "AMOUNT", "COMMISSION", "TDS", "GST", "CLOSING", "TYPE", "NARRATION", "TXNTYPE", "DATE"];
         const tableRows: (string | number)[][] = [];
         filteredRows.forEach(r => {
             tableRows.push([
-                r.UTR, r.USERNAME, r.WALLET, fmt(r.OPENING), fmt(r.AMOUNT), fmt(r.COMMISSION), fmt(r.TDS), fmt(r.GST), fmt(r.CLOSING), r.TYPE, r.NARRATION, r.TXNTYPE, r.DATE
+                r.UTR, r.WALLET, fmt(r.OPENING), fmt(r.AMOUNT), fmt(r.COMMISSION), fmt(r.TDS), fmt(r.GST), fmt(r.CLOSING), r.TYPE, r.NARRATION, r.TXNTYPE, r.DATE
             ]);
         });
         autoTable(doc, {
@@ -196,16 +192,12 @@ const WalletLedger = () => {
                         </div>
                         <div>
                             <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">Wallet Ledger</h1>
-                            <p className="text-xs md:text-sm text-muted-foreground">Running balance per wallet (reconciled to live wallet balances), commission, TDS & GST per transaction.</p>
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/30">
                                     AEPS ₹{fmt(currentAeps)}
                                 </span>
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
                                     Main ₹{fmt(currentMain)}
-                                </span>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary">
-                                    Combined ₹{fmt(currentCombined)}
                                 </span>
                             </div>
                         </div>
@@ -332,9 +324,6 @@ const WalletLedger = () => {
                                                 <TableCell className="px-4 py-2">
                                                     <span className="text-sm font-mono text-foreground/80 truncate block max-w-[130px]">{r.UTR || "N/A"}</span>
                                                 </TableCell>
-                                                <TableCell className="px-4 py-2">
-                                                    <span className="text-sm font-mono text-foreground/80 truncate block max-w-[100px]">{r.USERNAME || "N/A"}</span>
-                                                </TableCell>
                                                 <TableCell className="px-4 py-2 text-center">
                                                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${getWalletColor(r.WALLET)}`}>
                                                         {r.WALLET || "Main"}
@@ -347,9 +336,8 @@ const WalletLedger = () => {
                                                 <TableCell className="text-sm font-medium text-right px-4 py-2 text-rose-500">{r.GST ? fmt(r.GST) : '-'}</TableCell>
                                                 <TableCell className="text-sm font-bold text-right px-4 py-2 text-foreground">{fmt(r.CLOSING)}</TableCell>
                                                 <TableCell className="px-4 py-2 text-center">
-                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
-                                                        isCredit ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : isTransfer ? 'bg-sky-500/10 text-sky-500 border-sky-500/30' : 'bg-rose-500/10 text-rose-500 border-rose-500/30'
-                                                    }`}>
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${isCredit ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : isTransfer ? 'bg-sky-500/10 text-sky-500 border-sky-500/30' : 'bg-rose-500/10 text-rose-500 border-rose-500/30'
+                                                        }`}>
                                                         {r.TYPE}
                                                     </span>
                                                 </TableCell>
@@ -427,11 +415,10 @@ const WalletLedger = () => {
                                             <button
                                                 key={pageNum}
                                                 onClick={() => setCurrentPage(pageNum)}
-                                                className={`w-7 h-7 rounded text-xs font-medium flex items-center justify-center transition-colors ${
-                                                    currentPage === pageNum
+                                                className={`w-7 h-7 rounded text-xs font-medium flex items-center justify-center transition-colors ${currentPage === pageNum
                                                     ? "bg-primary text-primary-foreground"
                                                     : "text-muted-foreground hover:bg-muted"
-                                                }`}
+                                                    }`}
                                             >
                                                 {pageNum}
                                             </button>
