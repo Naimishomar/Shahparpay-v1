@@ -68,7 +68,10 @@ const WalletLedger = () => {
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState("");
     const [currentCombined, setCurrentCombined] = useState(0);
+    const [currentMain, setCurrentMain] = useState(0);
+    const [currentAeps, setCurrentAeps] = useState(0);
     const [searchTerm, setSearchTerm] = useState("");
+    const [walletFilter, setWalletFilter] = useState("ALL");
     const [txnTypeFilter, setTxnTypeFilter] = useState("ALL");
     const [typeFilter, setTypeFilter] = useState("ALL");
     const [startDate, setStartDate] = useState("");
@@ -83,6 +86,7 @@ const WalletLedger = () => {
                 const token = localStorage.getItem('token');
                 let url = `${import.meta.env.VITE_BACKEND_URL}/api/wallet/ledger`;
                 const params = new URLSearchParams();
+                if (walletFilter !== 'ALL') params.set('wallet', walletFilter);
                 if (startDate) params.set('startDate', startDate);
                 if (endDate) params.set('endDate', endDate);
                 const qs = params.toString();
@@ -93,6 +97,8 @@ const WalletLedger = () => {
                 if (res.data.success) {
                     setRows(res.data.data || []);
                     setCurrentCombined(toNum(res.data.currentCombined));
+                    setCurrentMain(toNum(res.data.currentMain ?? res.data.currentCombined));
+                    setCurrentAeps(toNum(res.data.currentAeps ?? 0));
                     setMessage("");
                 }
             } catch (error) {
@@ -104,7 +110,7 @@ const WalletLedger = () => {
             }
         };
         fetchLedger();
-    }, [startDate, endDate]);
+    }, [startDate, endDate, walletFilter]);
 
     const txnTypes = useMemo(() => {
         const set = new Set<string>();
@@ -190,10 +196,16 @@ const WalletLedger = () => {
                         </div>
                         <div>
                             <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">Wallet Ledger</h1>
-                            <p className="text-xs md:text-sm text-muted-foreground">Combined Main + AEPS wallet running balance, commission, TDS & GST per transaction.</p>
-                            <div className="flex items-center gap-2 mt-1">
+                            <p className="text-xs md:text-sm text-muted-foreground">Running balance per wallet (reconciled to live wallet balances), commission, TDS & GST per transaction.</p>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/30">
+                                    AEPS ₹{fmt(currentAeps)}
+                                </span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
+                                    Main ₹{fmt(currentMain)}
+                                </span>
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary">
-                                    Current Balance ₹{fmt(currentCombined)}
+                                    Combined ₹{fmt(currentCombined)}
                                 </span>
                             </div>
                         </div>
@@ -225,6 +237,15 @@ const WalletLedger = () => {
                             </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 w-full justify-end">
+                            <select
+                                value={walletFilter}
+                                onChange={(e) => { setWalletFilter(e.target.value); setCurrentPage(1); }}
+                                className="flex-1 md:flex-none px-3 py-2 bg-card border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
+                            >
+                                <option value="ALL">All Wallets</option>
+                                <option value="AEPS">AEPS Wallet</option>
+                                <option value="MAIN">Main Wallet</option>
+                            </select>
                             <select
                                 value={txnTypeFilter}
                                 onChange={(e) => { setTxnTypeFilter(e.target.value); setCurrentPage(1); }}
@@ -363,7 +384,7 @@ const WalletLedger = () => {
                                 <span className="text-sm font-bold text-emerald-600">₹ {totals.commission.toFixed(2)}</span>
                             </div>
                             <div className="flex items-center justify-between px-3 py-2 bg-card rounded-lg border border-border/50">
-                                <span className="text-[11px] text-muted-foreground font-medium">TDS (2%)</span>
+                                <span className="text-[11px] text-muted-foreground font-medium">TDS</span>
                                 <span className="text-sm font-bold text-rose-600">₹ {totals.tds.toFixed(2)}</span>
                             </div>
                             <div className="flex items-center justify-between px-3 py-2 bg-card rounded-lg border border-border/50">

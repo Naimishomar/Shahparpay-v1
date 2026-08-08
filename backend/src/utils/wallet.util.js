@@ -262,15 +262,20 @@ export const applyAepsWithdrawalSuccess = async ({ transactionId, userId, amount
         const numericAmount = Number(amount);
         // AEPS cash withdrawal retailer commission is slab-based
         // (₹300–₹3000 → 0.35%, ₹3001–₹10000 → flat ₹12, <₹300 → ₹0).
-        const retailerCommission = getAepsWithdrawalCommission(numericAmount);
+        // Rule: the retailer's commission is credited to the AEPS wallet only
+        // AFTER deducting 18% GST (configurable via AEPS_COMMISSION_GST_RATE).
+        const retailerGross = getAepsWithdrawalCommission(numericAmount);
+        const commissionGstRate = Number(process.env.AEPS_COMMISSION_GST_RATE || 18) / 100;
+        const retailerGst = Math.round(retailerGross * commissionGstRate * 100) / 100;
+        const retailerCommission = Math.round((retailerGross - retailerGst) * 100) / 100;
         const distributorCommission = numericAmount * (distributorPct / 100);
         const totalCommission = numericAmount * (totalApiPct / 100);
-        const adminCommission = Math.max(0, totalCommission - retailerCommission - distributorCommission);
+        const adminCommission = Math.max(0, totalCommission - retailerGross - distributorCommission);
 
         const retailer = await Retailer.findById(userId).session(session);
         const distId = retailer ? retailer.distributorId : null;
 
-        // Retailer AepsWallet (principal + retailer commission)
+        // Retailer AepsWallet (principal + retailer commission net of GST)
         await AepsWallet.findOneAndUpdate(
             { userId, userModel: 'Retailer' },
             { $inc: { balance: numericAmount + retailerCommission } },
@@ -300,6 +305,8 @@ export const applyAepsWithdrawalSuccess = async ({ transactionId, userId, amount
         claimed.commissions = {
             ...claimed.commissions,
             retailerEarned: retailerCommission,
+            retailerGst: retailerGst,
+            retailerCommissionGross: retailerGross,
             distributorEarned: distributorCommission,
             adminEarned: adminCommission
         };
