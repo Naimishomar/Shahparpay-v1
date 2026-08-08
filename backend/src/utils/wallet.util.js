@@ -304,7 +304,10 @@ export const applyAepsWithdrawalSuccess = async ({ transactionId, userId, amount
         claimed.transactionId = paysprintRef || claimed.transactionId;
         claimed.commissions = {
             ...claimed.commissions,
-            retailerEarned: retailerCommission,
+            // retailerEarned stores the GROSS commission; GST is tracked
+            // separately in retailerGst. The wallet itself is credited NET
+            // of GST (retailerCommission).
+            retailerEarned: retailerGross,
             retailerGst: retailerGst,
             retailerCommissionGross: retailerGross,
             distributorEarned: distributorCommission,

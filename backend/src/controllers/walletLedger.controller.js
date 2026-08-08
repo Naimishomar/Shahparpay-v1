@@ -104,17 +104,28 @@ const getNarration = (tx) => {
     }
 };
 
+// AEPS cash-withdrawal retailer commission (slab based).
+//   ₹300–₹3000    → 0.35% of the amount
+//   ₹3001–₹10000  → flat ₹12
+//   below ₹300    → ₹0 (no commission)
+// Mirrors getAepsWithdrawalCommission in wallet.util.js.
+const getAepsWithdrawalCommission = (amount) => {
+    const amt = toNumber(amount);
+    if (amt < 300) return 0;
+    if (amt <= 3000) return round2(amt * 0.0035);
+    return 12;
+};
+
 /**
  * Splits a transaction's retailer commission into gross, GST (18%) and the net
- * that is actually credited to the wallet. Handles both storage layouts:
- *  - old rows store `retailerEarned` = gross (no retailerGst field)
- *  - new rows store `retailerEarned` = net + `retailerGst` separately
+ * actually credited to the wallet. The gross is recomputed from the amount via
+ * the slab function (source of truth), so it is correct even though stored
+ * `retailerEarned` is inconsistent across historical rows (some store gross,
+ * others already store net).
  */
 const getCommissionSplit = (tx) => {
-    const earned = toNumber(tx.commissions?.retailerEarned);
-    const storedGst = toNumber(tx.commissions?.retailerGst);
-    const gross = round2(earned + storedGst);
-    const gst = storedGst || round2(gross * 0.18);
+    const gross = round2(getAepsWithdrawalCommission(toNumber(tx.amount)));
+    const gst = round2(gross * 0.18);
     const net = round2(gross - gst);
     return { gross, gst, net };
 };
@@ -257,7 +268,9 @@ export const getWalletLedger = async (req, res) => {
 
             const { gross, gst, net } = getCommissionSplit(tx);
             const isDailyAuth = tx.type === 'DAILY_AUTH_CHARGE';
-            const hasCommission = gross > 0 && tx.type === 'AEPS_WITHDRAWAL';
+            const isRefundRow = tx.transactionId && String(tx.transactionId).startsWith('REF-');
+            // Commission is never shown on refund rows (refunds credit the amount only).
+            const hasCommission = gross > 0 && tx.type === 'AEPS_WITHDRAWAL' && !isRefundRow;
 
             // TDS is charged ONLY for the daily 2FA auth — never on
             // commission-paying transactions. It equals the auth charge amount.
@@ -268,7 +281,6 @@ export const getWalletLedger = async (req, res) => {
             const type = delta.main + delta.aeps > 0 ? 'credit'
                        : delta.main + delta.aeps < 0 ? 'debit'
                        : 'transfer';
-            const isRefundRow = tx.transactionId && String(tx.transactionId).startsWith('REF-');
             const txntype = isRefundRow
                 ? 'Refund'
                 : (TXNTYPE_LABELS[tx.type] || String(tx.type || '').replace(/_/g, ' '));
