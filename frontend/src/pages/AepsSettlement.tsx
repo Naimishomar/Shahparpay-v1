@@ -80,12 +80,13 @@ const AepsSettlement = () => {
         try {
             const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/settlement/saved-banks`, getHeaders());
             if (res.data.success) {
-                setSavedBanks(res.data.data);
-                if (res.data.data.length > 0) {
-                    setSelectedBankId(res.data.data[0]._id);
-                } else {
-                    setSelectedBankId('');
-                }
+                const banks: any[] = res.data.data;
+                setSavedBanks(banks);
+                setSelectedBankId(prevId => {
+                    if (banks.length === 0) return '';
+                    if (prevId && banks.some(b => b._id === prevId)) return prevId;
+                    return banks[0]._id;
+                });
             }
         } catch (error) {
             console.error("Failed to fetch saved banks", error);

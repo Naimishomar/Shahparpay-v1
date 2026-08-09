@@ -319,25 +319,57 @@ export const getSettlementAccountStatus = async (req, res) => {
         }
 
         const resData = apiResponse.data;
-        const accountStatus = resData?.accountstatus;
+        // accountstatus can arrive at the top level or nested, and may be a number or a string
+        const accountStatusRaw = resData?.accountstatus ?? resData?.data?.accountstatus ?? resData?.account_status ?? resData?.data?.account_status;
+        const accountStatus = Number(accountStatusRaw);
 
-        if (resData?.status === false || accountStatus === undefined) {
+        if (resData?.status === false || Number.isNaN(accountStatus)) {
             return res.status(400).json({ success: false, message: resData?.message || "Unable to fetch account status", data: resData });
         }
 
+        // Map PaySprint accountstatus to the local status.
+        const statusMap = { 1: 'VERIFIED', 2: 'PENDING', 3: 'PENDING' };
+        let newStatus = statusMap[accountStatus] || bank.status;
+
+        // PaySprint can report an account as deactivated (0) even when it is still receiving
+        // settlements successfully. If this bank has a recent successful settlement, keep it
+        // verified so the UI never shows a misleading "deactivated" state for a working account.
+        if (accountStatus === 0) {
+            const recentSuccess = await Transaction.exists({
+                userId: req.user.id,
+                status: 'SUCCESS',
+                type: { $in: ['AEPS_SETTLEMENT', 'DIRECT_PAYOUT'] },
+                'metadata.bankAccount': bank.accountNumber,
+                createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+            });
+            newStatus = recentSuccess ? 'VERIFIED' : 'REJECTED';
+        }
+
         // Sync local record
-        const statusMap = { 0: 'REJECTED', 1: 'VERIFIED', 2: 'PENDING', 3: 'PENDING' };
         await BankAccount.updateOne(
             { _id: bank._id },
-            { $set: { status: statusMap[accountStatus] || bank.status, payoutAccountStatus: accountStatus } }
+            { $set: { status: newStatus, payoutAccountStatus: accountStatus } }
         );
+
+        let message;
+        if (accountStatus === 1) {
+            message = "Account is activated";
+        } else if (accountStatus === 2) {
+            message = "Document upload pending";
+        } else if (accountStatus === 3) {
+            message = "Document verification pending at PaySprint";
+        } else if (accountStatus === 0 && newStatus === 'VERIFIED') {
+            message = "Account is active (recent settlement succeeded)";
+        } else if (accountStatus === 0) {
+            message = "Account is deactivated";
+        } else {
+            message = resData?.message || "Account status";
+        }
 
         return res.status(200).json({
             success: true,
             accountStatus,
-            message: accountStatus === 1 ? "Account is activated" :
-                     accountStatus === 2 ? "Document upload pending" :
-                     accountStatus === 3 ? "Document verification pending at PaySprint" : "Account is deactivated"
+            message
         });
     } catch (error) {
         console.error("Error checking account status:", error);
