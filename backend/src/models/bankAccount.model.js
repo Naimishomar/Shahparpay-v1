@@ -44,6 +44,10 @@ const bankAccountSchema = new mongoose.Schema({
     beneId: {
         type: String,
         trim: true
+    },
+    deleted: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 

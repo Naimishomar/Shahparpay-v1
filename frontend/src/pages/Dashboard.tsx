@@ -292,7 +292,7 @@ const Dashboard = () => {
                                     <p className="text-xs text-muted-foreground">{sale.details || sale.email}</p>
                                 </div>
                                 <div className="ml-auto text-right">
-                                    <div className={`font-semibold ${sale.status === 'FAILED' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                    <div className={`font-semibold ${sale.status === 'SUCCESS' ? 'text-emerald-500' : sale.status === 'FAILED' ? 'text-rose-500' : 'text-yellow-500'}`}>
                                         {sale.amount}
                                     </div>
                                     {sale.date && (

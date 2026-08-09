@@ -98,7 +98,7 @@ const getServiceHoursError = () => {
 
 export const getSavedBanks = async (req, res) => {
     try {
-        const banks = await BankAccount.find({ userId: req.user.id }).sort({ createdAt: -1 });
+        const banks = await BankAccount.find({ userId: req.user.id, deleted: { $ne: true } }).sort({ createdAt: -1 });
         return res.status(200).json({ success: true, data: banks });
     } catch (error) {
         console.error("Error fetching saved banks:", error);
@@ -136,6 +136,11 @@ export const syncSavedBanks = async (req, res) => {
         for (const acct of accounts) {
             if (!acct?.account) continue;
 
+            // The Payout service has no delete/deactivate API, so a bank removed by the
+            // user is soft-deleted locally. Skip re-creating any account the user deleted.
+            const existing = await BankAccount.findOne({ userId: req.user.id, accountNumber: String(acct.account) });
+            if (existing && existing.deleted) continue;
+
             const verified = String(acct.verified) === '1';
             // status: 1 = active, 2 = inactive/document pending (see GET LIST response)
             const status = String(acct.status) === '1' ? 'VERIFIED' : 'PENDING';
@@ -170,7 +175,16 @@ export const syncSavedBanks = async (req, res) => {
 export const deleteSettlementBank = async (req, res) => {
     try {
         const { id } = req.params;
-        const bank = await BankAccount.findOneAndDelete({ _id: id, userId: req.user.id });
+
+        // PaySprint Payout exposes no delete/deactivate endpoint (only GET LIST, ADD ACCOUNT,
+        // UPLOAD DOCUMENT, ACCOUNT STATUS CHECK, DO TRANSACTION and STATUS ENQUIRY). The account
+        // still exists on PaySprint, so we soft-delete locally and exclude it from the saved
+        // list and from future syncs to stop it from reappearing.
+        const bank = await BankAccount.findOneAndUpdate(
+            { _id: id, userId: req.user.id, deleted: { $ne: true } },
+            { $set: { deleted: true } },
+            { new: true }
+        );
 
         if (!bank) {
             return res.status(404).json({ success: false, message: "Bank account not found or unauthorized to delete" });
@@ -255,7 +269,8 @@ export const addSettlementBank = async (req, res) => {
                 beneId,
                 accountType: selectedAccountType,
                 status: needsDocument ? 'PENDING' : 'VERIFIED',
-                documentRequired: needsDocument
+                documentRequired: needsDocument,
+                deleted: false
             },
             { upsert: true, new: true }
         );
@@ -281,7 +296,7 @@ export const addSettlementBank = async (req, res) => {
 export const getSettlementAccountStatus = async (req, res) => {
     try {
         const { id } = req.params;
-        const bank = await BankAccount.findOne({ _id: id, userId: req.user.id });
+        const bank = await BankAccount.findOne({ _id: id, userId: req.user.id, deleted: { $ne: true } });
         if (!bank) {
             return res.status(404).json({ success: false, message: "Bank account not found" });
         }
@@ -339,7 +354,7 @@ export const uploadSettlementDocument = async (req, res) => {
             return res.status(400).json({ success: false, message: "bankId is required" });
         }
 
-        const bank = await BankAccount.findOne({ _id: bankId, userId: req.user.id });
+        const bank = await BankAccount.findOne({ _id: bankId, userId: req.user.id, deleted: { $ne: true } });
         if (!bank) {
             return res.status(404).json({ success: false, message: "Bank account not found" });
         }
@@ -490,7 +505,7 @@ export const initiateSettlement = async (req, res) => {
             return res.status(400).json({ success: false, message: getServiceHoursError(), serviceHours: getPayoutWindow() });
         }
 
-        const bank = await BankAccount.findOne({ _id: bankId, userId: req.user.id });
+        const bank = await BankAccount.findOne({ _id: bankId, userId: req.user.id, deleted: { $ne: true } });
         if (!bank) {
             return res.status(404).json({ success: false, message: "Bank account not found" });
         }
@@ -682,7 +697,7 @@ export const initiateDirectPayout = async (req, res) => {
         }
 
         // Auto-register the beneficiary to obtain a valid bene_id
-        let savedBank = await BankAccount.findOne({ userId: req.user.id, accountNumber });
+        let savedBank = await BankAccount.findOne({ userId: req.user.id, accountNumber, deleted: { $ne: true } });
         const beneId = await ensureBeneRegistered({
             merchantCode,
             bank: savedBank,
