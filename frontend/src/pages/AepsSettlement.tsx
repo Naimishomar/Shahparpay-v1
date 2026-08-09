@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Send, Plus, Building2, Clock, Trash2, RefreshCw, SearchCheck } from 'lucide-react';
+import { Send, Plus, Building2, Clock, Trash2, RefreshCw, SearchCheck, FileUp } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -26,6 +26,11 @@ const AepsSettlement = () => {
     const [loading, setLoading] = useState(false);
     const [syncing, setSyncing] = useState(false);
     const [checkingId, setCheckingId] = useState('');
+    const [checkingBankStatusId, setCheckingBankStatusId] = useState('');
+    const [uploadDocBankId, setUploadDocBankId] = useState<string | null>(null);
+    const [docType, setDocType] = useState<'PAN' | 'AADHAAR'>('PAN');
+    const [docFiles, setDocFiles] = useState<{ passbook?: File; panimage?: File; front_aadhar?: File; back_aadhar?: File }>({});
+    const [uploading, setUploading] = useState(false);
 
     // Form states
     const [beneficiaryMobile, setBeneficiaryMobile] = useState('');
@@ -136,6 +141,56 @@ const AepsSettlement = () => {
         }
     };
 
+    const handleCheckBankStatus = async (id: string) => {
+        setCheckingBankStatusId(id);
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/settlement/account-status/${id}`, getHeaders());
+            if (res.data.success) {
+                toast.success(res.data.message || "Account status checked");
+            } else {
+                toast.error(res.data.message || "Failed to check account status");
+            }
+            fetchSavedBanks();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to check account status");
+        }
+        setCheckingBankStatusId('');
+    };
+
+    const handleUploadDocument = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!uploadDocBankId) return;
+
+        const hasFile = docFiles.passbook || docFiles.panimage || docFiles.front_aadhar || docFiles.back_aadhar;
+        if (!hasFile) return toast.error("Please select at least one document file");
+
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('bankId', uploadDocBankId);
+        formData.append('doctype', docType);
+        if (docFiles.passbook) formData.append('passbook', docFiles.passbook);
+        if (docFiles.panimage) formData.append('panimage', docFiles.panimage);
+        if (docFiles.front_aadhar) formData.append('front_aadhar', docFiles.front_aadhar);
+        if (docFiles.back_aadhar) formData.append('back_aadhar', docFiles.back_aadhar);
+
+        try {
+            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/settlement/upload-document`, formData, {
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
+            });
+            if (res.data.success) {
+                toast.success(res.data.message || "Document uploaded successfully");
+                setUploadDocBankId(null);
+                setDocFiles({});
+                fetchSavedBanks();
+            } else {
+                toast.error(res.data.message || "Failed to upload document");
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to upload document");
+        }
+        setUploading(false);
+    };
+
     const handleAddBank = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -194,6 +249,7 @@ const AepsSettlement = () => {
     };
 
     const selectedBank = savedBanks.find(b => b._id === selectedBankId);
+    const uploadDocBank = uploadDocBankId ? savedBanks.find(b => b._id === uploadDocBankId) : null;
 
     return (
         <div className="flex flex-col gap-6 w-full p-2 animate-in fade-in slide-in-from-bottom-4 duration-1000">
@@ -253,19 +309,42 @@ const AepsSettlement = () => {
                                                 <option value="">No banks added</option>
                                             ) : (
                                                 savedBanks.map(bank => (
-                                                    <option key={bank._id} value={bank._id}>{bank.bankName}</option>
+                                                    <option key={bank._id} value={bank._id}>
+                                                        {bank.status === 'VERIFIED' ? '✓ ' : bank.status === 'PENDING' ? '⏳ ' : '✗ '}{bank.bankName}
+                                                    </option>
                                                 ))
                                             )}
                                         </select>
                                         {selectedBankId && (
-                                            <button 
-                                                type="button" 
-                                                onClick={() => handleDeleteBank(selectedBankId)}
-                                                className="px-3 py-2 text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-md transition-colors flex items-center justify-center shrink-0"
-                                                title="Delete Bank Account"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
+                                            <>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => handleCheckBankStatus(selectedBankId)}
+                                                    disabled={checkingBankStatusId === selectedBankId || !selectedBank?.beneId}
+                                                    className="px-3 py-2 text-primary hover:text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-md transition-colors flex items-center justify-center shrink-0 disabled:opacity-50"
+                                                    title="Check activation status on PaySprint"
+                                                >
+                                                    <SearchCheck className={`w-4 h-4 ${checkingBankStatusId === selectedBankId ? 'animate-pulse' : ''}`} />
+                                                </button>
+                                                {selectedBank && selectedBank.status !== 'VERIFIED' && (
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => { setUploadDocBankId(selectedBank._id); setDocType('PAN'); setDocFiles({}); }}
+                                                        className="px-3 py-2 text-yellow-600 hover:text-yellow-700 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 rounded-md transition-colors flex items-center justify-center shrink-0"
+                                                        title="Upload supportive document to activate account"
+                                                    >
+                                                        <FileUp className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => handleDeleteBank(selectedBankId)}
+                                                    className="px-3 py-2 text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-md transition-colors flex items-center justify-center shrink-0"
+                                                    title="Delete Bank Account"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </>
                                         )}
                                     </div>
                                 </div>
@@ -548,6 +627,107 @@ const AepsSettlement = () => {
                                         className="flex-1 py-2 bg-white text-black hover:bg-gray-100 rounded-lg font-medium transition-colors disabled:opacity-50"
                                     >
                                         {loading ? 'Adding...' : 'Add Bank'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Upload Supportive Document Modal */}
+            {uploadDocBank && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="glass-card border border-border rounded-2xl p-6 w-full max-w-md shadow-xl relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-50 pointer-events-none"></div>
+                        <div className="relative z-10">
+                            <h3 className="text-xl font-bold text-foreground mb-1 border-b border-border/50 pb-2 flex items-center gap-2">
+                                <FileUp className="w-5 h-5 text-yellow-500" />
+                                Upload Supportive Document
+                            </h3>
+                            <div className="mb-4 text-sm">
+                                <p className="font-medium text-foreground">{uploadDocBank.bankName}</p>
+                                <p className="text-xs text-muted-foreground">A/C: {uploadDocBank.accountNumber}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    This account requires a supportive document to activate. Once verified, it will become eligible for settlement.
+                                </p>
+                            </div>
+                            <form onSubmit={handleUploadDocument} className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-medium text-foreground">Document Type</label>
+                                    <div className="flex gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setDocType('PAN')}
+                                            className={`flex-1 py-2 rounded-lg font-medium transition-colors border ${
+                                                docType === 'PAN'
+                                                    ? 'bg-primary/10 text-primary border-primary/40'
+                                                    : 'bg-background border-border text-foreground hover:bg-muted'
+                                            }`}
+                                        >
+                                            PAN / Passbook
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setDocType('AADHAAR')}
+                                            className={`flex-1 py-2 rounded-lg font-medium transition-colors border ${
+                                                docType === 'AADHAAR'
+                                                    ? 'bg-primary/10 text-primary border-primary/40'
+                                                    : 'bg-background border-border text-foreground hover:bg-muted'
+                                            }`}
+                                        >
+                                            Aadhaar
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {docType === 'PAN' ? (
+                                    <div className="space-y-1.5">
+                                        <label className="text-sm font-medium text-foreground">PAN / Passbook Image</label>
+                                        <input
+                                            type="file"
+                                            accept="image/*,.pdf"
+                                            onChange={e => setDocFiles({ ...docFiles, panimage: e.target.files?.[0] || undefined })}
+                                            className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border-0 file:bg-primary/10 file:text-primary"
+                                        />
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="space-y-1.5">
+                                            <label className="text-sm font-medium text-foreground">Aadhaar Front</label>
+                                            <input
+                                                type="file"
+                                                accept="image/*,.pdf"
+                                                onChange={e => setDocFiles({ ...docFiles, front_aadhar: e.target.files?.[0] || undefined })}
+                                                className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border-0 file:bg-primary/10 file:text-primary"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-sm font-medium text-foreground">Aadhaar Back</label>
+                                            <input
+                                                type="file"
+                                                accept="image/*,.pdf"
+                                                onChange={e => setDocFiles({ ...docFiles, back_aadhar: e.target.files?.[0] || undefined })}
+                                                className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border-0 file:bg-primary/10 file:text-primary"
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
+                                <div className="flex gap-3 pt-4 border-t border-border/50">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setUploadDocBankId(null); setDocFiles({}); }}
+                                        className="flex-1 py-2 bg-background border border-border hover:bg-muted text-foreground rounded-lg font-medium transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={uploading}
+                                        className="flex-1 py-2 bg-white text-black hover:bg-gray-100 rounded-lg font-medium transition-colors disabled:opacity-50"
+                                    >
+                                        {uploading ? 'Uploading...' : 'Upload Document'}
                                     </button>
                                 </div>
                             </form>

@@ -510,6 +510,18 @@ export const initiateSettlement = async (req, res) => {
             return res.status(404).json({ success: false, message: "Bank account not found" });
         }
 
+        // Only activated (penny-drop verified / document approved) accounts can receive
+        // settlement. A PENDING account must have its supportive document uploaded and
+        // verified before any money can be transferred to it.
+        if (bank.status !== 'VERIFIED') {
+            return res.status(400).json({
+                success: false,
+                message: bank.status === 'REJECTED'
+                    ? "This bank account is rejected. Please remove it and add a valid account."
+                    : "This bank account is not activated yet. Please upload the required document and check its status before settling."
+            });
+        }
+
         const aepsWallet = await AepsWallet.findOne({ userId: req.user.id });
         if (!aepsWallet || !aepsWallet.pin) {
             return res.status(400).json({ success: false, message: "Please set your wallet PIN first." });
