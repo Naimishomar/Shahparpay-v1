@@ -227,6 +227,44 @@ export const queryAepsTransactionStatus = async (reference) => {
 };
 
 /**
+ * Queries the PaySprint NSDL Cash Deposit status endpoint and maps the response
+ * to a normalized status: 'SUCCESS' | 'FAILED' | 'PROCESSING'.
+ *
+ * Per the PaySprint NSDL Cash Deposit Status Query docs this uses a DIFFERENT
+ * endpoint and status mapping than the generic AEPS query:
+ *   SUCCESS -> txnstatus 1 (and status true)
+ *   FAILED  -> txnstatus 2 (and status true)
+ */
+export const queryAepsDepositStatus = async (reference) => {
+    const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+    const token = generatePaySprintToken();
+    const encryptedData = encryptPayload(JSON.stringify({ reference }));
+
+    const headers = {
+        'Token': token,
+        'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+        'Content-Type': 'application/json'
+    };
+
+    const response = await axios.post(
+        `${baseUrl}/service/cashdeposit/V3/Cashdeposit/query`,
+        { body: encryptedData },
+        { headers, validateStatus: () => true }
+    );
+
+    const data = response.data || {};
+    const txnstatus = String(data?.txnstatus ?? data?.data?.txnstatus ?? '').trim();
+
+    if (txnstatus === '1') return { status: 'SUCCESS', data };
+    if (txnstatus === '2') return { status: 'FAILED', data };
+
+    if (data?.status === true && data?.response_code === 1) return { status: 'SUCCESS', data };
+    if (data?.status === false && data?.response_code === 0) return { status: 'FAILED', data };
+
+    return { status: 'PROCESSING', data };
+};
+
+/**
  * Atomically credits wallets and finalizes an AEPS withdrawal that the bank has
  * confirmed as successful. Idempotent: only a PENDING or PROCESSING transaction
  * may transition to SUCCESS, so concurrent reconciliation cannot double-credit.

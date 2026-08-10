@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import Transaction from '../models/transaction.model.js';
-import { resolveTransaction, applyAepsWithdrawalSuccess, queryAepsTransactionStatus } from '../utils/wallet.util.js';
+import { resolveTransaction, applyAepsWithdrawalSuccess, queryAepsTransactionStatus, queryAepsDepositStatus, updateWalletAtomically } from '../utils/wallet.util.js';
 import axios from 'axios';
 import crypto from 'crypto';
 import { generatePaySprintToken } from '../utils/paysprint.util.js';
@@ -104,6 +104,79 @@ const resolveAepsWithdrawal = async (txn) => {
 };
 
 /**
+ * Resolves a stuck AEPS_DEPOSIT transaction against the NSDL Cash Deposit
+ * Status Query endpoint. The original gateway response was ambiguous (bank
+ * acknowledged but reported failure), so the bank is the source of truth.
+ *
+ * - SUCCESS  -> finalize SUCCESS (amount already deducted, nothing to credit)
+ * - FAILED   -> refund the deducted amount back to the main wallet + finalize FAILED
+ * - PROCESSING / query error -> leave PROCESSING for the next run
+ *
+ * Returns a human-readable result string for the cron log.
+ */
+const resolveAepsDeposit = async (txn) => {
+    const reconciled = await queryAepsDepositStatus(txn.transactionId);
+
+    if (reconciled.status === 'SUCCESS') {
+        const reconciledData = reconciled.data || {};
+        const updated = await Transaction.findOneAndUpdate(
+            { _id: txn._id, status: 'PROCESSING' },
+            {
+                $set: {
+                    status: 'SUCCESS',
+                    metadata: {
+                        ...(txn.metadata || {}),
+                        reconciledAt: new Date().toISOString(),
+                        reconciledStatus: 'SUCCESS',
+                        apiMessage: reconciledData.message || 'Resolved by reconciliation cron. Cash deposit status: SUCCESS',
+                        ...(reconciledData.ackno ? { ackno: reconciledData.ackno } : {}),
+                        ...(reconciledData.bankrrn ? { bankrrn: reconciledData.bankrrn } : {})
+                    }
+                }
+            }
+        );
+        return updated
+            ? `AEPS deposit ${txn.transactionId} resolved as SUCCESS — customer bank credited, amount already deducted.`
+            : `AEPS deposit ${txn.transactionId} already resolved; skipped.`;
+    }
+
+    if (reconciled.status === 'FAILED') {
+        const refundAmount = Math.abs(Number(txn.amount));
+        await updateWalletAtomically(txn.userId, 'MAIN', refundAmount, {
+            transactionId: `REF-${txn.transactionId}`,
+            userId: txn.userId,
+            type: 'AEPS_DEPOSIT_REFUND',
+            amount: refundAmount,
+            status: 'SUCCESS',
+            metadata: { originalTxn: txn.transactionId, note: 'Refund for failed Cash Deposit (reconciliation)' }
+        });
+
+        const reconciledData = reconciled.data || {};
+        const updated = await Transaction.findOneAndUpdate(
+            { _id: txn._id, status: 'PROCESSING' },
+            {
+                $set: {
+                    status: 'FAILED',
+                    metadata: {
+                        ...(txn.metadata || {}),
+                        reconciledAt: new Date().toISOString(),
+                        reconciledStatus: 'FAILED',
+                        apiMessage: reconciledData.message || 'Resolved by reconciliation cron. Cash deposit status: FAILED',
+                        ...(reconciledData.ackno ? { ackno: reconciledData.ackno } : {}),
+                        ...(reconciledData.bankrrn ? { bankrrn: reconciledData.bankrrn } : {})
+                    }
+                }
+            }
+        );
+        return updated
+            ? `AEPS deposit ${txn.transactionId} resolved as FAILED — amount refunded to main wallet.`
+            : `AEPS deposit ${txn.transactionId} already resolved; skipped.`;
+    }
+
+    return `AEPS deposit ${txn.transactionId} still in process; keeping PROCESSING.`;
+};
+
+/**
  * The main Reconciliation Job
  * Runs every 5 minutes
  */
@@ -141,6 +214,8 @@ export const startReconciliationWorker = () => {
                     try {
                         if (txn.type === 'AEPS_WITHDRAWAL') {
                             console.log(`CRON: ${await resolveAepsWithdrawal(txn)}`);
+                        } else if (txn.type === 'AEPS_DEPOSIT') {
+                            console.log(`CRON: ${await resolveAepsDeposit(txn)}`);
                         } else {
                             console.log(`CRON: Skipping AEPS transaction ${txn.transactionId} (${txn.type}) — no reconciler wired yet.`);
                         }

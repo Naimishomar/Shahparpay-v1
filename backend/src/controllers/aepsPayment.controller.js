@@ -203,7 +203,7 @@ export const balanceEnquiry = async (req, res) => {
         console.log(`[Balance Enquiry Request] Payload:`, JSON.stringify({ ...payload, data: "HIDDEN_PID_DATA" }, null, 2));
 
         const response = await axios.post(
-            `${baseUrl}/service/aeps/v3/balanceenquiry/index`, 
+            `${baseUrl}/service/aeps/balanceenquiry/index`, 
             { body: encryptedData }, 
             { headers, validateStatus: () => true }
         );
@@ -894,7 +894,7 @@ export const miniStatement = async (req, res) => {
         };
 
         const response = await axios.post(
-            `${baseUrl}/service/aeps/v3/ministatement/index`, 
+            `${baseUrl}/service/aeps/ministatement/index`, 
             { body: encryptedData }, 
             { headers, validateStatus: () => true }
         );
@@ -910,14 +910,15 @@ export const miniStatement = async (req, res) => {
                     const txnType = entry.txnType || entry.type || '';
                     const amount = entry.amount || entry.txnAmount || '0';
 
-                    // Detect if 'date' contains narration text (e.g., 'RS CW 61...')
-                    // A valid date usually contains '/' or '-' with digits
-                    const looksLikeDate = /^\d{1,4}[\/-]\d{1,2}[\/-]\d{1,4}/.test(dateVal);
-                    if (!looksLikeDate && dateVal) {
-                        // The 'date' field actually has narration, swap them
+                    // A valid date contains digits separated by / - . (e.g. "30/06", "30/06/2022",
+                    // "2022-06-30 14:30:22"). Some pipes return the fields swapped (date holds the
+                    // narration text and narration holds the date), so only swap when the date field
+                    // clearly isn't a date AND the narration field clearly is one.
+                    const isDateLike = (v) => /^\d{1,4}[\/\-.]\d{1,2}([\/\-.]\d{1,4})?(\s+\d{1,2}:\d{2}(:\d{2})?)?$/.test(String(v).trim());
+                    if (dateVal && !isDateLike(dateVal) && isDateLike(narration)) {
                         const temp = narration;
                         narration = dateVal;
-                        dateVal = temp || 'N/A';
+                        dateVal = temp;
                     }
                     if (!dateVal) dateVal = 'N/A';
 
@@ -949,7 +950,6 @@ export const miniStatement = async (req, res) => {
 };
 
 export const cashDeposit = async (req, res) => {
-    let session = null;
     try {
         const { latitude, longitude, mobileNumber, aadhaarNumber, bankIIN, pidData, merchantPidData, amount, bankName, customerName, pipe } = req.body;
 
@@ -957,6 +957,15 @@ export const cashDeposit = async (req, res) => {
             return res.status(400).json({ 
                 success: false, 
                 message: "Aadhaar number, bank IIN, PID Data, and amount are required" 
+            });
+        }
+
+        // PaySprint enforces ₹100–₹10,000 for AEPS cash deposits (response_code 7).
+        const amountNum = Number(amount);
+        if (amountNum < 100 || amountNum > 10000) {
+            return res.status(400).json({
+                success: false,
+                message: "Cash deposit amount must be between ₹100 and ₹10,000"
             });
         }
 
@@ -969,15 +978,15 @@ export const cashDeposit = async (req, res) => {
         const referenceNo = `CD${Date.now()}`;
 
         // 2. Deduct from Main Wallet Atomically (Creates PENDING transaction)
-        const { updateWalletAtomically } = await import('../utils/wallet.util.js');
+        const { updateWalletAtomically, queryAepsDepositStatus } = await import('../utils/wallet.util.js');
         
         let newTxn;
         try {
-            newTxn = await updateWalletAtomically(req.user.id, 'MAIN', -Number(amount), {
+            newTxn = await updateWalletAtomically(req.user.id, 'MAIN', -amountNum, {
                 transactionId: referenceNo,
                 userId: req.user.id,
                 type: 'AEPS_DEPOSIT',
-                amount: Number(amount),
+                amount: amountNum,
                 status: 'PENDING',
                 metadata: {
                     aadhaar: aadhaarNumber,
@@ -1006,7 +1015,7 @@ export const cashDeposit = async (req, res) => {
             submerchantid: String(retailer.retailerId),
             data: pidData,
             timestamp: Math.floor(Date.now() / 1000),
-            amount: Number(amount)
+            amount: amountNum
         };
 
         const token = generatePaySprintToken();
@@ -1018,9 +1027,7 @@ export const cashDeposit = async (req, res) => {
             'Content-Type': 'application/json'
         };
 
-        let txnStatus = 'FAILED';
         let response = null;
-        let paysprintRef = null;
         let apiMessage = "Transaction failed";
 
         try {
@@ -1029,75 +1036,128 @@ export const cashDeposit = async (req, res) => {
                 { body: encryptedData }, 
                 { headers, validateStatus: () => true }
             );
-            if (response.data && response.data.status) {
-                txnStatus = 'SUCCESS';
-            }
-            paysprintRef = response.data?.data?.ackno || response.data?.data?.rrn || null;
             apiMessage = response.data?.message || "Cash deposit completed";
         } catch (apiError) {
             console.error("Cash Deposit API Error:", apiError?.response?.data || apiError.message);
             apiMessage = apiError?.response?.data?.message || apiError.message;
         }
-        
-        // 4. Handle Success/Failure
-        if (txnStatus === 'SUCCESS') {
-            session = await mongoose.startSession();
-            session.startTransaction();
+
+        const responseData = response?.data || {};
+
+        // Per docs: SUCCESS is signalled by status=true or response_code=1.
+        // response_code=2 means ERROR OR TIMEOUT — but the bank may still have
+        // accepted the deposit, so it must not be refunded blindly.
+        const gatewayOk = responseData.status === true ||
+            responseData.response_code === 1 ||
+            responseData.response_code === "1";
+
+        const paysprintRef = responseData.data?.ackno || responseData.data?.rrn ||
+            responseData.ackno || responseData.bankrrn || null;
+
+        // A bank-level acknowledgement (ackno/bankrrn) means the bank was
+        // touched and the deposit may have been credited to the customer.
+        const bankTouched = Boolean(
+            responseData.ackno || responseData.bankrrn ||
+            responseData.data?.ackno || responseData.data?.rrn
+        );
+
+        // 4. Success
+        if (gatewayOk) {
             await Transaction.findOneAndUpdate(
                 { transactionId: referenceNo }, 
                 { 
                     status: 'SUCCESS',
                     'metadata.paysprintRef': paysprintRef,
                     'metadata.apiMessage': apiMessage
-                },
-                { session }
+                }
             );
-
-            await session.commitTransaction();
-            session.endSession();
 
             return res.status(200).json({
                 success: true,
                 message: "Cash deposit successful",
-                data: response.data
+                data: responseData
             });
-        } else {
-            // Refund the deducted amount if it failed
-            await updateWalletAtomically(req.user.id, 'MAIN', Number(amount), {
-                transactionId: `REF-${referenceNo}`,
-                userId: req.user.id,
-                type: 'AEPS_DEPOSIT_REFUND',
-                amount: Number(amount),
-                status: 'SUCCESS',
-                metadata: { originalTxn: referenceNo, note: 'Refund for failed Cash Deposit' }
-            });
+        }
 
-            // Use the existing session from the top
-            session = await mongoose.startSession();
-            session.startTransaction();
-
+        // 5. Ambiguous (timeout/error but bank acknowledged): never refund here —
+        // reconcile against the NSDL Cash Deposit Status Query endpoint first.
+        if (bankTouched) {
             await Transaction.findOneAndUpdate(
-                { transactionId: referenceNo }, 
-                { 
-                    status: 'FAILED',  // <-- Should be FAILED, not SUCCESS
-                    'metadata.apiMessage': apiMessage
-                },
-                { session }
+                { transactionId: referenceNo },
+                {
+                    status: 'PROCESSING',
+                    needsReconciliation: true,
+                    'metadata.gatewayMessage': apiMessage,
+                    'metadata.paysprintRef': paysprintRef
+                }
             );
 
-            await session.commitTransaction();
-            session.endSession();
+            try {
+                const reconciled = await queryAepsDepositStatus(referenceNo);
+                if (reconciled.status === 'SUCCESS') {
+                    await Transaction.findOneAndUpdate(
+                        { transactionId: referenceNo },
+                        { status: 'SUCCESS', 'metadata.apiMessage': reconciled.data?.message || "Cash deposit successful" }
+                    );
+                    return res.status(200).json({
+                        success: true,
+                        message: "Cash deposit successful",
+                        data: reconciled.data || responseData
+                    });
+                }
+                if (reconciled.status === 'FAILED') {
+                    await updateWalletAtomically(req.user.id, 'MAIN', amountNum, {
+                        transactionId: `REF-${referenceNo}`,
+                        userId: req.user.id,
+                        type: 'AEPS_DEPOSIT_REFUND',
+                        amount: amountNum,
+                        status: 'SUCCESS',
+                        metadata: { originalTxn: referenceNo, note: 'Refund for failed Cash Deposit' }
+                    });
+                    await Transaction.findOneAndUpdate(
+                        { transactionId: referenceNo },
+                        { status: 'FAILED', 'metadata.apiMessage': reconciled.data?.message || apiMessage }
+                    );
+                    return res.status(400).json({
+                        success: false,
+                        message: reconciled.data?.message || "Cash deposit failed"
+                    });
+                }
+            } catch (reconError) {
+                console.error("Cash Deposit status reconciliation error:", reconError.message);
+            }
 
-            return res.status(400).json({
+            // Inconclusive — leave PROCESSING for the reconciliation cron.
+            return res.status(200).json({
                 success: false,
-                message: apiMessage || "Cash deposit failed"
+                message: "Cash deposit is being verified. It may have been credited by the bank — the status will be updated shortly.",
+                data: { ...responseData, verification: 'PENDING', referenceNo }
             });
         }
+
+        // 6. Clean failure (validation/auth error — bank never touched): refund.
+        await updateWalletAtomically(req.user.id, 'MAIN', amountNum, {
+            transactionId: `REF-${referenceNo}`,
+            userId: req.user.id,
+            type: 'AEPS_DEPOSIT_REFUND',
+            amount: amountNum,
+            status: 'SUCCESS',
+            metadata: { originalTxn: referenceNo, note: 'Refund for failed Cash Deposit' }
+        });
+
+        await Transaction.findOneAndUpdate(
+            { transactionId: referenceNo }, 
+            { 
+                status: 'FAILED',
+                'metadata.apiMessage': apiMessage
+            }
+        );
+
+        return res.status(400).json({
+            success: false,
+            message: apiMessage || "Cash deposit failed"
+        });
     } catch (error) {
-        if (session) {
-            await session.abortTransaction();
-            session.endSession();
-        }
         console.error("Cash Deposit Error:", error);
         return res.status(500).json({ 
             success: false, 
