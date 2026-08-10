@@ -19,6 +19,7 @@ const UPI_Payments = () => {
     const [txn, setTxn] = useState<any>(null);
     const [polling, setPolling] = useState(false);
     const [merchantOk, setMerchantOk] = useState<boolean | null>(null);
+    const [merchantStatusMsg, setMerchantStatusMsg] = useState('');
     const [checkingMerchant, setCheckingMerchant] = useState(true);
     const [onboarding, setOnboarding] = useState(false);
 
@@ -40,6 +41,7 @@ const UPI_Payments = () => {
             const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/upi/cashout/merchant-status`, getHeaders());
             if (res.data?.success) {
                 setMerchantOk(res.data.data?.onboarded ?? null);
+                setMerchantStatusMsg(res.data.data?.message || '');
             }
         } catch (error: any) {
             setMerchantOk(null);
@@ -195,7 +197,7 @@ const UPI_Payments = () => {
             ) : merchantOk === false ? (
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg border border-yellow-500/40 bg-yellow-500/10 text-yellow-700 text-sm">
                     <div className="flex items-start gap-2">
-                        <span>Your merchant is not onboarded for UPI Cashout (Bank 6). Complete onboarding before accepting payments.</span>
+                        <span>Your merchant is not onboarded for UPI Cashout (Bank 6). {merchantStatusMsg ? `PaySprint: ${merchantStatusMsg}` : 'Complete onboarding before accepting payments.'}</span>
                     </div>
                     <button
                         onClick={handleStartOnboarding}

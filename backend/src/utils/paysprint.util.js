@@ -252,6 +252,12 @@ export const getWebOnboardingUrl = async (merchantData) => {
             callback: merchantData.callbackUrl || (process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/kyc-status` : "https://your-production-url.com/kyc-status")
         };
 
+        // PaySprint returns a generic "Merchant already onboarded on Pipe." when a
+        // merchant already exists on ANY pipe unless the target pipe is specified.
+        if (merchantData.pipe) {
+            payload.pipe = merchantData.pipe;
+        }
+
         // v2 (bank1/bank4) expects the same RAW body shape.
         const token = generatePaySprintToken();
         const headers = {

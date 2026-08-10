@@ -651,6 +651,17 @@ export const generateOnboardUrl = async (req, res) => {
         const result = await getWebOnboardingUrl(merchantData);
         if (result.success) {
             if (result.alreadyOnboarded) {
+                // getonboardurl reports "already onboarded" whenever the merchant
+                // exists on ANY pipe. If a specific pipe was requested but it is
+                // NOT in the accepted set from the pre-check above, the merchant
+                // still needs to be onboarded on that pipe — do NOT claim success.
+                const requestedPipe = pipe ? String(pipe).toLowerCase() : null;
+                if (requestedPipe && !acceptedPipes.includes(requestedPipe)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Merchant is already onboarded with PaySprint but NOT on ${requestedPipe}. Please complete ${requestedPipe} onboarding (via PaySprint support if the web flow is blocked).`
+                    });
+                }
                 // Update DB since PaySprint says they are already onboarded
                 if (user.retailerId) {
                     await Retailer.findOneAndUpdate({ retailerId: merchantCodeFinal }, { isMerchantKycComplete: true });
