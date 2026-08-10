@@ -3,6 +3,7 @@ import Layout from "./pages/Layout"
 import Dashboard from "./pages/Dashboard"
 import AEPS from "./pages/AEPS"
 import AepsSettlement from "./pages/AepsSettlement"
+import PipeStatus from "./pages/PipeStatus"
 import DirectPayout from "./pages/DirectPayout"
 import DMT from "./pages/DMT"
 import Recharge from "./pages/Recharge"
@@ -52,6 +53,7 @@ function App() {
         <Route path="distributor/:tab" element={<DistributorPortal/>}/>
  
         <Route path="aeps" element={<AEPS/>}/>
+        <Route path="aeps/pipes" element={<PipeStatus/>}/>
         <Route path="aeps-settlement" element={<AepsSettlement/>}/>
         <Route path="direct-payout" element={<DirectPayout/>}/>
         <Route path="dmt" element={<DMT/>}/>

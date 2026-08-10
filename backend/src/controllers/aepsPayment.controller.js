@@ -1844,6 +1844,109 @@ export const getMerchantStatus = async (req, res) => {
     }
 };
 
+// All AEPS pipes that can be checked for merchant onboarding status.
+// bank1 is UAT-only and intentionally excluded (same as getVerifiedPipe).
+export const AEPS_PIPES = ['bank2', 'bank3', 'bank4', 'bank5', 'bank6'];
+
+const PIPE_LABELS = {
+    bank1: 'Bank 1 (UAT)',
+    bank2: 'Bank 2',
+    bank3: 'Bank 3',
+    bank4: 'Bank 4 (City Union)',
+    bank5: 'Bank 5',
+    bank6: 'Bank 6'
+};
+
+// Verifies the merchant's onboarding status on EVERY AEPS pipe and returns a
+// per-pipe breakdown (Accepted / Pending / Rejected / Not-Onboarded / error).
+// Also refreshes the retailer's activeAepsPipes in the DB.
+export const verifyAllPipes = async (req, res) => {
+    try {
+        const retailer = await Retailer.findById(req.user.id);
+        if (!retailer) {
+            return res.status(404).json({ success: false, message: "Retailer not found" });
+        }
+
+        const merchantcode = retailer.retailerId;
+        const mobile = String(retailer.contactNumber || "");
+
+        const statusPromises = AEPS_PIPES.map(pipe => {
+            const currentToken = generatePaySprintToken();
+            const headers = {
+                'Token': currentToken,
+                'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
+                'Content-Type': 'application/json'
+            };
+            return axios.post(
+                getOnboardStatusEndpoint(pipe),
+                { merchantcode, mobile, pipe },
+                { headers, validateStatus: () => true, timeout: 15000 }
+            ).then(response => ({ pipe, response }))
+              .catch(error => ({ pipe, error: error.message }));
+        });
+
+        const results = await Promise.allSettled(statusPromises);
+        const pipes = [];
+        const activePipes = [];
+
+        results.forEach((result) => {
+            const item = result.value;
+            if (!item) return;
+            const { pipe, response, error } = item;
+
+            if (error) {
+                pipes.push({ pipe, label: PIPE_LABELS[pipe] || pipe, status: 'ERROR', is_approved: null, message: error });
+                return;
+            }
+
+            const data = response.data || {};
+            const is_approved = data.is_approved || null;
+            const onboarded = data.response_code === 1 && is_approved === 'Accepted';
+            if (onboarded) activePipes.push(pipe);
+
+            let status;
+            if (data.response_code === 1 && is_approved === 'Accepted') status = 'ACCEPTED';
+            else if (is_approved === 'Pending' || is_approved === 'In-Process' || is_approved === 'Verification-Pending' || is_approved === 'KYC-Pending') status = 'PENDING';
+            else if (is_approved === 'Rejected') status = 'REJECTED';
+            else if (is_approved === 'Not-Onboarded' || is_approved === null) status = 'NOT_ONBOARDED';
+            else status = 'UNKNOWN';
+
+            pipes.push({
+                pipe,
+                label: PIPE_LABELS[pipe] || pipe,
+                status,
+                is_approved,
+                onboarded,
+                message: data.message || null
+            });
+        });
+
+        // Persist the freshly verified active pipes.
+        await Retailer.findOneAndUpdate(
+            { retailerId: merchantcode },
+            {
+                isMerchantKycComplete: activePipes.length > 0 ? true : retailer.isMerchantKycComplete,
+                activeAepsPipes: activePipes,
+                lastPipeCheckDate: new Date()
+            }
+        );
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                merchantCode: merchantcode,
+                mobile,
+                pipes,
+                activePipes,
+                lastCheckedAt: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error("[verifyAllPipes] Error:", error);
+        return res.status(500).json({ success: false, message: "Failed to verify pipes", error: error.message });
+    }
+};
+
 export const getPidOptions = async (req, res) => {
     try {
         const retailer = await Retailer.findById(req.user.id);
