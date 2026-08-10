@@ -207,9 +207,11 @@ export const startReconciliationWorker = () => {
                 // AEPS transactions are reconciled against the AEPS status
                 // query endpoint — never auto-FAILED/refunded here. Auto-FAILING
                 // an AEPS withdrawal would wrongly refund money the bank may
-                // have actually debited. AEPS_WITHDRAWAL is fully wired; the
-                // remaining AEPS types have no reconciler yet and are skipped.
-                const AEPS_TYPES = ['AEPS_WITHDRAWAL', 'AEPS_DEPOSIT', 'AEPS_DEPOSIT_REFUND', 'AEPSTOMAIN', 'AEPS_SETTLEMENT'];
+                // have actually debited. AEPS_WITHDRAWAL and AEPS_DEPOSIT are
+                // fully wired; the remaining AEPS types and UPI_CASHOUT (which
+                // resolves via the UPI-CASHOUT webhook) have no reconciler and
+                // are skipped so they are never auto-finalized incorrectly.
+                const AEPS_TYPES = ['AEPS_WITHDRAWAL', 'AEPS_DEPOSIT', 'AEPS_DEPOSIT_REFUND', 'AEPSTOMAIN', 'AEPS_SETTLEMENT', 'UPI_CASHOUT'];
                 if (AEPS_TYPES.includes(txn.type)) {
                     try {
                         if (txn.type === 'AEPS_WITHDRAWAL') {
