@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 type TxnStatus = 'idle' | 'PENDING' | 'SUCCESS' | 'FAILED';
 
 const UPI_Payments = () => {
-    const { token } = useAuth();
+    const { token, user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
 
     const [mobile, setMobile] = useState('');
@@ -20,6 +20,7 @@ const UPI_Payments = () => {
     const [polling, setPolling] = useState(false);
     const [merchantOk, setMerchantOk] = useState<boolean | null>(null);
     const [checkingMerchant, setCheckingMerchant] = useState(true);
+    const [onboarding, setOnboarding] = useState(false);
 
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -31,6 +32,49 @@ const UPI_Payments = () => {
             pollRef.current = null;
         }
         setPolling(false);
+    };
+
+    const checkMerchantStatus = async () => {
+        setCheckingMerchant(true);
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/upi/cashout/merchant-status`, getHeaders());
+            if (res.data?.success) {
+                setMerchantOk(res.data.data?.onboarded ?? null);
+            }
+        } catch (error: any) {
+            setMerchantOk(null);
+            console.error('Merchant status check failed', error);
+        } finally {
+            setCheckingMerchant(false);
+        }
+    };
+
+    // Kicks off PaySprint Bank 6 web onboarding for the current merchant.
+    const handleStartOnboarding = async () => {
+        const merchantId = user?.retailerId || user?.distributorId;
+        if (!merchantId) return toast.error('Merchant code not found');
+        setOnboarding(true);
+        try {
+            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/paysprint/get-onboard-url`, {
+                merchantId,
+                isNew: false,
+                pipe: 'bank6'
+            }, getHeaders());
+
+            if (res.data?.success && res.data.alreadyOnboarded) {
+                toast.success('Your merchant is already onboarded on Bank 6!');
+                checkMerchantStatus();
+            } else if (res.data?.success && res.data.url) {
+                window.open(res.data.url, '_blank', 'noopener,noreferrer');
+                toast.success('Bank 6 onboarding page opened. Complete it, then come back and re-check your status.');
+            } else {
+                toast.error(res.data?.message || 'Failed to start Bank 6 onboarding');
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to start Bank 6 onboarding');
+        } finally {
+            setOnboarding(false);
+        }
     };
 
     const checkStatus = async (transactionId: string) => {
@@ -65,21 +109,8 @@ const UPI_Payments = () => {
     };
 
     useEffect(() => {
-        const check = async () => {
-            setCheckingMerchant(true);
-            try {
-                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/upi/cashout/merchant-status`, getHeaders());
-                if (res.data?.success) {
-                    setMerchantOk(res.data.data?.onboarded ?? null);
-                }
-            } catch (error: any) {
-                setMerchantOk(null);
-                console.error('Merchant status check failed', error);
-            } finally {
-                setCheckingMerchant(false);
-            }
-        };
-        check();
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        checkMerchantStatus();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -93,6 +124,16 @@ const UPI_Payments = () => {
         return () => stopPolling();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // When the user returns from the PaySprint onboarding tab, refresh status.
+    useEffect(() => {
+        const onFocus = () => {
+            if (!polling && merchantOk === false) checkMerchantStatus();
+        };
+        window.addEventListener('focus', onFocus);
+        return () => window.removeEventListener('focus', onFocus);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [polling, merchantOk]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -152,8 +193,31 @@ const UPI_Payments = () => {
                     <Loader2 className="w-4 h-4 animate-spin" /> Checking merchant onboarding status...
                 </div>
             ) : merchantOk === false ? (
-                <div className="p-4 rounded-lg border border-yellow-500/40 bg-yellow-500/10 text-yellow-700 text-sm">
-                    Your merchant is not onboarded for UPI Cashout (Bank 6). Complete onboarding before accepting payments.
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg border border-yellow-500/40 bg-yellow-500/10 text-yellow-700 text-sm">
+                    <div className="flex items-start gap-2">
+                        <span>Your merchant is not onboarded for UPI Cashout (Bank 6). Complete onboarding before accepting payments.</span>
+                    </div>
+                    <button
+                        onClick={handleStartOnboarding}
+                        disabled={onboarding}
+                        className="flex items-center gap-2 justify-center bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50 whitespace-nowrap"
+                    >
+                        {onboarding ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
+                        Onboard for Bank 6
+                    </button>
+                </div>
+            ) : merchantOk === true ? (
+                <div className="flex items-center justify-between gap-3 p-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-600 text-sm">
+                    <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Merchant is onboarded on Bank 6 — UPI Cashout is ready.</span>
+                    </div>
+                    <button
+                        onClick={checkMerchantStatus}
+                        className="flex items-center gap-2 justify-center border border-emerald-500/40 hover:bg-emerald-500/10 text-emerald-600 px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
+                    >
+                        <RefreshCw className="w-4 h-4" /> Re-check
+                    </button>
                 </div>
             ) : null}
 
