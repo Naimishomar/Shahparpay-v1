@@ -657,13 +657,10 @@ export const generateOnboardUrl = async (req, res) => {
                 // still needs to be onboarded on that pipe — do NOT claim success.
                 const requestedPipe = pipe ? String(pipe).toLowerCase() : null;
                 if (requestedPipe && !acceptedPipes.includes(requestedPipe)) {
-                    // Merchant exists on another pipe. getonboardurl won't hand out
-                    // a URL for an existing merchant, so retry once forcing a fresh
-                    // onboarding session (is_new=1) that includes the requested pipe.
-                    const retryResult = await getWebOnboardingUrl({ ...merchantData, is_new: true });
-                    if (retryResult.success && retryResult.url) {
-                        return res.status(200).json({ success: true, url: retryResult.url });
-                    }
+                    // Merchant exists on another pipe but not the requested one.
+                    // PaySprint's getonboardurl returns "already onboarded" for an
+                    // existing merchant regardless of is_new/pipe, so there is no
+                    // web path to add the pipe — surface it honestly.
                     return res.status(400).json({
                         success: false,
                         message: `Merchant is already onboarded with PaySprint but NOT on ${requestedPipe}. Please complete ${requestedPipe} onboarding (via PaySprint support if the web flow is blocked).`
