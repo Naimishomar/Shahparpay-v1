@@ -1857,6 +1857,61 @@ const PIPE_LABELS = {
     bank6: 'Bank 6'
 };
 
+// Per-pipe onboarding plan. Each pipe has a different PaySprint flow:
+//   bank2 / bank5 / bank6 → Web KYC, then biometric eKYC via activate_merchant
+//     (bank5 additionally needs annual_income + nature_of_bussiness, bank6 needs accessmode).
+//   bank3 → Web KYC, then OTP-based eKYC via send_otp + verify_otp.
+//   bank4 → Web KYC only (v2 / City Union); status flips to Accepted/Processing after.
+// WADH values come straight from the PaySprint docs for each pipe.
+export const PIPE_ONBOARDING_CONFIG = {
+    bank2: {
+        label: 'Bank 2',
+        wadh: '18f4CEiXeXcfGXvgWA/blxD+w2pw7hfQPY45JMytkPw=',
+        webOnboardV2: false,
+        ekycMethod: 'activate',       // activate_merchant (biometric, DOB required)
+        ekycFields: ['dob'],
+        requiresDailyAuth: true
+    },
+    bank3: {
+        label: 'Bank 3',
+        wadh: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+        webOnboardV2: false,
+        ekycMethod: 'otp',            // send_otp + verify_otp (OTP + biometric)
+        ekycFields: [],
+        requiresDailyAuth: true
+    },
+    bank4: {
+        label: 'Bank 4 (City Union)',
+        wadh: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+        webOnboardV2: true,           // /onboard/v2/onboard/getonboardurl
+        ekycMethod: null,             // no separate eKYC step documented
+        ekycFields: [],
+        requiresDailyAuth: true
+    },
+    bank5: {
+        label: 'Bank 5',
+        wadh: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+        webOnboardV2: false,
+        ekycMethod: 'activate',
+        ekycFields: ['dob', 'annual_income', 'nature_of_bussiness'],
+        requiresDailyAuth: true
+    },
+    bank6: {
+        label: 'Bank 6',
+        wadh: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+        webOnboardV2: false,
+        ekycMethod: 'activate',
+        ekycFields: ['dob'],
+        requiresDailyAuth: true
+    }
+};
+
+const PIPE_EKYC_FIELD_LABELS = {
+    dob: 'Date of Birth',
+    annual_income: 'Annual Income',
+    nature_of_bussiness: 'Nature of Business'
+};
+
 // Verifies the merchant's onboarding status on EVERY AEPS pipe and returns a
 // per-pipe breakdown (Accepted / Pending / Rejected / Not-Onboarded / error).
 // Also refreshes the retailer's activeAepsPipes in the DB.
@@ -1944,6 +1999,129 @@ export const verifyAllPipes = async (req, res) => {
     } catch (error) {
         console.error("[verifyAllPipes] Error:", error);
         return res.status(500).json({ success: false, message: "Failed to verify pipes", error: error.message });
+    }
+};
+
+// Returns the onboarding plan for a single requested pipe: current PaySprint
+// status plus the ordered steps the retailer still needs to complete (web KYC,
+// eKYC via the pipe's method, and whether daily 2FA is required).
+export const getPipeOnboardingPlan = async (req, res) => {
+    try {
+        const { pipe } = req.query;
+        if (!pipe) {
+            return res.status(400).json({ success: false, message: "pipe query param is required" });
+        }
+        const pipeNorm = String(pipe).toLowerCase();
+        const config = PIPE_ONBOARDING_CONFIG[pipeNorm];
+        if (!config) {
+            return res.status(400).json({ success: false, message: `Unsupported pipe: ${pipeNorm}` });
+        }
+
+        const retailer = await Retailer.findById(req.user.id);
+        if (!retailer) {
+            return res.status(404).json({ success: false, message: "Retailer not found" });
+        }
+
+        const merchantcode = retailer.retailerId;
+        const mobile = String(retailer.contactNumber || "");
+
+        // Query current status from PaySprint.
+        let status = 'NOT_ONBOARDED';
+        let is_approved = null;
+        let message = null;
+        try {
+            const currentToken = generatePaySprintToken();
+            const statusRes = await axios.post(
+                getOnboardStatusEndpoint(pipeNorm),
+                { merchantcode, mobile, pipe: pipeNorm },
+                { headers: { 'Token': currentToken, 'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY, 'Content-Type': 'application/json' }, validateStatus: () => true, timeout: 15000 }
+            );
+            const data = statusRes.data || {};
+            is_approved = data.is_approved || null;
+            message = data.message || null;
+            if (data.response_code === 1 && is_approved === 'Accepted') status = 'ACCEPTED';
+            else if (is_approved === 'Pending' || is_approved === 'In-Process' || is_approved === 'Verification-Pending' || is_approved === 'KYC-Pending' || is_approved === 'Processing') status = 'PENDING';
+            else if (is_approved === 'Rejected') status = 'REJECTED';
+            else if (is_approved === 'Not-Onboarded' || is_approved === null) status = 'NOT_ONBOARDED';
+        } catch (e) {
+            console.warn(`[getPipeOnboardingPlan] status check failed for ${pipeNorm}:`, e.message);
+        }
+
+        // Build the ordered steps based on current status.
+        const steps = [];
+        let canStart = false;
+        let actionHint = null;
+
+        if (status === 'ACCEPTED') {
+            steps.push({ id: 'done', title: 'Onboarding complete', done: true });
+            canStart = false;
+        } else {
+            // Step 1: Web KYC (needed when not accepted yet).
+            steps.push({
+                id: 'web',
+                title: 'Complete Web KYC',
+                done: status === 'PENDING' ? true : false,
+                required: true,
+                v2: config.webOnboardV2
+            });
+
+            // Step 2: eKYC (biometric or OTP) — only after web KYC is done/pending.
+            if (config.ekycMethod) {
+                steps.push({
+                    id: 'ekyc',
+                    title: config.ekycMethod === 'otp' ? 'eKYC (OTP + Biometric)' : 'eKYC (Biometric)',
+                    done: false,
+                    required: true,
+                    method: config.ekycMethod,
+                    fields: config.ekycFields,
+                    wadh: config.wadh
+                });
+            }
+
+            // Step 3: Daily 2FA (needed on all pipes for transactions).
+            if (config.requiresDailyAuth) {
+                steps.push({
+                    id: 'daily_auth',
+                    title: 'Daily 2FA Login',
+                    done: false,
+                    required: true
+                });
+            }
+
+            if (status === 'PENDING') {
+                // Web KYC done; next actionable step is eKYC (or waiting for bank).
+                canStart = Boolean(config.ekycMethod);
+                actionHint = config.ekycMethod
+                    ? 'Web KYC is complete. Proceed to eKYC to activate transactions.'
+                    : 'Web KYC is under review by the bank. Please wait for approval.';
+            } else if (status === 'REJECTED') {
+                canStart = true;
+                actionHint = 'Onboarding was rejected by the bank. Restart the web KYC to update your documents.';
+            } else {
+                canStart = true;
+                actionHint = 'Start with the PaySprint Web KYC page for this pipe.';
+            }
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                pipe: pipeNorm,
+                label: config.label,
+                wadh: config.wadh,
+                status,
+                is_approved,
+                message,
+                steps,
+                canStart,
+                actionHint,
+                merchantCode: merchantcode,
+                mobile
+            }
+        });
+    } catch (error) {
+        console.error("[getPipeOnboardingPlan] Error:", error);
+        return res.status(500).json({ success: false, message: "Failed to get onboarding plan", error: error.message });
     }
 };
 

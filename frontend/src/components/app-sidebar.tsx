@@ -17,7 +17,6 @@ const retailerProjects = [
   { name: "DMT", url: "/dmt", icon: Send },
   { name: "Recharge", url: "/recharge", icon: Zap },
   { name: "AEPS", url: "/aeps", icon: ScanFace },
-  { name: "AEPS Pipe Status", url: "/aeps/pipes", icon: ScanFace },
   { name: "AEPS Settlement", url: "/aeps-settlement", icon: Landmark },
   // { name: "Direct Payout", url: "/direct-payout", icon: ArrowRightLeft },
   { name: "BBPS", url: "/bbps", icon: Zap },
@@ -41,6 +40,7 @@ const retailerProjects = [
     ]
   },
   { name: "Fund Request", url: "/fund-request", icon: Send },
+  { name: "AEPS Pipe Status", url: "/aeps/pipes", icon: ScanFace },
   { name: "Biometric Support", url: "/biometric-support", icon: ScanFace },
 ]
 
