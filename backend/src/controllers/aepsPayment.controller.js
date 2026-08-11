@@ -1912,6 +1912,19 @@ const PIPE_EKYC_FIELD_LABELS = {
     nature_of_bussiness: 'Nature of Business'
 };
 
+// Exact allowed values for activate_merchant's nature_of_bussiness (from PaySprint's live validation).
+const NATURE_OF_BUSINESS_OPTIONS = [
+    'Agriculture', 'Antique Dealer', 'Arms Dealer', 'Art Dealer', 'Banking',
+    'Mobility', 'Barber', 'Parlour', 'Salon', 'Bullion Dealer and Jeweller',
+    'Casino', 'Gaming Application', 'Educational Institute', 'Financial Institution',
+    'Healthcare', 'Pharma', 'Import And Export Trader', 'Law', 'Accountancy firm',
+    'Liquor', 'Manufacturing', 'Marketing including Multi-level Marketing', 'Media',
+    'Pawn Shop', 'Money Lender', 'Money Changer', 'Real Estate',
+    'Restaurant and Hospitality', 'Retail Shop', 'Service Provider', 'Small vendor',
+    'Kirana shop', 'Stock Trading', 'Brokerage', 'Transport', 'Logistics',
+    'Wholesale Trading', 'Others'
+];
+
 // Verifies the merchant's onboarding status on EVERY AEPS pipe and returns a
 // per-pipe breakdown (Accepted / Pending / Rejected / Not-Onboarded / error).
 // Also refreshes the retailer's activeAepsPipes in the DB.
@@ -2162,12 +2175,21 @@ export const activateMerchant = async (req, res) => {
 
         const pipeNorm = String(pipe).toLowerCase();
 
-        // Bank5 mandates annual_income & nature_of_bussiness; Bank6 mandates accessmode.
+        // Bank5 mandates annual_income & nature_of_bussiness; both bank5/bank6 mandate accessmode.
         if (pipeNorm === 'bank5' && !annual_income) {
             return res.status(400).json({ success: false, message: "annual_income is required for bank5 activation" });
         }
         if (pipeNorm === 'bank5' && !nature_of_bussiness) {
             return res.status(400).json({ success: false, message: "nature_of_bussiness is required for bank5 activation" });
+        }
+        if (pipeNorm === 'bank5' && !NATURE_OF_BUSINESS_OPTIONS.includes(nature_of_bussiness)) {
+            return res.status(400).json({
+                success: false,
+                message: `nature_of_bussiness must be one of: ${NATURE_OF_BUSINESS_OPTIONS.join(', ')}`
+            });
+        }
+        if (pipeNorm === 'bank5' && (isNaN(Number(annual_income)) || Number(annual_income) <= 0)) {
+            return res.status(400).json({ success: false, message: "annual_income must be a valid positive number" });
         }
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
@@ -2185,12 +2207,12 @@ export const activateMerchant = async (req, res) => {
             longitude: longitude || "77.1025"
         };
 
-        // bank6 requires accessmode; bank5 requires annual_income & nature_of_bussiness.
+        // bank5/bank6 require accessmode; bank5 also requires annual_income & nature_of_bussiness.
         if (pipeNorm === 'bank5') {
-            payload.annual_income = annual_income;
+            payload.annual_income = Number(annual_income).toFixed(2); // PaySprint wants a decimal number
             payload.nature_of_bussiness = nature_of_bussiness;
         }
-        if (pipeNorm === 'bank6') {
+        if (pipeNorm === 'bank5' || pipeNorm === 'bank6') {
             payload.accessmode = "SITE";
         }
 

@@ -36,6 +36,18 @@ interface PipeOnboardingModalProps {
 
 type Phase = 'loading' | 'plan' | 'web' | 'ekyc' | 'done';
 
+const NATURE_OF_BUSINESS_OPTIONS = [
+    'Agriculture', 'Antique Dealer', 'Arms Dealer', 'Art Dealer', 'Banking',
+    'Mobility', 'Barber', 'Parlour', 'Salon', 'Bullion Dealer and Jeweller',
+    'Casino', 'Gaming Application', 'Educational Institute', 'Financial Institution',
+    'Healthcare', 'Pharma', 'Import And Export Trader', 'Law', 'Accountancy firm',
+    'Liquor', 'Manufacturing', 'Marketing including Multi-level Marketing', 'Media',
+    'Pawn Shop', 'Money Lender', 'Money Changer', 'Real Estate',
+    'Restaurant and Hospitality', 'Retail Shop', 'Service Provider', 'Small vendor',
+    'Kirana shop', 'Stock Trading', 'Brokerage', 'Transport', 'Logistics',
+    'Wholesale Trading', 'Others'
+];
+
 const PipeOnboardingModal: React.FC<PipeOnboardingModalProps> = ({ pipe, onClose, onComplete }) => {
     const { token, user } = useAuth();
 
@@ -202,7 +214,7 @@ const PipeOnboardingModal: React.FC<PipeOnboardingModalProps> = ({ pipe, onClose
         if (method === 'otp' && !otp) return toast.error('Please enter the OTP first.');
         if (requiredFields.includes('dob') && !dob) return toast.error('Please enter your Date of Birth.');
         if (requiredFields.includes('annual_income') && !annualIncome) return toast.error('Please enter your Annual Income.');
-        if (requiredFields.includes('nature_of_bussiness') && !natureOfBusiness) return toast.error('Please enter your Nature of Business.');
+        if (requiredFields.includes('nature_of_bussiness') && !natureOfBusiness) return toast.error('Please select your Nature of Business.');
 
         setLoading(true);
         try {
@@ -388,7 +400,9 @@ const PipeOnboardingModal: React.FC<PipeOnboardingModalProps> = ({ pipe, onClose
                                                 <div>
                                                     <label className="text-sm font-medium mb-1 block">Annual Income</label>
                                                     <input
-                                                        type="text"
+                                                        type="number"
+                                                        min="1"
+                                                        step="0.01"
                                                         value={annualIncome}
                                                         onChange={(e) => setAnnualIncome(e.target.value)}
                                                         placeholder="e.g. 500000"
@@ -399,13 +413,17 @@ const PipeOnboardingModal: React.FC<PipeOnboardingModalProps> = ({ pipe, onClose
                                             {currentEkycFields.includes('nature_of_bussiness') && (
                                                 <div>
                                                     <label className="text-sm font-medium mb-1 block">Nature of Business</label>
-                                                    <input
-                                                        type="text"
+                                                    <select
                                                         value={natureOfBusiness}
                                                         onChange={(e) => setNatureOfBusiness(e.target.value)}
-                                                        placeholder="e.g. Retail, Grocery, Petrol Pump"
                                                         className="w-full p-2.5 rounded-lg border border-border bg-background"
-                                                    />
+                                                        style={{ colorScheme: 'dark' }}
+                                                    >
+                                                        <option value="">Select Nature of Business</option>
+                                                        {NATURE_OF_BUSINESS_OPTIONS.map((opt, i) => (
+                                                            <option key={i} value={opt} className="bg-background">{opt}</option>
+                                                        ))}
+                                                    </select>
                                                 </div>
                                             )}
 
