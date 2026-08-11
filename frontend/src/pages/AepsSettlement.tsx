@@ -43,7 +43,8 @@ const AepsSettlement = () => {
     const [bankData, setBankData] = useState({
         bankName: '',
         accountNumber: '',
-        ifscCode: ''
+        ifscCode: '',
+        accountHolderName: ''
     });
 
     const getHeaders = () => ({ headers: { 'Authorization': `Bearer ${token}` } });
@@ -162,6 +163,7 @@ const AepsSettlement = () => {
         e.preventDefault();
         if (!uploadDocBankId) return;
 
+        if (!docFiles.passbook) return toast.error("Please upload the passbook / bank statement image (required for all accounts)");
         const hasFile = docFiles.passbook || docFiles.panimage || docFiles.front_aadhar || docFiles.back_aadhar;
         if (!hasFile) return toast.error("Please select at least one document file");
 
@@ -200,7 +202,7 @@ const AepsSettlement = () => {
             if (res.data.success) {
                 toast.success("Bank account added successfully!");
                 setShowAddBank(false);
-                setBankData({ bankName: '', accountNumber: '', ifscCode: '' });
+                setBankData({ bankName: '', accountNumber: '', ifscCode: '', accountHolderName: '' });
                 fetchSavedBanks();
             }
         } catch (error: any) {
@@ -588,8 +590,21 @@ const AepsSettlement = () => {
                                 </div>
                                 <div className="space-y-1.5 p-3 bg-primary/10 border border-primary/20 rounded-md">
                                     <p className="text-xs text-primary leading-relaxed">
-                                        <strong>NPCI Strict Rule:</strong> To prevent fraud, the Account Holder Name will automatically be populated from your official KYC PAN/Aadhaar Name.
+                                        <strong>NPCI Strict Rule:</strong> For self (savings) accounts the Account Holder Name must match your official KYC PAN/Aadhaar Name and is used automatically.
                                     </p>
+                                    <p className="text-xs text-primary leading-relaxed">
+                                        For a business / current account, enter the exact Account Holder Name below (as per bank records) so the penny-drop validates it.
+                                    </p>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-medium text-foreground">Account Holder Name <span className="text-muted-foreground">(current/business accounts)</span></label>
+                                    <input
+                                        type="text"
+                                        value={bankData.accountHolderName}
+                                        onChange={e => setBankData({...bankData, accountHolderName: e.target.value})}
+                                        placeholder="Leave blank for self (KYC name) account"
+                                        className="w-full px-3 py-2 bg-background border border-border rounded-md focus:border-primary outline-none text-foreground"
+                                    />
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-sm font-medium text-foreground">Account Number</label>
@@ -682,12 +697,25 @@ const AepsSettlement = () => {
                                     </div>
                                 </div>
 
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-medium text-foreground">Passbook / Bank Statement Image (required)</label>
+                                    <input
+                                        type="file"
+                                        accept="image/png,image/jpg,image/jpeg"
+                                        onChange={e => setDocFiles({ ...docFiles, passbook: e.target.files?.[0] || undefined })}
+                                        className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border-0 file:bg-primary/10 file:text-primary"
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Savings: upload passbook page. Current account: upload first page of account statement or a cancelled cheque.
+                                    </p>
+                                </div>
+
                                 {docType === 'PAN' ? (
                                     <div className="space-y-1.5">
-                                        <label className="text-sm font-medium text-foreground">PAN / Passbook Image</label>
+                                        <label className="text-sm font-medium text-foreground">PAN Image (optional)</label>
                                         <input
                                             type="file"
-                                            accept="image/*,.pdf"
+                                            accept="image/png,image/jpg,image/jpeg"
                                             onChange={e => setDocFiles({ ...docFiles, panimage: e.target.files?.[0] || undefined })}
                                             className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border-0 file:bg-primary/10 file:text-primary"
                                         />
@@ -698,7 +726,7 @@ const AepsSettlement = () => {
                                             <label className="text-sm font-medium text-foreground">Aadhaar Front</label>
                                             <input
                                                 type="file"
-                                                accept="image/*,.pdf"
+                                                accept="image/png,image/jpg,image/jpeg"
                                                 onChange={e => setDocFiles({ ...docFiles, front_aadhar: e.target.files?.[0] || undefined })}
                                                 className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border-0 file:bg-primary/10 file:text-primary"
                                             />
@@ -707,7 +735,7 @@ const AepsSettlement = () => {
                                             <label className="text-sm font-medium text-foreground">Aadhaar Back</label>
                                             <input
                                                 type="file"
-                                                accept="image/*,.pdf"
+                                                accept="image/png,image/jpg,image/jpeg"
                                                 onChange={e => setDocFiles({ ...docFiles, back_aadhar: e.target.files?.[0] || undefined })}
                                                 className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border-0 file:bg-primary/10 file:text-primary"
                                             />

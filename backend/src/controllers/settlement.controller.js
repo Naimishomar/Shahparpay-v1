@@ -202,7 +202,7 @@ export const deleteSettlementBank = async (req, res) => {
 // supportive document upload to activate).
 export const addSettlementBank = async (req, res) => {
     try {
-        const { accountNumber, ifscCode, bankName, accountType } = req.body;
+        const { accountNumber, ifscCode, bankName, accountType, accountHolderName } = req.body;
 
         if (!accountNumber || !ifscCode || !bankName) {
             return res.status(400).json({ success: false, message: "Account number, IFSC, and Bank Name are required" });
@@ -215,8 +215,12 @@ export const addSettlementBank = async (req, res) => {
 
         const merchantCode = getMerchantCode(req);
 
-        // Strict AEPS Rule: Account Holder Name MUST match the KYC name for self accounts
+        // Strict AEPS Rule: Account Holder Name MUST match the KYC name for self accounts.
+        // For business / current accounts, allow an explicit accountHolderName so the
+        // penny-drop validates against the actual registered holder (PaySprint validates
+        // the `name` field against the account, so it must match the bank's records).
         const kycName = `${user.firstName} ${user.lastName}`.trim();
+        const beneficiaryName = (accountHolderName || '').trim() || kycName;
         const selectedAccountType = accountType === 'RELATIVE' ? 'RELATIVE' : 'PRIMARY';
 
         // PaySprint Payout ADD ACCOUNT contract:
@@ -226,7 +230,7 @@ export const addSettlementBank = async (req, res) => {
             merchant_code: merchantCode,
             account: accountNumber,
             ifsc: ifscCode,
-            name: kycName,
+            name: beneficiaryName,
             account_type: selectedAccountType,
             pipe: "bank2"
         };
@@ -262,7 +266,7 @@ export const addSettlementBank = async (req, res) => {
             {
                 userId: req.user.id,
                 userModel: req.user.role === 'distributor' ? 'Distributor' : 'Retailer',
-                accountHolderName: kycName,
+                accountHolderName: beneficiaryName,
                 accountNumber,
                 ifscCode,
                 bankName,
@@ -402,14 +406,23 @@ export const uploadSettlementDocument = async (req, res) => {
         const frontAadhar = files.front_aadhar ? files.front_aadhar[0] : null;
         const backAadhar = files.back_aadhar ? files.back_aadhar[0] : null;
 
-        if (!passbook && !panimage && !frontAadhar) {
-            return res.status(400).json({ success: false, message: "Please upload at least a passbook / pan image / aadhaar image" });
+        if (!passbook) {
+            return res.status(400).json({ success: false, message: "Please upload a passbook / bank statement image (required for all accounts)" });
+        }
+        if (!['image/png', 'image/jpg', 'image/jpeg'].includes(passbook.mimetype)) {
+            return res.status(400).json({ success: false, message: "Passbook must be a png/jpg/jpeg image" });
+        }
+        if (panimage && !['image/png', 'image/jpg', 'image/jpeg'].includes(panimage.mimetype)) {
+            return res.status(400).json({ success: false, message: "PAN image must be a png/jpg/jpeg image" });
+        }
+        if ((frontAadhar || backAadhar) && !['image/png', 'image/jpg', 'image/jpeg'].includes((frontAadhar || backAadhar).mimetype)) {
+            return res.status(400).json({ success: false, message: "Aadhaar image must be a png/jpg/jpeg image" });
         }
 
         const form = new FormData();
         form.append('doctype', selectedDoctype);
         form.append('bene_id', String(bank.beneId));
-        if (passbook) form.append('passbook', passbook.buffer, { filename: passbook.originalname, contentType: passbook.mimetype });
+        form.append('passbook', passbook.buffer, { filename: passbook.originalname, contentType: passbook.mimetype });
         if (panimage) form.append('panimage', panimage.buffer, { filename: panimage.originalname, contentType: panimage.mimetype });
         if (frontAadhar) form.append('front_aadhar', frontAadhar.buffer, { filename: frontAadhar.originalname, contentType: frontAadhar.mimetype });
         if (backAadhar) form.append('back_aadhar', backAadhar.buffer, { filename: backAadhar.originalname, contentType: backAadhar.mimetype });
