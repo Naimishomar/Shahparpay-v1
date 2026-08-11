@@ -4,7 +4,8 @@ import {
     applyPanCoupon,
     getPanServiceStatus,
     getPanCouponStatus,
-    getEsevaPanHistory
+    getEsevaPanHistory,
+    getMyEsevaPsaId
 } from '../controllers/panEseva.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 
@@ -16,5 +17,6 @@ router.post('/eseva/apply-coupon', authMiddlewares, applyPanCoupon);
 router.post('/eseva/service-status', authMiddlewares, getPanServiceStatus);
 router.post('/eseva/coupon-status', authMiddlewares, getPanCouponStatus);
 router.get('/eseva/history', authMiddlewares, getEsevaPanHistory);
+router.get('/eseva/my-psa', authMiddlewares, getMyEsevaPsaId);
 
 export default router;

@@ -2063,6 +2063,7 @@ export const getPipeOnboardingPlan = async (req, res) => {
         // Build the ordered steps based on current status.
         const steps = [];
         let canStart = false;
+        let canStartEkyc = false;
         let actionHint = null;
 
         if (status === 'ACCEPTED') {
@@ -2078,12 +2079,13 @@ export const getPipeOnboardingPlan = async (req, res) => {
                 v2: config.webOnboardV2
             });
 
-            // Step 2: eKYC (biometric or OTP) — only after web KYC is done/pending.
+            // Step 2: eKYC (biometric or OTP) — locked until web KYC is confirmed by the bank.
             if (config.ekycMethod) {
                 steps.push({
                     id: 'ekyc',
                     title: config.ekycMethod === 'otp' ? 'eKYC (OTP + Biometric)' : 'eKYC (Biometric)',
                     done: false,
+                    locked: status !== 'PENDING', // only actionable after web KYC is in progress
                     required: true,
                     method: config.ekycMethod,
                     fields: config.ekycFields,
@@ -2104,15 +2106,18 @@ export const getPipeOnboardingPlan = async (req, res) => {
             if (status === 'PENDING') {
                 // Web KYC done; next actionable step is eKYC (or waiting for bank).
                 canStart = Boolean(config.ekycMethod);
+                canStartEkyc = Boolean(config.ekycMethod);
                 actionHint = config.ekycMethod
                     ? 'Web KYC is complete. Proceed to eKYC to activate transactions.'
                     : 'Web KYC is under review by the bank. Please wait for approval.';
             } else if (status === 'REJECTED') {
                 canStart = true;
+                canStartEkyc = false;
                 actionHint = 'Onboarding was rejected by the bank. Restart the web KYC to update your documents.';
             } else {
                 canStart = true;
-                actionHint = 'Start with the PaySprint Web KYC page for this pipe.';
+                canStartEkyc = false;
+                actionHint = 'Start with the PaySprint Web KYC page for this pipe. eKYC unlocks once web KYC is complete.';
             }
         }
 
@@ -2127,6 +2132,7 @@ export const getPipeOnboardingPlan = async (req, res) => {
                 message,
                 steps,
                 canStart,
+                canStartEkyc,
                 actionHint,
                 merchantCode: merchantcode,
                 mobile
@@ -2190,6 +2196,48 @@ export const activateMerchant = async (req, res) => {
         }
         if (pipeNorm === 'bank5' && (isNaN(Number(annual_income)) || Number(annual_income) <= 0)) {
             return res.status(400).json({ success: false, message: "annual_income must be a valid positive number" });
+        }
+
+        // PRE-FLIGHT: activate_merchant only works AFTER web KYC is complete on this pipe.
+        // Query PaySprint's current onboarding status; block early with a clear message
+        // instead of hitting the activation endpoint blindly (avoids response_code 5).
+        let mobile = '';
+        try {
+            const retailer = await Retailer.findById(req.user.id);
+            mobile = retailer?.contactNumber ? String(retailer.contactNumber) : '';
+        } catch (e) {
+            console.warn("[activateMerchant] Could not load mobile for pre-flight:", e.message);
+        }
+
+        try {
+            const preToken = generatePaySprintToken();
+            const preRes = await axios.post(
+                getOnboardStatusEndpoint(pipeNorm),
+                { merchantcode, mobile, pipe: pipeNorm },
+                {
+                    headers: { 'Token': preToken, 'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY, 'Content-Type': 'application/json' },
+                    validateStatus: () => true,
+                    timeout: 15000
+                }
+            );
+            const preData = preRes.data || {};
+            const approved = preData.is_approved || null;
+            const onboarded = preData.response_code === 1 && approved === 'Accepted';
+
+            if (!onboarded) {
+                const hint = approved === 'Rejected'
+                    ? `Web KYC on ${pipeNorm} was rejected by the bank. Please redo the Web KYC step first.`
+                    : `Web KYC onboarding on ${pipeNorm} is not complete. Complete Web KYC first, then run eKYC — or contact PaySprint support if your merchant is already onboarded on another pipe.`;
+                return res.status(400).json({
+                    success: false,
+                    code: 'PIPE_NOT_ONBOARDED',
+                    message: hint,
+                    is_approved: approved
+                });
+            }
+        } catch (e) {
+            // If the pre-flight check itself fails, do NOT hard-block — let PaySprint decide.
+            console.warn("[activateMerchant] Pre-flight status check failed, continuing:", e.message);
         }
 
         const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';

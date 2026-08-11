@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Fingerprint, Loader2, CheckCircle2, ShieldAlert, ExternalLink, RefreshCw, Globe, KeyRound, type LucideIcon } from 'lucide-react';
+import { Fingerprint, Loader2, CheckCircle2, ShieldAlert, ExternalLink, RefreshCw, Globe, KeyRound, Lock, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
@@ -12,6 +12,7 @@ interface PipeOnboardingPlan {
     message: string | null;
     steps: OnboardingStep[];
     canStart: boolean;
+    canStartEkyc: boolean;
     actionHint: string | null;
     merchantCode: string;
     mobile: string;
@@ -21,6 +22,7 @@ interface OnboardingStep {
     id: string;
     title: string;
     done: boolean;
+    locked?: boolean;
     required: boolean;
     v2?: boolean;
     method?: 'activate' | 'otp';
@@ -57,6 +59,7 @@ const PipeOnboardingModal: React.FC<PipeOnboardingModalProps> = ({ pipe, onClose
 
     // Web KYC
     const [openingWeb, setOpeningWeb] = useState(false);
+    const [webBlocked, setWebBlocked] = useState<string | null>(null);
 
     // eKYC state
     const [dob, setDob] = useState(user?.dob || '');
@@ -78,6 +81,7 @@ const PipeOnboardingModal: React.FC<PipeOnboardingModalProps> = ({ pipe, onClose
             const data = await res.json();
             if (data.success) {
                 setPlan(data.data);
+                setWebBlocked(null);
                 setPhase('plan');
             } else {
                 toast.error(data.message || 'Failed to load onboarding plan');
@@ -114,6 +118,8 @@ const PipeOnboardingModal: React.FC<PipeOnboardingModalProps> = ({ pipe, onClose
                 window.open(data.url, '_blank', 'noopener,noreferrer');
                 toast.success('PaySprint KYC page opened in a new tab. Complete it, then come back.');
             } else {
+                // PaySprint blocks web onboarding when the merchant already exists on another pipe.
+                setWebBlocked(data.message || 'PaySprint blocked this onboarding. Contact PaySprint support to enable this pipe for your merchant.');
                 toast.error(data.message || 'Failed to start Web KYC');
             }
         } catch (error: any) {
@@ -344,6 +350,11 @@ const PipeOnboardingModal: React.FC<PipeOnboardingModalProps> = ({ pipe, onClose
                                                             <span className="text-xs text-muted-foreground">Biometric verification (Aadhaar + Fingerprint)</span>
                                                         )}
                                                         {step.done && <span className="text-xs text-emerald-600">Completed</span>}
+                                                        {step.locked && !step.done && (
+                                                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                                <Lock className="w-3 h-3" /> Unlocks after Web KYC is complete
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             );
@@ -359,6 +370,12 @@ const PipeOnboardingModal: React.FC<PipeOnboardingModalProps> = ({ pipe, onClose
                                     {/* Web KYC action */}
                                     {needsWebKyc && !plan.steps[0]?.done && (
                                         <div className="flex flex-col gap-2">
+                                            {webBlocked && (
+                                                <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700">
+                                                    <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0" />
+                                                    <span>{webBlocked}</span>
+                                                </div>
+                                            )}
                                             <button
                                                 onClick={startWebKyc}
                                                 disabled={openingWeb}
@@ -377,8 +394,8 @@ const PipeOnboardingModal: React.FC<PipeOnboardingModalProps> = ({ pipe, onClose
                                         </div>
                                     )}
 
-                                    {/* eKYC action */}
-                                    {plan.steps[0]?.done && currentEkycMethod && (
+                                    {/* eKYC action — only when web KYC is complete on this pipe */}
+                                    {plan.canStartEkyc && currentEkycMethod && (
                                         <div className="flex flex-col gap-4 border border-border rounded-xl p-4 bg-muted/10">
                                             <div className="flex items-center gap-2 font-semibold text-sm">
                                                 <Fingerprint className="w-4 h-4 text-primary" />

@@ -537,3 +537,31 @@ export const getEsevaPanHistory = async (req, res) => {
         return res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
+
+/**
+ * 6. Get the retailer's latest eSevaTech PSA ID (autofills the coupon form).
+ * PSA ID is pulled from the most recent approved PAN_SERVICE whose metadata
+ * has a psa_id synced back from the eSevaTech status check.
+ * @route GET /api/pan/eseva/my-psa
+ */
+export const getMyEsevaPsaId = async (req, res) => {
+    try {
+        const txn = await Transaction.findOne({
+            userId: req.user.id,
+            type: 'PAN_SERVICE',
+            'metadata.psa_id': { $exists: true, $ne: null, $ne: '' }
+        }).sort({ createdAt: -1 });
+
+        const psa_id = txn?.metadata?.psa_id || null;
+
+        return res.status(200).json({
+            success: true,
+            psa_id,
+            status: txn?.status || null,
+            application_number: txn?.metadata?.application_number || null
+        });
+    } catch (error) {
+        console.error("Error fetching eSeva PSA ID:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};

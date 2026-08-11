@@ -117,10 +117,24 @@ const EsevaPanTab: React.FC = () => {
         }
     };
 
+    const fetchMyPsaId = async () => {
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/pan/eseva/my-psa`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success && res.data.psa_id) {
+                setCouponForm(prev => ({ ...prev, psa_id: res.data.psa_id }));
+            }
+        } catch (error) {
+            console.error("Failed to fetch PSA ID:", error);
+        }
+    };
+
     useEffect(() => {
         if (token) {
             fetchWalletBalance();
             fetchHistory();
+            fetchMyPsaId();
         }
     }, [token]);
 
@@ -537,7 +551,9 @@ const EsevaPanTab: React.FC = () => {
                                     placeholder="Enter approved PSA ID"
                                     required
                                 />
-                                <p className="text-xs text-muted-foreground mt-1">PSA ID assigned after PAN Service approval.</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {couponForm.psa_id ? 'PSA ID auto-filled from your approved PAN Service. You can still edit it.' : 'PSA ID is auto-filled once your PAN Service is approved.'}
+                                </p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
