@@ -63,9 +63,15 @@ const toNumber = (v) => {
 
 const round2 = (v) => Math.round(toNumber(v) * 100) / 100;
 
+// Refund rows are identified by a `REF-` or `REFUND-` transaction-id prefix
+// (AEPS/DIRECT_PAYOUT refunds use `REF-`; historical ITR refunds used `REFUND-`
+// and still exist in the database). Both must be recognized so refund credits are
+// not miscounted as debits.
+const isRefundTxnId = (id) => /^REF(UND)?-/.test(String(id || ''));
+
 const getNarration = (tx) => {
     const m = tx.metadata || {};
-    const isRefund = tx.transactionId && String(tx.transactionId).startsWith('REF-');
+    const isRefund = isRefundTxnId(tx.transactionId);
     if (isRefund) return `Refund ${m.originalTxn ? 'for ' + m.originalTxn : 'for failed transaction'}`;
 
     switch (tx.type) {
@@ -109,6 +115,7 @@ const getNarration = (tx) => {
 //   ₹3001–₹10000  → flat ₹12
 //   below ₹300    → ₹0 (no commission)
 // Mirrors getAepsWithdrawalCommission in wallet.util.js.
+// Kept only as a reference for the commission display fallback below.
 const getAepsWithdrawalCommission = (amount) => {
     const amt = toNumber(amount);
     if (amt < 300) return 0;
@@ -118,13 +125,16 @@ const getAepsWithdrawalCommission = (amount) => {
 
 /**
  * Splits a transaction's retailer commission into gross, GST (18%) and the net
- * actually credited to the wallet. The gross is recomputed from the amount via
- * the slab function (source of truth), so it is correct even though stored
- * `retailerEarned` is inconsistent across historical rows (some store gross,
- * others already store net).
+ * actually credited to the wallet. The wallet is credited with the commission
+ * that was ACTUALLY paid at the time of the transaction, which is the value
+ * stored under `commissions.retailerEarned` (gross; GST tracked separately) —
+ * NOT a slab recomputation from the amount. Historical rows predating
+ * commission tracking store 0 even for large amounts (the wallet received no
+ * commission then), so recomputing from the slab would over-credit AEPS.
  */
 const getCommissionSplit = (tx) => {
-    const gross = round2(getAepsWithdrawalCommission(toNumber(tx.amount)));
+    const stored = toNumber(tx.commissions?.retailerEarned);
+    const gross = round2(stored);
     const gst = round2(gross * 0.18);
     const net = round2(gross - gst);
     return { gross, gst, net };
@@ -139,7 +149,7 @@ const getCommissionSplit = (tx) => {
 const getWalletDeltas = (tx) => {
     const amount = toNumber(tx.amount);
     const { net } = getCommissionSplit(tx);
-    const isRefund = tx.transactionId && String(tx.transactionId).startsWith('REF-');
+    const isRefund = isRefundTxnId(tx.transactionId);
 
     // Refund entries always credit back to the same wallet the original used.
     if (isRefund) {
@@ -165,6 +175,14 @@ const getWalletDeltas = (tx) => {
     // AEPS wallet debit (settlement).
     if (tx.type === 'AEPS_SETTLEMENT') {
         return { main: 0, aeps: round2(-amount) };
+    }
+
+    // PAN_SERVICE: the eSevaTech flow applies fee debit + commission credit in a
+    // single atomic MAIN wallet update (-fee + retailerEarned), so the ledger must
+    // mirror that net impact instead of the plain -amount of other PAN flows.
+    if (tx.type === 'PAN_SERVICE') {
+        const commission = toNumber(tx.commissions?.retailerEarned);
+        return { main: round2(-amount + commission), aeps: 0 };
     }
 
     // Everything else moves money in/out of the Main wallet.
@@ -206,16 +224,16 @@ export const getWalletLedger = async (req, res) => {
         // metadata.refundStatus = COMPLETED, which creates NO transaction row).
         // Include the original debits + synthesized resolveTransaction credits so
         // the reconstruction reconciles exactly with the live wallet balances.
-        const refRows = await Transaction.find({ userId, transactionId: /^REF-/ }).lean();
+        const refRows = await Transaction.find({ userId, transactionId: /^REF(UND)?-/ }).lean();
         const refOriginalIds = new Set();
         for (const r of refRows) {
             if (r.metadata?.originalTxn) refOriginalIds.add(String(r.metadata.originalTxn));
-            refOriginalIds.add(String(r.transactionId).replace(/^REF-/, ''));
+            refOriginalIds.add(String(r.transactionId).replace(/^REF(UND)?-/, ''));
         }
 
         const pendingLocks = await Transaction.find({
             userId,
-            type: { $in: ['AEPS_SETTLEMENT', 'DIRECT_PAYOUT'] },
+            type: { $in: ['AEPS_SETTLEMENT', 'DIRECT_PAYOUT', 'AEPS_DEPOSIT'] },
             status: { $nin: MONEY_MOVING_STATUSES }
         }).sort({ createdAt: 1 }).lean();
 
@@ -268,7 +286,7 @@ export const getWalletLedger = async (req, res) => {
 
             const { gross, gst, net } = getCommissionSplit(tx);
             const isDailyAuth = tx.type === 'DAILY_AUTH_CHARGE';
-            const isRefundRow = tx.transactionId && String(tx.transactionId).startsWith('REF-');
+            const isRefundRow = isRefundTxnId(tx.transactionId);
             // Commission is never shown on refund rows (refunds credit the amount only).
             const hasCommission = gross > 0 && tx.type === 'AEPS_WITHDRAWAL' && !isRefundRow;
 

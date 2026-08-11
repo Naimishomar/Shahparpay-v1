@@ -59,7 +59,7 @@ export const getRetailerStats = async (req, res) => {
         const graphData = new Array(12).fill(0);
 
         transactions.forEach(txn => {
-            const isRefund = txn.transactionId && txn.transactionId.startsWith('REF-');
+            const isRefund = txn.transactionId && /^REF(UND)?-/.test(String(txn.transactionId));
             if (txn.status === 'SUCCESS' && !isRefund) {
                 if (stats[txn.type] !== undefined) {
                     stats[txn.type] += txn.amount;

@@ -161,9 +161,14 @@ export const itrWebhook = async (req, res) => {
                 return res.status(404).json({ success: false, message: "Retailer not found" });
             }
 
-            // Prevent duplicate refund
-            const refundTxnId = `REFUND-${service_type}-${application_id}`;
-            const existingRefund = await Transaction.findOne({ transactionId: refundTxnId });
+            // Prevent duplicate refund (covers both historical REFUND- and REF- ids)
+            const refundTxnId = `REF-ITR-${application_id}`;
+            const existingRefund = await Transaction.findOne({
+                $or: [
+                    { transactionId: refundTxnId },
+                    { transactionId: `REFUND-${service_type}-${application_id}` }
+                ]
+            });
             if (existingRefund) {
                 return res.status(200).json({ success: true, message: "Agent wallet already credited for refund" });
             }
