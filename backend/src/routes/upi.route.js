@@ -1,5 +1,10 @@
 import express from 'express';
-import { generateToken, getTxnStatus, webhook, merchantStatus } from '../controllers/upi.controller.js';
+import {
+  generateToken,
+  getTxnStatus,
+  webhook,
+  merchantStatus,
+} from '../controllers/upi.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();

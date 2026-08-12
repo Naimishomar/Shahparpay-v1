@@ -6,293 +6,333 @@ import Transaction from '../models/transaction.model.js';
 import bcrypt from 'bcrypt';
 
 const getPaySprintHeaders = () => {
-    return {
-        'Token': generatePaySprintToken(),
-        'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
-        'Content-Type': 'application/json'
-    };
+  return {
+    Token: generatePaySprintToken(),
+    Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
+    'Content-Type': 'application/json',
+  };
 };
 
 const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
 
 export const queryRemitter = async (req, res) => {
-    try {
-        const { mobile } = req.body;
-        if (!mobile) return res.status(400).json({ success: false, message: "Mobile number required" });
+  try {
+    const { mobile } = req.body;
+    if (!mobile) return res.status(400).json({ success: false, message: 'Mobile number required' });
 
-        const payload = { 
-            mobile: mobile,
-            bank3_flag: "NO",
-            bank4_flag: "NO"
-        };
-        const response = await axios.post(`${baseUrl}/service/dmt/kyc/remitter/queryremitter`, 
-            payload, 
-            { headers: getPaySprintHeaders() }
-        );
+    const payload = {
+      mobile: mobile,
+      bank3_flag: 'NO',
+      bank4_flag: 'NO',
+    };
+    const response = await axios.post(
+      `${baseUrl}/service/dmt/kyc/remitter/queryremitter`,
+      payload,
+      { headers: getPaySprintHeaders() }
+    );
 
-        return res.status(200).json({ success: true, data: response.data });
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error?.response?.data?.message || "Failed to query remitter", error: error?.response?.data });
-    }
+    return res.status(200).json({ success: true, data: response.data });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error?.response?.data?.message || 'Failed to query remitter',
+      error: error?.response?.data,
+    });
+  }
 };
 
 export const remitterEkyc = async (req, res) => {
-    try {
-        const { mobile, aadhaar_number, lat, long, pidData } = req.body;
-        if (!mobile || !aadhaar_number || !pidData) {
-            return res.status(400).json({ success: false, message: "Mobile, Aadhaar, and PID Data are required" });
-        }
-
-        const encryptedData = encryptPayload(pidData);
-
-        const payload = { 
-            mobile,
-            aadhaar_number,
-            lat: lat || "28.7041",
-            long: long || "77.1025",
-            is_iris: "2",
-            data: encryptedData
-        };
-        
-        const response = await axios.post(`${baseUrl}/service/dmt/kyc/remitter/queryremitter/kyc`, 
-            payload, 
-            { headers: getPaySprintHeaders() }
-        );
-
-        // The response contains ekyc_id and stateresp, which are passed to the frontend
-        return res.status(200).json({ success: true, data: response.data });
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error?.response?.data?.message || "Failed to complete remitter e-kyc", error: error?.response?.data });
+  try {
+    const { mobile, aadhaar_number, lat, long, pidData } = req.body;
+    if (!mobile || !aadhaar_number || !pidData) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Mobile, Aadhaar, and PID Data are required' });
     }
+
+    const encryptedData = encryptPayload(pidData);
+
+    const payload = {
+      mobile,
+      aadhaar_number,
+      lat: lat || '28.7041',
+      long: long || '77.1025',
+      is_iris: '2',
+      data: encryptedData,
+    };
+
+    const response = await axios.post(
+      `${baseUrl}/service/dmt/kyc/remitter/queryremitter/kyc`,
+      payload,
+      { headers: getPaySprintHeaders() }
+    );
+
+    // The response contains ekyc_id and stateresp, which are passed to the frontend
+    return res.status(200).json({ success: true, data: response.data });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error?.response?.data?.message || 'Failed to complete remitter e-kyc',
+      error: error?.response?.data,
+    });
+  }
 };
 
 export const registerRemitter = async (req, res) => {
-    try {
-        const { mobile, firstName, lastName, pincode, aadhaar, pidData, ekyc_id, otp, stateresp } = req.body;
-        
-        // Encrypt the PID data exactly as done in E-KYC
-        const { encrypt } = await import('../utils/encryption.js');
-        const encryptedData = encrypt(pidData);
+  try {
+    const { mobile, firstName, lastName, pincode, aadhaar, pidData, ekyc_id, otp, stateresp } =
+      req.body;
 
-        const payload = { 
-            mobile, 
-            firstname: firstName, 
-            lastname: lastName, 
-            pincode,
-            aadhaar,
-            piddata: encryptedData,
-            ekyc_id,
-            otp,
-            stateresp
-        };
-        const response = await axios.post(`${baseUrl}/service/dmt/kyc/remitter/registerremitter`, 
-            payload, 
-            { headers: getPaySprintHeaders() }
-        );
+    // Encrypt the PID data exactly as done in E-KYC
+    const { encrypt } = await import('../utils/encryption.js');
+    const encryptedData = encrypt(pidData);
 
-        return res.status(200).json({ success: true, data: response.data });
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error?.response?.data?.message || "Failed to register remitter" });
-    }
+    const payload = {
+      mobile,
+      firstname: firstName,
+      lastname: lastName,
+      pincode,
+      aadhaar,
+      piddata: encryptedData,
+      ekyc_id,
+      otp,
+      stateresp,
+    };
+    const response = await axios.post(
+      `${baseUrl}/service/dmt/kyc/remitter/registerremitter`,
+      payload,
+      { headers: getPaySprintHeaders() }
+    );
+
+    return res.status(200).json({ success: true, data: response.data });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error?.response?.data?.message || 'Failed to register remitter',
+    });
+  }
 };
 
 export const fetchBeneficiaries = async (req, res) => {
-    try {
-        const { mobile } = req.body;
-        const payload = { mobile };
-        const response = await axios.post(`${baseUrl}/service/dmt/kyc/beneficiary/registerbeneficiary/fetchbeneficiary`, 
-            payload, 
-            { headers: getPaySprintHeaders() }
-        );
+  try {
+    const { mobile } = req.body;
+    const payload = { mobile };
+    const response = await axios.post(
+      `${baseUrl}/service/dmt/kyc/beneficiary/registerbeneficiary/fetchbeneficiary`,
+      payload,
+      { headers: getPaySprintHeaders() }
+    );
 
-        return res.status(200).json({ success: true, data: response.data });
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error?.response?.data?.message || "Failed to fetch beneficiaries", error: error?.response?.data });
-    }
+    return res.status(200).json({ success: true, data: response.data });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error?.response?.data?.message || 'Failed to fetch beneficiaries',
+      error: error?.response?.data,
+    });
+  }
 };
 
 export const addBeneficiary = async (req, res) => {
-    try {
-        const { mobile, bankid, benename, beneaccount, ifsc, pincode } = req.body;
-        const payload = { mobile, bankid, benename, accno: beneaccount, ifsc, pincode };
-        const response = await axios.post(`${baseUrl}/service/dmt/kyc/beneficiary/registerbeneficiary`, 
-            payload, 
-            { headers: getPaySprintHeaders() }
-        );
+  try {
+    const { mobile, bankid, benename, beneaccount, ifsc, pincode } = req.body;
+    const payload = { mobile, bankid, benename, accno: beneaccount, ifsc, pincode };
+    const response = await axios.post(
+      `${baseUrl}/service/dmt/kyc/beneficiary/registerbeneficiary`,
+      payload,
+      { headers: getPaySprintHeaders() }
+    );
 
-        return res.status(200).json({ success: true, data: response.data });
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error?.response?.data?.message || "Failed to add beneficiary", error: error?.response?.data });
-    }
+    return res.status(200).json({ success: true, data: response.data });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error?.response?.data?.message || 'Failed to add beneficiary',
+      error: error?.response?.data,
+    });
+  }
 };
 
 export const deleteBeneficiary = async (req, res) => {
-    try {
-        const { mobile, beneid } = req.body;
-        const payload = { mobile, beneid };
-        const response = await axios.post(`${baseUrl}/service/dmt/kyc/beneficiary/registerbeneficiary/deletebeneficiary`, 
-            payload, 
-            { headers: getPaySprintHeaders() }
-        );
+  try {
+    const { mobile, beneid } = req.body;
+    const payload = { mobile, beneid };
+    const response = await axios.post(
+      `${baseUrl}/service/dmt/kyc/beneficiary/registerbeneficiary/deletebeneficiary`,
+      payload,
+      { headers: getPaySprintHeaders() }
+    );
 
-        return res.status(200).json({ success: true, data: response.data });
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error?.response?.data?.message || "Failed to delete beneficiary" });
-    }
+    return res.status(200).json({ success: true, data: response.data });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error?.response?.data?.message || 'Failed to delete beneficiary',
+    });
+  }
 };
 
 export const initiateTransfer = async (req, res) => {
-    try {
-        const retailerId = req.user.id;
-        const { mobile, beneid, amount, beneaccount, ifsc, pin } = req.body;
+  try {
+    const retailerId = req.user.id;
+    const { mobile, beneid, amount, beneaccount, ifsc, pin } = req.body;
 
-        if (!amount || amount <= 0 || !pin) {
-            return res.status(400).json({ success: false, message: "Valid amount and PIN are required" });
-        }
-
-        const mainWallet = await MainWallet.findOne({ userId: retailerId });
-        if (!mainWallet || mainWallet.balance < amount) {
-            return res.status(400).json({ success: false, message: "Insufficient Main Wallet balance for DMT" });
-        }
-
-        // We use AepsWallet to verify PIN since PIN is stored there
-        const AepsWallet = (await import('../models/aepsWallet.model.js')).default;
-        const aepsWallet = await AepsWallet.findOne({ userId: retailerId });
-        
-        if (!aepsWallet || !aepsWallet.pin) {
-            return res.status(400).json({ success: false, message: "Please set your wallet PIN first." });
-        }
-
-        const isPinValid = await bcrypt.compare(pin.toString(), aepsWallet.pin);
-        if (!isPinValid) {
-            return res.status(401).json({ success: false, message: "Incorrect PIN" });
-        }
-
-        const transactionId = `DMT${Date.now()}${Math.floor(Math.random() * 1000)}`;
-
-        // Deduct from Main Wallet atomically (Creates PENDING transaction)
-        const { updateWalletAtomically } = await import('../utils/wallet.util.js');
-        await updateWalletAtomically(retailerId, 'MAIN', -amount, {
-            transactionId,
-            userId: retailerId,
-            type: 'DMT',
-            amount: amount,
-            status: 'PENDING',
-            metadata: { beneficiaryAccount: beneaccount }
-        });
-
-        const payload = {
-            mobile,
-            referenceid: transactionId,
-            pipe: "bank1",
-            pincode: "110001",
-            address: "Retailer Address",
-            dob: "01-01-1990",
-            gst_state: "07",
-            beneid,
-            txntype: "IMPS",
-            amount: amount.toString()
-        };
-
-        let response;
-        let status = 'FAILED';
-        
-        try {
-            response = await axios.post(`${baseUrl}/service/dmt/kyc/transact/transact`, 
-                payload, 
-                { headers: getPaySprintHeaders() }
-            );
-            status = response.data?.status ? 'SUCCESS' : 'FAILED';
-        } catch (apiError) {
-            console.error("DMT API request failed:", apiError?.response?.data || apiError.message);
-            response = { data: apiError?.response?.data || { message: apiError.message } };
-        }
-
-        // Refund if failed
-        if (status === 'FAILED') {
-            await updateWalletAtomically(retailerId, 'MAIN', amount, {
-                transactionId: `REF-${transactionId}`,
-                userId: retailerId,
-                type: 'DMT',
-                amount: amount,
-                status: 'SUCCESS',
-                metadata: { note: 'Refund for failed DMT transaction', originalTxn: transactionId }
-            });
-        }
-
-        // Update the original Transaction status
-        await Transaction.findOneAndUpdate({ transactionId }, { 
-            status, 
-            'metadata.apiMessage': response.data?.message 
-        });
-
-        // Log DMT specific Transaction
-        const dmtTxn = await DmtTransaction.create({
-            transactionId,
-            retailerId,
-            remitterMobile: mobile,
-            beneficiaryAccount: beneaccount,
-            beneficiaryIfsc: ifsc,
-            amount,
-            status,
-            apiReference: response.data?.ackno || null,
-            apiResponse: response.data
-        });
-
-        return res.status(200).json({ 
-            success: status === 'SUCCESS', 
-            message: response.data?.message || "Transaction processed",
-            data: response.data,
-            transaction: dmtTxn
-        });
-
-    } catch (error) {
-        console.error("DMT Transfer Error:", error);
-        return res.status(500).json({ success: false, message: "Internal server error" });
+    if (!amount || amount <= 0 || !pin) {
+      return res.status(400).json({ success: false, message: 'Valid amount and PIN are required' });
     }
+
+    const mainWallet = await MainWallet.findOne({ userId: retailerId });
+    if (!mainWallet || mainWallet.balance < amount) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Insufficient Main Wallet balance for DMT' });
+    }
+
+    // We use AepsWallet to verify PIN since PIN is stored there
+    const AepsWallet = (await import('../models/aepsWallet.model.js')).default;
+    const aepsWallet = await AepsWallet.findOne({ userId: retailerId });
+
+    if (!aepsWallet || !aepsWallet.pin) {
+      return res.status(400).json({ success: false, message: 'Please set your wallet PIN first.' });
+    }
+
+    const isPinValid = await bcrypt.compare(pin.toString(), aepsWallet.pin);
+    if (!isPinValid) {
+      return res.status(401).json({ success: false, message: 'Incorrect PIN' });
+    }
+
+    const transactionId = `DMT${Date.now()}${Math.floor(Math.random() * 1000)}`;
+
+    // Deduct from Main Wallet atomically (Creates PENDING transaction)
+    const { updateWalletAtomically } = await import('../utils/wallet.util.js');
+    await updateWalletAtomically(retailerId, 'MAIN', -amount, {
+      transactionId,
+      userId: retailerId,
+      type: 'DMT',
+      amount: amount,
+      status: 'PENDING',
+      metadata: { beneficiaryAccount: beneaccount },
+    });
+
+    const payload = {
+      mobile,
+      referenceid: transactionId,
+      pipe: 'bank1',
+      pincode: '110001',
+      address: 'Retailer Address',
+      dob: '01-01-1990',
+      gst_state: '07',
+      beneid,
+      txntype: 'IMPS',
+      amount: amount.toString(),
+    };
+
+    let response;
+    let status = 'FAILED';
+
+    try {
+      response = await axios.post(`${baseUrl}/service/dmt/kyc/transact/transact`, payload, {
+        headers: getPaySprintHeaders(),
+      });
+      status = response.data?.status ? 'SUCCESS' : 'FAILED';
+    } catch (apiError) {
+      console.error('DMT API request failed:', apiError?.response?.data || apiError.message);
+      response = { data: apiError?.response?.data || { message: apiError.message } };
+    }
+
+    // Refund if failed
+    if (status === 'FAILED') {
+      await updateWalletAtomically(retailerId, 'MAIN', amount, {
+        transactionId: `REF-${transactionId}`,
+        userId: retailerId,
+        type: 'DMT',
+        amount: amount,
+        status: 'SUCCESS',
+        metadata: { note: 'Refund for failed DMT transaction', originalTxn: transactionId },
+      });
+    }
+
+    // Update the original Transaction status
+    await Transaction.findOneAndUpdate(
+      { transactionId },
+      {
+        status,
+        'metadata.apiMessage': response.data?.message,
+      }
+    );
+
+    // Log DMT specific Transaction
+    const dmtTxn = await DmtTransaction.create({
+      transactionId,
+      retailerId,
+      remitterMobile: mobile,
+      beneficiaryAccount: beneaccount,
+      beneficiaryIfsc: ifsc,
+      amount,
+      status,
+      apiReference: response.data?.ackno || null,
+      apiResponse: response.data,
+    });
+
+    return res.status(200).json({
+      success: status === 'SUCCESS',
+      message: response.data?.message || 'Transaction processed',
+      data: response.data,
+      transaction: dmtTxn,
+    });
+  } catch (error) {
+    console.error('DMT Transfer Error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
 };
 
 export const getDmtHistory = async (req, res) => {
-    try {
-        const history = await DmtTransaction.find({ retailerId: req.user.id }).sort({ createdAt: -1 }).limit(50);
-        return res.status(200).json({ success: true, data: history });
-    } catch (error) {
-        return res.status(500).json({ success: false, message: "Internal server error" });
-    }
+  try {
+    const history = await DmtTransaction.find({ retailerId: req.user.id })
+      .sort({ createdAt: -1 })
+      .limit(50);
+    return res.status(200).json({ success: true, data: history });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
 };
 
 import fs from 'fs';
 import path from 'path';
 
 export const fetchBankList = async (req, res) => {
-    try {
-        const banksFilePath = path.join(process.cwd(), 'src/data/dmt_banks.json');
-        
-        // Read the local JSON file containing PaySprint banks
-        if (fs.existsSync(banksFilePath)) {
-            const fileData = fs.readFileSync(banksFilePath, 'utf-8');
-            const banks = JSON.parse(fileData);
-            
-            // Map the data to the format expected by the frontend
-            const formattedBanks = banks.map(bank => ({
-                bankid: bank.BankId.toString(),
-                bankname: bank.BankName,
-                ifsc: "" // Partner provides IFSC themselves
-            }));
+  try {
+    const banksFilePath = path.join(process.cwd(), 'src/data/dmt_banks.json');
 
-            return res.status(200).json({ 
-                success: true, 
-                data: {
-                    status: true,
-                    message: "Banks fetched successfully",
-                    data: formattedBanks
-                } 
-            });
-        } else {
-            return res.status(500).json({ success: false, message: "Bank list data not found on server" });
-        }
-    } catch (error) {
-        console.error("Failed to load bank list from file:", error);
-        return res.status(500).json({ success: false, message: "Internal server error while loading bank list" });
+    // Read the local JSON file containing PaySprint banks
+    if (fs.existsSync(banksFilePath)) {
+      const fileData = fs.readFileSync(banksFilePath, 'utf-8');
+      const banks = JSON.parse(fileData);
+
+      // Map the data to the format expected by the frontend
+      const formattedBanks = banks.map((bank) => ({
+        bankid: bank.BankId.toString(),
+        bankname: bank.BankName,
+        ifsc: '', // Partner provides IFSC themselves
+      }));
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          status: true,
+          message: 'Banks fetched successfully',
+          data: formattedBanks,
+        },
+      });
+    } else {
+      return res
+        .status(500)
+        .json({ success: false, message: 'Bank list data not found on server' });
     }
+  } catch (error) {
+    console.error('Failed to load bank list from file:', error);
+    return res
+      .status(500)
+      .json({ success: false, message: 'Internal server error while loading bank list' });
+  }
 };

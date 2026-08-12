@@ -13,7 +13,7 @@ import { generatePaySprintToken, encryptPayload } from './paysprint.util.js';
  * Rounds a number to 2 decimal places to prevent float precision issues.
  */
 const formatAmount = (amount) => {
-    return Math.round(Number(amount) * 100) / 100;
+  return Math.round(Number(amount) * 100) / 100;
 };
 
 /**
@@ -24,11 +24,11 @@ const formatAmount = (amount) => {
  * Amounts above ₹10000 are not supported (blocked at the controller).
  */
 export const getAepsWithdrawalCommission = (amount) => {
-    const amt = Number(amount) || 0;
-    if (amt < 300) return 0;
-    if (amt <= 3000) return Math.round(amt * 0.0035 * 100) / 100;
-    if (amt <= 10000) return 12;
-    return 12;
+  const amt = Number(amount) || 0;
+  if (amt < 300) return 0;
+  if (amt <= 3000) return Math.round(amt * 0.0035 * 100) / 100;
+  if (amt <= 10000) return 12;
+  return 12;
 };
 
 /**
@@ -37,149 +37,162 @@ export const getAepsWithdrawalCommission = (amount) => {
  * Safe from double-spend since it checks balance atomically.
  */
 export const lockFundsForTransaction = async (userId, walletType, amount, transactionDetails) => {
-    const formattedAmount = formatAmount(amount); // Typically a negative number (e.g. -103)
-    
-    // Check if deduction is valid
-    let condition = { userId };
-    if (formattedAmount < 0) {
-        condition.balance = { $gte: Math.abs(formattedAmount) }; 
+  const formattedAmount = formatAmount(amount); // Typically a negative number (e.g. -103)
+
+  // Check if deduction is valid
+  let condition = { userId };
+  if (formattedAmount < 0) {
+    condition.balance = { $gte: Math.abs(formattedAmount) };
+  }
+
+  const WalletModel = walletType === 'MAIN' ? MainWallet : AepsWallet;
+
+  try {
+    // 1. Atomically deduct the balance
+    const updatedWallet = await WalletModel.findOneAndUpdate(
+      condition,
+      { $inc: { balance: formattedAmount } },
+      { returnDocument: 'after' } // No upsert on deduction
+    );
+
+    if (!updatedWallet) {
+      throw new Error(`Insufficient funds or wallet not found for ${walletType} wallet.`);
     }
 
-    const WalletModel = walletType === 'MAIN' ? MainWallet : AepsWallet;
-    
-    try {
-        // 1. Atomically deduct the balance
-        const updatedWallet = await WalletModel.findOneAndUpdate(
-            condition,
-            { $inc: { balance: formattedAmount } },
-            { returnDocument: 'after' } // No upsert on deduction
-        );
+    // 2. Create the Transaction Log as PROCESSING
+    const transactionLogs = await Transaction.create([
+      {
+        ...transactionDetails,
+        status: 'PROCESSING',
+      },
+    ]);
 
-        if (!updatedWallet) {
-            throw new Error(`Insufficient funds or wallet not found for ${walletType} wallet.`);
-        }
-
-        // 2. Create the Transaction Log as PROCESSING
-        const transactionLogs = await Transaction.create([{
-            ...transactionDetails,
-            status: 'PROCESSING'
-        }]);
-
-        return transactionLogs[0];
-    } catch (error) {
-        throw error;
-    }
+    return transactionLogs[0];
+  } catch (error) {
+    throw error;
+  }
 };
 
 /**
- * PHASE 2: RESOLVE 
+ * PHASE 2: RESOLVE
  * Resolves a PROCESSING transaction based on the API response.
  * If failed, it securely refunds the locked funds.
  */
-export const resolveTransaction = async (transactionId, finalStatus, apiMessage, walletType = 'MAIN') => {
-    try {
-        const txn = await Transaction.findOne({ transactionId });
-        if (!txn) throw new Error("Transaction not found for resolution.");
-        
-        // Prevent double-resolving
-        if (txn.status !== 'PROCESSING') {
-            return txn; // Already resolved
-        }
+export const resolveTransaction = async (
+  transactionId,
+  finalStatus,
+  apiMessage,
+  walletType = 'MAIN'
+) => {
+  try {
+    const txn = await Transaction.findOne({ transactionId });
+    if (!txn) throw new Error('Transaction not found for resolution.');
 
-        if (finalStatus === 'SUCCESS') {
-            // Funds are already deducted, just update status
-            txn.status = 'SUCCESS';
-            txn.metadata = { ...txn.metadata, apiMessage };
-            await txn.save();
-            return txn;
-        } else if (finalStatus === 'FAILED') {
-            // Must refund the deducted amount
-            const refundAmount = Math.abs(txn.amount); // Always positive
-
-            const WalletModel = walletType === 'MAIN' ? MainWallet : AepsWallet;
-            await WalletModel.findOneAndUpdate(
-                { userId: txn.userId },
-                { $inc: { balance: refundAmount } }
-            );
-
-            // Update transaction to FAILED (or REFUNDED)
-            txn.status = 'FAILED';
-            txn.metadata = { ...txn.metadata, apiMessage, refundStatus: 'COMPLETED' };
-            await txn.save();
-            return txn;
-        }
-    } catch (error) {
-        console.error("Error resolving transaction:", error);
-        throw error;
+    // Prevent double-resolving
+    if (txn.status !== 'PROCESSING') {
+      return txn; // Already resolved
     }
+
+    if (finalStatus === 'SUCCESS') {
+      // Funds are already deducted, just update status
+      txn.status = 'SUCCESS';
+      txn.metadata = { ...txn.metadata, apiMessage };
+      await txn.save();
+      return txn;
+    } else if (finalStatus === 'FAILED') {
+      // Must refund the deducted amount
+      const refundAmount = Math.abs(txn.amount); // Always positive
+
+      const WalletModel = walletType === 'MAIN' ? MainWallet : AepsWallet;
+      await WalletModel.findOneAndUpdate(
+        { userId: txn.userId },
+        { $inc: { balance: refundAmount } }
+      );
+
+      // Update transaction to FAILED (or REFUNDED)
+      txn.status = 'FAILED';
+      txn.metadata = { ...txn.metadata, apiMessage, refundStatus: 'COMPLETED' };
+      await txn.save();
+      return txn;
+    }
+  } catch (error) {
+    console.error('Error resolving transaction:', error);
+    throw error;
+  }
 };
 
 /**
  * Legacy update function (used for non-API dependent instant transactions)
  */
 export const updateWalletAtomically = async (userId, walletType, amount, transactionDetails) => {
-    const formattedAmount = formatAmount(amount);
-    
-    let condition = { userId };
-    if (formattedAmount < 0) {
-        condition.balance = { $gte: Math.abs(formattedAmount) };
+  const formattedAmount = formatAmount(amount);
+
+  let condition = { userId };
+  if (formattedAmount < 0) {
+    condition.balance = { $gte: Math.abs(formattedAmount) };
+  }
+
+  const WalletModel = walletType === 'MAIN' ? MainWallet : AepsWallet;
+
+  try {
+    const updatedWallet = await WalletModel.findOneAndUpdate(
+      condition,
+      { $inc: { balance: formattedAmount } },
+      { returnDocument: 'after', upsert: formattedAmount >= 0, setDefaultsOnInsert: true }
+    );
+
+    if (!updatedWallet) {
+      throw new Error(`Insufficient funds or wallet not found for ${walletType} wallet.`);
     }
 
-    const WalletModel = walletType === 'MAIN' ? MainWallet : AepsWallet;
-    
-    try {
-        const updatedWallet = await WalletModel.findOneAndUpdate(
-            condition,
-            { $inc: { balance: formattedAmount } },
-            { returnDocument: 'after', upsert: formattedAmount >= 0, setDefaultsOnInsert: true }
-        );
-
-        if (!updatedWallet) {
-            throw new Error(`Insufficient funds or wallet not found for ${walletType} wallet.`);
-        }
-
-        const transactionLogs = await Transaction.create([transactionDetails]);
-        return transactionLogs[0];
-    } catch (error) {
-        throw error;
-    }
+    const transactionLogs = await Transaction.create([transactionDetails]);
+    return transactionLogs[0];
+  } catch (error) {
+    throw error;
+  }
 };
 
 /**
  * Atomically transfers funds between two wallets
  */
-export const transferBetweenWallets = async (userId, fromWalletType, toWalletType, amount, transactionDetails) => {
-    const formattedAmount = formatAmount(Math.abs(amount));
-    
-    const FromWalletModel = fromWalletType === 'MAIN' ? MainWallet : AepsWallet;
-    const ToWalletModel = toWalletType === 'MAIN' ? MainWallet : AepsWallet;
+export const transferBetweenWallets = async (
+  userId,
+  fromWalletType,
+  toWalletType,
+  amount,
+  transactionDetails
+) => {
+  const formattedAmount = formatAmount(Math.abs(amount));
 
-    try {
-        const deductedWallet = await FromWalletModel.findOneAndUpdate(
-            { userId, balance: { $gte: formattedAmount } },
-            { $inc: { balance: -formattedAmount } },
-            { returnDocument: 'after' }
-        );
+  const FromWalletModel = fromWalletType === 'MAIN' ? MainWallet : AepsWallet;
+  const ToWalletModel = toWalletType === 'MAIN' ? MainWallet : AepsWallet;
 
-        if (!deductedWallet) {
-            throw new Error(`Insufficient funds in ${fromWalletType} wallet.`);
-        }
+  try {
+    const deductedWallet = await FromWalletModel.findOneAndUpdate(
+      { userId, balance: { $gte: formattedAmount } },
+      { $inc: { balance: -formattedAmount } },
+      { returnDocument: 'after' }
+    );
 
-        const creditedWallet = await ToWalletModel.findOneAndUpdate(
-            { userId },
-            { $inc: { balance: formattedAmount } },
-            { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true }
-        );
-
-        if (!creditedWallet) {
-            throw new Error(`Destination ${toWalletType} wallet not found.`);
-        }
-
-        const transactionLogs = await Transaction.create([transactionDetails]);
-        return transactionLogs[0];
-    } catch (error) {
-        throw error;
+    if (!deductedWallet) {
+      throw new Error(`Insufficient funds in ${fromWalletType} wallet.`);
     }
+
+    const creditedWallet = await ToWalletModel.findOneAndUpdate(
+      { userId },
+      { $inc: { balance: formattedAmount } },
+      { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true }
+    );
+
+    if (!creditedWallet) {
+      throw new Error(`Destination ${toWalletType} wallet not found.`);
+    }
+
+    const transactionLogs = await Transaction.create([transactionDetails]);
+    return transactionLogs[0];
+  } catch (error) {
+    throw error;
+  }
 };
 
 /**
@@ -193,37 +206,37 @@ export const transferBetweenWallets = async (userId, fromWalletType, toWalletTyp
  * later rather than finalized on an inconclusive answer.
  */
 export const queryAepsTransactionStatus = async (reference) => {
-    const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
-    const token = generatePaySprintToken();
-    const encryptedData = encryptPayload(JSON.stringify({ reference }));
+  const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+  const token = generatePaySprintToken();
+  const encryptedData = encryptPayload(JSON.stringify({ reference }));
 
-    const headers = {
-        'Token': token,
-        'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
-        'Content-Type': 'application/json'
-    };
+  const headers = {
+    Token: token,
+    Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
+    'Content-Type': 'application/json',
+  };
 
-    const response = await axios.post(
-        `${baseUrl}/service/aeps/aepsquery/query`,
-        { body: encryptedData },
-        { headers, validateStatus: () => true }
-    );
+  const response = await axios.post(
+    `${baseUrl}/service/aeps/aepsquery/query`,
+    { body: encryptedData },
+    { headers, validateStatus: () => true }
+  );
 
-    const data = response.data || {};
-    const txnstatus = String(data?.txnstatus ?? data?.data?.txnstatus ?? '').trim();
-    const responseCode = String(data?.response_code ?? data?.data?.response_code ?? '').trim();
-    const status = data?.status;
+  const data = response.data || {};
+  const txnstatus = String(data?.txnstatus ?? data?.data?.txnstatus ?? '').trim();
+  const responseCode = String(data?.response_code ?? data?.data?.response_code ?? '').trim();
+  const status = data?.status;
 
-    if (txnstatus === '1' || responseCode === '1') return { status: 'SUCCESS', data };
-    if (txnstatus === '3' || responseCode === '0') return { status: 'FAILED', data };
-    if (txnstatus === '2' || responseCode === '2') return { status: 'PROCESSING', data };
+  if (txnstatus === '1' || responseCode === '1') return { status: 'SUCCESS', data };
+  if (txnstatus === '3' || responseCode === '0') return { status: 'FAILED', data };
+  if (txnstatus === '2' || responseCode === '2') return { status: 'PROCESSING', data };
 
-    // Fallbacks when txnstatus is absent
-    if (status === true) return { status: 'SUCCESS', data };
-    if (status === false) return { status: 'FAILED', data };
+  // Fallbacks when txnstatus is absent
+  if (status === true) return { status: 'SUCCESS', data };
+  if (status === false) return { status: 'FAILED', data };
 
-    // Inconclusive (auth/validation errors, txn not found) — keep reconciling.
-    return { status: 'PROCESSING', data };
+  // Inconclusive (auth/validation errors, txn not found) — keep reconciling.
+  return { status: 'PROCESSING', data };
 };
 
 /**
@@ -236,32 +249,32 @@ export const queryAepsTransactionStatus = async (reference) => {
  *   FAILED  -> txnstatus 2 (and status true)
  */
 export const queryAepsDepositStatus = async (reference) => {
-    const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
-    const token = generatePaySprintToken();
-    const encryptedData = encryptPayload(JSON.stringify({ reference }));
+  const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+  const token = generatePaySprintToken();
+  const encryptedData = encryptPayload(JSON.stringify({ reference }));
 
-    const headers = {
-        'Token': token,
-        'Authorisedkey': process.env.PAYSPRINT_AUTHORISED_KEY,
-        'Content-Type': 'application/json'
-    };
+  const headers = {
+    Token: token,
+    Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
+    'Content-Type': 'application/json',
+  };
 
-    const response = await axios.post(
-        `${baseUrl}/service/cashdeposit/V3/Cashdeposit/query`,
-        { body: encryptedData },
-        { headers, validateStatus: () => true }
-    );
+  const response = await axios.post(
+    `${baseUrl}/service/cashdeposit/V3/Cashdeposit/query`,
+    { body: encryptedData },
+    { headers, validateStatus: () => true }
+  );
 
-    const data = response.data || {};
-    const txnstatus = String(data?.txnstatus ?? data?.data?.txnstatus ?? '').trim();
+  const data = response.data || {};
+  const txnstatus = String(data?.txnstatus ?? data?.data?.txnstatus ?? '').trim();
 
-    if (txnstatus === '1') return { status: 'SUCCESS', data };
-    if (txnstatus === '2') return { status: 'FAILED', data };
+  if (txnstatus === '1') return { status: 'SUCCESS', data };
+  if (txnstatus === '2') return { status: 'FAILED', data };
 
-    if (data?.status === true && data?.response_code === 1) return { status: 'SUCCESS', data };
-    if (data?.status === false && data?.response_code === 0) return { status: 'FAILED', data };
+  if (data?.status === true && data?.response_code === 1) return { status: 'SUCCESS', data };
+  if (data?.status === false && data?.response_code === 0) return { status: 'FAILED', data };
 
-    return { status: 'PROCESSING', data };
+  return { status: 'PROCESSING', data };
 };
 
 /**
@@ -272,99 +285,105 @@ export const queryAepsDepositStatus = async (reference) => {
  * Returns the finalized Transaction, or null if the transaction was already
  * resolved (someone else credited it first).
  */
-export const applyAepsWithdrawalSuccess = async ({ transactionId, userId, amount, paysprintRef, message }) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    try {
-        // Atomic claim — this is the idempotency guard.
-        const claimed = await Transaction.findOneAndUpdate(
-            { _id: transactionId, status: { $in: ['PENDING', 'PROCESSING'] } },
-            { $set: { status: 'SUCCESS' } },
-            { session, new: true }
-        );
-        if (!claimed) {
-            await session.commitTransaction();
-            session.endSession();
-            return null;
-        }
-
-        // Commission rates from GlobalSettings (defaults mirror the legacy path).
-        const settings = await GlobalSettings.findOne({}).session(session);
-        let distributorPct = 0;
-        let totalApiPct = 0.45;
-        if (settings && settings.aepsCommission) {
-            distributorPct = settings.aepsCommission.distributorPercentage || 0;
-            totalApiPct = settings.aepsCommission.totalApiPercentage || 0.45;
-        }
-
-        const numericAmount = Number(amount);
-        // AEPS cash withdrawal retailer commission is slab-based
-        // (₹300–₹3000 → 0.35%, ₹3001–₹10000 → flat ₹12, <₹300 → ₹0).
-        // Rule: the retailer's commission is credited to the AEPS wallet only
-        // AFTER deducting 18% GST (configurable via AEPS_COMMISSION_GST_RATE).
-        const retailerGross = getAepsWithdrawalCommission(numericAmount);
-        const commissionGstRate = Number(process.env.AEPS_COMMISSION_GST_RATE || 18) / 100;
-        const retailerGst = Math.round(retailerGross * commissionGstRate * 100) / 100;
-        const retailerCommission = Math.round((retailerGross - retailerGst) * 100) / 100;
-        const distributorCommission = numericAmount * (distributorPct / 100);
-        const totalCommission = numericAmount * (totalApiPct / 100);
-        const adminCommission = Math.max(0, totalCommission - retailerGross - distributorCommission);
-
-        const retailer = await Retailer.findById(userId).session(session);
-        const distId = retailer ? retailer.distributorId : null;
-
-        // Retailer AepsWallet (principal + retailer commission net of GST)
-        await AepsWallet.findOneAndUpdate(
-            { userId, userModel: 'Retailer' },
-            { $inc: { balance: numericAmount + retailerCommission } },
-            { upsert: true, session }
-        );
-
-        // Distributor AepsWallet
-        if (distId && distributorCommission > 0) {
-            await AepsWallet.findOneAndUpdate(
-                { userId: distId, userModel: 'Distributor' },
-                { $inc: { balance: distributorCommission } },
-                { upsert: true, session }
-            );
-        }
-
-        // AdminWallet
-        const admin = await Admin.findOne({}).session(session);
-        if (admin && adminCommission > 0) {
-            await AdminWallet.findOneAndUpdate(
-                { userId: admin._id },
-                { $inc: { balance: adminCommission } },
-                { upsert: true, session }
-            );
-        }
-
-        claimed.transactionId = paysprintRef || claimed.transactionId;
-        claimed.commissions = {
-            ...claimed.commissions,
-            // retailerEarned stores the GROSS commission; GST is tracked
-            // separately in retailerGst. The wallet itself is credited NET
-            // of GST (retailerCommission).
-            retailerEarned: retailerGross,
-            retailerGst: retailerGst,
-            retailerCommissionGross: retailerGross,
-            distributorEarned: distributorCommission,
-            adminEarned: adminCommission
-        };
-        if (paysprintRef) {
-            claimed.metadata = { ...claimed.metadata, paysprintRef };
-        }
-        if (message) {
-            claimed.metadata = { ...claimed.metadata, gatewayMessage: message };
-        }
-        await claimed.save({ session });
-
-        await session.commitTransaction();
-        session.endSession();
-        return claimed;
-    } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
-        throw error;
+export const applyAepsWithdrawalSuccess = async ({
+  transactionId,
+  userId,
+  amount,
+  paysprintRef,
+  message,
+}) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    // Atomic claim — this is the idempotency guard.
+    const claimed = await Transaction.findOneAndUpdate(
+      { _id: transactionId, status: { $in: ['PENDING', 'PROCESSING'] } },
+      { $set: { status: 'SUCCESS' } },
+      { session, new: true }
+    );
+    if (!claimed) {
+      await session.commitTransaction();
+      session.endSession();
+      return null;
     }
+
+    // Commission rates from GlobalSettings (defaults mirror the legacy path).
+    const settings = await GlobalSettings.findOne({}).session(session);
+    let distributorPct = 0;
+    let totalApiPct = 0.45;
+    if (settings && settings.aepsCommission) {
+      distributorPct = settings.aepsCommission.distributorPercentage || 0;
+      totalApiPct = settings.aepsCommission.totalApiPercentage || 0.45;
+    }
+
+    const numericAmount = Number(amount);
+    // AEPS cash withdrawal retailer commission is slab-based
+    // (₹300–₹3000 → 0.35%, ₹3001–₹10000 → flat ₹12, <₹300 → ₹0).
+    // Rule: the retailer's commission is credited to the AEPS wallet only
+    // AFTER deducting 18% GST (configurable via AEPS_COMMISSION_GST_RATE).
+    const retailerGross = getAepsWithdrawalCommission(numericAmount);
+    const commissionGstRate = Number(process.env.AEPS_COMMISSION_GST_RATE || 18) / 100;
+    const retailerGst = Math.round(retailerGross * commissionGstRate * 100) / 100;
+    const retailerCommission = Math.round((retailerGross - retailerGst) * 100) / 100;
+    const distributorCommission = numericAmount * (distributorPct / 100);
+    const totalCommission = numericAmount * (totalApiPct / 100);
+    const adminCommission = Math.max(0, totalCommission - retailerGross - distributorCommission);
+
+    const retailer = await Retailer.findById(userId).session(session);
+    const distId = retailer ? retailer.distributorId : null;
+
+    // Retailer AepsWallet (principal + retailer commission net of GST)
+    await AepsWallet.findOneAndUpdate(
+      { userId, userModel: 'Retailer' },
+      { $inc: { balance: numericAmount + retailerCommission } },
+      { upsert: true, session }
+    );
+
+    // Distributor AepsWallet
+    if (distId && distributorCommission > 0) {
+      await AepsWallet.findOneAndUpdate(
+        { userId: distId, userModel: 'Distributor' },
+        { $inc: { balance: distributorCommission } },
+        { upsert: true, session }
+      );
+    }
+
+    // AdminWallet
+    const admin = await Admin.findOne({}).session(session);
+    if (admin && adminCommission > 0) {
+      await AdminWallet.findOneAndUpdate(
+        { userId: admin._id },
+        { $inc: { balance: adminCommission } },
+        { upsert: true, session }
+      );
+    }
+
+    claimed.transactionId = paysprintRef || claimed.transactionId;
+    claimed.commissions = {
+      ...claimed.commissions,
+      // retailerEarned stores the GROSS commission; GST is tracked
+      // separately in retailerGst. The wallet itself is credited NET
+      // of GST (retailerCommission).
+      retailerEarned: retailerGross,
+      retailerGst: retailerGst,
+      retailerCommissionGross: retailerGross,
+      distributorEarned: distributorCommission,
+      adminEarned: adminCommission,
+    };
+    if (paysprintRef) {
+      claimed.metadata = { ...claimed.metadata, paysprintRef };
+    }
+    if (message) {
+      claimed.metadata = { ...claimed.metadata, gatewayMessage: message };
+    }
+    await claimed.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+    return claimed;
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
 };

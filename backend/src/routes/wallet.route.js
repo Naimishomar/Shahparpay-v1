@@ -1,5 +1,10 @@
 import express from 'express';
-import { getBalances, setPin, transferAepsToMain, getTransferHistory } from '../controllers/wallet.controller.js';
+import {
+  getBalances,
+  setPin,
+  transferAepsToMain,
+  getTransferHistory,
+} from '../controllers/wallet.controller.js';
 import { getWalletLedger } from '../controllers/walletLedger.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 

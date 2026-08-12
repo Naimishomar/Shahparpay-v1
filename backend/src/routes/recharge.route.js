@@ -1,5 +1,14 @@
 import express from 'express';
-import { getOperators, browsePlans, fetchDthInfo, doRecharge, getHistory, checkBalance, checkStatus, fetchBill } from '../controllers/recharge.controller.js';
+import {
+  getOperators,
+  browsePlans,
+  fetchDthInfo,
+  doRecharge,
+  getHistory,
+  checkBalance,
+  checkStatus,
+  fetchBill,
+} from '../controllers/recharge.controller.js';
 
 const router = express.Router();
 

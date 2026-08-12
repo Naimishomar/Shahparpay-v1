@@ -1,11 +1,11 @@
 import express from 'express';
 import {
-    applyPanService,
-    applyPanCoupon,
-    getPanServiceStatus,
-    getPanCouponStatus,
-    getEsevaPanHistory,
-    getMyEsevaPsaId
+  applyPanService,
+  applyPanCoupon,
+  getPanServiceStatus,
+  getPanCouponStatus,
+  getEsevaPanHistory,
+  getMyEsevaPsaId,
 } from '../controllers/panEseva.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 

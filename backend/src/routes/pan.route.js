@@ -1,5 +1,17 @@
 import express from 'express';
-import { getMyPsaStatus, registerBiometricPsa, buyPsaCoupons, setPsaId, syncPsaStatus, panCallback, getStdPsaStatus, registerStdPsa, updateStdPsa, purchaseStdCoupons, requestStdPsaPassword } from '../controllers/pan.controller.js';
+import {
+  getMyPsaStatus,
+  registerBiometricPsa,
+  buyPsaCoupons,
+  setPsaId,
+  syncPsaStatus,
+  panCallback,
+  getStdPsaStatus,
+  registerStdPsa,
+  updateStdPsa,
+  purchaseStdCoupons,
+  requestStdPsaPassword,
+} from '../controllers/pan.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();

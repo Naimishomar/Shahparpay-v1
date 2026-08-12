@@ -1,15 +1,15 @@
 import express from 'express';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
-import { 
-    queryRemitter, 
-    remitterEkyc,
-    registerRemitter, 
-    fetchBeneficiaries, 
-    addBeneficiary, 
-    deleteBeneficiary, 
-    initiateTransfer, 
-    getDmtHistory,
-    fetchBankList
+import {
+  queryRemitter,
+  remitterEkyc,
+  registerRemitter,
+  fetchBeneficiaries,
+  addBeneficiary,
+  deleteBeneficiary,
+  initiateTransfer,
+  getDmtHistory,
+  fetchBankList,
 } from '../controllers/dmt.controller.js';
 
 const router = express.Router();

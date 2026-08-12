@@ -6,61 +6,76 @@ import morgan from 'morgan';
 import { connectDB } from './config/db.js';
 
 const app = express();
-dotenv.config({quiet: true});
+dotenv.config({ quiet: true });
 const PORT = process.env.PORT || 5000;
 
-app.use(cors({
-    origin: function(origin, callback) {
-        // Allow frontend origins + eSevaTech server-to-server (no origin) calls
-        const allowedOrigins = ['http://localhost:5173', 'https://shahparpay-v1.vercel.app'];
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(null, true); // Allow all origins for server-to-server webhooks
-        }
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow frontend origins + eSevaTech server-to-server (no origin) calls
+      const allowedOrigins = ['http://localhost:5173', 'https://shahparpay-v1.vercel.app'];
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Allow all origins for server-to-server webhooks
+      }
     },
     credentials: true,
-}));
+  })
+);
 
 morgan.token('custom-date', () => {
-    const formatter = new Intl.DateTimeFormat('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-    });
-    return formatter.format(new Date()).replace(', ', ' - ').toUpperCase().replace(' PM', 'PM').replace(' AM', 'AM');
+  const formatter = new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+  return formatter
+    .format(new Date())
+    .replace(', ', ' - ')
+    .toUpperCase()
+    .replace(' PM', 'PM')
+    .replace(' AM', 'AM');
 });
 
-app.use(morgan(function (tokens, req, res) {
+app.use(
+  morgan(function (tokens, req, res) {
     const status = tokens.status(req, res);
-    const statusColor = status >= 500 ? 31 // red
-      : status >= 400 ? 33 // yellow
-      : status >= 300 ? 36 // cyan
-      : status >= 200 ? 32 // green
-      : 0; // no color
-      
+    const statusColor =
+      status >= 500
+        ? 31 // red
+        : status >= 400
+          ? 33 // yellow
+          : status >= 300
+            ? 36 // cyan
+            : status >= 200
+              ? 32 // green
+              : 0; // no color
+
     return [
-        `\x1b[90m[${tokens['custom-date'](req, res)}]\x1b[0m`, 
-        tokens.method(req, res),
-        tokens.url(req, res),
-        `\x1b[${statusColor}m${status}\x1b[0m`,
-        tokens['response-time'](req, res), 'ms',
-        '-',
-        tokens.res(req, res, 'content-length')
+      `\x1b[90m[${tokens['custom-date'](req, res)}]\x1b[0m`,
+      tokens.method(req, res),
+      tokens.url(req, res),
+      `\x1b[${statusColor}m${status}\x1b[0m`,
+      tokens['response-time'](req, res),
+      'ms',
+      '-',
+      tokens.res(req, res, 'content-length'),
     ].join(' ');
-}));
+  })
+);
 
 app.use(express.json());
-app.use(express.urlencoded({extended:false}));
+app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
-app.get('/', (req,res)=>{
-    return res.send("Shahparpay never goes down🚀");
-})
+app.get('/', (req, res) => {
+  return res.send('Shahparpay never goes down🚀');
+});
 
 import aepsRoutes from './routes/aeps.route.js';
 import rechargeRoutes from './routes/recharge.route.js';
@@ -102,16 +117,16 @@ app.use('/api/upi', upiRouter);
 app.all('/api/check-agent-wallet', checkAgentWallet);
 
 const startServer = async () => {
-    try {
-        await connectDB();
-        app.listen(PORT,()=>{
-            console.log(`Server is running on port ${PORT}✅`);
-            startReconciliationWorker();
-        });
-    } catch (error) {
-        console.log("Failed to connect to database",error.message);
-        process.exit(1);
-    }
-}
+  try {
+    await connectDB();
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}✅`);
+      startReconciliationWorker();
+    });
+  } catch (error) {
+    console.log('Failed to connect to database', error.message);
+    process.exit(1);
+  }
+};
 
 startServer();

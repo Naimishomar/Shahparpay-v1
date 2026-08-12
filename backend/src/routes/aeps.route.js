@@ -1,22 +1,22 @@
 import express from 'express';
-import { 
-    balanceEnquiry, 
-    getBankList, 
-    cashWithdrawal,
-    cashDeposit,
-    miniStatement,
-    cashWithdrawalTxnStatus,
-    sendMerchantOtp,
-    resendMerchantOtp,
-    verifyMerchantOtp,
-    dailyAuth,
-    getMerchantStatus,
-    aadhaarPay,
-    getPidOptions,
-    activateMerchant,
-    initiateAepsTxnOtp,
-    verifyAllPipes,
-    getPipeOnboardingPlan
+import {
+  balanceEnquiry,
+  getBankList,
+  cashWithdrawal,
+  cashDeposit,
+  miniStatement,
+  cashWithdrawalTxnStatus,
+  sendMerchantOtp,
+  resendMerchantOtp,
+  verifyMerchantOtp,
+  dailyAuth,
+  getMerchantStatus,
+  aadhaarPay,
+  getPidOptions,
+  activateMerchant,
+  initiateAepsTxnOtp,
+  verifyAllPipes,
+  getPipeOnboardingPlan,
 } from '../controllers/aepsPayment.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 

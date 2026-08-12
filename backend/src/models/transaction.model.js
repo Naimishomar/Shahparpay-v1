@@ -1,58 +1,80 @@
-import mongoose from "mongoose";
-import { broadcastTransaction } from "../utils/sse.js";
+import mongoose from 'mongoose';
+import { broadcastTransaction } from '../utils/sse.js';
 
-const transactionSchema = new mongoose.Schema({
+const transactionSchema = new mongoose.Schema(
+  {
     transactionId: {
-        type: String,
-        unique: true,
-        required: true
+      type: String,
+      unique: true,
+      required: true,
     }, // Bank Txn ID
-    userId: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'Retailer', 
-        required: true 
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Retailer',
+      required: true,
     }, // Retailer who did it
-    type: { 
-        type: String, 
-                enum: ['AEPS_WITHDRAWAL', 'BILL_PAYMENT', 'WALLET_TOPUP', 'RECHARGE', 'AEPSTOMAIN', 'AEPS_SETTLEMENT', 'DMT', 'DIRECT_PAYOUT', 'DIRECT_PAYOUT_REFUND', 'AEPS_DEPOSIT', 'AEPS_DEPOSIT_REFUND', 'PAN_CARD', 'ITR', 'GST_REGISTRATION', 'PAN_SERVICE', 'PAN_COUPON', 'DAILY_AUTH_CHARGE', 'UPI_CASHOUT'], 
-        required: true 
+    type: {
+      type: String,
+      enum: [
+        'AEPS_WITHDRAWAL',
+        'BILL_PAYMENT',
+        'WALLET_TOPUP',
+        'RECHARGE',
+        'AEPSTOMAIN',
+        'AEPS_SETTLEMENT',
+        'DMT',
+        'DIRECT_PAYOUT',
+        'DIRECT_PAYOUT_REFUND',
+        'AEPS_DEPOSIT',
+        'AEPS_DEPOSIT_REFUND',
+        'PAN_CARD',
+        'ITR',
+        'GST_REGISTRATION',
+        'PAN_SERVICE',
+        'PAN_COUPON',
+        'DAILY_AUTH_CHARGE',
+        'UPI_CASHOUT',
+      ],
+      required: true,
     },
-    amount: { 
-        type: Number, 
-        required: true 
+    amount: {
+      type: Number,
+      required: true,
     },
     commissions: {
-        chargeDeducted: { 
-            type: Number, 
-            default: 0 
-        },
-        retailerEarned: { 
-            type: Number, 
-            default: 0 
-        },
-        distributorEarned: { 
-            type: Number, 
-            default: 0 
-        },
-        adminEarned: {
-            type: Number,
-            default: 0
-        }
+      chargeDeducted: {
+        type: Number,
+        default: 0,
+      },
+      retailerEarned: {
+        type: Number,
+        default: 0,
+      },
+      distributorEarned: {
+        type: Number,
+        default: 0,
+      },
+      adminEarned: {
+        type: Number,
+        default: 0,
+      },
     },
-    status: { 
-        type: String, 
-        enum: ['PENDING', 'PROCESSING', 'SUCCESS', 'FAILED', 'REFUNDED', 'APPROVED', 'REJECTED'], 
-        default: 'PENDING' 
+    status: {
+      type: String,
+      enum: ['PENDING', 'PROCESSING', 'SUCCESS', 'FAILED', 'REFUNDED', 'APPROVED', 'REJECTED'],
+      default: 'PENDING',
     },
-    metadata: { 
-        type: mongoose.Schema.Types.Mixed 
-    } // Stores dynamic data like Aadhaar ending, Bill numbers
-}, { timestamps: true });
+    metadata: {
+      type: mongoose.Schema.Types.Mixed,
+    }, // Stores dynamic data like Aadhaar ending, Bill numbers
+  },
+  { timestamps: true }
+);
 
-transactionSchema.post('save', function(doc) {
-    // Fire and forget broadcast
-    broadcastTransaction(doc);
+transactionSchema.post('save', function (doc) {
+  // Fire and forget broadcast
+  broadcastTransaction(doc);
 });
 
-const Transaction = mongoose.model("Transaction", transactionSchema);
+const Transaction = mongoose.model('Transaction', transactionSchema);
 export default Transaction;

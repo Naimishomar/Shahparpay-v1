@@ -5,10 +5,10 @@ import { authMiddlewares } from '../middlewares/auth.middleware.js';
 const router = express.Router();
 
 const verifyRole = (role) => (req, res, next) => {
-    if (req.user && req.user.role === role) {
-        return next();
-    }
-    return res.status(403).json({ success: false, message: "Forbidden: Access denied" });
+  if (req.user && req.user.role === role) {
+    return next();
+  }
+  return res.status(403).json({ success: false, message: 'Forbidden: Access denied' });
 };
 
 router.get('/retailer', authMiddlewares, verifyRole('retailer'), getRetailerStats);

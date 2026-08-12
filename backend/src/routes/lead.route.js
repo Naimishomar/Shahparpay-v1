@@ -1,5 +1,10 @@
 import express from 'express';
-import { generateLead, checkStatus, getLeadHistory, leadCallback } from '../controllers/lead.controller.js';
+import {
+  generateLead,
+  checkStatus,
+  getLeadHistory,
+  leadCallback,
+} from '../controllers/lead.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
