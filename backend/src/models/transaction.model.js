@@ -50,6 +50,10 @@ const transactionSchema = new mongoose.Schema(
         type: Number,
         default: 0,
       },
+      retailerTds: {
+        type: Number,
+        default: 0,
+      },
       distributorEarned: {
         type: Number,
         default: 0,

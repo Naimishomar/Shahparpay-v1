@@ -60,6 +60,120 @@ export const decryptPayload = (encryptedString) => {
   return decrypted;
 };
 
+// PaySprint declines AEPS transactions whose lat/long falls outside the radius
+// of the merchant's registered base location (errorcode 1061, geo-fencing).
+export const isGeoFenceDecline = (data) => {
+  if (!data) return false;
+  const errorCode = String(data.errorcode || '');
+  const message = String(data.message || '').toLowerCase();
+  return errorCode === '1061' || message.includes('geo-fencing');
+};
+
+// Merchant Location Update API (Bank2/5/6). Re-maps the merchant's registered
+// base location so geo-fencing compares against the real shop coordinates.
+// NOTE: PaySprint allows a max of 3 location updates per merchant per calendar
+// year, so this must only be called when actually needed (geo-fence decline).
+export const updateMerchantLocation = async ({ merchantcode, mobile, lat, long, pipe }) => {
+  try {
+    const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+    const payload = {
+      merchantcode: String(merchantcode),
+      mobile: String(mobile),
+      lat: String(lat),
+      long: String(long),
+      accessmode: 'SITE',
+    };
+    if (pipe) payload.pipe = String(pipe);
+
+    const token = generatePaySprintToken();
+    const headers = {
+      Token: token,
+      Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
+      'Content-Type': 'application/json',
+    };
+
+    console.log('[Merchant Location Update] Request:', JSON.stringify(payload));
+
+    const response = await axios.post(
+      `${baseUrl}/service/onboard/onboard/update_location`,
+      payload,
+      { headers, validateStatus: () => true }
+    );
+
+    console.log('[Merchant Location Update] Response:', JSON.stringify(response.data, null, 2));
+
+    return response.data;
+  } catch (error) {
+    console.error('Merchant Location Update error:', error?.response?.data || error.message);
+    return null;
+  }
+};
+
+// Posts an encrypted AEPS body to PaySprint and transparently recovers from a
+// geo-fencing decline (errorcode 1061) by re-mapping the merchant's base
+// location to the transaction coordinates, then retrying the call ONCE.
+export const postAepsTransactionWithGeoRecovery = async ({
+  url,
+  payload,
+  merchantcode,
+  mobile,
+  pipe,
+  logLabel = 'AEPS Transaction',
+  hideData = false,
+}) => {
+  const attempt = async () => {
+    const token = generatePaySprintToken();
+    const encryptedData = encryptPayload(JSON.stringify(payload));
+    const headers = {
+      Token: token,
+      Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
+      'Content-Type': 'application/json',
+    };
+
+    const loggedPayload = hideData ? { ...payload, data: 'HIDDEN_PID_DATA' } : payload;
+    console.log(`[${logLabel} Request] Payload:`, JSON.stringify(loggedPayload, null, 2));
+
+    const response = await axios.post(
+      url,
+      { body: encryptedData },
+      { headers, validateStatus: () => true }
+    );
+
+    console.log(`[${logLabel} Response]`, JSON.stringify(response.data, null, 2));
+    return response.data;
+  };
+
+  let data = await attempt();
+
+  if (isGeoFenceDecline(data)) {
+    console.log(
+      `[${logLabel}] Geo-fencing decline detected (errorcode 1061). Re-mapping merchant base location...`
+    );
+    const updated = await updateMerchantLocation({
+      merchantcode,
+      mobile,
+      lat: payload.latitude,
+      long: payload.longitude,
+      pipe,
+    });
+
+    if (
+      updated &&
+      (updated.status || updated.response_code === 1 || updated.response_code === '1')
+    ) {
+      console.log(`[${logLabel}] Merchant base location re-mapped. Retrying transaction once...`);
+      data = await attempt();
+    } else {
+      console.error(
+        `[${logLabel}] Merchant base location update failed:`,
+        JSON.stringify(updated || 'no response')
+      );
+    }
+  }
+
+  return data;
+};
+
 export const onboardMerchant = async (merchantData) => {
   try {
     const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://sit.paysprint.in/service-api/api/v1';

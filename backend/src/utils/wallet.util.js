@@ -320,11 +320,12 @@ export const applyAepsWithdrawalSuccess = async ({
     // AEPS cash withdrawal retailer commission is slab-based
     // (₹300–₹3000 → 0.35%, ₹3001–₹10000 → flat ₹12, <₹300 → ₹0).
     // Rule: the retailer's commission is credited to the AEPS wallet only
-    // AFTER deducting 18% GST (configurable via AEPS_COMMISSION_GST_RATE).
+    // AFTER deducting 2% TDS (configurable via AEPS_COMMISSION_TDS_RATE).
+    // GST is no longer charged on commission.
     const retailerGross = getAepsWithdrawalCommission(numericAmount);
-    const commissionGstRate = Number(process.env.AEPS_COMMISSION_GST_RATE || 18) / 100;
-    const retailerGst = Math.round(retailerGross * commissionGstRate * 100) / 100;
-    const retailerCommission = Math.round((retailerGross - retailerGst) * 100) / 100;
+    const commissionTdsRate = Number(process.env.AEPS_COMMISSION_TDS_RATE || 2) / 100;
+    const retailerTds = Math.round(retailerGross * commissionTdsRate * 100) / 100;
+    const retailerCommission = Math.round((retailerGross - retailerTds) * 100) / 100;
     const distributorCommission = numericAmount * (distributorPct / 100);
     const totalCommission = numericAmount * (totalApiPct / 100);
     const adminCommission = Math.max(0, totalCommission - retailerGross - distributorCommission);
@@ -332,7 +333,7 @@ export const applyAepsWithdrawalSuccess = async ({
     const retailer = await Retailer.findById(userId).session(session);
     const distId = retailer ? retailer.distributorId : null;
 
-    // Retailer AepsWallet (principal + retailer commission net of GST)
+    // Retailer AepsWallet (principal + retailer commission net of TDS)
     await AepsWallet.findOneAndUpdate(
       { userId, userModel: 'Retailer' },
       { $inc: { balance: numericAmount + retailerCommission } },
@@ -361,11 +362,11 @@ export const applyAepsWithdrawalSuccess = async ({
     claimed.transactionId = paysprintRef || claimed.transactionId;
     claimed.commissions = {
       ...claimed.commissions,
-      // retailerEarned stores the GROSS commission; GST is tracked
-      // separately in retailerGst. The wallet itself is credited NET
-      // of GST (retailerCommission).
+      // retailerEarned stores the GROSS commission; TDS is tracked
+      // separately in retailerTds. The wallet itself is credited NET
+      // of TDS (retailerCommission).
       retailerEarned: retailerGross,
-      retailerGst: retailerGst,
+      retailerTds: retailerTds,
       retailerCommissionGross: retailerGross,
       distributorEarned: distributorCommission,
       adminEarned: adminCommission,

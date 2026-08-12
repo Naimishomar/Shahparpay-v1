@@ -165,8 +165,12 @@ export const applyPanService = async (req, res) => {
       });
     }
 
-    const finalAmount =
-      Number(result.final_amount) > 0 ? Number(result.final_amount) : PAN_APPLICATION_FEE;
+    // Fixed ₹107 charge is always debited from the Main Wallet on a successful
+    // application — regardless of what the provider reports as final_amount.
+    // The provider's figures are preserved in metadata for reference.
+    const finalAmount = PAN_APPLICATION_FEE;
+    const providerFinalAmount =
+      Number(result.final_amount) > 0 ? Number(result.final_amount) : null;
     const netCommission = Number(result.net_commission);
     const applicationNumber = result.application_number;
 
@@ -190,6 +194,7 @@ export const applyPanService = async (req, res) => {
         admin_fee: result.admin_fee,
         gst_amount: result.gst_amount,
         final_amount: finalAmount,
+        provider_final_amount: providerFinalAmount,
         commission_amount: result.commission_amount,
         tds_amount: result.tds_amount,
         net_commission: netCommission,
@@ -300,10 +305,12 @@ export const applyPanCoupon = async (req, res) => {
       });
     }
 
-    const finalAmount =
-      Number(result.final_amount) > 0
-        ? Number(result.final_amount)
-        : PAN_APPLICATION_FEE * Number(number_of_coupons);
+    // Fixed ₹107 per coupon is always debited from the Main Wallet on a
+    // successful purchase — regardless of what the provider reports as
+    // final_amount. The provider's figures are preserved in metadata.
+    const finalAmount = PAN_APPLICATION_FEE * Number(number_of_coupons);
+    const providerFinalAmount =
+      Number(result.final_amount) > 0 ? Number(result.final_amount) : null;
     const netCommission = Number(result.net_commission);
     const applicationNumber = result.application_number;
 
@@ -324,6 +331,7 @@ export const applyPanCoupon = async (req, res) => {
         admin_fee: result.admin_fee,
         gst_amount: result.gst_amount,
         final_amount: finalAmount,
+        provider_final_amount: providerFinalAmount,
         commission_amount: result.commission_amount,
         tds_amount: result.tds_amount,
         net_commission: netCommission,

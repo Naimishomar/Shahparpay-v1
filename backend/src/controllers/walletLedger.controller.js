@@ -128,27 +128,28 @@ const getAepsWithdrawalCommission = (amount) => {
 };
 
 /**
- * Splits a transaction's retailer commission into gross, GST (18%) and the net
+ * Splits a transaction's retailer commission into gross, TDS (2%) and the net
  * actually credited to the wallet. The wallet is credited with the commission
  * that was ACTUALLY paid at the time of the transaction, which is the value
- * stored under `commissions.retailerEarned` (gross; GST tracked separately) —
+ * stored under `commissions.retailerEarned` (gross; TDS tracked separately) —
  * NOT a slab recomputation from the amount. Historical rows predating
  * commission tracking store 0 even for large amounts (the wallet received no
  * commission then), so recomputing from the slab would over-credit AEPS.
+ * GST is no longer deducted from commission — only 2% TDS.
  */
 const getCommissionSplit = (tx) => {
   const stored = toNumber(tx.commissions?.retailerEarned);
   const gross = round2(stored);
-  const gst = round2(gross * 0.18);
-  const net = round2(gross - gst);
-  return { gross, gst, net };
+  const tds = round2(gross * 0.02);
+  const net = round2(gross - tds);
+  return { gross, tds, net };
 };
 
 /**
  * Net effect of a transaction on EACH wallet independently.
  * `main` = change to the Main wallet, `aeps` = change to the AEPS wallet.
  * Positive = money in, negative = money out. AEPSTOMAIN moves AEPS → Main.
- * Commission is credited NET of 18% GST.
+ * Commission is credited NET of 2% TDS.
  */
 const getWalletDeltas = (tx) => {
   const amount = toNumber(tx.amount);
@@ -199,7 +200,7 @@ const getWalletDeltas = (tx) => {
   }
 
   // Debit types: money leaves the Main wallet, retailer commission (if any)
-  // is credited back net of GST.
+  // is credited back net of TDS.
   return { main: round2(-amount + net), aeps: 0 };
 };
 
@@ -293,17 +294,18 @@ export const getWalletLedger = async (req, res) => {
       const closingAeps = round2(currentAeps - (totalAeps - cum[i].aeps));
       const openingAeps = round2(closingAeps - delta.aeps);
 
-      const { gross, gst, net } = getCommissionSplit(tx);
+      const { gross, tds, net } = getCommissionSplit(tx);
       const isDailyAuth = tx.type === 'DAILY_AUTH_CHARGE';
       const isRefundRow = isRefundTxnId(tx.transactionId);
       // Commission is never shown on refund rows (refunds credit the amount only).
       const hasCommission = gross > 0 && tx.type === 'AEPS_WITHDRAWAL' && !isRefundRow;
 
-      // TDS is charged ONLY for the daily 2FA auth — never on
-      // commission-paying transactions. It equals the auth charge amount.
-      const tds = isDailyAuth ? round2(toNumber(tx.amount)) : 0;
-      // GST is charged on AEPS-withdrawal commission (18% of gross).
-      const gstShown = hasCommission ? gst : 0;
+      // TDS (2%) is deducted ONLY from commission-paying transactions, never
+      // from the principal. The daily 2FA auth keeps its own historical TDS
+      // (equal to the auth charge amount).
+      const tdsShown = hasCommission ? tds : isDailyAuth ? round2(toNumber(tx.amount)) : 0;
+      // GST is no longer charged on commission — always zero.
+      const gstShown = 0;
 
       const type =
         delta.main + delta.aeps > 0 ? 'credit' : delta.main + delta.aeps < 0 ? 'debit' : 'transfer';
@@ -319,7 +321,7 @@ export const getWalletLedger = async (req, res) => {
         OPENING: openingMain,
         AMOUNT: round2(toNumber(tx.amount)),
         COMMISSION: hasCommission ? gross : 0,
-        TDS: tds,
+        TDS: tdsShown,
         GST: gstShown,
         CLOSING: closingMain,
         AEPS_OPENING: openingAeps,

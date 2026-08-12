@@ -4,6 +4,7 @@ import {
   generatePaySprintToken,
   encryptPayload,
   getOnboardStatusEndpoint,
+  postAepsTransactionWithGeoRecovery,
 } from '../utils/paysprint.util.js';
 import Retailer from '../models/users/retailer.model.js';
 import Distributor from '../models/users/distributor.model.js';
@@ -206,40 +207,32 @@ export const balanceEnquiry = async (req, res) => {
       pipe: pipe || (await getVerifiedPipe(retailer.retailerId, retailer.contactNumber)),
     };
 
-    const token = generatePaySprintToken();
-    const encryptedData = encryptPayload(JSON.stringify(payload));
+    // Geo-fencing: if the transaction coordinates fall outside the radius of the
+    // merchant's registered base location, PaySprint declines with errorcode
+    // 1061. The helper below transparently re-maps the base location via the
+    // Merchant Location Update API and retries the enquiry once.
+    const responseData = await postAepsTransactionWithGeoRecovery({
+      url: `${baseUrl}/service/aeps/balanceenquiry/index`,
+      payload,
+      merchantcode: retailer.retailerId,
+      mobile: retailer.contactNumber,
+      pipe: payload.pipe,
+      logLabel: 'Balance Enquiry',
+      hideData: true,
+    });
 
-    const headers = {
-      Token: token,
-      Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-      'Content-Type': 'application/json',
-    };
-
-    console.log(
-      `[Balance Enquiry Request] Payload:`,
-      JSON.stringify({ ...payload, data: 'HIDDEN_PID_DATA' }, null, 2)
-    );
-
-    const response = await axios.post(
-      `${baseUrl}/service/aeps/balanceenquiry/index`,
-      { body: encryptedData },
-      { headers, validateStatus: () => true }
-    );
-
-    console.log(`[Balance Enquiry Response]`, JSON.stringify(response.data, null, 2));
-
-    if (response.data && response.data.status) {
+    if (responseData && responseData.status) {
       return res.status(200).json({
         success: true,
         message: 'Balance fetched successfully',
-        data: response.data,
+        data: responseData,
       });
     } else {
-      console.error('AEPS Balance Enquiry API Error:', JSON.stringify(response.data, null, 2));
+      console.error('AEPS Balance Enquiry API Error:', JSON.stringify(responseData, null, 2));
       return res.status(400).json({
         success: false,
-        message: response.data?.message || 'Failed to fetch balance',
-        data: response.data,
+        message: responseData?.message || 'Failed to fetch balance',
+        data: responseData,
       });
     }
   } catch (error) {
@@ -420,33 +413,26 @@ export const initiateAepsTxnOtp = async (req, res) => {
       amount: Number(amount),
     };
 
-    const token = generatePaySprintToken();
-    const encryptedData = encryptPayload(JSON.stringify(payload));
+    // Auto-recover from geo-fencing decline (errorcode 1061) by re-mapping the
+    // merchant's base location and retrying once.
+    const responseData = await postAepsTransactionWithGeoRecovery({
+      url: `${baseUrl}/service/aeps/txnotp/index`,
+      payload,
+      merchantcode: retailer.retailerId,
+      mobile: retailer.contactNumber,
+      pipe: payload.pipe,
+      logLabel: 'AePS Transaction OTP',
+      hideData: true,
+    });
 
-    const headers = {
-      Token: token,
-      Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-      'Content-Type': 'application/json',
-    };
-
-    console.log(`[AePS Transaction OTP Request] Payload:`, JSON.stringify(payload, null, 2));
-
-    const response = await axios.post(
-      `${baseUrl}/service/aeps/txnotp/index`,
-      { body: encryptedData },
-      { headers, validateStatus: () => true }
-    );
-
-    console.log(`[AePS Transaction OTP Response]`, JSON.stringify(response.data, null, 2));
-
-    const otpRefId = response.data?.otp_refid || response.data?.data?.otp_refid;
+    const otpRefId = responseData?.otp_refid || responseData?.data?.otp_refid;
 
     // PaySprint may report success via `status: true` or `response_code: 1`
     const isOtpSuccess =
-      response.data &&
-      (response.data.status === true ||
-        response.data.response_code === 1 ||
-        response.data.response_code === '1');
+      responseData &&
+      (responseData.status === true ||
+        responseData.response_code === 1 ||
+        responseData.response_code === '1');
 
     if (isOtpSuccess && otpRefId) {
       newTxn.metadata = { ...newTxn.metadata, otpRefId, otpInitiatedAt: new Date().toISOString() };
@@ -454,7 +440,7 @@ export const initiateAepsTxnOtp = async (req, res) => {
 
       return res.status(200).json({
         success: true,
-        message: response.data.message || 'OTP sent successfully',
+        message: responseData.message || 'OTP sent successfully',
         data: {
           otpRefId,
           referenceNo,
@@ -468,8 +454,8 @@ export const initiateAepsTxnOtp = async (req, res) => {
 
     return res.status(400).json({
       success: false,
-      message: response.data?.message || 'Failed to initiate AEPS transaction OTP',
-      data: response.data,
+      message: responseData?.message || 'Failed to initiate AEPS transaction OTP',
+      data: responseData,
     });
   } catch (error) {
     console.error('AEPS Transaction OTP Error:', error?.response?.data || error.message);
@@ -589,29 +575,19 @@ export const cashWithdrawal = async (req, res) => {
       pipe: pipe || (await getVerifiedPipe(retailer.retailerId, retailer.contactNumber)),
     };
 
-    const token = generatePaySprintToken();
-    const encryptedData = encryptPayload(JSON.stringify(payload));
+    // Auto-recover from geo-fencing decline (errorcode 1061) by re-mapping the
+    // merchant's base location and retrying once.
+    const rawResponseData = await postAepsTransactionWithGeoRecovery({
+      url: `${baseUrl}/service/aeps/authcashwithdraw/index`,
+      payload,
+      merchantcode: retailer.retailerId,
+      mobile: retailer.contactNumber,
+      pipe: payload.pipe,
+      logLabel: 'Cash Withdrawal',
+      hideData: true,
+    });
 
-    const headers = {
-      Token: token,
-      Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-      'Content-Type': 'application/json',
-    };
-
-    console.log(
-      `[Cash Withdrawal Request] Payload:`,
-      JSON.stringify({ ...payload, data: 'HIDDEN_PID_DATA' }, null, 2)
-    );
-
-    const response = await axios.post(
-      `${baseUrl}/service/aeps/authcashwithdraw/index`,
-      { body: encryptedData },
-      { headers, validateStatus: () => true }
-    );
-
-    console.log(`[Cash Withdrawal Response]`, JSON.stringify(response.data, null, 2));
-
-    const responseData = response.data || {};
+    const responseData = rawResponseData || {};
     const gatewayOk =
       responseData.status === true ||
       responseData.response_code === 1 ||
@@ -832,30 +808,20 @@ export const aadhaarPay = async (req, res) => {
       pipe: pipe || (await getVerifiedPipe(retailer.retailerId, retailer.contactNumber)),
     };
 
-    const token = generatePaySprintToken();
-    const encryptedData = encryptPayload(JSON.stringify(payload));
+    // Auto-recover from geo-fencing decline (errorcode 1061) by re-mapping the
+    // merchant's base location and retrying once.
+    const responseData = await postAepsTransactionWithGeoRecovery({
+      url: `${baseUrl}/service/aadharpay/aadharpay/index`,
+      payload,
+      merchantcode: retailer.retailerId,
+      mobile: retailer.contactNumber,
+      pipe: payload.pipe,
+      logLabel: 'Aadhaar Pay',
+      hideData: true,
+    });
 
-    const headers = {
-      Token: token,
-      Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-      'Content-Type': 'application/json',
-    };
-
-    console.log(
-      `[Aadhaar Pay Request] Payload:`,
-      JSON.stringify({ ...payload, data: 'HIDDEN_PID_DATA' }, null, 2)
-    );
-
-    const response = await axios.post(
-      `${baseUrl}/service/aadharpay/aadharpay/index`,
-      { body: encryptedData },
-      { headers, validateStatus: () => true }
-    );
-
-    console.log(`[Aadhaar Pay Response]`, JSON.stringify(response.data, null, 2));
-
-    let txnStatus = response.data && response.data.status ? 'SUCCESS' : 'FAILED';
-    let paysprintRef = response.data?.data?.ackno || response.data?.data?.rrn || null;
+    let txnStatus = responseData && responseData.status ? 'SUCCESS' : 'FAILED';
+    let paysprintRef = responseData?.data?.ackno || responseData?.data?.rrn || null;
 
     // 3. Atomically update Wallet & Transaction if SUCCESS
     if (txnStatus === 'SUCCESS') {
@@ -888,14 +854,14 @@ export const aadhaarPay = async (req, res) => {
       return res.status(200).json({
         success: true,
         message: 'Aadhaar Pay successful',
-        data: response.data,
+        data: responseData,
       });
     } else {
       // Update Transaction to FAILED (No session needed as wallet is unaffected)
       newTxn.status = 'FAILED';
       newTxn.metadata = {
         ...newTxn.metadata,
-        gatewayMessage: response.data?.message || 'Aadhaar Pay failed',
+        gatewayMessage: responseData?.message || 'Aadhaar Pay failed',
       };
       if (paysprintRef) {
         newTxn.metadata = { ...newTxn.metadata, paysprintRef };
@@ -904,8 +870,8 @@ export const aadhaarPay = async (req, res) => {
 
       return res.status(400).json({
         success: false,
-        message: response.data?.message || 'Aadhaar Pay failed',
-        data: response.data,
+        message: responseData?.message || 'Aadhaar Pay failed',
+        data: responseData,
       });
     }
   } catch (error) {
@@ -953,25 +919,22 @@ export const miniStatement = async (req, res) => {
       pipe: pipe || (await getVerifiedPipe(retailer.retailerId, retailer.contactNumber)),
     };
 
-    const token = generatePaySprintToken();
-    const encryptedData = encryptPayload(JSON.stringify(payload));
+    // Auto-recover from geo-fencing decline (errorcode 1061) by re-mapping the
+    // merchant's base location and retrying once.
+    const responseData = await postAepsTransactionWithGeoRecovery({
+      url: `${baseUrl}/service/aeps/ministatement/index`,
+      payload,
+      merchantcode: retailer.retailerId,
+      mobile: retailer.contactNumber,
+      pipe: payload.pipe,
+      logLabel: 'Mini Statement',
+      hideData: true,
+    });
 
-    const headers = {
-      Token: token,
-      Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-      'Content-Type': 'application/json',
-    };
-
-    const response = await axios.post(
-      `${baseUrl}/service/aeps/ministatement/index`,
-      { body: encryptedData },
-      { headers, validateStatus: () => true }
-    );
-
-    if (response.data && response.data.status) {
+    if (responseData && responseData.status) {
       // Normalize mini statement entries - PaySprint returns inconsistent field names
       // across pipes. Some return narration in 'date' field and date in 'narration'.
-      let ministatement = response.data.ministatement || response.data.data?.ministatement || [];
+      let ministatement = responseData.ministatement || responseData.data?.ministatement || [];
       if (Array.isArray(ministatement)) {
         ministatement = ministatement.map((entry) => {
           let dateVal = entry.date || entry.txnDate || '';
@@ -997,18 +960,18 @@ export const miniStatement = async (req, res) => {
           return { date: dateVal, narration, txnType, amount };
         });
       }
-      response.data.ministatement = ministatement;
+      responseData.ministatement = ministatement;
 
       return res.status(200).json({
         success: true,
         message: 'Mini Statement fetched',
-        data: response.data,
+        data: responseData,
       });
     } else {
       return res.status(400).json({
         success: false,
-        message: response.data?.message || 'Failed to fetch mini statement',
-        data: response.data,
+        message: responseData?.message || 'Failed to fetch mini statement',
+        data: responseData,
       });
     }
   } catch (error) {
