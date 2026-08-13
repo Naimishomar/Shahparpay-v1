@@ -301,11 +301,10 @@ export const getWalletLedger = async (req, res) => {
       const hasCommission = gross > 0 && tx.type === 'AEPS_WITHDRAWAL' && !isRefundRow;
 
       // TDS (2%) is deducted ONLY from commission-paying transactions, never
-      // from the principal. The daily 2FA auth keeps its own historical TDS
-      // (equal to the auth charge amount).
-      const tdsShown = hasCommission ? tds : isDailyAuth ? round2(toNumber(tx.amount)) : 0;
-      // GST is no longer charged on commission — always zero.
-      const gstShown = 0;
+      // from the principal. The daily 2FA auth charge is shown under GST (₹1).
+      const tdsShown = hasCommission ? tds : 0;
+      // Daily 2FA auth charge of ₹1 is shown as GST; commission GST is zero.
+      const gstShown = isDailyAuth ? round2(toNumber(tx.amount)) : 0;
 
       const type =
         delta.main + delta.aeps > 0 ? 'credit' : delta.main + delta.aeps < 0 ? 'debit' : 'transfer';
