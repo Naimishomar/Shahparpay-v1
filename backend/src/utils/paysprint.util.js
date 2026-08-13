@@ -121,16 +121,17 @@ export const postAepsTransactionWithGeoRecovery = async ({
   logLabel = 'AEPS Transaction',
   hideData = false,
 }) => {
-  const attempt = async () => {
+  const attempt = async (retryPayload) => {
+    const activePayload = retryPayload || payload;
     const token = generatePaySprintToken();
-    const encryptedData = encryptPayload(JSON.stringify(payload));
+    const encryptedData = encryptPayload(JSON.stringify(activePayload));
     const headers = {
       Token: token,
       Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
       'Content-Type': 'application/json',
     };
 
-    const loggedPayload = hideData ? { ...payload, data: 'HIDDEN_PID_DATA' } : payload;
+    const loggedPayload = hideData ? { ...activePayload, data: 'HIDDEN_PID_DATA' } : activePayload;
     console.log(`[${logLabel} Request] Payload:`, JSON.stringify(loggedPayload, null, 2));
 
     const response = await axios.post(
@@ -162,7 +163,14 @@ export const postAepsTransactionWithGeoRecovery = async ({
       (updated.status || updated.response_code === 1 || updated.response_code === '1')
     ) {
       console.log(`[${logLabel}] Merchant base location re-mapped. Retrying transaction once...`);
-      data = await attempt();
+      // Generate a new unique reference number for the retry, since the original
+      // one was already submitted to the provider (even if it failed due to geo-fence).
+      const retryPayload = {
+        ...payload,
+        referenceno: `REF${Date.now()}`,
+        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      };
+      data = await attempt(retryPayload);
     } else {
       console.error(
         `[${logLabel}] Merchant base location update failed:`,
