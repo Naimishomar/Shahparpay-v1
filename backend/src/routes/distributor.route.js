@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getDashboardStats,
   getRetailers,
+  updateRetailer,
   getProfile,
   updateProfile,
 } from '../controllers/distributor.controller.js';
@@ -15,6 +16,16 @@ router.get('/stats', authMiddlewares, getDashboardStats);
 
 // Retailers
 router.get('/retailers', authMiddlewares, getRetailers);
+router.put(
+  '/retailers/:id',
+  authMiddlewares,
+  upload.fields([
+    { name: 'profilePicture', maxCount: 1 },
+    { name: 'aadhaarPicture', maxCount: 1 },
+    { name: 'panPicture', maxCount: 1 },
+  ]),
+  updateRetailer
+);
 
 // Profile
 router.get('/profile', authMiddlewares, getProfile);

@@ -69,6 +69,138 @@ export const getRetailers = async (req, res) => {
   }
 };
 
+// Update a retailer's details (only retailers belonging to this distributor)
+export const updateRetailer = async (req, res) => {
+  try {
+    if (req.user.role !== 'distributor')
+      return res.status(403).json({ success: false, message: 'Unauthorized access' });
+
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ success: false, message: 'Retailer ID is required' });
+
+    const retailer = await Retailer.findOne({ _id: id, distributorId: req.user.id });
+    if (!retailer)
+      return res.status(404).json({ success: false, message: 'Retailer not found' });
+
+    const {
+      prefix,
+      firstName,
+      lastName,
+      dob,
+      email,
+      contactNumber,
+      password,
+      address,
+      businessName,
+      businessAddress,
+      aadhaarNumber,
+      panNumber,
+      hasGst,
+      gstNumber,
+      dmtPackage,
+      rechargePackage,
+      aepsPackage,
+      bbpsPackage,
+      payoutPackage,
+      cmsPackage,
+      ccpayPackage,
+      payinPackage,
+      upiPackage,
+      website,
+      brandName,
+      companyRegisterName,
+      supportEmail,
+      supportMobile,
+      isExistingMerchant,
+      isActive,
+    } = req.body;
+
+    const updateData = {};
+    if (firstName) updateData.firstName = firstName;
+    if (lastName) updateData.lastName = lastName;
+    if (firstName || lastName)
+      updateData.name = `${updateData.firstName || retailer.firstName} ${
+        updateData.lastName || retailer.lastName
+      }`.trim();
+    if (prefix) updateData.prefix = prefix;
+    if (dob) updateData.dob = dob;
+    if (email) updateData.email = email;
+    if (contactNumber) updateData.contactNumber = contactNumber;
+    if (password) updateData.password = password;
+    if (businessName) updateData.businessName = businessName;
+    if (businessAddress) updateData.businessAddress = businessAddress;
+    if (address)
+      updateData.address = typeof address === 'string' ? JSON.parse(address) : address;
+    if (aadhaarNumber) updateData.aadhaarNumber = aadhaarNumber;
+    if (panNumber) updateData.panNumber = panNumber;
+    if (hasGst !== undefined) updateData.hasGst = hasGst === 'true' || hasGst === true;
+    if (gstNumber) updateData.gstNumber = gstNumber;
+
+    const packages = {
+      dmtPackage,
+      rechargePackage,
+      aepsPackage,
+      bbpsPackage,
+      payoutPackage,
+      cmsPackage,
+      ccpayPackage,
+      payinPackage,
+      upiPackage,
+    };
+    Object.entries(packages).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) updateData[key] = value;
+    });
+
+    if (website) updateData.website = website;
+    if (brandName) updateData.brandName = brandName;
+    if (companyRegisterName) updateData.companyRegisterName = companyRegisterName;
+    if (supportEmail) updateData.supportEmail = supportEmail;
+    if (supportMobile) updateData.supportMobile = supportMobile;
+    if (isExistingMerchant !== undefined)
+      updateData.isExistingMerchant = isExistingMerchant === 'true' || isExistingMerchant === true;
+    if (isActive !== undefined) updateData.isActive = isActive === 'true' || isActive === true;
+
+    // Image uploads
+    const profilePictureLocalPath = req.files?.profilePicture?.[0]?.path;
+    const aadhaarPictureLocalPath = req.files?.aadhaarPicture?.[0]?.path;
+    const panPictureLocalPath = req.files?.panPicture?.[0]?.path;
+
+    if (profilePictureLocalPath) {
+      const profilePic = await uploadOnR2(profilePictureLocalPath);
+      if (profilePic?.url) updateData.profilePicture = profilePic.url;
+    }
+    if (aadhaarPictureLocalPath) {
+      const aadhaarPic = await uploadOnR2(aadhaarPictureLocalPath);
+      if (aadhaarPic?.url) updateData.aadhaarPicture = aadhaarPic.url;
+    }
+    if (panPictureLocalPath) {
+      const panPic = await uploadOnR2(panPictureLocalPath);
+      if (panPic?.url) updateData.panPicture = panPic.url;
+    }
+
+    Object.assign(retailer, updateData);
+    await retailer.save();
+
+    const retailerObj = retailer.toObject();
+    delete retailerObj.password;
+
+    return res.status(200).json({
+      success: true,
+      message: 'Retailer updated successfully',
+      data: retailerObj,
+    });
+  } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email, contact number or KYC document is already in use by another retailer.',
+      });
+    }
+    console.error('Error updating retailer:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
 export const getProfile = async (req, res) => {
   try {
     if (req.user.role !== 'distributor')

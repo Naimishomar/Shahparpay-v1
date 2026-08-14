@@ -34,12 +34,23 @@ export const registerAdmin = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Admin already exists' });
     }
     const adminId = `AD${customAlphabet('0123456789', 6)()}`;
+    // Admins do not require KYC for onboarding.
     const createAdmin = await Admin.create({
       adminId,
-      username,
+      name: req.body.name || username,
       email,
       contactNumber,
       password,
+      ...(req.body.businessName && { businessName: req.body.businessName }),
+      ...(req.body.businessAddress && { businessAddress: req.body.businessAddress }),
+      ...(req.body.aadhaarNumber && { aadhaarNumber: req.body.aadhaarNumber }),
+      ...(req.body.panNumber && { panNumber: req.body.panNumber }),
+      ...(req.body.address
+        ? {
+            address:
+              typeof req.body.address === 'string' ? JSON.parse(req.body.address) : req.body.address,
+          }
+        : {}),
     });
     const token = await jwt.sign({ id: createAdmin._id }, process.env.ADMIN_JWT_SECRET, {
       expiresIn: '1d',
@@ -436,44 +447,17 @@ export const createDistributor = async (req, res) => {
     const aadhaarPictureLocalPath = req.files?.aadhaarPicture?.[0]?.path;
     const panPictureLocalPath = req.files?.panPicture?.[0]?.path;
 
-    if (!aadhaarPictureLocalPath || !panPictureLocalPath)
-      return res
-        .status(400)
-        .json({ success: false, message: 'Aadhaar and PAN pictures are required.' });
-
     const profilePic = profilePictureLocalPath ? await uploadOnR2(profilePictureLocalPath) : null;
-    const aadhaarPic = await uploadOnR2(aadhaarPictureLocalPath);
-    const panPic = await uploadOnR2(panPictureLocalPath);
+    const aadhaarPic = aadhaarPictureLocalPath ? await uploadOnR2(aadhaarPictureLocalPath) : null;
+    const panPic = panPictureLocalPath ? await uploadOnR2(panPictureLocalPath) : null;
 
     let parsedAddress = typeof address === 'string' ? JSON.parse(address) : address;
 
     const distributorId = req.body.merchantCode || `DT${customAlphabet('0123456789', 6)()}`;
 
-    // Paysprint Merchant Onboarding / Verification
-    const paysprintResponse = await onboardMerchant({
-      merchantcode: distributorId,
-      mobile: contactNumber,
-      email,
-      name,
-      businessName,
-      panNumber,
-      panPictureUrl: panPic?.url,
-      aadhaarNumber,
-      aadhaarPictureUrl: aadhaarPic?.url,
-      dob,
-      address: parsedAddress,
-      pincode: parsedAddress?.pincode || '110001',
-    });
+    // Distributors do not require KYC onboarding.
 
-    // Strict rejection: If PaySprint fails, do not create the user in DB
-    if (!paysprintResponse.success) {
-      return res.status(400).json({
-        success: false,
-        message: 'PaySprint Onboarding Failed: ' + (paysprintResponse.message || 'Unknown error'),
-      });
-    }
-
-    const isMerchantKycComplete = false; // They still need to do Web KYC
+    const isMerchantKycComplete = true; // No KYC required for distributors
 
     const newDistributor = new Distributor({
       adminId: req.user.id,
@@ -488,9 +472,9 @@ export const createDistributor = async (req, res) => {
       address: parsedAddress,
       businessName,
       businessAddress,
-      aadhaarNumber,
+      aadhaarNumber: aadhaarNumber || undefined,
       aadhaarPicture: aadhaarPic?.url,
-      panNumber,
+      panNumber: panNumber || undefined,
       panPicture: panPic?.url,
       hasGst: hasGst === 'true' || hasGst === true,
       gstNumber,

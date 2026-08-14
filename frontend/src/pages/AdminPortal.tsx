@@ -12,7 +12,6 @@ import {
     UserCircle,
     ChevronLeft,
     Wallet,
-    Clock,
     Store,
     CheckCircle,
     XCircle,
@@ -218,8 +217,6 @@ const AdminPortal = () => {
         e.preventDefault();
 
         if (!isEmailVerified) return toast.error("Please verify Email first.");
-        if (!aadhaarPicture) return toast.error("Please upload Aadhaar picture.");
-        if (!panPicture) return toast.error("Please upload PAN picture.");
 
         setIsLoading(true);
         setMessage('Creating distributor... Please wait.');
@@ -308,45 +305,6 @@ const AdminPortal = () => {
             toast.error('Failed to update profile.');
         } finally {
             setIsLoading(false);
-        }
-    };
-
-    const handleGenerateKycLink = async (merchantId: string) => {
-        const loadingToast = toast.loading("Generating KYC Link...");
-        // Open window synchronously to bypass popup blockers
-        const newWindow = window.open('', '_blank');
-        
-        try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/paysprint/get-onboard-url`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ merchantId, isNew: true })
-            });
-            const data = await res.json();
-            toast.dismiss(loadingToast);
-            if (data.success && data.url) {
-                try {
-                    navigator.clipboard.writeText(data.url);
-                    toast.success('KYC Link copied to clipboard!');
-                } catch (err) {}
-                
-                if (newWindow) {
-                    newWindow.location.href = data.url;
-                } else {
-                    toast.error("Popup blocked! Please allow popups or paste the copied link.");
-                }
-            } else {
-                if (newWindow) newWindow.close();
-                toast.error(data.message || 'Failed to generate KYC link');
-            }
-        } catch (err) {
-            if (newWindow) newWindow.close();
-            toast.dismiss(loadingToast);
-            toast.error('Error generating KYC link');
         }
     };
 
@@ -741,14 +699,6 @@ const AdminPortal = () => {
                                         <div className="px-4 py-2 bg-green-500/10 border border-green-500/20 text-green-500 rounded-lg flex items-center gap-2 font-medium">
                                             <ShieldCheck size={18} /> Active
                                         </div>
-                                        {!selectedDistributor.isMerchantKycComplete && (
-                                            <button 
-                                                onClick={() => handleGenerateKycLink(selectedDistributor._id)}
-                                                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-foreground rounded-lg transition-colors font-medium flex items-center gap-2 border border-blue-500/50 shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:shadow-[0_0_25px_rgba(37,99,235,0.5)]"
-                                            >
-                                                Generate KYC Link
-                                            </button>
-                                        )}
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -896,23 +846,9 @@ const AdminPortal = () => {
                                                     <td className="p-4 text-sm">{dist.contactNumber}</td>
                                                     <td className="p-4 text-sm">{dist.businessName}</td>
                                                     <td className="p-4">
-                                                        {dist.isMerchantKycComplete ? (
-                                                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-500 border border-green-500/20">
-                                                                <ShieldCheck size={14} /> Verified
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
-                                                                    <Clock size={14} /> Pending
-                                                                </div>
-                                                                <button 
-                                                                    onClick={(e) => { e.stopPropagation(); handleGenerateKycLink(dist._id); }}
-                                                                    className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-foreground rounded text-xs font-medium transition-colors"
-                                                                >
-                                                                    Gen Link
-                                                                </button>
-                                                            </div>
-                                                        )}
+                                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-500 border border-green-500/20">
+                                                            <ShieldCheck size={14} /> Verified
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))
@@ -1028,9 +964,9 @@ const AdminPortal = () => {
                                             </div>
                                         </div>
 
-                                        {/* SECTION: Business & Identity (KYC) */}
+                                        {/* SECTION: Business & Identity */}
                                         <div>
-                                            <h3 className="text-xl font-bold mb-6 border-b border-border pb-2 text-foreground">2. Business & Identity (KYC)</h3>
+                                            <h3 className="text-xl font-bold mb-6 border-b border-border pb-2 text-foreground">2. Business & Identity</h3>
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-semibold text-muted-foreground">Business Name *</label>
@@ -1038,29 +974,29 @@ const AdminPortal = () => {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-semibold text-muted-foreground flex justify-between">
-                                                        Aadhar Number *
+                                                        Aadhar Number (Optional)
                                                         <div className="flex gap-2">
                                                             {aadhaarPicture ? <span className="text-green-500 text-xs">Pic Uploaded</span> : (
                                                                 <label className="text-blue-500 text-xs hover:underline cursor-pointer">
-                                                                    Upload Pic <input type="file" onChange={(e) => setAadhaarPicture(e.target.files?.[0] || null)} required className="hidden" />
+                                                                    Upload Pic <input type="file" onChange={(e) => setAadhaarPicture(e.target.files?.[0] || null)} className="hidden" />
                                                                 </label>
                                                             )}
                                                         </div>
                                                     </label>
-                                                    <input name="aadhaarNumber" placeholder="Enter your aadhar number" onChange={handleChange} required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
+                                                    <input name="aadhaarNumber" placeholder="Enter your aadhar number" onChange={handleChange} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-semibold text-muted-foreground flex justify-between">
-                                                        Pancard Number *
+                                                        Pancard Number (Optional)
                                                         <div className="flex gap-2">
                                                             {panPicture ? <span className="text-green-500 text-xs">Pic Uploaded</span> : (
                                                                 <label className="text-blue-500 text-xs hover:underline cursor-pointer">
-                                                                    Upload Pic <input type="file" onChange={(e) => setPanPicture(e.target.files?.[0] || null)} required className="hidden" />
+                                                                    Upload Pic <input type="file" onChange={(e) => setPanPicture(e.target.files?.[0] || null)} className="hidden" />
                                                                 </label>
                                                             )}
                                                         </div>
                                                     </label>
-                                                    <input name="panNumber" placeholder="Enter your Pancard number" onChange={handleChange} required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
+                                                    <input name="panNumber" placeholder="Enter your Pancard number" onChange={handleChange} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-semibold text-muted-foreground">Street Address *</label>

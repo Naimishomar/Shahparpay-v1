@@ -34,27 +34,27 @@ const adminSchema = new mongoose.Schema(
       trim: true,
     },
     address: {
-      city: { type: String, required: true },
+      city: { type: String },
       landmark: { type: String },
-      district: { type: String, required: true },
-      state: { type: String, required: true },
+      district: { type: String },
+      state: { type: String },
     },
-    businessName: { type: String, required: true },
-    businessAddress: { type: String, required: true },
+    businessName: { type: String },
+    businessAddress: { type: String },
     aadhaarNumber: {
       type: String,
-      required: true,
       unique: true,
+      sparse: true,
       match: [/^[2-9]{1}[0-9]{11}$/, 'Please enter a valid Aadhar number'],
     },
-    aadhaarPicture: { type: String, required: true }, // Cloudinary URL
+    aadhaarPicture: { type: String }, // Cloudinary URL
     panNumber: {
       type: String,
-      required: true,
       unique: true,
+      sparse: true,
       match: [/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Please enter a valid PAN number'],
     },
-    panPicture: { type: String, required: true }, // Cloudinary URL
+    panPicture: { type: String }, // Cloudinary URL
     hasGst: { type: Boolean, default: false },
     gstNumber: { type: String },
     isActive: {

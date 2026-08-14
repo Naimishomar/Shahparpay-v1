@@ -424,7 +424,7 @@ const Profile = () => {
                     <div className="glass-card rounded-3xl p-8 relative overflow-hidden bg-card shadow-sm border border-border">
                         <div className="absolute -right-4 -top-4 w-24 h-24 bg-green-500/10 rounded-full blur-2xl"></div>
                         <div className="flex flex-col items-center text-center space-y-3 relative z-10">
-                            {user?.isMerchantKycComplete ? (
+                            {user?.role !== 'retailer' || user?.isMerchantKycComplete ? (
                                 <>
                                     <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mb-2">
                                         <ShieldCheck size={32} />

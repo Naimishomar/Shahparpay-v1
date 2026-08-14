@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import MerchantKycModal from '../components/MerchantKycModal';
+import EditRetailerModal from '../components/EditRetailerModal';
 import DailyAuthModal from '../components/DailyAuthModal';
 import { INDIAN_STATES } from '../constants';
 
@@ -44,7 +45,7 @@ const DistributorPortal = () => {
     const [frFormData, setFrFormData] = useState({ transactionMode: '', amount: '', bankUtr: '', depositDate: '', remarks: '' });
     const [frDepositSlip, setFrDepositSlip] = useState<File | null>(null);
     const [showMerchantKycModal, setShowMerchantKycModal] = useState(false);
-    
+
     // Form states
     const [formData, setFormData] = useState({
         prefix: 'Mr', firstName: '', lastName: '', email: '', contactNumber: '', password: '', 
@@ -63,6 +64,7 @@ const DistributorPortal = () => {
     const [message, setMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [selectedRetailer, setSelectedRetailer] = useState<any>(null);
+    const [editingRetailer, setEditingRetailer] = useState<any>(null);
     
     const [profileData, setProfileData] = useState<any>(null);
     const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -77,100 +79,6 @@ const DistributorPortal = () => {
     const [merchantCode, setMerchantCode] = useState('');
     const [isEmailVerified, setIsEmailVerified] = useState(false);
     const [verifyingEmail, setVerifyingEmail] = useState(false);
-
-    // KYC States
-    const [showKyc, setShowKyc] = useState(false);
-    const [isGeneratingSelf, setIsGeneratingSelf] = useState(false);
-    const [selectedPipe, setSelectedPipe] = useState('bank3');
-
-    const [webKycDone, setWebKycDone] = useState(false);
-
-    useEffect(() => {
-        if (user && user.role === 'distributor') {
-            const needsWebKyc = user.isMerchantKycComplete === false;
-            const needsBiometricKyc = !user.activeAepsPipes || user.activeAepsPipes.length === 0;
-            
-            if (needsWebKyc || needsBiometricKyc) {
-                setShowKyc(true);
-            } else {
-                setShowKyc(false);
-            }
-
-            if (user.isMerchantKycComplete) {
-                setWebKycDone(true);
-            }
-        } else {
-            setShowKyc(false);
-        }
-
-        const handleStorageChange = (e: StorageEvent) => {
-            if (e.key === 'webKycCompleted' && e.newValue) {
-                setWebKycDone(true);
-            }
-        };
-        window.addEventListener('storage', handleStorageChange);
-        if (localStorage.getItem('webKycCompleted')) {
-            setWebKycDone(true);
-        }
-        return () => window.removeEventListener('storage', handleStorageChange);
-    }, [user]);
-
-    const handleCompleteSelfKyc = async () => {
-        if (!user || !user._id) return;
-        setIsGeneratingSelf(true);
-        
-        // Open window synchronously to avoid popup blocker
-        const newWindow = window.open('', '_blank');
-        if (newWindow) {
-            newWindow.document.write('<div style="font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh;"><h2>Loading KYC Portal, please wait...</h2></div>');
-        } else {
-            toast.error("Popup blocked! Please allow popups for this site.");
-        }
-
-        try {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/paysprint/get-onboard-url`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` 
-                },
-                body: JSON.stringify({
-                    merchantId: user._id,
-                    isNew: true,
-                    pipe: selectedPipe,
-                    callbackUrl: window.location.origin + '/kyc-status'
-                })
-            });
-            const data = await res.json();
-            if (data.success) {
-                if (data.alreadyOnboarded) {
-                    if (newWindow) newWindow.close();
-                    setShowMerchantKycModal(true);
-                    setShowKyc(false);
-                    setIsGeneratingSelf(false);
-                } else if (data.url) {
-                    if (newWindow) {
-                        newWindow.location.href = data.url;
-                    } else {
-                        window.location.href = data.url; // fallback if blocked
-                    }
-                    setIsGeneratingSelf(false);
-                } else {
-                    if (newWindow) newWindow.close();
-                    toast.error("Invalid KYC link received.");
-                    setIsGeneratingSelf(false);
-                }
-            } else {
-                if (newWindow) newWindow.close();
-                toast.error(data.message || "Failed to generate KYC link.");
-                setIsGeneratingSelf(false);
-            }
-        } catch (err: any) {
-            if (newWindow) newWindow.close();
-            toast.error("Failed to generate KYC link.");
-            setIsGeneratingSelf(false);
-        }
-    };
 
     useEffect(() => {
         if (isInitializing) return;
@@ -221,6 +129,22 @@ const DistributorPortal = () => {
             }
         } catch (error) {
             console.error("Error fetching distributor data", error);
+        }
+    };
+
+    const handleRetailerUpdated = async () => {
+        try {
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/distributor/retailers`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await res.json();
+            if (data.success) {
+                setRetailers(data.data);
+                if (selectedRetailer) {
+                    const updated = data.data.find((r: any) => r._id === selectedRetailer._id);
+                    if (updated) setSelectedRetailer(updated);
+                }
+            }
+        } catch (error) {
+            console.error("Error refreshing retailers", error);
         }
     };
 
@@ -621,6 +545,12 @@ const DistributorPortal = () => {
                                         <div className="px-4 py-2 bg-green-500/10 border border-green-500/20 text-green-500 rounded-lg flex items-center gap-2 font-medium">
                                             <ShieldCheck size={18} /> Active
                                         </div>
+                                        <button
+                                            onClick={() => setEditingRetailer(selectedRetailer)}
+                                            className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium flex items-center gap-2"
+                                        >
+                                            Edit Details
+                                        </button>
                                         {!selectedRetailer.isMerchantKycComplete && (
                                             <button 
                                                 onClick={() => handleGenerateKycLink(selectedRetailer._id)}
@@ -1282,18 +1212,6 @@ const DistributorPortal = () => {
                                 <p className="text-muted-foreground">Manage your personal and business details.</p>
                             </div>
                             <div className="flex flex-wrap items-center gap-3">
-                                <button 
-                                    onClick={() => handleGenerateKycLink(profileData._id)}
-                                    className="px-5 py-2.5 font-medium rounded-lg transition-colors bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:shadow-[0_0_25px_rgba(37,99,235,0.5)] flex items-center gap-2"
-                                >
-                                    Web KYC
-                                </button>
-                                <button 
-                                    onClick={() => setShowMerchantKycModal(true)}
-                                    className="px-5 py-2.5 font-medium rounded-lg transition-colors bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] flex items-center gap-2"
-                                >
-                                    Biometric KYC
-                                </button>
                                 <button onClick={() => setIsEditingProfile(!isEditingProfile)} className={`px-5 py-2.5 font-medium rounded-lg transition-colors ${isEditingProfile ? 'bg-white/10 text-foreground border border-border' : 'bg-primary text-primary-foreground'}`}>
                                     {isEditingProfile ? 'Cancel Edit' : 'Edit Profile'}
                                 </button>
@@ -1448,72 +1366,21 @@ const DistributorPortal = () => {
                     </div>
                 )}
 
-                {/* Forced KYC Modal for new Distributors */}
-                {showKyc && (
-                    <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                        <div className="bg-background border border-border shadow-2xl rounded-3xl p-8 max-w-md w-full text-center space-y-6 animate-in zoom-in-95 duration-300">
-                            <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto text-blue-500">
-                                <ShieldCheck size={40} />
-                            </div>
-                            <div>
-                                <h2 className="text-2xl font-bold mb-2">Mandatory KYC Verification</h2>
-                                <p className="text-muted-foreground text-sm">
-                                    To access your distributor dashboard and start onboarding retailers, you must first complete your identity verification.
-                                </p>
-                            </div>
-                            
-                            <div className="space-y-3 pt-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-foreground">Select Primary Bank (Pipe)</label>
-                                    <select 
-                                        value={selectedPipe}
-                                        onChange={(e) => setSelectedPipe(e.target.value)}
-                                        className="w-full p-3 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
-                                        disabled={webKycDone || isGeneratingSelf}
-                                    >
-                                        <option value="bank3">Bank 3 (Fino - Recommended)</option>
-                                        <option value="bank2">Bank 2 (Yes/NSDL)</option>
-                                    </select>
-                                </div>
-                                {selectedPipe === 'bank3' ? (
-                                    <button 
-                                        onClick={handleCompleteSelfKyc}
-                                        disabled={isGeneratingSelf || webKycDone}
-                                        className={`w-full py-3 px-4 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${webKycDone ? 'bg-slate-600 text-white cursor-not-allowed opacity-80' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
-                                    >
-                                        {isGeneratingSelf ? "Redirecting..." : webKycDone ? "Step 1: Completed" : "Step 1: Complete Web KYC"}
-                                    </button>
-                                ) : (
-                                    <div className="w-full py-3 px-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 text-sm text-center font-medium">
-                                        Step 1 is not required for Bank 2.<br/>Proceed directly to Step 2.
-                                    </div>
-                                )}
-                                <button 
-                                    onClick={() => {
-                                        setShowKyc(false);
-                                        setShowMerchantKycModal(true);
-                                    }}
-                                    className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
-                                >
-                                    Step 2: Biometric Activation
-                                </button>
-                                <button 
-                                    onClick={() => logout && logout()}
-                                    className="w-full py-3 px-4 bg-transparent border border-border hover:bg-muted text-foreground rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
-                                >
-                                    <LogOut size={18} /> Logout
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-                
                 {/* Bank 3 Aeps / Biometric KYC Modal */}
                 {showMerchantKycModal && (
                     <MerchantKycModal onClose={() => setShowMerchantKycModal(false)} />
                 )}
 
-            </main>
+                {/* Edit Retailer Modal */}
+                {editingRetailer && (
+                    <EditRetailerModal
+                        retailer={editingRetailer}
+                        onClose={() => setEditingRetailer(null)}
+                        onUpdated={handleRetailerUpdated}
+                    />
+                )}
+
+                </main>
             {/* Add Fund Request Modal */}
             {showAddFrModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
