@@ -70,6 +70,11 @@ const EsevaPanTab: React.FC = () => {
     });
     const [couponLoading, setCouponLoading] = useState(false);
 
+    // True once a PSA ID exists — the PAN Service form is then disabled because
+    // there is no need to apply for the service again.
+    const [hasPsaId, setHasPsaId] = useState(false);
+    const [myPsaId, setMyPsaId] = useState<string | null>(null);
+
     const [statusForm, setStatusForm] = useState({ application_number: '' });
     const [statusLoading, setStatusLoading] = useState<'SERVICE' | 'COUPON' | null>(null);
 
@@ -123,7 +128,12 @@ const EsevaPanTab: React.FC = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data.success && res.data.psa_id) {
+                setMyPsaId(res.data.psa_id);
+                setHasPsaId(true);
                 setCouponForm(prev => ({ ...prev, psa_id: res.data.psa_id }));
+            } else {
+                setHasPsaId(false);
+                setMyPsaId(null);
             }
         } catch (error) {
             console.error("Failed to fetch PSA ID:", error);
@@ -156,6 +166,7 @@ const EsevaPanTab: React.FC = () => {
 
     const handleApplyService = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (hasPsaId) return toast.error("Your PSA ID is already generated. No need to apply for PAN Service again.");
         if (serviceForm.pan_number.length !== 10) return toast.error("PAN number must be 10 characters");
         if (serviceForm.pincode.length !== 6) return toast.error("Pincode must be 6 digits");
         setServiceLoading(true);
@@ -387,6 +398,33 @@ const EsevaPanTab: React.FC = () => {
                                 <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">eSevaTech</div>
                             </div>
 
+                            {hasPsaId ? (
+                                <div className="p-5 bg-green-500/5 border border-green-500/30 rounded-2xl space-y-3">
+                                    <div className="flex items-center gap-3 text-green-600 dark:text-green-400 font-bold">
+                                        <CheckCircle2 className="w-6 h-6" />
+                                        <span>PSA ID Already Generated</span>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                        Your PSA ID <strong className="font-mono text-primary">#{myPsaId}</strong> has already
+                                        been generated and approved. There is no need to apply for the PAN Service again — you
+                                        can directly purchase PAN coupons using your PSA ID.
+                                    </p>
+                                    {myPsaId && (
+                                        <div className="p-3 bg-card border border-border/40 rounded-xl flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">Your PSA ID</span>
+                                            <span className="font-bold text-primary font-mono">{myPsaId}</span>
+                                        </div>
+                                    )}
+                                    <button
+                                        onClick={() => setActiveSubTab('COUPON')}
+                                        className="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <ShoppingBag className="w-4 h-4" />
+                                        Go to PAN Coupon
+                                    </button>
+                                </div>
+                            ) : (
+                            <>
                             <form onSubmit={handleApplyService} className="space-y-5">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="md:col-span-2">
@@ -518,11 +556,12 @@ const EsevaPanTab: React.FC = () => {
                             </form>
 
                             {serviceResult && renderResult(serviceResult, 'SERVICE')}
+                            </>
+                            )}
                         </div>
                     </div>
                 </div>
             )}
-
             {activeSubTab === 'COUPON' && (
                 <div className="max-w-2xl mx-auto">
                     <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
