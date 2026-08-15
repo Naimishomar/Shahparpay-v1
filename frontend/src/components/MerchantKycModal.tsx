@@ -307,12 +307,6 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
                         </div>
                     )}
                 </div>
-
-                <div className="border-t border-border p-4 bg-muted/20 flex justify-end">
-                    <button onClick={onClose} className="px-4 py-2 font-medium text-muted-foreground hover:text-foreground">
-                        Cancel
-                    </button>
-                </div>
             </div>
         </div>
     );
