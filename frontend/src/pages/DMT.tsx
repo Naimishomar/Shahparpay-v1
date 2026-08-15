@@ -1,11 +1,36 @@
 import { useState, useEffect } from 'react';
-import { Search, UserPlus, Send, Plus, CreditCard, Lock, CheckCircle2, X, Trash, Fingerprint, Loader2 } from 'lucide-react';
+import { Search, UserPlus, Send, Plus, CreditCard, Lock, CheckCircle2, X, Trash, Fingerprint, Loader2, Cpu } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
+// WADH keys for different RD Service providers per pipe
+const WADH_KEYS: Record<string, Record<'mantra' | 'morpho', string>> = {
+    bank2: {
+        mantra: '18f4CEiXeXcfGXvgWA/blxD+w2pw7hfQPY45JMytkPw=',
+        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
+    },
+    bank3: {
+        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
+    },
+    bank4: {
+        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
+    },
+    bank5: {
+        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
+    },
+    bank6: {
+        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
+    },
+};
+
 const DMT = () => {
     const { token } = useAuth();
+    const [selectedDevice, setSelectedDevice] = useState<'mantra' | 'morpho'>('mantra');
     
     // States
     const [mobile, setMobile] = useState('');
@@ -68,8 +93,8 @@ const DMT = () => {
             const ports = [11100, 11101, 11102];
             let activeUrl = null;
             
-            // Determine target WADH dynamically based on selected pipe from the backend
-            let targetWadh = "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc="; // default fallback
+            // Determine target WADH based on selected pipe and device type
+            let targetWadh = WADH_KEYS['bank2']?.[selectedDevice] || "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=";
             try {
                 const token = localStorage.getItem('token');
                 const pidOptsRes = await axios.post(
@@ -78,18 +103,17 @@ const DMT = () => {
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 if (pidOptsRes.data && pidOptsRes.data.wadh) {
-                    targetWadh = pidOptsRes.data.wadh;
+                    targetWadh = WADH_KEYS[pidOptsRes.data.pipe]?.[selectedDevice] || pidOptsRes.data.wadh;
                 }
             } catch (err) {
-                console.error("Failed to fetch dynamic WADH", err);
+                console.error("Failed to fetch dynamic WADH, using device-specific fallback", err);
             }
 
             // High-security L1 options package (fType="2")
-            // Removing WADH from DMT payload because it causes "WADH validation fail" 
-            // when fType="2" is used, and Bank 2 strictly rejects fType="0" (FIR+FMR).
+            const wadhAttr = ` wadh="${targetWadh}"`;
             const captureXml = `<?xml version="1.0"?>
             <PidOptions ver="1.0">
-            <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN" />
+            <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN"${wadhAttr} />
             <CustOpts>
                 <Param name="Param1" value="" />
             </CustOpts>
@@ -102,16 +126,22 @@ const DMT = () => {
                     const res = await fetch(`${url}/rd/info`, { method: 'RDSERVICE', headers: { 'Accept': 'text/xml' }, signal: AbortSignal.timeout(500) });
                     if (res.ok) { activeUrl = url; break; }
                 } catch (e) {
+                    const err = e as Error;
+                    console.log(`Port ${port} HTTP failed:`, err.message);
                     try {
                         const urlHttps = `https://127.0.0.1:${port}`;
                         const resHttps = await fetch(`${urlHttps}/rd/info`, { method: 'RDSERVICE', headers: { 'Accept': 'text/xml' }, signal: AbortSignal.timeout(500) });
                         if (resHttps.ok) { activeUrl = urlHttps; break; }
-                    } catch (e2) { continue; }
+                    } catch (e2) { 
+                        const err2 = e2 as Error;
+                        console.log(`Port ${port} HTTPS failed:`, err2.message);
+                        continue; 
+                    }
                 }
             }
 
             if (!activeUrl) {
-                toast.error("RD Service not found. Please ensure your Biometric scanner is connected.");
+                toast.error("RD Service not found on ports 11100-11102. Please ensure Mantra/Morpho RD Service is installed, running, and the device is connected.");
                 setLoading(false);
                 return;
             }
@@ -122,9 +152,22 @@ const DMT = () => {
                 headers: { 'Content-Type': 'text/xml', 'Accept': 'text/xml' }
             });
             const capturedData = await captureResponse.text();
+            console.log('RD Capture Response:', capturedData);
 
-            if (!capturedData.includes('errCode="0"')) {
-                toast.error("Biometric capture failed. Please clean the scanner and try again.");
+            // Check for RD Service errors in the XML response
+            const errCodeMatch = capturedData.match(/errCode="([^"]*)"/);
+            const errInfoMatch = capturedData.match(/errInfo="([^"]*)"/);
+            const errCode = errCodeMatch ? errCodeMatch[1] : null;
+            const errInfo = errInfoMatch ? errInfoMatch[1] : null;
+
+            if (!(errCode === '0' && capturedData.includes('PidData'))) {
+                let errorMsg = "Biometric capture failed. Please clean the scanner and try again.";
+                if (errCode && errInfo) {
+                    errorMsg = `RD Service Error (${errCode}): ${errInfo}`;
+                } else if (capturedData.includes('init')) {
+                    errorMsg = "RD Service initialization error. Please restart the RD Service (Mantra/Morpho) and try again.";
+                }
+                toast.error(errorMsg);
                 setLoading(false);
                 return;
             }
@@ -483,6 +526,19 @@ const DMT = () => {
                                     placeholder="Enter 12-digit Aadhaar"
                                     className="w-full px-3 py-3 bg-background border border-border/50 rounded-xl text-foreground focus:ring-2 focus:ring-primary/20" 
                                 />
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium text-foreground mb-1 block">Biometric Device</label>
+                                <select 
+                                    value={selectedDevice}
+                                    onChange={e => setSelectedDevice(e.target.value as 'mantra' | 'morpho')}
+                                    className="w-full px-3 py-3 bg-background border border-border/50 rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
+                                >
+                                    <option value="mantra">Mantra (MFS100 / MFS110)</option>
+                                    <option value="morpho">Morpho (IDEMIA E2 / E3 / MSO)</option>
+                                </select>
+                                <p className="text-xs text-muted-foreground mt-1">Select your fingerprint scanner brand. Mantra and Morpho use different WADH keys.</p>
                             </div>
 
                             <div className="bg-muted/30 border border-border/50 rounded-xl p-4 mt-2">

@@ -1368,9 +1368,20 @@ export const sendMerchantOtp = async (req, res) => {
       validateStatus: () => true,
     });
 
+    const psData = response.data;
+    console.log('=== SEND OTP RESPONSE ===', JSON.stringify(psData));
+
+    if (!psData || psData.response_code !== 1 || psData.status === false) {
+      return res.status(400).json({
+        success: false,
+        message: psData?.message || 'Failed to send OTP. Merchant code may not be valid for this pipe.',
+        data: psData,
+      });
+    }
+
     return res.status(200).json({
       success: true,
-      data: response.data,
+      data: psData,
     });
   } catch (error) {
     console.error('Send OTP Error:', error?.response?.data || error.message);
@@ -1473,20 +1484,29 @@ export const verifyMerchantOtp = async (req, res) => {
       { headers, validateStatus: () => true }
     );
 
-    if (response.data && response.data.status) {
-      // Update the Retailer's KYC completion status and add to activeAepsPipes
-      await Retailer.findOneAndUpdate(
-        { retailerId: merchantcode },
-        {
-          isMerchantKycComplete: true,
-          $addToSet: { activeAepsPipes: pipe },
-        }
-      );
+    const psData = response.data;
+    console.log('=== VERIFY OTP RESPONSE ===', JSON.stringify(psData));
+
+    if (!psData || psData.response_code !== 1 || psData.status === false) {
+      return res.status(400).json({
+        success: false,
+        message: psData?.message || 'OTP verification failed.',
+        data: psData,
+      });
     }
+
+    // Update the Retailer's KYC completion status and add to activeAepsPipes
+    await Retailer.findOneAndUpdate(
+      { retailerId: merchantcode },
+      {
+        isMerchantKycComplete: true,
+        $addToSet: { activeAepsPipes: pipe },
+      }
+    );
 
     return res.status(200).json({
       success: true,
-      data: response.data,
+      data: psData,
     });
   } catch (error) {
     console.error('Verify OTP Error:', error?.response?.data || error.message);

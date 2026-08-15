@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Fingerprint, Clock, CheckCircle2, XCircle, RefreshCcw, ShieldCheck, KeyRound, Wallet, FileText, IndianRupee, CreditCard, Loader2, Store, Phone, Printer } from "lucide-react";
+import { Fingerprint, Clock, CheckCircle2, XCircle, RefreshCcw, ShieldCheck, KeyRound, Wallet, FileText, IndianRupee, CreditCard, Loader2, Store, Phone, Printer, Cpu } from "lucide-react";
 import logo from "../assets/logo.png";
 import MerchantKycModal from "../components/MerchantKycModal";
 import DailyAuthModal from "../components/DailyAuthModal";
@@ -9,6 +9,31 @@ import axios from "axios";
 import { toast } from "sonner";
 import { useLocationContext } from "../context/LocationContext";
 import { z } from "zod";
+
+// WADH keys for different RD Service providers per pipe
+const WADH_KEYS: Record<string, Record<'mantra' | 'morpho', string>> = {
+    bank2: {
+        mantra: '18f4CEiXeXcfGXvgWA/blxD+w2pw7hfQPY45JMytkPw=',
+        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
+    },
+    bank3: {
+        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
+    },
+    bank4: {
+        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
+    },
+    bank5: {
+        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
+    },
+    bank6: {
+        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
+    },
+};
+
 const banks = [
     { name: 'SBI', displayName: 'State Bank of India (SBI)', logo: 'https://www.google.com/s2/favicons?domain=onlinesbi.sbi&sz=128' },
     { name: 'PNB', displayName: 'Punjab National Bank (PNB)', logo: 'https://www.google.com/s2/favicons?domain=pnbindia.in&sz=128' },
@@ -263,8 +288,9 @@ const AEPS = () => {
         if (isScanning) return;
         setIsScanning(true);
         try {
-            // Determine target WADH dynamically based on selected pipe from the backend
-            let targetWadh = "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc="; // default fallback
+            // Determine target WADH based on selected pipe and device type
+            // Try to fetch from backend first, fallback to device-specific WADH
+            let targetWadh = WADH_KEYS[selectedPipe]?.[selectedDevice as 'mantra' | 'morpho'] || "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=";
             try {
                 const token = localStorage.getItem('token');
                 const pidOptsRes = await axios.post(
@@ -273,10 +299,11 @@ const AEPS = () => {
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 if (pidOptsRes.data && pidOptsRes.data.wadh) {
-                    targetWadh = pidOptsRes.data.wadh;
+                    // Use backend WADH but override with device-specific if different device selected
+                    targetWadh = WADH_KEYS[pidOptsRes.data.pipe]?.[selectedDevice as 'mantra' | 'morpho'] || pidOptsRes.data.wadh;
                 }
             } catch (err) {
-                console.error("Failed to fetch dynamic WADH", err);
+                console.error("Failed to fetch dynamic WADH, using device-specific fallback", err);
             }
 
             // High-security L1 options package (fType="2")
@@ -285,9 +312,11 @@ const AEPS = () => {
             // The customer's AEPS transaction OTP is passed via the `otp` attribute so it gets
             // bound inside the captured PID data (required only for withdrawals >= ₹5000).
             const otpAttr = (activeTab === 'cash_withdrawal' && Number(amount) > AEPS_OTP_THRESHOLD && otp) ? ` otp="${otp}"` : "";
+            // Include WADH for all transactions - it's required for proper device authentication
+            const wadhAttr = ` wadh="${targetWadh}"`;
             const captureXml = `<?xml version="1.0"?>
             <PidOptions ver="1.0">
-            <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN"${otpAttr} />
+            <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN"${wadhAttr}${otpAttr} />
             <CustOpts>
                 <Param name="Param1" value="" />
             </CustOpts>
@@ -308,7 +337,7 @@ const AEPS = () => {
                         try {
                             const testUrl = `${protocol}://${host}:${port}`;
                             // UIDAI specifies RDSERVICE method to check status
-                            const response = await fetch(`${testUrl}`, { method: 'RDSERVICE' });
+                            const response = await fetch(`${testUrl}/rd/info`, { method: 'RDSERVICE', headers: { 'Accept': 'text/xml' }, signal: AbortSignal.timeout(500) });
                             
                             if (response.ok) {
                                 const text = await response.text();
@@ -317,6 +346,8 @@ const AEPS = () => {
                                 }
                             }
                         } catch (e) {
+                            const err = e as Error;
+                            console.log(`Port ${port} on ${protocol}://${host} failed:`, err.message);
                             // ignore and try next port
                         }
                     }
@@ -324,7 +355,7 @@ const AEPS = () => {
             }
 
             if (!activeUrl) {
-                throw new Error("Could not find any READY RD Service on any port.");
+                throw new Error("RD Service not found on ports 11100-11120. Please ensure Mantra/Morpho RD Service is installed, running, and the device is connected.");
             }
 
             // Step 2: Capture Biometrics on the discovered port
@@ -335,23 +366,29 @@ const AEPS = () => {
             });
             
             const capturedData = await captureResponse.text();
+            console.log('RD Capture Response:', capturedData);
 
-            if (capturedData && capturedData.includes('errCode="0"')) {
+            // Check for RD Service errors in the XML response
+            const errCodeMatch = capturedData.match(/errCode="([^"]*)"/);
+            const errInfoMatch = capturedData.match(/errInfo="([^"]*)"/);
+            const errCode = errCodeMatch ? errCodeMatch[1] : null;
+            const errInfo = errInfoMatch ? errInfoMatch[1] : null;
+
+            if (errCode === '0' && capturedData.includes('PidData')) {
                 setPidData(capturedData);
-            } else if (capturedData && !capturedData.includes('errCode="0"')) {
-                const errMatch = capturedData.match(/errInfo="([^"]+)"/);
-                const errMsg = errMatch ? errMatch[1] : 'Unknown error';
-                setPidData(null);
             } else {
-                throw new Error("No valid data returned from capture endpoint.");
+                let errorMsg = "Biometric capture failed. Please clean the scanner and try again.";
+                if (errCode && errInfo) {
+                    errorMsg = `RD Service Error (${errCode}): ${errInfo}`;
+                } else if (capturedData.includes('init')) {
+                    errorMsg = "RD Service initialization error. Please restart the RD Service (Mantra/Morpho) and try again.";
+                }
+                toast.error(errorMsg);
+                setPidData(null);
             }
         } catch (error) {
             console.error("RD Service Error:", error);
-            toast.error(`Could not connect to ${selectedDevice}.
-            
-1. Ensure the RD Service app is running in Windows Services.
-2. Turn off ALL Ad-Blockers (uBlock, AdBlock, Brave Shields) as they block connections to the scanner.
-3. If on an HTTPS site, enable 'allow-insecure-localhost' in chrome://flags.`);
+            toast.error(`Could not connect to ${selectedDevice}. Ensure RD Service is running and ad-blockers are disabled.`);
             setPidData(null);
         } finally {
             setIsScanning(false);

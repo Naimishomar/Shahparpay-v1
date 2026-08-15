@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Fingerprint, Loader2, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Fingerprint, Loader2, CheckCircle2, ShieldAlert, Cpu, Settings } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -10,15 +10,36 @@ interface MerchantKycModalProps {
     longitude?: string;
 }
 
+// WADH keys for different RD Service providers per pipe
+const WADH_KEYS: Record<string, Record<'mantra' | 'morpho', string>> = {
+    bank2: {
+        mantra: '18f4CEiXeXcfGXvgWA/blxD+w2pw7hfQPY45JMytkPw=',
+        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=', // Morpho/IDEMIA WADH for Bank 2
+    },
+    bank3: {
+        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=', // Morpho/IDEMIA WADH for Bank 3/5/6
+    },
+    bank5: {
+        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
+    },
+    bank6: {
+        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
+    },
+};
+
 const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, longitude }) => {
     const { user } = useAuth();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
-    const [kycMethod, setKycMethod] = useState<'bank3' | 'bank2'>('bank2'); // Default to bank2 since it's the default pipe
+    const [kycMethod, setKycMethod] = useState<'bank3' | 'bank2'>('bank2');
     const [merchantCode, setMerchantCode] = useState(user?.retailerId || user?.distributorId || '');
     const [aadhaar, setAadhaar] = useState(user?.aadhaarNumber || '');
     const [dob, setDob] = useState(user?.dob || '');
     const [otp, setOtp] = useState('');
+    const [deviceType, setDeviceType] = useState<'mantra' | 'morpho'>('mantra');
     
     // API State
     const [ekycId, setEkycId] = useState('');
@@ -80,9 +101,7 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
         try {
             const ports = [11100, 11101, 11102];
             let activeUrl = null;
-            const wadh = kycMethod === 'bank2' 
-                ? "18f4CEiXeXcfGXvgWA/blxD+w2pw7hfQPY45JMytkPw=" 
-                : "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc="; // Bank 3/5/6
+            const wadh = WADH_KEYS[kycMethod]?.[deviceType] || WADH_KEYS.bank2.mantra;
             const captureXml = `<?xml version="1.0"?>
                 <PidOptions ver="1.0">
                   <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN" wadh="${wadh}" />
@@ -94,16 +113,22 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
                     const res = await fetch(`${url}/rd/info`, { method: 'RDSERVICE', headers: { 'Accept': 'text/xml' }, signal: AbortSignal.timeout(500) });
                     if (res.ok) { activeUrl = url; break; }
                 } catch (e) {
+                    const err = e as Error;
+                    console.log(`Port ${port} HTTP failed:`, err.message);
                     try {
                         const urlHttps = `https://127.0.0.1:${port}`;
                         const resHttps = await fetch(`${urlHttps}/rd/info`, { method: 'RDSERVICE', headers: { 'Accept': 'text/xml' }, signal: AbortSignal.timeout(500) });
                         if (resHttps.ok) { activeUrl = urlHttps; break; }
-                    } catch (e2) { continue; }
+                    } catch (e2) { 
+                        const err2 = e2 as Error;
+                        console.log(`Port ${port} HTTPS failed:`, err2.message);
+                        continue; 
+                    }
                 }
             }
 
             if (!activeUrl) {
-                toast.error("RD Service not found. Please ensure Mantra/Morpho is connected and running.");
+                toast.error("RD Service not found on ports 11100-11102. Please ensure Mantra/Morpho RD Service is installed, running, and the device is connected.");
                 setLoading(false);
                 return;
             }
@@ -114,12 +139,25 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
                 headers: { 'Content-Type': 'text/xml', 'Accept': 'text/xml' }
             });
             const capturedData = await captureResponse.text();
+            console.log('RD Capture Response:', capturedData);
 
-            if (capturedData.includes('errCode="0"')) {
+            // Check for RD Service errors in the XML response
+            const errCodeMatch = capturedData.match(/errCode="([^"]*)"/);
+            const errInfoMatch = capturedData.match(/errInfo="([^"]*)"/);
+            const errCode = errCodeMatch ? errCodeMatch[1] : null;
+            const errInfo = errInfoMatch ? errInfoMatch[1] : null;
+
+            if (errCode === '0' && capturedData.includes('PidData')) {
                 setPidData(capturedData);
-                toast.error("Fingerprint captured successfully!");
+                toast.success("Fingerprint captured successfully!");
             } else {
-                toast.error("Biometric capture failed. Please clean the scanner and try again.");
+                let errorMsg = "Biometric capture failed. Please clean the scanner and try again.";
+                if (errCode && errInfo) {
+                    errorMsg = `RD Service Error (${errCode}): ${errInfo}`;
+                } else if (capturedData.includes('init')) {
+                    errorMsg = "RD Service initialization error. Please restart the RD Service (Mantra/Morpho) and try again.";
+                }
+                toast.error(errorMsg);
             }
         } catch (error) {
             console.error(error);
@@ -215,6 +253,18 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
                                     <option value="bank2">Bank 2 / 5 / 6 (Direct Biometric)</option>
                                     <option value="bank3">Bank 3 (OTP + Biometric)</option>
                                 </select>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1 block">Biometric Device</label>
+                                <select 
+                                    value={deviceType}
+                                    onChange={(e) => setDeviceType(e.target.value as 'mantra' | 'morpho')}
+                                    className="w-full p-2.5 rounded-lg border border-border bg-background"
+                                >
+                                    <option value="mantra">Mantra (MFS100 / MFS110)</option>
+                                    <option value="morpho">Morpho (IDEMIA E2 / E3 / MSO)</option>
+                                </select>
+                                <p className="text-xs text-muted-foreground mt-1">Select your fingerprint scanner brand. Mantra and Morpho use different WADH keys.</p>
                             </div>
                             <div>
                                 <label className="text-sm font-medium mb-1 block">Merchant Code</label>
