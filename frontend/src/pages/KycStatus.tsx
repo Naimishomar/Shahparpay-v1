@@ -45,7 +45,7 @@ const KycStatus = () => {
                 
                 // Redirect back to dashboard after a short delay
                 setTimeout(() => {
-                    navigate('/');
+                    navigate('/dashboard');
                 }, 3000);
             } catch (error) {
                 setStatus('error');
@@ -101,7 +101,7 @@ const KycStatus = () => {
                                 There was an issue verifying your status. You may need to try again.
                             </p>
                             <button 
-                                onClick={() => navigate('/')}
+                                onClick={() => navigate('/dashboard')}
                                 className="px-4 py-2 bg-blue-600 text-white rounded-xl"
                             >
                                 Return to Dashboard

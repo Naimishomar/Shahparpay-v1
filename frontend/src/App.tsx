@@ -1,4 +1,5 @@
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } from "react-router-dom"
+import Landing from "./pages/Landing"
 import Layout from "./pages/Layout"
 import Dashboard from "./pages/Dashboard"
 import AEPS from "./pages/AEPS"
@@ -33,52 +34,61 @@ import KycStatus from "./pages/KycStatus"
 import Profile from "./pages/Profile"
 
 import { Toaster } from 'sonner'
+import { useAuth } from './context/AuthContext'
+import { Navigate } from 'react-router-dom'
+
+function LandingRoute() {
+  const { token } = useAuth()
+  if (token) return <Navigate to="/dashboard" replace />
+  return <Landing />
+}
 
 function App() {
   const router = createBrowserRouter(
     createRoutesFromElements(
       <>
+      <Route path="/" element={<LandingRoute />} />
       <Route path="/login" element={<Login />} />
       <Route path="/kyc-status" element={<KycStatus />} />
-      <Route path="/" element={<Layout/>}>
-        {/* Retailer Dashboard (Index) */}
-        <Route index element={<Dashboard/>}/>
+      <Route element={<Layout/>}>
+        {/* Retailer Dashboard */}
+        <Route path="/dashboard" element={<Dashboard/>}/>
         
         {/* Admin Routes */}
-        <Route path="admin" element={<AdminPortal/>}/>
-        <Route path="admin/:tab" element={<AdminPortal/>}/>
+        <Route path="/admin" element={<AdminPortal/>}/>
+        <Route path="/admin/:tab" element={<AdminPortal/>}/>
         
         {/* Distributor Routes */}
-        <Route path="distributor" element={<DistributorPortal/>}/>
-        <Route path="distributor/:tab" element={<DistributorPortal/>}/>
+        <Route path="/distributor" element={<DistributorPortal/>}/>
+        <Route path="/distributor/:tab" element={<DistributorPortal/>}/>
  
-        <Route path="aeps" element={<AEPS/>}/>
-        <Route path="aeps/pipes" element={<PipeStatus/>}/>
-        <Route path="aeps-settlement" element={<AepsSettlement/>}/>
-        <Route path="direct-payout" element={<DirectPayout/>}/>
-        <Route path="dmt" element={<DMT/>}/>
-        <Route path="recharge" element={<Recharge/>}/>
-        <Route path="wallet-transfer" element={<WalletTransfer/>}/>
-        <Route path="bbps" element={<BBPS/>}/>
-        <Route path="upi-payments" element={<UPI_Payments/>}/>
-        <Route path="lead-generation" element={<LeadGeneration/>}/>
-        <Route path="pan" element={<PanCard/>}/>
-        <Route path="itr" element={<ITR/>}/>
+        <Route path="/aeps" element={<AEPS/>}/>
+        <Route path="/aeps/pipes" element={<PipeStatus/>}/>
+        <Route path="/aeps-settlement" element={<AepsSettlement/>}/>
+        <Route path="/direct-payout" element={<DirectPayout/>}/>
+        <Route path="/dmt" element={<DMT/>}/>
+        <Route path="/recharge" element={<Recharge/>}/>
+        <Route path="/wallet-transfer" element={<WalletTransfer/>}/>
+        <Route path="/bbps" element={<BBPS/>}/>
+        <Route path="/upi-payments" element={<UPI_Payments/>}/>
+        <Route path="/lead-generation" element={<LeadGeneration/>}/>
+        <Route path="/pan" element={<PanCard/>}/>
+        <Route path="/itr" element={<ITR/>}/>
         
         {/* Reports Routes */}
-        <Route path="reports/ledger" element={<LedgerReport/>}/>
-        <Route path="reports/aeps" element={<AepsReport/>}/>
-        <Route path="reports/dmt" element={<DmtReport/>}/>
-        <Route path="reports/payout" element={<PayoutReport/>}/>
-        <Route path="reports/upi" element={<UpiReport/>}/>
-        <Route path="reports/pan" element={<PanReport/>}/>
-        <Route path="reports/itr" element={<ItrReport/>}/>
-        <Route path="reports/lead-generation" element={<LeadGenerationReport/>}/>
-        <Route path="reports/wallet-ledger" element={<WalletLedger/>}/>
+        <Route path="/reports/ledger" element={<LedgerReport/>}/>
+        <Route path="/reports/aeps" element={<AepsReport/>}/>
+        <Route path="/reports/dmt" element={<DmtReport/>}/>
+        <Route path="/reports/payout" element={<PayoutReport/>}/>
+        <Route path="/reports/upi" element={<UpiReport/>}/>
+        <Route path="/reports/pan" element={<PanReport/>}/>
+        <Route path="/reports/itr" element={<ItrReport/>}/>
+        <Route path="/reports/lead-generation" element={<LeadGenerationReport/>}/>
+        <Route path="/reports/wallet-ledger" element={<WalletLedger/>}/>
 
-        <Route path="fund-request" element={<FundRequest/>}/>
-        <Route path="biometric-support" element={<BiometricSupport/>}/>
-        <Route path="profile" element={<Profile/>}/>
+        <Route path="/fund-request" element={<FundRequest/>}/>
+        <Route path="/biometric-support" element={<BiometricSupport/>}/>
+        <Route path="/profile" element={<Profile/>}/>
       </Route>
       </>
     )

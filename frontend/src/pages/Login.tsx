@@ -73,7 +73,7 @@ const Login = () => {
                 setTimeout(() => {
                     if (data.role === 'admin') navigate('/admin');
                     else if (data.role === 'distributor') navigate('/distributor');
-                    else navigate('/'); 
+                    else navigate('/dashboard'); 
                 }, 500);
             } else {
                 setError(data.message || 'Invalid OTP.');
@@ -88,13 +88,13 @@ const Login = () => {
     return (
         <div className="min-h-screen flex bg-background text-foreground overflow-hidden">
             {/* Left Side: Dynamic Branding Panel */}
-            <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 relative overflow-hidden bg-gradient-to-br from-black to-zinc-900 border-r border-border">
+            <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 relative overflow-hidden bg-gradient-to-br from-zinc-100 via-white to-zinc-200 dark:from-black dark:via-zinc-900 dark:to-zinc-950 border-r border-border">
                 {/* Abstract Background Elements */}
-                <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-white/5 rounded-full blur-[100px] mix-blend-screen pointer-events-none"></div>
-                <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-white/5 rounded-full blur-[120px] mix-blend-screen pointer-events-none"></div>
+                <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-500/10 dark:bg-white/5 rounded-full blur-[100px] mix-blend-multiply dark:mix-blend-screen pointer-events-none"></div>
+                <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-sky-500/10 dark:bg-white/5 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen pointer-events-none"></div>
                 
                 <div className="relative z-10 flex items-center gap-3">
-                    <img src={logo} alt="Shahparpay Logo" className="h-16 w-auto invert" onError={(e) => e.currentTarget.style.display = 'none'} />
+                    <img src={logo} alt="Shahparpay Logo" className="h-16 w-auto dark:invert" onError={(e) => e.currentTarget.style.display = 'none'} />
                 </div>
 
                 <div className="relative z-10 mb-20 animate-in slide-in-from-left-8 duration-700 fade-in">
@@ -107,7 +107,7 @@ const Login = () => {
                     </p>
                     
                     <div className="mt-10 flex gap-4">
-                        <div className="px-4 py-2 rounded-full border border-border bg-white/5 backdrop-blur flex items-center gap-2 text-sm font-medium">
+                        <div className="px-4 py-2 rounded-full border border-border bg-black/5 dark:bg-white/5 backdrop-blur flex items-center gap-2 text-sm font-medium">
                             <ShieldCheck size={16} className="text-primary"/> 256-bit Encryption
                         </div>
                     </div>
@@ -123,7 +123,7 @@ const Login = () => {
                 
                 {/* Mobile Logo Fallback */}
                 <div className="absolute top-8 left-8 lg:hidden flex items-center gap-2">
-                    <img src={logo} alt="Shahparpay Logo" className="h-8 w-auto invert" onError={(e) => e.currentTarget.style.display = 'none'} />
+                    <img src={logo} alt="Shahparpay Logo" className="h-8 w-auto dark:invert" onError={(e) => e.currentTarget.style.display = 'none'} />
                     <span className="text-xl font-bold tracking-tight">Shahparpay</span>
                 </div>
 
@@ -187,7 +187,7 @@ const Login = () => {
                             <button
                                 type="submit"
                                 disabled={isLoading || !identifier || !password}
-                                className="w-full mt-2 py-4 bg-primary text-primary-foreground font-bold text-lg rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:scale-[0.99] transition-all disabled:opacity-50 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-2 group"
+                                className="w-full mt-2 py-4 bg-primary text-primary-foreground font-bold text-lg rounded-xl shadow-[0_0_20px_rgba(0,0,0,0.15)] dark:shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(0,0,0,0.25)] dark:hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:scale-[0.99] transition-all disabled:opacity-50 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-2 group"
                             >
                                 {isLoading ? (
                                     <div className="w-6 h-6 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
@@ -229,7 +229,7 @@ const Login = () => {
                             <button
                                 type="submit"
                                 disabled={isLoading || otp.length < 6}
-                                className="w-full mt-2 py-4 bg-primary text-primary-foreground font-bold text-lg rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:scale-[0.99] transition-all disabled:opacity-50 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-2"
+                                className="w-full mt-2 py-4 bg-primary text-primary-foreground font-bold text-lg rounded-xl shadow-[0_0_20px_rgba(0,0,0,0.15)] dark:shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(0,0,0,0.25)] dark:hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:scale-[0.99] transition-all disabled:opacity-50 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-2"
                             >
                                 {isLoading ? (
                                     <div className="w-6 h-6 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
