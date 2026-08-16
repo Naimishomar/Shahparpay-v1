@@ -3,6 +3,7 @@ import Transaction from '../models/transaction.model.js';
 import {
   resolveTransaction,
   applyAepsWithdrawalSuccess,
+  applyAepsDepositSuccess,
   queryAepsTransactionStatus,
   queryAepsDepositStatus,
   updateWalletAtomically,
@@ -131,6 +132,17 @@ const resolveAepsDeposit = async (txn) => {
 
   if (reconciled.status === 'SUCCESS') {
     const reconciledData = reconciled.data || {};
+    const credited = await applyAepsDepositSuccess({
+      transactionId: txn._id,
+      userId: txn.userId,
+      amount: txn.amount,
+      paysprintRef:
+        txn.metadata?.paysprintRef || reconciledData.ackno || reconciledData.bankrrn || undefined,
+      message: reconciledData.message || 'Resolved by reconciliation cron. Cash deposit status: SUCCESS',
+    });
+    if (credited) {
+      return `AEPS deposit ${txn.transactionId} resolved as SUCCESS — customer bank credited, deposit commission credited.`;
+    }
     const updated = await Transaction.findOneAndUpdate(
       { _id: txn._id, status: 'PROCESSING' },
       {

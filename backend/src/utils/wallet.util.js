@@ -32,6 +32,21 @@ export const getAepsWithdrawalCommission = (amount) => {
 };
 
 /**
+ * AEPS cash-deposit retailer commission (slab based).
+ *   ₹500–₹3000    → flat ₹2
+ *   ₹3001–₹10000  → flat ₹5
+ *   below ₹500    → ₹0 (no commission)
+ * No TDS or GST is deducted from cash-deposit commission.
+ */
+export const getAepsDepositCommission = (amount) => {
+  const amt = Number(amount) || 0;
+  if (amt < 500) return 0;
+  if (amt <= 3000) return 2;
+  if (amt <= 10000) return 5;
+  return 5;
+};
+
+/**
  * PHASE 1: PRE-FLIGHT LOCK
  * Atomically deducts funds and creates a PROCESSING transaction.
  * Safe from double-spend since it checks balance atomically.
@@ -370,6 +385,80 @@ export const applyAepsWithdrawalSuccess = async ({
       retailerCommissionGross: retailerGross,
       distributorEarned: distributorCommission,
       adminEarned: adminCommission,
+    };
+    if (paysprintRef) {
+      claimed.metadata = { ...claimed.metadata, paysprintRef };
+    }
+    if (message) {
+      claimed.metadata = { ...claimed.metadata, gatewayMessage: message };
+    }
+    await claimed.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+    return claimed;
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+};
+
+/**
+ * Atomically credits the retailer's cash-deposit commission and finalizes an
+ * AEPS deposit that the bank has confirmed as successful. Idempotent: only a
+ * PENDING or PROCESSING transaction may transition to SUCCESS, so concurrent
+ * reconciliation cannot double-credit.
+ *
+ * The deposit principal was debited from the Main wallet at lock time; only the
+ * slab-based commission (₹2 / ₹5) is credited here, in full — no TDS or GST is
+ * deducted from cash-deposit commission.
+ *
+ * Returns the finalized Transaction, or null if already resolved.
+ */
+export const applyAepsDepositSuccess = async ({
+  transactionId,
+  userId,
+  amount,
+  paysprintRef,
+  message,
+}) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    // Atomic claim — this is the idempotency guard.
+    const claimed = await Transaction.findOneAndUpdate(
+      { _id: transactionId, status: { $in: ['PENDING', 'PROCESSING'] } },
+      { $set: { status: 'SUCCESS' } },
+      { session, new: true }
+    );
+    if (!claimed) {
+      await session.commitTransaction();
+      session.endSession();
+      return null;
+    }
+
+    const numericAmount = Number(amount);
+    // Cash-deposit commission is slab-based and NOT subject to TDS/GST.
+    const retailerCommission = getAepsDepositCommission(numericAmount);
+
+    // Retailer MainWallet gets the full deposit commission (net of nothing).
+    if (retailerCommission > 0) {
+      await MainWallet.findOneAndUpdate(
+        { userId, userModel: 'Retailer' },
+        { $inc: { balance: retailerCommission } },
+        { upsert: true, session }
+      );
+    }
+
+    claimed.transactionId = paysprintRef || claimed.transactionId;
+    claimed.commissions = {
+      ...claimed.commissions,
+      retailerEarned: retailerCommission,
+      retailerTds: 0,
+      retailerCommissionGross: retailerCommission,
+      distributorEarned: 0,
+      adminEarned: 0,
     };
     if (paysprintRef) {
       claimed.metadata = { ...claimed.metadata, paysprintRef };

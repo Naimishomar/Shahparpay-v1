@@ -140,6 +140,10 @@ const getAepsWithdrawalCommission = (amount) => {
 const getCommissionSplit = (tx) => {
   const stored = toNumber(tx.commissions?.retailerEarned);
   const gross = round2(stored);
+  // Cash-deposit commission is credited in full — no TDS/GST is deducted.
+  if (tx.type === 'AEPS_DEPOSIT') {
+    return { gross, tds: 0, net: gross };
+  }
   const tds = round2(gross * 0.02);
   const net = round2(gross - tds);
   return { gross, tds, net };
@@ -298,7 +302,10 @@ export const getWalletLedger = async (req, res) => {
       const isDailyAuth = tx.type === 'DAILY_AUTH_CHARGE';
       const isRefundRow = isRefundTxnId(tx.transactionId);
       // Commission is never shown on refund rows (refunds credit the amount only).
-      const hasCommission = gross > 0 && tx.type === 'AEPS_WITHDRAWAL' && !isRefundRow;
+      const hasCommission =
+        gross > 0 &&
+        (tx.type === 'AEPS_WITHDRAWAL' || tx.type === 'AEPS_DEPOSIT') &&
+        !isRefundRow;
 
       // TDS (2%) is deducted ONLY from commission-paying transactions, never
       // from the principal. The daily 2FA auth charge is shown under GST (₹1).

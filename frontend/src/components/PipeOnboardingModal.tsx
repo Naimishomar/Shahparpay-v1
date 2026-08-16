@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Fingerprint, Loader2, CheckCircle2, ShieldAlert, ExternalLink, RefreshCw, Globe, KeyRound, Lock, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import { captureBiometric, DEVICE_LABELS } from '../utils/rdService';
+import type { DeviceBrand } from '../utils/rdService';
 
 // WADH values are per-pipe from the PaySprint docs (NOT per device brand).
 // The backend plan provides the authoritative wadh; this map is a local fallback.
@@ -79,7 +81,7 @@ const PipeOnboardingModal: React.FC<PipeOnboardingModalProps> = ({ pipe, onClose
     const [ekycId, setEkycId] = useState('');
     const [stateresp, setStateresp] = useState('');
     const [pidData, setPidData] = useState<string | null>(null);
-    const [deviceType, setDeviceType] = useState<'mantra' | 'morpho'>('mantra');
+    const [deviceType, setDeviceType] = useState<DeviceBrand>('mantra');
 
     const getHeaders = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` });
 
@@ -145,67 +147,13 @@ const PipeOnboardingModal: React.FC<PipeOnboardingModalProps> = ({ pipe, onClose
         const wadh = plan?.wadh || PIPE_WADH[currentPipe] || "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=";
         setLoading(true);
         try {
-            const ports = [11100, 11101, 11102];
-            let activeUrl = null;
-            const captureXml = `<?xml version="1.0"?>
-                <PidOptions ver="1.0">
-                  <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN" wadh="${wadh}" />
-                </PidOptions>`;
-
-            for (const port of ports) {
-                const url = `http://127.0.0.1:${port}`;
-                try {
-                    const res = await fetch(`${url}/rd/info`, { method: 'RDSERVICE', headers: { 'Accept': 'text/xml' }, signal: AbortSignal.timeout(500) });
-                    if (res.ok) { activeUrl = url; break; }
-                } catch (e) {
-                    const err = e as Error;
-                    console.log(`Port ${port} HTTP failed:`, err.message);
-                    try {
-                        const urlHttps = `https://127.0.0.1:${port}`;
-                        const resHttps = await fetch(`${urlHttps}/rd/info`, { method: 'RDSERVICE', headers: { 'Accept': 'text/xml' }, signal: AbortSignal.timeout(500) });
-                        if (resHttps.ok) { activeUrl = urlHttps; break; }
-                    } catch (e2) { 
-                        const err2 = e2 as Error;
-                        console.log(`Port ${port} HTTPS failed:`, err2.message);
-                        continue; 
-                    }
-                }
-            }
-
-            if (!activeUrl) {
-                toast.error("RD Service not found on ports 11100-11102. Please ensure Mantra/Morpho RD Service is installed, running, and the device is connected.");
-                return;
-            }
-
-            const captureResponse = await fetch(`${activeUrl}/rd/capture`, {
-                method: 'CAPTURE',
-                body: captureXml,
-                headers: { 'Content-Type': 'text/xml', 'Accept': 'text/xml' }
-            });
-            const capturedData = await captureResponse.text();
-            console.log('RD Capture Response:', capturedData);
-
-            // Check for RD Service errors in the XML response
-            const errCodeMatch = capturedData.match(/errCode="([^"]*)"/);
-            const errInfoMatch = capturedData.match(/errInfo="([^"]*)"/);
-            const errCode = errCodeMatch ? errCodeMatch[1] : null;
-            const errInfo = errInfoMatch ? errInfoMatch[1] : null;
-
-            if (errCode === '0' && capturedData.includes('PidData')) {
-                setPidData(capturedData);
-                toast.success("Fingerprint captured successfully!");
-            } else {
-                let errorMsg = "Biometric capture failed. Please clean the scanner and try again.";
-                if (errCode && errInfo) {
-                    errorMsg = `RD Service Error (${errCode}): ${errInfo}`;
-                } else if (capturedData.includes('init')) {
-                    errorMsg = "RD Service initialization error. Please restart the RD Service (Mantra/Morpho) and try again.";
-                }
-                toast.error(errorMsg);
-            }
+            const { pidData: capturedData } = await captureBiometric({ wadh });
+            setPidData(capturedData);
+            toast.success("Fingerprint captured successfully!");
         } catch (error) {
             console.error(error);
-            toast.error("Error during biometric capture.");
+            const err = error as Error;
+            toast.error(err?.message || "Error during biometric capture.");
         } finally {
             setLoading(false);
         }
@@ -503,13 +451,14 @@ const PipeOnboardingModal: React.FC<PipeOnboardingModalProps> = ({ pipe, onClose
                                                     <label className="text-sm font-medium mb-1 block">Biometric Device</label>
                                                     <select 
                                                         value={deviceType}
-                                                        onChange={(e) => setDeviceType(e.target.value as 'mantra' | 'morpho')}
+                                                        onChange={(e) => setDeviceType(e.target.value as DeviceBrand)}
                                                         className="w-full p-2.5 rounded-lg border border-border bg-background"
                                                     >
-                                                        <option value="mantra">Mantra (MFS100 / MFS110)</option>
-                                                        <option value="morpho">Morpho (IDEMIA E2 / E3 / MSO)</option>
+                                                        {Object.entries(DEVICE_LABELS).map(([brand, label]) => (
+                                                            <option key={brand} value={brand}>{label}</option>
+                                                        ))}
                                                     </select>
-                                                    <p className="text-xs text-muted-foreground mt-1">Select your fingerprint scanner brand. Both Mantra and Morpho devices are supported.</p>
+                                                    <p className="text-xs text-muted-foreground mt-1">Select your fingerprint scanner brand. Mantra, Morpho, and Startek devices are supported.</p>
                                                 </div>
 
                                             <div className="border border-border rounded-xl p-4 flex flex-col items-center justify-center gap-3 bg-background/50">

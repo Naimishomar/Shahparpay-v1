@@ -3,6 +3,7 @@ import { Fingerprint, Loader2, KeyRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { captureBiometric } from '../utils/rdService';
 
 interface DailyAuthModalProps {
     onClose: () => void;
@@ -29,46 +30,7 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = 
         setLoading(true);
         try {
             // 1. Capture Fingerprint First (Without OTP WADH, typical capture)
-            const ports = [11100, 11101, 11102];
-            let activeUrl = null;
-            
-            const captureXml = `<?xml version="1.0"?>
-                <PidOptions ver="1.0">
-                  <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN" />
-                </PidOptions>`;
-
-            for (const port of ports) {
-                const url = `http://127.0.0.1:${port}`;
-                try {
-                    const res = await fetch(`${url}/rd/info`, { method: 'RDSERVICE', headers: { 'Accept': 'text/xml' }, signal: AbortSignal.timeout(500) });
-                    if (res.ok) { activeUrl = url; break; }
-                } catch (e) {
-                    try {
-                        const urlHttps = `https://127.0.0.1:${port}`;
-                        const resHttps = await fetch(`${urlHttps}/rd/info`, { method: 'RDSERVICE', headers: { 'Accept': 'text/xml' }, signal: AbortSignal.timeout(500) });
-                        if (resHttps.ok) { activeUrl = urlHttps; break; }
-                    } catch (e2) { continue; }
-                }
-            }
-
-            if (!activeUrl) {
-                toast.error("RD Service not found. Please ensure your Biometric scanner is connected and running.");
-                setLoading(false);
-                return;
-            }
-
-            const captureResponse = await fetch(`${activeUrl}/rd/capture`, {
-                method: 'CAPTURE',
-                body: captureXml,
-                headers: { 'Content-Type': 'text/xml', 'Accept': 'text/xml' }
-            });
-            const capturedData = await captureResponse.text();
-
-            if (!capturedData.includes('errCode="0"')) {
-                toast.error("Biometric capture failed. Please clean the scanner and try again.");
-                setLoading(false);
-                return;
-            }
+            const { pidData: capturedData } = await captureBiometric();
 
             // 2. Submit to Daily Auth Endpoint
             const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/daily-auth`, {

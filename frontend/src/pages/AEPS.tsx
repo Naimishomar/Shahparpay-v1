@@ -9,6 +9,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { useLocationContext } from "../context/LocationContext";
 import { z } from "zod";
+import { captureBiometric, DEVICE_LABELS } from "../utils/rdService";
 
 const banks = [
     { name: 'SBI', displayName: 'State Bank of India (SBI)', logo: 'https://www.google.com/s2/favicons?domain=onlinesbi.sbi&sz=128' },
@@ -264,88 +265,17 @@ const AEPS = () => {
         if (isScanning) return;
         setIsScanning(true);
         try {
-            // High-security L1 options package (fType="2")
-            // WADH is intentionally NOT sent for AEPS transactions — including it causes
-            // "WADH validation failed in RD(WW)" because PaySprint's transaction PID block
-            // uses an empty wadh (see PaySprint docs). Bank 2 strictly rejects fType="0" (FIR+FMR).
-            // The customer's AEPS transaction OTP is passed via the `otp` attribute so it gets
-            // bound inside the captured PID data (required only for withdrawals >= ₹5000).
-            const otpAttr = (activeTab === 'cash_withdrawal' && Number(amount) > AEPS_OTP_THRESHOLD && otp) ? ` otp="${otp}"` : "";
-            const captureXml = `<?xml version="1.0"?>
-            <PidOptions ver="1.0">
-            <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN"${otpAttr} />
-            <CustOpts>
-                <Param name="Param1" value="" />
-            </CustOpts>
-            </PidOptions>
-            `;
-            // Common ports used by RD Services
-            const portsToTry = Array.from({length: 21}, (_, i) => 11100 + i); // 11100 to 11120
-            const protocols = window.location.protocol === 'https:' ? ['https', 'http'] : ['http', 'https'];
-            const hosts = ['127.0.0.1', 'localhost'];
-            
-            let activeUrl = null;
-
-            // Step 1: Discover the active RD Service port
-            for (const host of hosts) {
-                for (const protocol of protocols) {
-                    for (const port of portsToTry) {
-                        if (activeUrl) break;
-                        try {
-                            const testUrl = `${protocol}://${host}:${port}`;
-                            // UIDAI specifies RDSERVICE method to check status
-                            const response = await fetch(`${testUrl}/rd/info`, { method: 'RDSERVICE', headers: { 'Accept': 'text/xml' }, signal: AbortSignal.timeout(500) });
-                            
-                            if (response.ok) {
-                                const text = await response.text();
-                                if (text && text.includes('status="READY"')) {
-                                    activeUrl = testUrl;
-                                }
-                            }
-                        } catch (e) {
-                            const err = e as Error;
-                            console.log(`Port ${port} on ${protocol}://${host} failed:`, err.message);
-                            // ignore and try next port
-                        }
-                    }
-                }
-            }
-
-            if (!activeUrl) {
-                throw new Error("RD Service not found on ports 11100-11120. Please ensure Mantra/Morpho RD Service is installed, running, and the device is connected.");
-            }
-
-            // Step 2: Capture Biometrics on the discovered port
-            const captureResponse = await fetch(`${activeUrl}/rd/capture`, {
-                method: 'CAPTURE', // UIDAI strict specification verb
-                body: captureXml,
-                headers: { 'Content-Type': 'application/xml', 'Accept': 'application/xml' }
-            });
-            
-            const capturedData = await captureResponse.text();
-            console.log('RD Capture Response:', capturedData);
-
-            // Check for RD Service errors in the XML response
-            const errCodeMatch = capturedData.match(/errCode="([^"]*)"/);
-            const errInfoMatch = capturedData.match(/errInfo="([^"]*)"/);
-            const errCode = errCodeMatch ? errCodeMatch[1] : null;
-            const errInfo = errInfoMatch ? errInfoMatch[1] : null;
-
-            if (errCode === '0' && capturedData.includes('PidData')) {
-                setPidData(capturedData);
-            } else {
-                let errorMsg = "Biometric capture failed. Please clean the scanner and try again.";
-                if (errCode && errInfo) {
-                    errorMsg = `RD Service Error (${errCode}): ${errInfo}`;
-                } else if (capturedData.includes('init')) {
-                    errorMsg = "RD Service initialization error. Please restart the RD Service (Mantra/Morpho) and try again.";
-                }
-                toast.error(errorMsg);
-                setPidData(null);
-            }
+            // The customer's AEPS transaction OTP is passed via the `otp` option so it
+            // gets bound inside the captured PID data (required only for
+            // withdrawals >= ₹5000). WADH is intentionally NOT sent for AEPS
+            // transactions (see rdService.ts).
+            const otpValue = (activeTab === 'cash_withdrawal' && Number(amount) > AEPS_OTP_THRESHOLD && otp) ? otp : undefined;
+            const { pidData: capturedPid } = await captureBiometric({ otp: otpValue });
+            setPidData(capturedPid);
         } catch (error) {
             console.error("RD Service Error:", error);
-            toast.error(`Could not connect to ${selectedDevice}. Ensure RD Service is running and ad-blockers are disabled.`);
+            const err = error as Error;
+            toast.error(err?.message || `Could not connect to ${selectedDevice}. Ensure RD Service is running and ad-blockers are disabled.`);
             setPidData(null);
         } finally {
             setIsScanning(false);

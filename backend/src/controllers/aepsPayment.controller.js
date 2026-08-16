@@ -9,7 +9,11 @@ import {
 import Retailer from '../models/users/retailer.model.js';
 import Distributor from '../models/users/distributor.model.js';
 import Transaction from '../models/transaction.model.js';
-import { applyAepsWithdrawalSuccess, queryAepsTransactionStatus } from '../utils/wallet.util.js';
+import {
+  applyAepsWithdrawalSuccess,
+  applyAepsDepositSuccess,
+  queryAepsTransactionStatus,
+} from '../utils/wallet.util.js';
 
 // AEPS transaction OTP is required when the withdrawal amount is greater
 // than this threshold (PaySprint rule). At or below it, no OTP is needed.
@@ -1118,14 +1122,22 @@ export const cashDeposit = async (req, res) => {
 
     // 4. Success
     if (gatewayOk) {
-      await Transaction.findOneAndUpdate(
-        { transactionId: referenceNo },
-        {
-          status: 'SUCCESS',
-          'metadata.paysprintRef': paysprintRef,
-          'metadata.apiMessage': apiMessage,
-        }
-      );
+      const credited = await applyAepsDepositSuccess({
+        transactionId: newTxn._id,
+        userId: req.user.id,
+        amount: amountNum,
+        paysprintRef: paysprintRef || undefined,
+        message: apiMessage || 'Cash deposit successful',
+      });
+
+      if (!credited) {
+        // Already resolved elsewhere — never double-credit.
+        return res.status(409).json({
+          success: false,
+          message: 'Transaction was already resolved.',
+          data: responseData,
+        });
+      }
 
       return res.status(200).json({
         success: true,
@@ -1150,13 +1162,22 @@ export const cashDeposit = async (req, res) => {
       try {
         const reconciled = await queryAepsDepositStatus(referenceNo);
         if (reconciled.status === 'SUCCESS') {
-          await Transaction.findOneAndUpdate(
-            { transactionId: referenceNo },
-            {
-              status: 'SUCCESS',
-              'metadata.apiMessage': reconciled.data?.message || 'Cash deposit successful',
-            }
-          );
+          const credited = await applyAepsDepositSuccess({
+            transactionId: newTxn._id,
+            userId: req.user.id,
+            amount: amountNum,
+            paysprintRef: paysprintRef || undefined,
+            message: reconciled.data?.message || 'Cash deposit successful',
+          });
+
+          if (!credited) {
+            return res.status(409).json({
+              success: false,
+              message: 'Transaction was already resolved.',
+              data: reconciled.data || responseData,
+            });
+          }
+
           return res.status(200).json({
             success: true,
             message: 'Cash deposit successful',
