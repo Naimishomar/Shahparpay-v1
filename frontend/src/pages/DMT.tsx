@@ -1,32 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Search, UserPlus, Send, Plus, CreditCard, Lock, CheckCircle2, X, Trash, Fingerprint, Loader2, Cpu } from 'lucide-react';
+import { Search, UserPlus, Send, Plus, CreditCard, Lock, CheckCircle2, X, Trash, Fingerprint, Loader2 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
-
-// WADH keys for different RD Service providers per pipe
-const WADH_KEYS: Record<string, Record<'mantra' | 'morpho', string>> = {
-    bank2: {
-        mantra: '18f4CEiXeXcfGXvgWA/blxD+w2pw7hfQPY45JMytkPw=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
-    },
-    bank3: {
-        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
-    },
-    bank4: {
-        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
-    },
-    bank5: {
-        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
-    },
-    bank6: {
-        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
-    },
-};
 
 const DMT = () => {
     const { token } = useAuth();
@@ -92,28 +68,13 @@ const DMT = () => {
         try {
             const ports = [11100, 11101, 11102];
             let activeUrl = null;
-            
-            // Determine target WADH based on selected pipe and device type
-            let targetWadh = WADH_KEYS['bank2']?.[selectedDevice] || "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=";
-            try {
-                const token = localStorage.getItem('token');
-                const pidOptsRes = await axios.post(
-                    `${import.meta.env.VITE_BACKEND_URL}/api/aeps/get-pid-options`,
-                    {},
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
-                if (pidOptsRes.data && pidOptsRes.data.wadh) {
-                    targetWadh = WADH_KEYS[pidOptsRes.data.pipe]?.[selectedDevice] || pidOptsRes.data.wadh;
-                }
-            } catch (err) {
-                console.error("Failed to fetch dynamic WADH, using device-specific fallback", err);
-            }
 
             // High-security L1 options package (fType="2")
-            const wadhAttr = ` wadh="${targetWadh}"`;
+            // WADH is intentionally NOT sent for the DMT remitter E-KYC capture — including it
+            // causes "WADH validation failed in RD(WW)" (see PaySprint docs / original working flow).
             const captureXml = `<?xml version="1.0"?>
             <PidOptions ver="1.0">
-            <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN"${wadhAttr} />
+            <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN" />
             <CustOpts>
                 <Param name="Param1" value="" />
             </CustOpts>
@@ -538,7 +499,7 @@ const DMT = () => {
                                     <option value="mantra">Mantra (MFS100 / MFS110)</option>
                                     <option value="morpho">Morpho (IDEMIA E2 / E3 / MSO)</option>
                                 </select>
-                                <p className="text-xs text-muted-foreground mt-1">Select your fingerprint scanner brand. Mantra and Morpho use different WADH keys.</p>
+                                <p className="text-xs text-muted-foreground mt-1">Select your fingerprint scanner brand. Both Mantra and Morpho devices are supported.</p>
                             </div>
 
                             <div className="bg-muted/30 border border-border/50 rounded-xl p-4 mt-2">

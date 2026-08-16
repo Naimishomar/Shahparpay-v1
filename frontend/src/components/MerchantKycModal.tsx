@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Fingerprint, Loader2, CheckCircle2, ShieldAlert, Cpu, Settings } from 'lucide-react';
+import { Fingerprint, Loader2, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -10,24 +10,13 @@ interface MerchantKycModalProps {
     longitude?: string;
 }
 
-// WADH keys for different RD Service providers per pipe
-const WADH_KEYS: Record<string, Record<'mantra' | 'morpho', string>> = {
-    bank2: {
-        mantra: '18f4CEiXeXcfGXvgWA/blxD+w2pw7hfQPY45JMytkPw=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=', // Morpho/IDEMIA WADH for Bank 2
-    },
-    bank3: {
-        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=', // Morpho/IDEMIA WADH for Bank 3/5/6
-    },
-    bank5: {
-        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
-    },
-    bank6: {
-        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
-    },
+// WADH values are per-pipe from the PaySprint docs (NOT per device brand).
+// bank2 -> 18f4... ; bank3/bank5/bank6 -> E0jz...
+const PIPE_WADH: Record<string, string> = {
+    bank2: '18f4CEiXeXcfGXvgWA/blxD+w2pw7hfQPY45JMytkPw=',
+    bank3: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+    bank5: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+    bank6: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
 };
 
 const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, longitude }) => {
@@ -101,7 +90,7 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
         try {
             const ports = [11100, 11101, 11102];
             let activeUrl = null;
-            const wadh = WADH_KEYS[kycMethod]?.[deviceType] || WADH_KEYS.bank2.mantra;
+            const wadh = PIPE_WADH[kycMethod] || PIPE_WADH.bank2;
             const captureXml = `<?xml version="1.0"?>
                 <PidOptions ver="1.0">
                   <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN" wadh="${wadh}" />
@@ -264,7 +253,7 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
                                     <option value="mantra">Mantra (MFS100 / MFS110)</option>
                                     <option value="morpho">Morpho (IDEMIA E2 / E3 / MSO)</option>
                                 </select>
-                                <p className="text-xs text-muted-foreground mt-1">Select your fingerprint scanner brand. Mantra and Morpho use different WADH keys.</p>
+                                <p className="text-xs text-muted-foreground mt-1">Select your fingerprint scanner brand. Both Mantra and Morpho devices are supported.</p>
                             </div>
                             <div>
                                 <label className="text-sm font-medium mb-1 block">Merchant Code</label>

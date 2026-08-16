@@ -1,30 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Fingerprint, Loader2, CheckCircle2, ShieldAlert, ExternalLink, RefreshCw, Globe, KeyRound, Lock, Cpu, Settings, type LucideIcon } from 'lucide-react';
+import { Fingerprint, Loader2, CheckCircle2, ShieldAlert, ExternalLink, RefreshCw, Globe, KeyRound, Lock, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
-// WADH keys for different RD Service providers per pipe
-const WADH_KEYS: Record<string, Record<'mantra' | 'morpho', string>> = {
-    bank2: {
-        mantra: '18f4CEiXeXcfGXvgWA/blxD+w2pw7hfQPY45JMytkPw=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
-    },
-    bank3: {
-        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
-    },
-    bank4: {
-        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
-    },
-    bank5: {
-        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
-    },
-    bank6: {
-        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
-    },
+// WADH values are per-pipe from the PaySprint docs (NOT per device brand).
+// The backend plan provides the authoritative wadh; this map is a local fallback.
+const PIPE_WADH: Record<string, string> = {
+    bank2: '18f4CEiXeXcfGXvgWA/blxD+w2pw7hfQPY45JMytkPw=',
+    bank3: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+    bank4: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+    bank5: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
+    bank6: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
 };
 
 interface PipeOnboardingPlan {
@@ -156,7 +142,7 @@ const PipeOnboardingModal: React.FC<PipeOnboardingModalProps> = ({ pipe, onClose
 
     const captureFingerprint = async () => {
         const currentPipe = plan?.pipe || pipe;
-        const wadh = WADH_KEYS[currentPipe]?.[deviceType] || plan?.wadh || "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=";
+        const wadh = plan?.wadh || PIPE_WADH[currentPipe] || "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=";
         setLoading(true);
         try {
             const ports = [11100, 11101, 11102];
@@ -523,7 +509,7 @@ const PipeOnboardingModal: React.FC<PipeOnboardingModalProps> = ({ pipe, onClose
                                                         <option value="mantra">Mantra (MFS100 / MFS110)</option>
                                                         <option value="morpho">Morpho (IDEMIA E2 / E3 / MSO)</option>
                                                     </select>
-                                                    <p className="text-xs text-muted-foreground mt-1">Select your fingerprint scanner brand. Mantra and Morpho use different WADH keys.</p>
+                                                    <p className="text-xs text-muted-foreground mt-1">Select your fingerprint scanner brand. Both Mantra and Morpho devices are supported.</p>
                                                 </div>
 
                                             <div className="border border-border rounded-xl p-4 flex flex-col items-center justify-center gap-3 bg-background/50">

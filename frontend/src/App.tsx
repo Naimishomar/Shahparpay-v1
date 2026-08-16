@@ -43,12 +43,18 @@ function LandingRoute() {
   return <Landing />
 }
 
+function LoginRoute() {
+  const { token } = useAuth()
+  if (token) return <Navigate to="/dashboard" replace />
+  return <Login />
+}
+
 function App() {
   const router = createBrowserRouter(
     createRoutesFromElements(
       <>
       <Route path="/" element={<LandingRoute />} />
-      <Route path="/login" element={<Login />} />
+      <Route path="/login" element={<LoginRoute />} />
       <Route path="/kyc-status" element={<KycStatus />} />
       <Route element={<Layout/>}>
         {/* Retailer Dashboard */}

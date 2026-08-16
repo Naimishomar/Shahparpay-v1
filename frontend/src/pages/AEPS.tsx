@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Fingerprint, Clock, CheckCircle2, XCircle, RefreshCcw, ShieldCheck, KeyRound, Wallet, FileText, IndianRupee, CreditCard, Loader2, Store, Phone, Printer, Cpu } from "lucide-react";
+import { Fingerprint, Clock, CheckCircle2, XCircle, RefreshCcw, ShieldCheck, KeyRound, Wallet, FileText, IndianRupee, CreditCard, Loader2, Store, Phone, Printer } from "lucide-react";
 import logo from "../assets/logo.png";
 import MerchantKycModal from "../components/MerchantKycModal";
 import DailyAuthModal from "../components/DailyAuthModal";
@@ -9,30 +9,6 @@ import axios from "axios";
 import { toast } from "sonner";
 import { useLocationContext } from "../context/LocationContext";
 import { z } from "zod";
-
-// WADH keys for different RD Service providers per pipe
-const WADH_KEYS: Record<string, Record<'mantra' | 'morpho', string>> = {
-    bank2: {
-        mantra: '18f4CEiXeXcfGXvgWA/blxD+w2pw7hfQPY45JMytkPw=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
-    },
-    bank3: {
-        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
-    },
-    bank4: {
-        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
-    },
-    bank5: {
-        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
-    },
-    bank6: {
-        mantra: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
-        morpho: 'q/B7+M8fP5cU9HhG9JqK6w8R2tV4nX1zL3mN5pO7sT9=',
-    },
-};
 
 const banks = [
     { name: 'SBI', displayName: 'State Bank of India (SBI)', logo: 'https://www.google.com/s2/favicons?domain=onlinesbi.sbi&sz=128' },
@@ -288,35 +264,16 @@ const AEPS = () => {
         if (isScanning) return;
         setIsScanning(true);
         try {
-            // Determine target WADH based on selected pipe and device type
-            // Try to fetch from backend first, fallback to device-specific WADH
-            let targetWadh = WADH_KEYS[selectedPipe]?.[selectedDevice as 'mantra' | 'morpho'] || "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=";
-            try {
-                const token = localStorage.getItem('token');
-                const pidOptsRes = await axios.post(
-                    `${import.meta.env.VITE_BACKEND_URL}/api/aeps/get-pid-options`,
-                    {},
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
-                if (pidOptsRes.data && pidOptsRes.data.wadh) {
-                    // Use backend WADH but override with device-specific if different device selected
-                    targetWadh = WADH_KEYS[pidOptsRes.data.pipe]?.[selectedDevice as 'mantra' | 'morpho'] || pidOptsRes.data.wadh;
-                }
-            } catch (err) {
-                console.error("Failed to fetch dynamic WADH, using device-specific fallback", err);
-            }
-
             // High-security L1 options package (fType="2")
-            // Removing WADH from Balance Enquiry payload because it causes "WADH validation fail" 
-            // when fType="2" is used, and Bank 2 strictly rejects fType="0" (FIR+FMR).
+            // WADH is intentionally NOT sent for AEPS transactions — including it causes
+            // "WADH validation failed in RD(WW)" because PaySprint's transaction PID block
+            // uses an empty wadh (see PaySprint docs). Bank 2 strictly rejects fType="0" (FIR+FMR).
             // The customer's AEPS transaction OTP is passed via the `otp` attribute so it gets
             // bound inside the captured PID data (required only for withdrawals >= ₹5000).
             const otpAttr = (activeTab === 'cash_withdrawal' && Number(amount) > AEPS_OTP_THRESHOLD && otp) ? ` otp="${otp}"` : "";
-            // Include WADH for all transactions - it's required for proper device authentication
-            const wadhAttr = ` wadh="${targetWadh}"`;
             const captureXml = `<?xml version="1.0"?>
             <PidOptions ver="1.0">
-            <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN"${wadhAttr}${otpAttr} />
+            <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN"${otpAttr} />
             <CustOpts>
                 <Param name="Param1" value="" />
             </CustOpts>
