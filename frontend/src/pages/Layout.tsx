@@ -31,13 +31,13 @@ const Layout = () => {
             );
             const plan = res.data?.data;
             if (plan) {
-                const webStep = plan.steps?.find((s) => s.id === 'web');
+                const webStep = plan.steps?.find((s: { id: string }) => s.id === 'web');
                 const done = plan.status === 'ACCEPTED' || Boolean(webStep?.done) || Boolean(plan.webDone);
                 setWebKycDone(done);
             }
         } catch (err) {
             // Keep current state if the live check fails (e.g. transient network error).
-            console.warn('Failed to fetch live web KYC status', err?.message);
+            console.warn('Failed to fetch live web KYC status', err instanceof Error ? err.message : err);
         }
     }, [token, selectedPipe]);
 
