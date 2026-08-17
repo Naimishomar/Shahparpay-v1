@@ -67,17 +67,16 @@ export const discoverRdServiceUrl = async (): Promise<string | null> => {
 /**
  * Builds the UIDAI PidOptions capture XML. fType="2" (FMR+FIR) is the
  * high-security L1 option supported by all three scanner brands.
+ *
+ * RD Services validate the XML against the UIDAI spec and reject non-spec
+ * input with errCode 100 ("Invalid PidOptions input. XML should strictly
+ * adhere to spec"). The proven cross-vendor (Morpho/Mantra/Startek) format is
+ * a single-line <PidOptions> with NO XML declaration and NO <CustOpts> block.
  */
 export const buildCaptureXml = (options: CaptureOptions = {}): string => {
   const wadhAttr = options.wadh ? ` wadh="${options.wadh}"` : '';
   const otpAttr = options.otp ? ` otp="${options.otp}"` : '';
-  return `<?xml version="1.0"?>
-          <PidOptions ver="1.0">
-            <Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" env="P" posh="UNKNOWN"${wadhAttr}${otpAttr} />
-            <CustOpts>
-              <Param name="Param1" value="" />
-            </CustOpts>
-          </PidOptions>`;
+  return `<PidOptions ver="1.0"><Opts fCount="1" fType="2" iCount="0" pCount="0" format="0" pidVer="2.0" timeout="10000" posh="UNKNOWN" env="P"${otpAttr}${wadhAttr} /></PidOptions>`;
 };
 
 export interface RdCaptureResult {
