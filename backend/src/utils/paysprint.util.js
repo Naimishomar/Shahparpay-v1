@@ -17,6 +17,63 @@ export const getOnboardStatusEndpoint = (pipe) => {
     : `${baseUrl}/service/onboard/onboard/getonboardstatus`;
 };
 
+// Determines whether the WEB KYC step is actually complete based on PaySprint's
+// live getonboardstatus response. This is the authoritative signal — it must be
+// used instead of the local isMerchantKycComplete attribute, because merely
+// OPENING the PaySprint web onboarding page can flip local flags prematurely.
+//
+// PaySprint status semantics (bank2/bank3/bank5/bank6):
+//   'Accepted'            -> Onboarding completed, KYC verified, eligible (web done)
+//   'Pending'             -> bank2: "Onboarding complete, kindly activate merchant
+//                             by ekyc process" (web DONE, eKYC next). Other pipes may
+//                             say "Merchant onboarding is in process" (web NOT done).
+//   'In-Process'          -> "Merchant KYC completed successfully, wait 30 mins for
+//                             bank approval" (web done)
+//   'Verification-Pending'-> "Onboarding complete, please wait 24hr for merchant
+//                             verification" (web done)
+//   'KYC-Pending'         -> still pending -> web not confirmed complete
+//   'Rejected'            -> rejected
+//   'Not-Onboarded'       -> response_code 0, with current_stage like
+//                             ONBOARD-NOT-STARTED / ONBOARDING-STARTED / PAN-VERIFICATION
+//                             (web NOT done)
+export const isWebKycDone = (data = {}) => {
+  const approved = data.is_approved;
+  if (!approved) return false;
+  if (approved === 'Accepted') return true;
+  if (approved === 'In-Process' || approved === 'Verification-Pending') return true;
+  if (approved === 'Pending') {
+    const msg = String(data.message || '').toLowerCase();
+    return msg.includes('onboarding complete') || msg.includes('activate the merchant');
+  }
+  return false;
+};
+
+// Queries PaySprint's live getonboardstatus for a single pipe and returns the raw
+// response body (or null on failure). Used to verify actual onboarding state instead
+// of trusting local flags or callbacks that can fire before web KYC is complete.
+export const getOnboardStatus = async (merchantcode, mobile, pipe, timeout = 15000) => {
+  try {
+    const token = generatePaySprintToken();
+    const res = await axios.post(
+      getOnboardStatusEndpoint(pipe),
+      { merchantcode, mobile, pipe },
+      {
+        headers: {
+          Token: token,
+          Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
+          'Content-Type': 'application/json',
+        },
+        validateStatus: () => true,
+        timeout,
+      }
+    );
+    return res.data || null;
+  } catch (e) {
+    console.warn(`[getOnboardStatus] pipe ${pipe} failed:`, e.message);
+    return null;
+  }
+};
+
 export const getOnboardUrlEndpoint = (pipe) => {
   const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
   return isV2OnboardPipe(pipe)

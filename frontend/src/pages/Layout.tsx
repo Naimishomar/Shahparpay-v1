@@ -4,7 +4,7 @@ import News from "@/components/News"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Outlet, Navigate, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import axios from "axios"
 import toast from "react-hot-toast"
 import { ShieldCheck, LogOut } from "lucide-react"
@@ -19,6 +19,28 @@ const Layout = () => {
 
     const [webKycDone, setWebKycDone] = useState(false);
 
+    // "Step 1 (Web KYC): Completed" must come from PaySprint's LIVE status — not from
+    // the isMerchantKycComplete attribute or localStorage, because merely opening the
+    // PaySprint web onboarding page can flip those before web KYC is actually done.
+    const checkWebKycStatus = useCallback(async () => {
+        if (!token || !selectedPipe) return;
+        try {
+            const res = await axios.get(
+                `${import.meta.env.VITE_BACKEND_URL}/api/aeps/onboarding/plan?pipe=${selectedPipe}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            const plan = res.data?.data;
+            if (plan) {
+                const webStep = plan.steps?.find((s) => s.id === 'web');
+                const done = plan.status === 'ACCEPTED' || Boolean(webStep?.done) || Boolean(plan.webDone);
+                setWebKycDone(done);
+            }
+        } catch (err) {
+            // Keep current state if the live check fails (e.g. transient network error).
+            console.warn('Failed to fetch live web KYC status', err?.message);
+        }
+    }, [token, selectedPipe]);
+
     useEffect(() => {
         if (user && user.role === 'retailer') {
             const needsWebKyc = user.isMerchantKycComplete === false;
@@ -29,25 +51,21 @@ const Layout = () => {
             } else {
                 setShowKyc(false);
             }
-
-            if (user.isMerchantKycComplete) {
-                setWebKycDone(true);
-            }
         } else {
             setShowKyc(false);
         }
 
+        checkWebKycStatus();
+
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === 'webKycCompleted' && e.newValue) {
-                setWebKycDone(true);
+                // Re-verify live instead of trusting the callback alone.
+                checkWebKycStatus();
             }
         };
         window.addEventListener('storage', handleStorageChange);
-        if (localStorage.getItem('webKycCompleted')) {
-            setWebKycDone(true);
-        }
         return () => window.removeEventListener('storage', handleStorageChange);
-    }, [user]);
+    }, [user, checkWebKycStatus]);
 
     const handleCompleteKyc = async () => {
         if (!user || !user._id) return;

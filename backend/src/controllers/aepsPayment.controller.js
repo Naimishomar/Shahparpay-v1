@@ -5,6 +5,7 @@ import {
   encryptPayload,
   getOnboardStatusEndpoint,
   postAepsTransactionWithGeoRecovery,
+  isWebKycDone,
 } from '../utils/paysprint.util.js';
 import Retailer from '../models/users/retailer.model.js';
 import Distributor from '../models/users/distributor.model.js';
@@ -2239,6 +2240,10 @@ export const getPipeOnboardingPlan = async (req, res) => {
       const data = statusRes.data || {};
       is_approved = data.is_approved || null;
       message = data.message || null;
+      console.log(
+        `[getPipeOnboardingPlan] ${pipeNorm} getonboardstatus:`,
+        JSON.stringify(data)
+      );
       if (data.response_code === 1 && is_approved === 'Accepted') status = 'ACCEPTED';
       else if (
         is_approved === 'Pending' ||
@@ -2254,6 +2259,11 @@ export const getPipeOnboardingPlan = async (req, res) => {
       console.warn(`[getPipeOnboardingPlan] status check failed for ${pipeNorm}:`, e.message);
     }
 
+    // Web KYC is ONLY considered done when PaySprint's live status confirms it.
+    // Do NOT trust the local isMerchantKycComplete attribute — merely opening the
+    // PaySprint web page must not mark this step complete.
+    const webDone = isWebKycDone({ is_approved, message });
+
     // Build the ordered steps based on current status.
     const steps = [];
     let canStart = false;
@@ -2268,7 +2278,7 @@ export const getPipeOnboardingPlan = async (req, res) => {
       steps.push({
         id: 'web',
         title: 'Complete Web KYC',
-        done: status === 'PENDING' ? true : false,
+        done: webDone,
         required: true,
         v2: config.webOnboardV2,
       });
@@ -2279,7 +2289,7 @@ export const getPipeOnboardingPlan = async (req, res) => {
           id: 'ekyc',
           title: config.ekycMethod === 'otp' ? 'eKYC (OTP + Biometric)' : 'eKYC (Biometric)',
           done: false,
-          locked: status !== 'PENDING', // only actionable after web KYC is in progress
+          locked: !webDone, // only actionable after web KYC is in progress
           required: true,
           method: config.ekycMethod,
           fields: config.ekycFields,
@@ -2297,7 +2307,7 @@ export const getPipeOnboardingPlan = async (req, res) => {
         });
       }
 
-      if (status === 'PENDING') {
+      if (webDone) {
         // Web KYC done; next actionable step is eKYC (or waiting for bank).
         canStart = Boolean(config.ekycMethod);
         canStartEkyc = Boolean(config.ekycMethod);
@@ -2326,6 +2336,7 @@ export const getPipeOnboardingPlan = async (req, res) => {
         status,
         is_approved,
         message,
+        webDone,
         steps,
         canStart,
         canStartEkyc,

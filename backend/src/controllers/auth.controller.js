@@ -20,6 +20,8 @@ import {
   decryptPayload,
   generatePaySprintToken,
   getOnboardStatusEndpoint,
+  isWebKycDone,
+  getOnboardStatus,
 } from '../utils/paysprint.util.js';
 import axios from 'axios';
 
@@ -876,17 +878,41 @@ export const generateOnboardUrl = async (req, res) => {
             message: `Merchant is already onboarded with PaySprint but NOT on ${requestedPipe}. Please complete ${requestedPipe} onboarding (via PaySprint support if the web flow is blocked).`,
           });
         }
-        // Update DB since PaySprint says they are already onboarded
-        if (user.retailerId) {
-          await Retailer.findOneAndUpdate(
-            { retailerId: merchantCodeFinal },
-            { isMerchantKycComplete: true }
+        // Verify with PaySprint's LIVE status before persisting — getonboardurl
+        // saying "already onboarded" is NOT proof that web KYC was completed on
+        // this pipe. Only mark the merchant KYC-complete when PaySprint confirms it.
+        const pipesToVerify = requestedPipe
+          ? [requestedPipe]
+          : ['bank3', 'bank2', 'bank4', 'bank5', 'bank6'];
+        let liveWebKycDone = false;
+        for (const p of pipesToVerify) {
+          const live = await getOnboardStatus(
+            merchantCodeFinal.toString(),
+            String(user.contactNumber || ''),
+            p
           );
-        } else if (user.distributorId) {
-          await Distributor.findOneAndUpdate(
-            { distributorId: merchantCodeFinal },
-            { isMerchantKycComplete: true }
+          console.log(
+            `[generateOnboardUrl] verify pipe ${p} for ${merchantCodeFinal}:`,
+            JSON.stringify(live)
           );
+          if (live && isWebKycDone(live)) {
+            liveWebKycDone = true;
+            break;
+          }
+        }
+        // Update DB only when PaySprint actually confirms web onboarding is done.
+        if (liveWebKycDone) {
+          if (user.retailerId) {
+            await Retailer.findOneAndUpdate(
+              { retailerId: merchantCodeFinal },
+              { isMerchantKycComplete: true }
+            );
+          } else if (user.distributorId) {
+            await Distributor.findOneAndUpdate(
+              { distributorId: merchantCodeFinal },
+              { isMerchantKycComplete: true }
+            );
+          }
         }
         // Return callback URL so frontend redirects back gracefully
         return res.status(200).json({ success: true, alreadyOnboarded: true });
@@ -953,12 +979,19 @@ export const updateKycStatus = async (req, res) => {
 
     const merchantCode = decoded.merchantcode;
 
+    // Load the merchant's real contact number from the DB — the callback payload may
+    // omit `mobile`, and PaySprint's getonboardstatus needs it for the verification call.
+    let existingUser = await Retailer.findOne({ retailerId: merchantCode });
+    if (!existingUser) existingUser = await Distributor.findOne({ distributorId: merchantCode });
+    const mobile = existingUser?.contactNumber ? String(existingUser.contactNumber) : String(decoded.mobile || '');
+
     // status "0" means onboarding is still PENDING -> must not be marked complete.
-    const status = String(decoded.status ?? '1');
+    // Only accept a genuinely successful callback status.
+    const status = String(decoded.status ?? '');
     const isSuccess = status === '1' || status === 'true' || status === '2';
 
     // Persist the same pipe(s) reported as bank / active pipes.
-    const updateData = { isMerchantKycComplete: isSuccess };
+    const updateData = {};
     if (decoded.bank) {
       const activePipes = [];
       if (decoded.bank.Bank2 === 1 || decoded.bank.Bank2 === '1') activePipes.push('bank2');
@@ -969,16 +1002,43 @@ export const updateKycStatus = async (req, res) => {
       if (activePipes.length) updateData.activeAepsPipes = activePipes;
     }
 
+    // NEVER trust the local isMerchantKycComplete flag or the callback payload on its
+    // own. Merely opening the PaySprint web onboarding page can fire a callback (or
+    // flip a local flag) before web KYC is actually complete. So when the callback
+    // claims success, re-verify against PaySprint's live getonboardstatus: only mark
+    // web KYC complete when PaySprint actually confirms the merchant is onboarded.
+    let webKycVerified = false;
+    if (isSuccess) {
+      const pipesToVerify =
+        (updateData.activeAepsPipes && updateData.activeAepsPipes.length
+          ? updateData.activeAepsPipes
+          : ['bank3', 'bank2', 'bank4', 'bank5', 'bank6']);
+      for (const p of pipesToVerify) {
+        const live = await getOnboardStatus(merchantCode, mobile, p);
+        console.log(
+          `[updateKycStatus] verify pipe ${p} for ${merchantCode}:`,
+          JSON.stringify(live)
+        );
+        if (live && isWebKycDone(live)) {
+          webKycVerified = true;
+          break;
+        }
+      }
+    }
+
+    const finalSuccess = isSuccess && webKycVerified;
+    updateData.isMerchantKycComplete = finalSuccess;
+
     const retailer = await Retailer.findOneAndUpdate({ retailerId: merchantCode }, updateData, {
       new: true,
     });
     if (retailer) {
       return res.status(200).json({
-        success: isSuccess,
-        message: isSuccess
+        success: finalSuccess,
+        message: finalSuccess
           ? 'KYC Status updated'
           : 'Onboarding is still pending. Please complete onboarding again.',
-        isPending: !isSuccess,
+        isPending: !finalSuccess,
       });
     }
 
@@ -989,11 +1049,11 @@ export const updateKycStatus = async (req, res) => {
     );
     if (distributor) {
       return res.status(200).json({
-        success: isSuccess,
-        message: isSuccess
+        success: finalSuccess,
+        message: finalSuccess
           ? 'KYC Status updated'
           : 'Onboarding is still pending. Please complete onboarding again.',
-        isPending: !isSuccess,
+        isPending: !finalSuccess,
       });
     }
 
