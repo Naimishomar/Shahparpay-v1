@@ -70,7 +70,7 @@ const DMT = () => {
         try {
             // WADH is intentionally NOT sent for the DMT remitter E-KYC capture — including it
             // causes "WADH validation failed in RD(WW)" (see PaySprint docs / original working flow).
-            const { pidData: capturedData } = await captureBiometric();
+            const { pidData: capturedData } = await captureBiometric({ device: selectedDevice });
             const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/dmt/remitter/ekyc`, {
                 mobile,
                 aadhaar_number: aadhaar,

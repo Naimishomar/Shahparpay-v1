@@ -147,7 +147,7 @@ const PipeOnboardingModal: React.FC<PipeOnboardingModalProps> = ({ pipe, onClose
         const wadh = plan?.wadh || PIPE_WADH[currentPipe] || "E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=";
         setLoading(true);
         try {
-            const { pidData: capturedData } = await captureBiometric({ wadh });
+            const { pidData: capturedData } = await captureBiometric({ wadh, device: deviceType });
             setPidData(capturedData);
             toast.success("Fingerprint captured successfully!");
         } catch (error) {

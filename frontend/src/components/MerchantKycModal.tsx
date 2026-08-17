@@ -91,7 +91,7 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
         setLoading(true);
         try {
             const wadh = PIPE_WADH[kycMethod] || PIPE_WADH.bank2;
-            const { pidData: capturedData } = await captureBiometric({ wadh });
+            const { pidData: capturedData } = await captureBiometric({ wadh, device: deviceType });
             setPidData(capturedData);
             toast.success("Fingerprint captured successfully!");
         } catch (error) {

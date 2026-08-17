@@ -19,27 +19,52 @@ export const DEVICE_LABELS: Record<DeviceBrand, string> = {
 const RD_PORTS = Array.from({ length: 21 }, (_, i) => 11100 + i);
 const RD_HOSTS = ['127.0.0.1', 'localhost'];
 
+// Preferred probe order per brand. When the user selects a specific scanner
+// brand we probe its known ports first so the capture always reaches the
+// matching RD Service — otherwise (with multiple RD Services installed) the
+// ascending port probe can land on a different brand's service and the
+// selected scanner never receives the capture command (its LED never glows).
+const BRAND_PREFERRED_PORTS: Record<DeviceBrand, number[]> = {
+  mantra: [11100, 11101],
+  morpho: [11101, 11100],
+  startek: [11100, 11101],
+};
+
 export interface CaptureOptions {
   // Optional per-pipe WADH (eKYC capture flows). Omit for AEPS/DMT
   // transaction captures where PaySprint expects an empty wadh.
   wadh?: string;
   // Optional AEPS transaction OTP, bound into the captured PID block.
   otp?: string;
+  // The scanner brand the user selected. Drives RD Service discovery so the
+  // capture is sent to the brand's RD Service and its LED lights up.
+  device?: DeviceBrand;
 }
 
 /**
  * Discovers the active RD Service by probing /rd/info on every standard port
- * (http + https, 127.0.0.1 + localhost). Returns the base URL or null.
+ * (http + https, 127.0.0.1 + localhost). The selected device brand's known
+ * ports are probed first so the capture reaches the matching RD Service.
+ * Returns the base URL or null.
  */
-export const discoverRdServiceUrl = async (): Promise<string | null> => {
+export const discoverRdServiceUrl = async (
+  device?: DeviceBrand
+): Promise<string | null> => {
   const protocols =
     typeof window !== 'undefined' && window.location.protocol === 'https:'
       ? ['https', 'http']
       : ['http', 'https'];
 
+  // Probe the selected brand's ports first, then fall back to the rest.
+  const preferred = device ? BRAND_PREFERRED_PORTS[device] : [];
+  const orderedPorts = [
+    ...preferred,
+    ...RD_PORTS.filter((p) => !preferred.includes(p)),
+  ];
+
   for (const host of RD_HOSTS) {
     for (const protocol of protocols) {
-      for (const port of RD_PORTS) {
+      for (const port of orderedPorts) {
         try {
           const testUrl = `${protocol}://${host}:${port}`;
           const response = await fetch(`${testUrl}/rd/info`, {
@@ -91,7 +116,7 @@ export interface RdCaptureResult {
 export const captureBiometric = async (
   options: CaptureOptions = {}
 ): Promise<RdCaptureResult> => {
-  const activeUrl = await discoverRdServiceUrl();
+  const activeUrl = await discoverRdServiceUrl(options.device);
   if (!activeUrl) {
     throw new Error(
       'RD Service not found on ports 11100-11120. Please ensure the Mantra/Morpho/Startek RD Service is installed, running, and the device is connected.'

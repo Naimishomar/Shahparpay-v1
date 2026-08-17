@@ -9,7 +9,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { useLocationContext } from "../context/LocationContext";
 import { z } from "zod";
-import { captureBiometric, DEVICE_LABELS } from "../utils/rdService";
+import { captureBiometric, DEVICE_LABELS, type DeviceBrand } from "../utils/rdService";
 
 const banks = [
     { name: 'SBI', displayName: 'State Bank of India (SBI)', logo: 'https://www.google.com/s2/favicons?domain=onlinesbi.sbi&sz=128' },
@@ -270,7 +270,7 @@ const AEPS = () => {
             // withdrawals >= ₹5000). WADH is intentionally NOT sent for AEPS
             // transactions (see rdService.ts).
             const otpValue = (activeTab === 'cash_withdrawal' && Number(amount) > AEPS_OTP_THRESHOLD && otp) ? otp : undefined;
-            const { pidData: capturedPid } = await captureBiometric({ otp: otpValue });
+            const { pidData: capturedPid } = await captureBiometric({ otp: otpValue, device: selectedDevice as DeviceBrand });
             setPidData(capturedPid);
         } catch (error) {
             console.error("RD Service Error:", error);
