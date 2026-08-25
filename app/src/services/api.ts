@@ -1,12 +1,26 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_ENDPOINTS } from '@/constants';
+import Constants from 'expo-constants';
+import { API_ENDPOINTS, STORAGE_KEYS } from '@/constants';
 
-const BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+// On a device or emulator "localhost" is the device itself, not the dev
+// machine, so fall back to whichever host is serving the Metro bundle.
+const resolveBaseUrl = () => {
+  const fromEnv = process.env.EXPO_PUBLIC_BACKEND_URL;
+  if (fromEnv) return fromEnv.replace(/\/+$/, '');
+  const host = Constants.expoConfig?.hostUri?.split(':')[0];
+  return host ? `http://${host}:3000` : 'http://localhost:3000';
+};
+
+export const BASE_URL = resolveBaseUrl();
+
+type RetriableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
 class ApiService {
   private client: AxiosInstance;
   private token: string | null = null;
+  private refreshPromise: Promise<string | null> | null = null;
+  private onUnauthorized: (() => void) | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -20,7 +34,7 @@ class ApiService {
     this.client.interceptors.request.use(
       async (config: InternalAxiosRequestConfig) => {
         if (!this.token) {
-          this.token = await AsyncStorage.getItem('token');
+          this.token = await AsyncStorage.getItem(STORAGE_KEYS.token);
         }
         if (this.token && config.headers) {
           config.headers.Authorization = `Bearer ${this.token}`;
@@ -33,7 +47,18 @@ class ApiService {
     this.client.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        if (error.response?.status === 401) {
+        const original = error.config as RetriableConfig | undefined;
+        const isAuthCall = original?.url?.startsWith('/api/auth/');
+
+        // Access tokens live 15 minutes; refresh once and replay the request
+        // instead of dumping the user back on the login screen.
+        if (error.response?.status === 401 && original && !original._retry && !isAuthCall) {
+          original._retry = true;
+          const refreshed = await this.refreshAccessToken();
+          if (refreshed) {
+            original.headers.Authorization = `Bearer ${refreshed}`;
+            return this.client(original);
+          }
           await this.handleUnauthorized();
         }
         return Promise.reject(error);
@@ -41,10 +66,48 @@ class ApiService {
     );
   }
 
+  private refreshAccessToken(): Promise<string | null> {
+    if (!this.refreshPromise) {
+      this.refreshPromise = (async () => {
+        const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.refreshToken);
+        if (!refreshToken) return null;
+        try {
+          // Raw axios: going through this.client would recurse on a 401.
+          const { data } = await axios.post(
+            `${BASE_URL}${API_ENDPOINTS.auth.refreshToken}`,
+            { refreshToken },
+            { timeout: 30000 }
+          );
+          if (!data?.success || !data?.token) return null;
+          this.token = data.token;
+          await AsyncStorage.setItem(STORAGE_KEYS.token, data.token);
+          return data.token as string;
+        } catch {
+          return null;
+        }
+      })().finally(() => {
+        this.refreshPromise = null;
+      });
+    }
+    return this.refreshPromise;
+  }
+
   private async handleUnauthorized() {
-    await AsyncStorage.removeItem('token');
-    await AsyncStorage.removeItem('user');
+    await this.clearSession();
+    this.onUnauthorized?.();
+  }
+
+  async clearSession() {
     this.token = null;
+    await AsyncStorage.multiRemove([
+      STORAGE_KEYS.token,
+      STORAGE_KEYS.refreshToken,
+      STORAGE_KEYS.user,
+    ]);
+  }
+
+  setUnauthorizedHandler(handler: (() => void) | null) {
+    this.onUnauthorized = handler;
   }
 
   setToken(token: string | null) {
@@ -90,7 +153,8 @@ class ApiService {
   }
 
   async refreshToken() {
-    return this.post(API_ENDPOINTS.auth.refreshToken);
+    const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.refreshToken);
+    return this.post(API_ENDPOINTS.auth.refreshToken, refreshToken ? { refreshToken } : undefined);
   }
 
   async getPaysprintOnboardUrl(merchantId: string, isNew: boolean, pipe: string, callbackUrl: string) {
@@ -116,86 +180,90 @@ class ApiService {
   }
 
   // AEPS endpoints
-  async getAepsServices() {
-    return this.get(API_ENDPOINTS.aeps.services);
+  async getAepsBanks() {
+    return this.get(API_ENDPOINTS.aeps.banks);
   }
 
-  async getAepsSettlement(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.aeps.settlement, params);
+  async getAepsMerchantStatus() {
+    return this.get(API_ENDPOINTS.aeps.merchantStatus);
   }
 
-  async getAepsPipes() {
-    return this.get(API_ENDPOINTS.aeps.pipes);
+  async verifyAepsPipes() {
+    return this.get(API_ENDPOINTS.aeps.pipesVerify);
   }
 
   async getOnboardingPlan(pipe: string) {
-    return this.get(`${API_ENDPOINTS.aeps.onboardingPlan}?pipe=${pipe}`);
+    return this.get(API_ENDPOINTS.aeps.onboardingPlan, { pipe });
+  }
+
+  // Settlement / payout endpoints
+  async getSettlementHistory(params?: Record<string, any>) {
+    return this.get(API_ENDPOINTS.settlement.history, params);
+  }
+
+  async getSavedBanks() {
+    return this.get(API_ENDPOINTS.settlement.savedBanks);
+  }
+
+  async initiateSettlement(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.settlement.initiate, data);
+  }
+
+  async directPayout(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.settlement.directPayout, data);
   }
 
   // DMT endpoints
-  async getDmtServices() {
-    return this.get(API_ENDPOINTS.dmt.services);
+  async getDmtBanks(data?: Record<string, any>) {
+    return this.post(API_ENDPOINTS.dmt.banks, data);
   }
 
-  async getDmtReport(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.dmt.report, params);
+  async getDmtHistory(params?: Record<string, any>) {
+    return this.get(API_ENDPOINTS.dmt.history, params);
   }
 
-  // Recharge endpoints
-  async getRechargeServices() {
-    return this.get(API_ENDPOINTS.recharge.services);
+  // Recharge / BBPS endpoints (BBPS bill pay runs through the recharge routes)
+  async getRechargeOperators(type: string) {
+    return this.get(`${API_ENDPOINTS.recharge.operators}/${type}`);
   }
 
-  async getRechargeOperators() {
-    return this.get(API_ENDPOINTS.recharge.operators);
+  async fetchBill(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.recharge.fetchBill, data);
   }
 
-  // BBPS endpoints
-  async getBbpsCategories() {
-    return this.get(API_ENDPOINTS.bbps.categories);
+  async doRecharge(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.recharge.doRecharge, data);
   }
 
-  async getBbpsBillers(categoryId: string) {
-    return this.get(`${API_ENDPOINTS.bbps.billers}?categoryId=${categoryId}`);
-  }
-
-  async fetchBbpsBill(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.bbps.fetchBill, data);
-  }
-
-  async payBbpsBill(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.bbps.payBill, data);
+  async getRechargeHistory(params?: Record<string, any>) {
+    return this.get(API_ENDPOINTS.recharge.history, params);
   }
 
   // UPI endpoints
-  async getUpiPayments(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.upi.payments, params);
+  async getUpiMerchantStatus() {
+    return this.get(API_ENDPOINTS.upi.merchantStatus);
   }
 
-  async getUpiReport(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.upi.report, params);
+  async generateUpiToken(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.upi.generateToken, data);
   }
 
   // PAN endpoints
-  async applyPanCard(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.pan.apply, data);
+  async applyPanService(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.pan.esevaApplyService, data);
   }
 
-  async getPanStatus(applicationId: string) {
-    return this.get(`${API_ENDPOINTS.pan.status}/${applicationId}`);
-  }
-
-  async getPanReport(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.pan.report, params);
+  async getPanHistory(params?: Record<string, any>) {
+    return this.get(API_ENDPOINTS.pan.esevaHistory, params);
   }
 
   // ITR endpoints
-  async fileItr(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.itr.filing, data);
+  async launchItr(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.itr.launch, data);
   }
 
-  async getItrReport(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.itr.report, params);
+  async getItrHistory(params?: Record<string, any>) {
+    return this.get(API_ENDPOINTS.itr.history, params);
   }
 
   // Lead Generation endpoints
@@ -203,47 +271,43 @@ class ApiService {
     return this.post(API_ENDPOINTS.lead.generate, data);
   }
 
-  async getLeadReport(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.lead.report, params);
+  async getLeadHistory(params?: Record<string, any>) {
+    return this.get(API_ENDPOINTS.lead.history, params);
   }
 
   // Fund Request endpoints
-  async createFundRequest(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.fundRequest.create, data);
+  async getRetailerFundRequests(params?: Record<string, any>) {
+    return this.get(API_ENDPOINTS.fundRequest.retailer, params);
   }
 
-  async getFundRequests(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.fundRequest.list, params);
+  async getDistributorFundRequests(params?: Record<string, any>) {
+    return this.get(API_ENDPOINTS.fundRequest.distributor, params);
   }
 
-  async approveFundRequest(requestId: string, action: 'approve' | 'reject', remark?: string) {
-    return this.post(`${API_ENDPOINTS.fundRequest.approve}/${requestId}`, { action, remark });
+  async updateFundRequest(data: Record<string, any>) {
+    return this.put(API_ENDPOINTS.fundRequest.update, data);
   }
 
   // Distributor endpoints
+  async getDistributorStats() {
+    return this.get(API_ENDPOINTS.distributor.stats);
+  }
+
   async getDistributorRetailers(params?: Record<string, any>) {
     return this.get(API_ENDPOINTS.distributor.retailers, params);
   }
 
-  async createDistributorRetailer(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.distributor.create, data);
+  // Admin endpoints
+  async getAdminStats() {
+    return this.get(API_ENDPOINTS.admin.stats);
   }
 
-  // Admin endpoints
   async getAdminDistributors(params?: Record<string, any>) {
     return this.get(API_ENDPOINTS.admin.distributors, params);
   }
 
-  async createAdminUser(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.admin.create, data);
-  }
-
-  async getAdminCommissions(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.admin.commissions, params);
-  }
-
   async getAdminFundRequests(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.admin.fundRequests, params);
+    return this.get(API_ENDPOINTS.fundRequest.admin, params);
   }
 }
 

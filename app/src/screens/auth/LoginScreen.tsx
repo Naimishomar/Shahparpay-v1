@@ -88,11 +88,12 @@ export const LoginScreen: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await api.verifyOtp(identifier, otp);
+      const response = await api.verifyOtp(identifier.trim(), otp.trim());
 
       if (response.success) {
+        // The backend returns token/refreshToken/role/user at the top level.
         // AppNavigator swaps to the role's stack as soon as the token lands.
-        await login(response.data.token, { ...response.data.user, role: response.data.role });
+        await login(response.token, { ...response.user, role: response.role }, response.refreshToken);
       } else {
         setError(response.message || 'Invalid OTP.');
       }

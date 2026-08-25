@@ -1,14 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, AuthState } from '@/types';
+import { STORAGE_KEYS } from '@/constants';
 import api from '@/services/api';
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
-
-const STORAGE_KEYS = {
-  token: 'token',
-  user: 'user',
-};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -34,45 +30,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const clearAuthState = useCallback(async () => {
+    setToken(null);
+    setUser(null);
+    await api.clearSession();
+  }, []);
+
   const refreshAuthToken = useCallback(async () => {
     const stored = await AsyncStorage.getItem(STORAGE_KEYS.token);
     if (!stored) return; // logged out: nothing to refresh
     try {
+      // The backend replies with token/role/user at the top level, not under `data`.
       const response = await api.refreshToken();
-      if (response.success) {
-        const refreshedUser = { ...response.data.user, role: response.data.role };
-        setToken(response.data.token);
+      if (response.success && response.token) {
+        const refreshedUser = { ...response.user, role: response.role };
+        setToken(response.token);
         setUser(refreshedUser);
+        api.setToken(response.token);
         await Promise.all([
-          AsyncStorage.setItem(STORAGE_KEYS.token, response.data.token),
+          AsyncStorage.setItem(STORAGE_KEYS.token, response.token),
           AsyncStorage.setItem(STORAGE_KEYS.user, JSON.stringify(refreshedUser)),
         ]);
-        api.setToken(response.data.token);
       } else {
-        await logout();
+        await clearAuthState();
       }
     } catch (error) {
-      console.error('Session restoration failed:', error);
+      // A 401 means the refresh token is gone or expired: drop back to login.
+      if ((error as any)?.response?.status === 401) {
+        await clearAuthState();
+      } else {
+        console.error('Session restoration failed:', error);
+      }
     }
-  }, []);
+  }, [clearAuthState]);
 
   useEffect(() => {
     loadStoredAuth();
+
+    // Keeps the axios 401 handler and the React tree in sync.
+    api.setUnauthorizedHandler(() => {
+      setToken(null);
+      setUser(null);
+    });
 
     const intervalId = setInterval(() => {
       refreshAuthToken();
     }, 600000);
 
-    return () => clearInterval(intervalId);
+    return () => {
+      api.setUnauthorizedHandler(null);
+      clearInterval(intervalId);
+    };
   }, [loadStoredAuth, refreshAuthToken]);
 
-  const login = async (newToken: string, newUser: User) => {
+  const login = async (newToken: string, newUser: User, newRefreshToken?: string) => {
     setToken(newToken);
     setUser(newUser);
     api.setToken(newToken);
     await Promise.all([
       AsyncStorage.setItem(STORAGE_KEYS.token, newToken),
       AsyncStorage.setItem(STORAGE_KEYS.user, JSON.stringify(newUser)),
+      newRefreshToken
+        ? AsyncStorage.setItem(STORAGE_KEYS.refreshToken, newRefreshToken)
+        : Promise.resolve(),
     ]);
   };
 
@@ -82,13 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Logout API failed:', error);
     }
-    setToken(null);
-    setUser(null);
-    api.setToken(null);
-    await Promise.all([
-      AsyncStorage.removeItem(STORAGE_KEYS.token),
-      AsyncStorage.removeItem(STORAGE_KEYS.user),
-    ]);
+    await clearAuthState();
   };
 
   const checkSession = refreshAuthToken;

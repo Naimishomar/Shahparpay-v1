@@ -213,6 +213,9 @@ export const verifyLoginOtp = async (req, res) => {
       success: true,
       message: 'Login successful',
       token: accessToken,
+      // Native clients have no cookie jar for a `Secure; SameSite=None`
+      // cookie, so they get the refresh token in the body instead.
+      refreshToken,
       role,
       user: userObj,
     });
@@ -256,7 +259,7 @@ export const sendVerificationOtp = async (req, res) => {
 
 export const refreshAccessToken = async (req, res) => {
   try {
-    const incomingRefreshToken = req.cookies.refreshToken;
+    const incomingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
     if (!incomingRefreshToken) {
       return res.status(401).json({ success: false, message: 'Refresh token is missing' });
     }
@@ -297,6 +300,7 @@ export const refreshAccessToken = async (req, res) => {
     return res.status(200).json({
       success: true,
       token: newAccessToken,
+      refreshToken: incomingRefreshToken,
       role: decoded.role,
       user: userObj,
     });

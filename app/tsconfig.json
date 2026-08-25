@@ -54,8 +54,7 @@
   },
   "include": [
     "src/**/*",
-    "App.tsx",
-    "expo-env.d.ts"
+    "App.tsx"
   ],
   "exclude": [
     "node_modules"

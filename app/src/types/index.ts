@@ -22,7 +22,7 @@ export interface AuthState {
   user: User | null;
   token: string | null;
   isInitializing: boolean;
-  login: (token: string, user: User) => void;
+  login: (token: string, user: User, refreshToken?: string) => Promise<void>;
   logout: () => Promise<void>;
   checkSession: () => Promise<void>;
 }
