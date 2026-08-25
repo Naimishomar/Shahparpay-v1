@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { colors, themed } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 const kycSteps = [
-  { id: 'web', name: 'Web KYC (Step 1)', desc: 'Complete PaySprint onboarding', icon: 'globe', status: 'pending' },
+  { id: 'web', name: 'Web KYC (Step 1)', desc: 'Complete PaySprint onboarding', icon: 'earth', status: 'pending' },
   { id: 'biometric', name: 'Biometric Activation (Step 2)', desc: 'Register fingerprint device', icon: 'fingerprint', status: 'pending' },
 ];
 
@@ -46,7 +47,7 @@ export const KycStatusScreen: React.FC = () => {
               </View>
               <View style={styles.stepContent}>
                 <View style={styles.stepIcon}>
-                  <MaterialCommunityIcons name={step.icon} size={24} color="var(--primary)" />
+                  <MaterialCommunityIcons name={step.icon as any} size={24} color={colors.primary} />
                 </View>
                 <View style={styles.stepInfo}>
                   <Text style={styles.stepName}>{step.name}</Text>
@@ -88,31 +89,31 @@ export const KycStatusScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  scrollView: { flex: 1, backgroundColor: 'var(--background)' },
+const styles = themed((c) => ({
+  scrollView: { flex: 1, backgroundColor: c.background },
   content: { padding: 16, paddingBottom: 32, gap: 16 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  pageTitle: { fontSize: 24, fontWeight: '700', color: 'var(--foreground)' },
-  pageSubtitle: { fontSize: 13, color: 'var(--muted-foreground)', marginTop: 2 },
+  pageTitle: { fontSize: 24, fontWeight: '700', color: c.foreground },
+  pageSubtitle: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
   statusCard: {},
   overallStatus: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   statusCircle: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#F59E0B20', justifyContent: 'center', alignItems: 'center' },
-  statusTitle: { fontSize: 18, fontWeight: '700', color: 'var(--foreground)' },
-  statusDesc: { fontSize: 13, color: 'var(--muted-foreground)', marginTop: 2 },
+  statusTitle: { fontSize: 18, fontWeight: '700', color: c.foreground },
+  statusDesc: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
   stepsCard: { marginTop: 8 },
   stepItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  stepNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'var(--primary)', justifyContent: 'center', alignItems: 'center' },
+  stepNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: c.primary, justifyContent: 'center', alignItems: 'center' },
   stepNumberText: { fontSize: 14, fontWeight: '700', color: 'white' },
   stepContent: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  stepIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'var(--primary)', justifyContent: 'center', alignItems: 'center' },
+  stepIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: c.primary, justifyContent: 'center', alignItems: 'center' },
   stepInfo: { flex: 1 },
-  stepName: { fontSize: 14, fontWeight: '600', color: 'var(--foreground)' },
-  stepDesc: { fontSize: 12, color: 'var(--muted-foreground)', marginTop: 2 },
+  stepName: { fontSize: 14, fontWeight: '600', color: c.foreground },
+  stepDesc: { fontSize: 12, color: c.mutedForeground, marginTop: 2 },
   stepAction: {},
   infoCard: { marginTop: 8 },
   notesList: { gap: 10 },
   noteItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  noteText: { fontSize: 13, color: 'var(--foreground)', flex: 1, lineHeight: 20 },
-});
+  noteText: { fontSize: 13, color: c.foreground, flex: 1, lineHeight: 20 },
+}));
 
 export default KycStatusScreen;

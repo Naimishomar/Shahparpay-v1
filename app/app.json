@@ -4,7 +4,7 @@
     "slug": "shahparpay-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/assets/logo.png",
+    "icon": "./src/assets/icon.png",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./src/assets/logo.png",
@@ -20,17 +20,16 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/logo.png",
+        "foregroundImage": "./src/assets/icon.png",
         "backgroundColor": "#FAFAFA"
       },
       "package": "com.shahparpay.app"
     },
     "web": {
-      "favicon": "./src/assets/favicon.png",
+      "favicon": "./src/assets/icon.png",
       "bundler": "metro"
     },
     "plugins": [
-      "expo-router",
       "expo-font",
       [
         "expo-splash-screen",
@@ -43,15 +42,9 @@
     ],
     "scheme": "shahparpay",
     "extra": {
-      "router": {
-        "origin": false
-      },
       "eas": {
         "projectId": "your-project-id"
       }
-    },
-    "experiments": {
-      "typedRoutes": true
     }
   }
 }

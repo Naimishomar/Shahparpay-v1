@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { colors, themed } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -32,7 +33,7 @@ export const FundRequestScreen: React.FC = () => {
             <Text style={styles.fieldLabel}>Remarks</Text>
             <Text style={styles.fieldValue}>Additional details</Text>
           </View>
-          <Button className="mt-4" size="lg">Submit Request</Button>
+          <Button style={{ marginTop: 16 }} size="lg">Submit Request</Button>
         </CardContent>
       </Card>
 
@@ -42,7 +43,7 @@ export const FundRequestScreen: React.FC = () => {
         </CardHeader>
         <CardContent>
           <View style={styles.emptyState}>
-            <Ionicons name="clipboard-outline" size={48} color="var(--muted-foreground)" />
+            <Ionicons name="clipboard-outline" size={48} color={colors.mutedForeground} />
             <Text style={styles.emptyText}>No fund requests yet</Text>
             <Text style={styles.emptySubtext}>Your requests will appear here</Text>
           </View>
@@ -52,20 +53,20 @@ export const FundRequestScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  scrollView: { flex: 1, backgroundColor: 'var(--background)' },
+const styles = themed((c) => ({
+  scrollView: { flex: 1, backgroundColor: c.background },
   content: { padding: 16, paddingBottom: 32, gap: 16 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  pageTitle: { fontSize: 24, fontWeight: '700', color: 'var(--foreground)' },
-  pageSubtitle: { fontSize: 13, color: 'var(--muted-foreground)', marginTop: 2 },
+  pageTitle: { fontSize: 24, fontWeight: '700', color: c.foreground },
+  pageSubtitle: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
   requestCard: {},
   historyCard: { marginTop: 8 },
   formField: { marginBottom: 16, gap: 8 },
-  fieldLabel: { fontSize: 12, fontWeight: '500', color: 'var(--muted-foreground)' },
-  fieldValue: { fontSize: 14, color: 'var(--foreground)' },
+  fieldLabel: { fontSize: 12, fontWeight: '500', color: c.mutedForeground },
+  fieldValue: { fontSize: 14, color: c.foreground },
   emptyState: { alignItems: 'center', paddingVertical: 32, gap: 12 },
-  emptyText: { fontSize: 14, fontWeight: '500', color: 'var(--foreground)' },
-  emptySubtext: { fontSize: 12, color: 'var(--muted-foreground)' },
-});
+  emptyText: { fontSize: 14, fontWeight: '500', color: c.foreground },
+  emptySubtext: { fontSize: 12, color: c.mutedForeground },
+}));
 
 export default FundRequestScreen;

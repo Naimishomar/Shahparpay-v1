@@ -1,8 +1,9 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { createDrawerNavigator } from '@react-navigation/drawer';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
+import { palettes } from '../theme/colors';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { LoginScreen } from '@/screens/auth/LoginScreen';
 import { LandingScreen } from '@/screens/auth/LandingScreen';
@@ -26,107 +27,115 @@ import { KycStatusScreen } from '@/screens/retailer/KycStatusScreen';
 import { AdminPortalScreen } from '@/screens/admin/AdminPortalScreen';
 import { DistributorPortalScreen } from '@/screens/distributor/DistributorPortalScreen';
 
-const RetailerStack = createStackNavigator();
-const AdminStack = createStackNavigator();
-const DistributorStack = createStackNavigator();
-const AuthStack = createStackNavigator();
+const Stack = createStackNavigator();
 
-const RetailerNavigator = () => (
-  <RetailerStack.Navigator
+// Every authenticated screen renders inside MainLayout (header + sidebar).
+// Cached so the wrapper identity is stable and screens are not remounted.
+const layoutCache = new Map<React.ComponentType<any>, React.ComponentType<any>>();
+const withLayout = (Screen: React.ComponentType<any>) => {
+  let wrapped = layoutCache.get(Screen);
+  if (!wrapped) {
+    wrapped = (props: any) => {
+      // Subscribing here (not just in MainLayout) is what re-renders the screen
+      // on a theme switch: react-navigation keeps the child element identity
+      // stable, so the theme must be consumed by the screen component itself.
+      useTheme();
+      return (
+        <MainLayout>
+          <Screen {...props} />
+        </MainLayout>
+      );
+    };
+    wrapped.displayName = `WithLayout(${Screen.displayName || Screen.name || 'Screen'})`;
+    layoutCache.set(Screen, wrapped);
+  }
+  return wrapped;
+};
+
+// Route names must match `route` in the sidebar menus (src/constants).
+const RETAILER_SCREENS: [string, React.ComponentType<any>][] = [
+  ['Dashboard', DashboardScreen],
+  ['AEPS', AepsScreen],
+  ['AepsSettlement', AepsSettlementScreen],
+  ['PAN', PanCardScreen],
+  ['LeadGeneration', LeadGenerationScreen],
+  ['ITR', ItrScreen],
+  ['UPIPayments', UpiPaymentsScreen],
+  ['DMT', DmtScreen],
+  ['Recharge', RechargeScreen],
+  ['BBPS', BbpsScreen],
+  ['WalletTransfer', WalletTransferScreen],
+  ['DirectPayout', DirectPayoutScreen],
+  ['FundRequest', FundRequestScreen],
+  ['BiometricSupport', BiometricSupportScreen],
+  ['PipeStatus', PipeStatusScreen],
+  ['Profile', ProfileScreen],
+  ['KycStatus', KycStatusScreen],
+];
+
+const ADMIN_SCREENS: [string, React.ComponentType<any>][] = [['AdminPortal', AdminPortalScreen]];
+const DISTRIBUTOR_SCREENS: [string, React.ComponentType<any>][] = [
+  ['DistributorPortal', DistributorPortalScreen],
+];
+
+const buildNavigator = (screens: [string, React.ComponentType<any>][], background: string) => (
+  <Stack.Navigator
     screenOptions={{
       headerShown: false,
       gestureEnabled: true,
-      cardStyle: { backgroundColor: 'var(--background)' },
+      // flex/overflow: on web @react-navigation/stack otherwise lets the card
+      // grow past the viewport and hands scrolling to document.body, which
+      // Expo's reset has set to overflow:hidden. No-op on native.
+      cardStyle: { backgroundColor: background, flex: 1, overflow: 'hidden' },
     }}
   >
-    <RetailerStack.Screen name="Dashboard" component={DashboardScreen} />
-    <RetailerStack.Screen name="AEPS" component={AepsScreen} />
-    <RetailerStack.Screen name="AepsSettlement" component={AepsSettlementScreen} />
-    <RetailerStack.Screen name="PAN" component={PanCardScreen} />
-    <RetailerStack.Screen name="LeadGeneration" component={LeadGenerationScreen} />
-    <RetailerStack.Screen name="ITR" component={ItrScreen} />
-    <RetailerStack.Screen name="UPIPayments" component={UpiPaymentsScreen} />
-    <RetailerStack.Screen name="DMT" component={DmtScreen} />
-    <RetailerStack.Screen name="Recharge" component={RechargeScreen} />
-    <RetailerStack.Screen name="BBPS" component={BbpsScreen} />
-    <RetailerStack.Screen name="WalletTransfer" component={WalletTransferScreen} />
-    <RetailerStack.Screen name="DirectPayout" component={DirectPayoutScreen} />
-    <RetailerStack.Screen name="FundRequest" component={FundRequestScreen} />
-    <RetailerStack.Screen name="BiometricSupport" component={BiometricSupportScreen} />
-    <RetailerStack.Screen name="PipeStatus" component={PipeStatusScreen} />
-    <RetailerStack.Screen name="Profile" component={ProfileScreen} />
-    <RetailerStack.Screen name="KycStatus" component={KycStatusScreen} />
-  </RetailerStack.Navigator>
-);
-
-const AdminNavigator = () => (
-  <AdminStack.Navigator
-    screenOptions={{
-      headerShown: false,
-      gestureEnabled: true,
-      cardStyle: { backgroundColor: 'var(--background)' },
-    }}
-  >
-    <AdminStack.Screen name="AdminPortal" component={AdminPortalScreen} />
-  </AdminStack.Navigator>
-);
-
-const DistributorNavigator = () => (
-  <DistributorStack.Navigator
-    screenOptions={{
-      headerShown: false,
-      gestureEnabled: true,
-      cardStyle: { backgroundColor: 'var(--background)' },
-    }}
-  >
-    <DistributorStack.Screen name="DistributorPortal" component={DistributorPortalScreen} />
-  </DistributorStack.Navigator>
-);
-
-const AuthNavigator = () => (
-  <AuthStack.Navigator
-    screenOptions={{
-      headerShown: false,
-      gestureEnabled: false,
-      cardStyle: { backgroundColor: 'var(--background)' },
-    }}
-  >
-    <AuthStack.Screen name="Login" component={LoginScreen} />
-    <AuthStack.Screen name="Landing" component={LandingScreen} />
-  </AuthStack.Navigator>
+    {screens.map(([name, Screen]) => (
+      <Stack.Screen key={name} name={name} component={withLayout(Screen)} />
+    ))}
+  </Stack.Navigator>
 );
 
 export const AppNavigator: React.FC = () => {
   const { user, token, isInitializing } = useAuth();
+  const { resolvedTheme } = useTheme();
+  const palette = palettes[resolvedTheme];
 
-  if (isInitializing) {
-    return null;
-  }
-
-  if (!token) {
-    return (
-      <NavigationContainer>
-        <AuthNavigator />
-      </NavigationContainer>
-    );
-  }
-
-  const getUserNavigator = () => {
-    switch (user?.role) {
-      case 'admin':
-        return AdminNavigator;
-      case 'distributor':
-        return DistributorNavigator;
-      default:
-        return RetailerNavigator;
-    }
+  const navTheme = {
+    ...(resolvedTheme === 'dark' ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(resolvedTheme === 'dark' ? DarkTheme : DefaultTheme).colors,
+      background: palette.background,
+      card: palette.card,
+      text: palette.foreground,
+      border: palette.border,
+      primary: palette.primary,
+    },
   };
 
-  const UserNavigator = getUserNavigator();
+  if (isInitializing) return null;
+
+  const screens =
+    !token ? null
+    : user?.role === 'admin' ? ADMIN_SCREENS
+    : user?.role === 'distributor' ? DISTRIBUTOR_SCREENS
+    : RETAILER_SCREENS;
 
   return (
-    <NavigationContainer>
-      <UserNavigator />
+    <NavigationContainer theme={navTheme}>
+      {screens ? (
+        buildNavigator(screens, palette.background)
+      ) : (
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+            gestureEnabled: false,
+            cardStyle: { backgroundColor: palette.background, flex: 1, overflow: 'hidden' },
+          }}
+        >
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Landing" component={LandingScreen} />
+        </Stack.Navigator>
+      )}
     </NavigationContainer>
   );
 };

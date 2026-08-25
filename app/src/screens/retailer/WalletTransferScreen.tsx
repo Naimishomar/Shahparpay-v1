@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { colors, themed } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -48,14 +49,14 @@ export const WalletTransferScreen: React.FC = () => {
             <Text style={styles.fieldLabel}>From Wallet</Text>
             <View style={styles.selectWrapper}>
               <Text style={styles.selectValue}>AEPS Wallet</Text>
-              <Ionicons name="chevron-down" size={20} color="var(--muted-foreground)" />
+              <Ionicons name="chevron-down" size={20} color={colors.mutedForeground} />
             </View>
           </View>
           <View style={styles.formField}>
             <Text style={styles.fieldLabel}>To Wallet</Text>
             <View style={styles.selectWrapper}>
               <Text style={styles.selectValue}>Main Wallet</Text>
-              <Ionicons name="chevron-down" size={20} color="var(--muted-foreground)" />
+              <Ionicons name="chevron-down" size={20} color={colors.mutedForeground} />
             </View>
           </View>
           <View style={styles.formField}>
@@ -66,32 +67,32 @@ export const WalletTransferScreen: React.FC = () => {
             <Text style={styles.fieldLabel}>Remarks</Text>
             <Text style={styles.fieldValue}>Optional</Text>
           </View>
-          <Button className="mt-4" size="lg">Transfer Now</Button>
+          <Button style={{ marginTop: 16 }} size="lg">Transfer Now</Button>
         </CardContent>
       </Card>
     </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
-  scrollView: { flex: 1, backgroundColor: 'var(--background)' },
+const styles = themed((c) => ({
+  scrollView: { flex: 1, backgroundColor: c.background },
   content: { padding: 16, paddingBottom: 32, gap: 16 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  pageTitle: { fontSize: 24, fontWeight: '700', color: 'var(--foreground)' },
-  pageSubtitle: { fontSize: 13, color: 'var(--muted-foreground)', marginTop: 2 },
+  pageTitle: { fontSize: 24, fontWeight: '700', color: c.foreground },
+  pageSubtitle: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
   balanceCard: {},
   balanceContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   walletItem: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   walletIcon: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  walletLabel: { fontSize: 12, color: 'var(--muted-foreground)' },
-  walletAmount: { fontSize: 18, fontWeight: '700', color: 'var(--foreground)' },
-  divider: { width: 1, height: 40, backgroundColor: 'var(--border)' },
+  walletLabel: { fontSize: 12, color: c.mutedForeground },
+  walletAmount: { fontSize: 18, fontWeight: '700', color: c.foreground },
+  divider: { width: 1, height: 40, backgroundColor: c.border },
   transferCard: { marginTop: 8 },
   formField: { marginBottom: 16, gap: 8 },
-  fieldLabel: { fontSize: 12, fontWeight: '500', color: 'var(--muted-foreground)' },
-  selectWrapper: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 14, borderRadius: 10, borderWidth: 1, borderColor: 'var(--border)', backgroundColor: 'var(--background)' },
-  selectValue: { fontSize: 14, color: 'var(--foreground)' },
-  fieldValue: { fontSize: 14, color: 'var(--foreground)' },
-});
+  fieldLabel: { fontSize: 12, fontWeight: '500', color: c.mutedForeground },
+  selectWrapper: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 14, borderRadius: 10, borderWidth: 1, borderColor: c.border, backgroundColor: c.background },
+  selectValue: { fontSize: 14, color: c.foreground },
+  fieldValue: { fontSize: 14, color: c.foreground },
+}));
 
 export default WalletTransferScreen;

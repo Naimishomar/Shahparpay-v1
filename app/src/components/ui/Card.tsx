@@ -1,37 +1,19 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
-import { cn } from '@/utils/cn';
+import { View, Text, StyleProp, ViewStyle, TextStyle } from 'react-native';
+import { themed } from '../../theme/colors';
 
 interface CardProps {
   children: React.ReactNode;
-  className?: string;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   variant?: 'default' | 'glass' | 'outlined';
   padding?: number;
 }
 
-export const Card: React.FC<CardProps> = ({
-  children,
-  className = '',
-  style,
-  variant = 'default',
-  padding = 16,
-}) => {
-  const baseStyles = [
-    styles.base,
-    variantStyles[variant],
-    { padding },
-    style,
-  ];
-
-  return <View style={baseStyles}>{children}</View>;
-};
-
-const variantStyles = {
+const variantStyles = themed((c) => ({
   default: {
-    backgroundColor: 'var(--card)',
+    backgroundColor: c.card,
     borderWidth: 1,
-    borderColor: 'var(--border)',
+    borderColor: c.border,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -44,79 +26,65 @@ const variantStyles = {
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 16,
-    backdropFilter: 'blur(20px)',
   },
   outlined: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'var(--border)',
+    borderColor: c.border,
     borderRadius: 16,
   },
-};
+}));
 
-const styles = StyleSheet.create({
-  base: {
-    overflow: 'hidden',
-  },
-});
+export const Card: React.FC<CardProps> = ({ children, style, variant = 'default', padding = 16 }) => (
+  <View style={[styles.base, variantStyles[variant], { padding }, style]}>{children}</View>
+);
 
-export const CardHeader: React.FC<{ children: React.ReactNode; className?: string; style?: ViewStyle }> = ({
-  children,
-  className = '',
-  style,
-}) => (
+export const CardHeader: React.FC<{ children: React.ReactNode; style?: StyleProp<ViewStyle> }> = ({ children, style }) => (
   <View style={[styles.header, style]}>{children}</View>
 );
 
-export const CardTitle: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <Text style={[styles.title, className]}>{children}</Text>
+export const CardTitle: React.FC<{ children: React.ReactNode; style?: StyleProp<TextStyle> }> = ({ children, style }) => (
+  <Text style={[styles.title, style]}>{children}</Text>
 );
 
-export const CardDescription: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <Text style={[styles.description, className]}>{children}</Text>
+export const CardDescription: React.FC<{ children: React.ReactNode; style?: StyleProp<TextStyle> }> = ({ children, style }) => (
+  <Text style={[styles.description, style]}>{children}</Text>
 );
 
-export const CardContent: React.FC<{ children: React.ReactNode; className?: string; style?: ViewStyle }> = ({
-  children,
-  className = '',
-  style,
-}) => (
+export const CardContent: React.FC<{ children: React.ReactNode; style?: StyleProp<ViewStyle> }> = ({ children, style }) => (
   <View style={[styles.content, style]}>{children}</View>
 );
 
-export const CardFooter: React.FC<{ children: React.ReactNode; className?: string; style?: ViewStyle }> = ({
-  children,
-  className = '',
-  style,
-}) => (
+export const CardFooter: React.FC<{ children: React.ReactNode; style?: StyleProp<ViewStyle> }> = ({ children, style }) => (
   <View style={[styles.footer, style]}>{children}</View>
 );
 
-const { Text } = require('react-native');
-
-const styles = StyleSheet.create({
+const styles = themed((c) => ({
+  base: {
+    overflow: 'hidden',
+  },
   header: {
     paddingBottom: 8,
   },
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'var(--card-foreground)',
+    color: c.cardForeground,
   },
   description: {
     fontSize: 13,
-    color: 'var(--muted-foreground)',
+    color: c.mutedForeground,
     marginTop: 2,
   },
   content: {},
   footer: {
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'var(--border)',
+    borderTopColor: c.border,
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 8,
   },
-});
+}));
 
 export default Card;

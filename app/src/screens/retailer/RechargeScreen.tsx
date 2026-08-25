@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { themed } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -19,14 +20,14 @@ export const RechargeScreen: React.FC = () => {
           <Text style={styles.pageTitle}>Recharge & Bills</Text>
           <Text style={styles.pageSubtitle}>Mobile, DTH, Data & Broadband</Text>
         </View>
-        <Ionicons name="smartphone" size={32} color="#3B82F6" />
+        <MaterialCommunityIcons name="cellphone" size={32} color="#3B82F6" />
       </View>
 
       <View style={styles.categoriesGrid}>
         {rechargeCategories.map((cat, index) => (
           <View key={index} style={styles.categoryCard}>
             <View style={[styles.categoryIcon, { backgroundColor: `${cat.color}20` }]}>
-              <MaterialCommunityIcons name={cat.icon} size={28} color={cat.color} />
+              <MaterialCommunityIcons name={cat.icon as any} size={28} color={cat.color} />
             </View>
             <Text style={styles.categoryName}>{cat.name}</Text>
             <Text style={styles.categoryDesc}>{cat.desc}</Text>
@@ -38,7 +39,7 @@ export const RechargeScreen: React.FC = () => {
                 <Text style={styles.operatorTag}>+{cat.operators.length - 3} more</Text>
               )}
             </View>
-            <Button variant="outline" size="sm" className="mt-3" fullWidth>Recharge</Button>
+            <Button variant="outline" size="sm" style={{ marginTop: 12 }} fullWidth>Recharge</Button>
           </View>
         ))}
       </View>
@@ -66,23 +67,23 @@ export const RechargeScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  scrollView: { flex: 1, backgroundColor: 'var(--background)' },
+const styles = themed((c) => ({
+  scrollView: { flex: 1, backgroundColor: c.background },
   content: { padding: 16, paddingBottom: 32, gap: 16 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  pageTitle: { fontSize: 24, fontWeight: '700', color: 'var(--foreground)' },
-  pageSubtitle: { fontSize: 13, color: 'var(--muted-foreground)', marginTop: 2 },
+  pageTitle: { fontSize: 24, fontWeight: '700', color: c.foreground },
+  pageSubtitle: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
   categoriesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' },
-  categoryCard: { width: '48%', padding: 16, borderRadius: 16, backgroundColor: 'var(--card)', borderWidth: 1, borderColor: 'var(--border)', gap: 10 },
+  categoryCard: { width: '48%', padding: 16, borderRadius: 16, backgroundColor: c.card, borderWidth: 1, borderColor: c.border, gap: 10 },
   categoryIcon: { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  categoryName: { fontSize: 14, fontWeight: '600', color: 'var(--foreground)' },
-  categoryDesc: { fontSize: 11, color: 'var(--muted-foreground)' },
-  operators: { flexDirection: 'row', flexWrap: 'row', gap: 6, marginTop: 4 },
-  operatorTag: { fontSize: 10, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: 'var(--secondary)', color: 'var(--foreground)' },
+  categoryName: { fontSize: 14, fontWeight: '600', color: c.foreground },
+  categoryDesc: { fontSize: 11, color: c.mutedForeground },
+  operators: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  operatorTag: { fontSize: 10, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: c.secondary, color: c.foreground },
   offersCard: { marginTop: 8 },
   offersList: { gap: 8 },
   offerItem: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
-  offerText: { fontSize: 12, color: 'var(--foreground)', flex: 1 },
-});
+  offerText: { fontSize: 12, color: c.foreground, flex: 1 },
+}));
 
 export default RechargeScreen;

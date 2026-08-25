@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { themed } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -67,31 +68,31 @@ export const PanCardScreen: React.FC = () => {
               ))}
             </View>
           </View>
-          <Button className="mt-4" size="lg">Submit Application</Button>
+          <Button style={{ marginTop: 16 }} size="lg">Submit Application</Button>
         </CardContent>
       </Card>
     </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
-  scrollView: { flex: 1, backgroundColor: 'var(--background)' },
+const styles = themed((c) => ({
+  scrollView: { flex: 1, backgroundColor: c.background },
   content: { padding: 16, paddingBottom: 32, gap: 16 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  pageTitle: { fontSize: 24, fontWeight: '700', color: 'var(--foreground)' },
-  pageSubtitle: { fontSize: 13, color: 'var(--muted-foreground)', marginTop: 2 },
+  pageTitle: { fontSize: 24, fontWeight: '700', color: c.foreground },
+  pageSubtitle: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
   tabCard: { marginBottom: 8 },
   tabs: { flexDirection: 'row', gap: 8 },
   formCard: {},
   formGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 16 },
   formField: { width: '48%', gap: 6 },
-  fieldLabel: { fontSize: 12, fontWeight: '500', color: 'var(--muted-foreground)' },
-  fieldValue: { fontSize: 14, color: 'var(--foreground)' },
-  documents: { paddingTop: 16, borderTopWidth: 1, borderTopColor: 'var(--border)' },
-  docTitle: { fontSize: 13, fontWeight: '600', color: 'var(--foreground)', marginBottom: 12 },
+  fieldLabel: { fontSize: 12, fontWeight: '500', color: c.mutedForeground },
+  fieldValue: { fontSize: 14, color: c.foreground },
+  documents: { paddingTop: 16, borderTopWidth: 1, borderTopColor: c.border },
+  docTitle: { fontSize: 13, fontWeight: '600', color: c.foreground, marginBottom: 12 },
   docList: { gap: 8 },
   docItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  docText: { fontSize: 13, color: 'var(--foreground)' },
-});
+  docText: { fontSize: 13, color: c.foreground },
+}));
 
 export default PanCardScreen;

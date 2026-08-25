@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { colors, themed } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -86,7 +87,7 @@ const OverviewTab = () => (
       </CardHeader>
       <CardContent>
         <View style={styles.emptyState}>
-          <Ionicons name="information-circle" size={48} color="var(--muted-foreground)" />
+          <Ionicons name="information-circle" size={48} color={colors.mutedForeground} />
           <Text style={styles.emptyText}>No recent activity</Text>
         </View>
       </CardContent>
@@ -99,7 +100,7 @@ const DistributorsTab = () => (
     <Card>
       <CardContent>
         <View style={styles.emptyState}>
-          <Ionicons name="account-group" size={48} color="var(--muted-foreground)" />
+          <MaterialCommunityIcons name="account-group" size={48} color={colors.mutedForeground} />
           <Text style={styles.emptyText}>12 Distributors</Text>
           <Text style={styles.emptySubtext}>Tap to view details</Text>
         </View>
@@ -113,7 +114,7 @@ const FundRequestsTab = () => (
     <Card>
       <CardContent>
         <View style={styles.emptyState}>
-          <Ionicons name="cash" size={48} color="var(--muted-foreground)" />
+          <Ionicons name="cash" size={48} color={colors.mutedForeground} />
           <Text style={styles.emptyText}>5 Pending Requests</Text>
           <Text style={styles.emptySubtext}>Review and approve</Text>
         </View>
@@ -127,7 +128,7 @@ const CommissionsTab = () => (
     <Card>
       <CardContent>
         <View style={styles.emptyState}>
-          <Ionicons name="calculator" size={48} color="var(--muted-foreground)" />
+          <Ionicons name="calculator" size={48} color={colors.mutedForeground} />
           <Text style={styles.emptyText}>Commission Reports</Text>
           <Text style={styles.emptySubtext}>View detailed breakdown</Text>
         </View>
@@ -147,7 +148,7 @@ const CreateUserTab = () => (
           <Text style={styles.fieldLabel}>Role *</Text>
           <View style={styles.selectWrapper}>
             <Text style={styles.selectValue}>Select Role</Text>
-            <Ionicons name="chevron-down" size={20} color="var(--muted-foreground)" />
+            <Ionicons name="chevron-down" size={20} color={colors.mutedForeground} />
           </View>
         </View>
         <View style={styles.formField}>
@@ -166,40 +167,40 @@ const CreateUserTab = () => (
           <Text style={styles.fieldLabel}>Password *</Text>
           <Text style={styles.fieldValue}>Enter password</Text>
         </View>
-        <Button className="mt-4" size="lg">Create User</Button>
+        <Button style={{ marginTop: 16 }} size="lg">Create User</Button>
       </CardContent>
     </Card>
   </View>
 );
 
-const styles = StyleSheet.create({
-  scrollView: { flex: 1, backgroundColor: 'var(--background)' },
+const styles = themed((c) => ({
+  scrollView: { flex: 1, backgroundColor: c.background },
   content: { padding: 16, paddingBottom: 32, gap: 16 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  pageTitle: { fontSize: 24, fontWeight: '700', color: 'var(--foreground)' },
-  pageSubtitle: { fontSize: 13, color: 'var(--muted-foreground)', marginTop: 2 },
+  pageTitle: { fontSize: 24, fontWeight: '700', color: c.foreground },
+  pageSubtitle: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
   tabs: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  tab: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: 'var(--border)', backgroundColor: 'var(--background)' },
-  tabActive: { backgroundColor: 'var(--primary)', borderColor: 'var(--primary)' },
-  tabText: { fontSize: 13, fontWeight: '500', color: 'var(--foreground)', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  tab: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: c.border, backgroundColor: c.background },
+  tabActive: { backgroundColor: c.primary, borderColor: c.primary },
+  tabText: { fontSize: 13, fontWeight: '500', color: c.foreground, flexDirection: 'row', alignItems: 'center', gap: 6 },
   tabTextActive: { color: 'white' },
-  tabBadge: { fontSize: 10, fontWeight: '700', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, backgroundColor: 'var(--secondary)', color: 'var(--foreground)' },
-  tabBadgeActive: { backgroundColor: 'white', color: 'var(--primary)' },
+  tabBadge: { fontSize: 10, fontWeight: '700', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, backgroundColor: c.secondary, color: c.foreground },
+  tabBadgeActive: { backgroundColor: 'white', color: c.primary },
   tabContent: { gap: 16 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   statCard: { width: '48%', borderRadius: 16 },
   statLabel: { fontSize: 12, fontWeight: '500' },
-  statValue: { fontSize: 20, fontWeight: '700', color: 'var(--foreground)', marginTop: 4 },
+  statValue: { fontSize: 20, fontWeight: '700', color: c.foreground, marginTop: 4 },
   recentCard: { marginTop: 8 },
   emptyState: { alignItems: 'center', paddingVertical: 32, gap: 12 },
-  emptyText: { fontSize: 14, fontWeight: '500', color: 'var(--foreground)' },
-  emptySubtext: { fontSize: 12, color: 'var(--muted-foreground)' },
+  emptyText: { fontSize: 14, fontWeight: '500', color: c.foreground },
+  emptySubtext: { fontSize: 12, color: c.mutedForeground },
   formField: { marginBottom: 16, gap: 8 },
-  fieldLabel: { fontSize: 12, fontWeight: '500', color: 'var(--muted-foreground)' },
-  selectWrapper: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 14, borderRadius: 10, borderWidth: 1, borderColor: 'var(--border)', backgroundColor: 'var(--background)' },
-  selectValue: { fontSize: 14, color: 'var(--foreground)' },
-  fieldValue: { fontSize: 14, color: 'var(--foreground)' },
-});
+  fieldLabel: { fontSize: 12, fontWeight: '500', color: c.mutedForeground },
+  selectWrapper: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 14, borderRadius: 10, borderWidth: 1, borderColor: c.border, backgroundColor: c.background },
+  selectValue: { fontSize: 14, color: c.foreground },
+  fieldValue: { fontSize: 14, color: c.foreground },
+}));
 
 import { TouchableOpacity } from 'react-native';
 export default AdminPortalScreen;

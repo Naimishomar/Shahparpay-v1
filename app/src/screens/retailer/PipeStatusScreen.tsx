@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { themed } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -17,7 +18,7 @@ export const PipeStatusScreen: React.FC = () => {
           <Text style={styles.pageTitle}>AEPS Pipe Status</Text>
           <Text style={styles.pageSubtitle}>Monitor bank pipe connectivity</Text>
         </View>
-        <Ionicons name="pipe" size={32} color="#06B6D4" />
+        <MaterialCommunityIcons name="pipe" size={32} color="#06B6D4" />
       </View>
 
       <View style={styles.pipesGrid}>
@@ -26,7 +27,7 @@ export const PipeStatusScreen: React.FC = () => {
             <CardContent>
               <View style={styles.pipeHeader}>
                 <View style={[styles.pipeIcon, { backgroundColor: `${pipe.statusColor}20` }]}>
-                  <MaterialCommunityIcons name={pipe.icon} size={24} color={pipe.statusColor} />
+                  <MaterialCommunityIcons name={pipe.icon as any} size={24} color={pipe.statusColor} />
                 </View>
                 <View style={styles.pipeInfo}>
                   <Text style={styles.pipeName}>{pipe.name}</Text>
@@ -51,7 +52,7 @@ export const PipeStatusScreen: React.FC = () => {
                   <Text style={styles.metricValue}>98.5%</Text>
                 </View>
               </View>
-              <Button variant="outline" size="sm" className="mt-3" fullWidth>View Details</Button>
+              <Button variant="outline" size="sm" style={{ marginTop: 12 }} fullWidth>View Details</Button>
             </CardContent>
           </Card>
         ))}
@@ -73,30 +74,30 @@ export const PipeStatusScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  scrollView: { flex: 1, backgroundColor: 'var(--background)' },
+const styles = themed((c) => ({
+  scrollView: { flex: 1, backgroundColor: c.background },
   content: { padding: 16, paddingBottom: 32, gap: 16 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  pageTitle: { fontSize: 24, fontWeight: '700', color: 'var(--foreground)' },
-  pageSubtitle: { fontSize: 13, color: 'var(--muted-foreground)', marginTop: 2 },
+  pageTitle: { fontSize: 24, fontWeight: '700', color: c.foreground },
+  pageSubtitle: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
   pipesGrid: { gap: 12 },
   pipeCard: {},
   pipeHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   pipeIcon: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   pipeInfo: { flex: 1 },
-  pipeName: { fontSize: 16, fontWeight: '600', color: 'var(--foreground)' },
-  pipeDesc: { fontSize: 12, color: 'var(--muted-foreground)', marginTop: 2 },
+  pipeName: { fontSize: 16, fontWeight: '600', color: c.foreground },
+  pipeDesc: { fontSize: 12, color: c.mutedForeground, marginTop: 2 },
   statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   statusText: { fontSize: 12, fontWeight: '600' },
-  pipeMetrics: { flexDirection: 'row', gap: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'var(--border)' },
+  pipeMetrics: { flexDirection: 'row', gap: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: c.border },
   metric: { flex: 1, alignItems: 'center' },
-  metricLabel: { fontSize: 11, color: 'var(--muted-foreground)' },
-  metricValue: { fontSize: 14, fontWeight: '700', color: 'var(--foreground)', marginTop: 2 },
+  metricLabel: { fontSize: 11, color: c.mutedForeground },
+  metricValue: { fontSize: 14, fontWeight: '700', color: c.foreground, marginTop: 2 },
   incidentCard: { marginTop: 8 },
   emptyState: { alignItems: 'center', paddingVertical: 24, gap: 8 },
-  emptyText: { fontSize: 14, fontWeight: '500', color: 'var(--foreground)' },
-  emptySubtext: { fontSize: 12, color: 'var(--muted-foreground)' },
-});
+  emptyText: { fontSize: 14, fontWeight: '500', color: c.foreground },
+  emptySubtext: { fontSize: 12, color: c.mutedForeground },
+}));
 
 export default PipeStatusScreen;

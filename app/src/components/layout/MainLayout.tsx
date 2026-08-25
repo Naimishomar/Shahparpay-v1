@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, StatusBar, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, ActivityIndicator, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, themed } from '../../theme/colors';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { Header } from './Header';
@@ -17,111 +19,87 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   showSidebar = true,
   showHeader = true,
 }) => {
-  const { user, token, isInitializing, logout } = useAuth();
+  const { token, isInitializing, logout } = useAuth();
   const { resolvedTheme } = useTheme();
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const route = useRoute();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeRoute, setActiveRoute] = useState(route.name as string);
-
-  useEffect(() => {
-    setActiveRoute(route.name as string);
-  }, [route.name]);
-
-  useEffect(() => {
-    if (!isInitializing && !token) {
-      navigation.navigate('Login' as any);
-    }
-  }, [isInitializing, token, navigation]);
 
   const handleNavigate = (routeName: string) => {
-    setActiveRoute(routeName);
     setSidebarOpen(false);
-    navigation.navigate(routeName as any);
+    navigation.navigate(routeName);
   };
 
   const handleLogout = async () => {
+    setSidebarOpen(false);
     await logout();
-    navigation.navigate('Login' as any);
   };
 
   if (isInitializing) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <StatusBar barStyle={resolvedTheme === 'dark' ? 'light-content' : 'dark-content'} />
-        <View style={styles.loadingContent}>
-          <View style={styles.spinner} />
-        </View>
+        <ActivityIndicator size="large" color={colors.primary} />
       </SafeAreaView>
     );
   }
 
-  if (!token) {
-    return null;
-  }
+  // AppNavigator swaps to the auth stack when the token goes away.
+  if (!token) return null;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: 'var(--background)' }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar
         barStyle={resolvedTheme === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor={resolvedTheme === 'dark' ? '#000' : '#FAFAFA'}
+        backgroundColor={colors.background}
       />
-
-      {showSidebar && (
-        <Sidebar
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          activeRoute={activeRoute}
-          onNavigate={handleNavigate}
-        />
-      )}
 
       <View style={styles.mainContent}>
         {showHeader && (
           <Header
             onMenuPress={() => setSidebarOpen(true)}
-            title={route.name !== 'Dashboard' ? route.name as string : undefined}
+            title={route.name !== 'Dashboard' ? route.name : undefined}
           />
         )}
 
-        <View style={styles.contentWrapper}>
-          {children}
-        </View>
+        <View style={styles.contentWrapper}>{children}</View>
       </View>
+
+      {showSidebar && (
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          activeRoute={route.name}
+          onNavigate={handleNavigate}
+          onLogout={handleLogout}
+        />
+      )}
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themed((c) => ({
   container: {
     flex: 1,
+    backgroundColor: c.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: c.background,
   },
-  loadingContent: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  spinner: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 3,
-    borderColor: 'var(--primary)',
-    borderTopColor: 'transparent',
-  },
+  // minHeight/minWidth 0: on react-native-web a flex child defaults to
+  // min-height:auto and grows past the viewport instead of letting the inner
+  // ScrollView scroll. No-op on native.
   mainContent: {
     flex: 1,
-    flexDirection: 'column',
+    minHeight: 0,
   },
   contentWrapper: {
     flex: 1,
-    padding: 16,
+    minHeight: 0,
   },
-});
+}));
 
 export default MainLayout;

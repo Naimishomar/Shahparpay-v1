@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { colors, themed } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -30,11 +31,11 @@ export const BbpsScreen: React.FC = () => {
         {billerCategories.map((cat, index) => (
           <View key={index} style={styles.categoryCard}>
             <View style={[styles.categoryIcon, { backgroundColor: `${cat.color}20` }]}>
-              <MaterialCommunityIcons name={cat.icon} size={28} color={cat.color} />
+              <MaterialCommunityIcons name={cat.icon as any} size={28} color={cat.color} />
             </View>
             <Text style={styles.categoryName}>{cat.name}</Text>
             <Text style={styles.categoryCount}>{cat.billers.length}+ Billers</Text>
-            <Button variant="outline" size="sm" className="mt-3" fullWidth>Pay Bill</Button>
+            <Button variant="outline" size="sm" style={{ marginTop: 12 }} fullWidth>Pay Bill</Button>
           </View>
         ))}
       </View>
@@ -45,7 +46,7 @@ export const BbpsScreen: React.FC = () => {
         </CardHeader>
         <CardContent>
           <View style={styles.emptyState}>
-            <Ionicons name="receipt-outline" size={48} color="var(--muted-foreground)" />
+            <Ionicons name="receipt-outline" size={48} color={colors.mutedForeground} />
             <Text style={styles.emptyText}>No recent bill payments</Text>
             <Text style={styles.emptySubtext}>Your payments will appear here</Text>
           </View>
@@ -55,21 +56,21 @@ export const BbpsScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  scrollView: { flex: 1, backgroundColor: 'var(--background)' },
+const styles = themed((c) => ({
+  scrollView: { flex: 1, backgroundColor: c.background },
   content: { padding: 16, paddingBottom: 32, gap: 16 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  pageTitle: { fontSize: 24, fontWeight: '700', color: 'var(--foreground)' },
-  pageSubtitle: { fontSize: 13, color: 'var(--muted-foreground)', marginTop: 2 },
+  pageTitle: { fontSize: 24, fontWeight: '700', color: c.foreground },
+  pageSubtitle: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
   categoriesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' },
-  categoryCard: { width: '48%', padding: 16, borderRadius: 16, backgroundColor: 'var(--card)', borderWidth: 1, borderColor: 'var(--border)', alignItems: 'center', gap: 10 },
+  categoryCard: { width: '48%', padding: 16, borderRadius: 16, backgroundColor: c.card, borderWidth: 1, borderColor: c.border, alignItems: 'center', gap: 10 },
   categoryIcon: { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  categoryName: { fontSize: 14, fontWeight: '600', color: 'var(--foreground)' },
-  categoryCount: { fontSize: 11, color: 'var(--muted-foreground)' },
+  categoryName: { fontSize: 14, fontWeight: '600', color: c.foreground },
+  categoryCount: { fontSize: 11, color: c.mutedForeground },
   recentCard: { marginTop: 8 },
   emptyState: { alignItems: 'center', paddingVertical: 32, gap: 12 },
-  emptyText: { fontSize: 14, fontWeight: '500', color: 'var(--foreground)' },
-  emptySubtext: { fontSize: 12, color: 'var(--muted-foreground)' },
-});
+  emptyText: { fontSize: 14, fontWeight: '500', color: c.foreground },
+  emptySubtext: { fontSize: 12, color: c.mutedForeground },
+}));
 
 export default BbpsScreen;

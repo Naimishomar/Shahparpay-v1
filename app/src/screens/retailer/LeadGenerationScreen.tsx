@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { themed } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -28,7 +29,7 @@ export const LeadGenerationScreen: React.FC = () => {
         {leadProducts.map((product, index) => (
           <View key={index} style={styles.productCard}>
             <View style={[styles.productIcon, { backgroundColor: `${product.color}20` }]}>
-              <MaterialCommunityIcons name={product.icon} size={28} color={product.color} />
+              <MaterialCommunityIcons name={product.icon as any} size={28} color={product.color} />
             </View>
             <Text style={styles.productName}>{product.name}</Text>
             <Text style={styles.productDesc}>{product.desc}</Text>
@@ -72,24 +73,24 @@ export const LeadGenerationScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  scrollView: { flex: 1, backgroundColor: 'var(--background)' },
+const styles = themed((c) => ({
+  scrollView: { flex: 1, backgroundColor: c.background },
   content: { padding: 16, paddingBottom: 32, gap: 16 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  pageTitle: { fontSize: 24, fontWeight: '700', color: 'var(--foreground)' },
-  pageSubtitle: { fontSize: 13, color: 'var(--muted-foreground)', marginTop: 2 },
+  pageTitle: { fontSize: 24, fontWeight: '700', color: c.foreground },
+  pageSubtitle: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
   productsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' },
-  productCard: { width: '48%', padding: 16, borderRadius: 16, backgroundColor: 'var(--card)', borderWidth: 1, borderColor: 'var(--border)', gap: 10 },
+  productCard: { width: '48%', padding: 16, borderRadius: 16, backgroundColor: c.card, borderWidth: 1, borderColor: c.border, gap: 10 },
   productIcon: { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  productName: { fontSize: 14, fontWeight: '600', color: 'var(--foreground)' },
-  productDesc: { fontSize: 11, color: 'var(--muted-foreground)' },
-  productFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'var(--border)' },
+  productName: { fontSize: 14, fontWeight: '600', color: c.foreground },
+  productDesc: { fontSize: 11, color: c.mutedForeground },
+  productFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.border },
   commission: { fontSize: 12, fontWeight: '600', color: '#10B981', flexDirection: 'row', alignItems: 'center', gap: 4 },
   statsCard: { marginTop: 8 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  statItem: { width: '48%', padding: 12, borderRadius: 12, backgroundColor: 'var(--secondary)', alignItems: 'center' },
-  statLabel: { fontSize: 11, color: 'var(--muted-foreground)', textAlign: 'center', marginBottom: 4 },
-  statValue: { fontSize: 18, fontWeight: '700', color: 'var(--foreground)' },
-});
+  statItem: { width: '48%', padding: 12, borderRadius: 12, backgroundColor: c.secondary, alignItems: 'center' },
+  statLabel: { fontSize: 11, color: c.mutedForeground, textAlign: 'center', marginBottom: 4 },
+  statValue: { fontSize: 18, fontWeight: '700', color: c.foreground },
+}));
 
 export default LeadGenerationScreen;

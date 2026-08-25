@@ -1,40 +1,35 @@
 import React from 'react';
-import { StyleSheet, StatusBar, View } from 'react-native';
+import { StatusBar } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '@/context/AuthContext';
-import { ThemeProvider } from '@/context/ThemeContext';
+import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { AppNavigator } from '@/navigation/AppNavigator';
-import { useTheme } from '@/context/ThemeContext';
-import './global.css';
+import { palettes } from '@/theme/colors';
 
 const AppContent: React.FC = () => {
   const { resolvedTheme } = useTheme();
-
-  React.useEffect(() => {
-    StatusBar.setBarStyle(resolvedTheme === 'dark' ? 'light-content' : 'dark-content');
-    StatusBar.setBackgroundColor(resolvedTheme === 'dark' ? '#000' : '#FAFAFA');
-  }, [resolvedTheme]);
+  const palette = palettes[resolvedTheme];
 
   return (
-    <View style={styles.container} className={resolvedTheme === 'dark' ? 'dark' : ''}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: palette.background }}>
+      <StatusBar
+        barStyle={resolvedTheme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={palette.background}
+      />
       <AppNavigator />
-    </View>
+    </GestureHandlerRootView>
   );
 };
 
-const App: React.FC = () => {
-  return (
+const App: React.FC = () => (
+  <SafeAreaProvider>
     <ThemeProvider>
       <AuthProvider>
         <AppContent />
       </AuthProvider>
     </ThemeProvider>
-  );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
+  </SafeAreaProvider>
+);
 
 export default App;

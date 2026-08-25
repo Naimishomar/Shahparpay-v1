@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { cn } from '@/utils/cn';
+import { colors, themed } from '../../theme/colors';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -28,7 +28,7 @@ export const Header: React.FC<HeaderProps> = ({
     if (user && token) {
       try {
         const res = await api.getWalletBalance();
-        if (res.success) {
+        if (res?.success && res.data) {
           setBalances(res.data);
         }
       } catch (error) {
@@ -44,18 +44,18 @@ export const Header: React.FC<HeaderProps> = ({
   }, [user, token]);
 
   return (
-    <View style={[styles.header, { backgroundColor: 'var(--background)' }]}>
+    <View style={[styles.header, { backgroundColor: colors.background }]}>
       <View style={styles.leftSection}>
         {showBackButton ? (
           <TouchableOpacity onPress={onBackPress} style={styles.iconButton}>
-            <Ionicons name="chevron-back" size={26} color="var(--foreground)" />
+            <Ionicons name="chevron-back" size={26} color={colors.foreground} />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity onPress={onMenuPress} style={styles.iconButton}>
-            <Ionicons name="menu" size={26} color="var(--foreground)" />
+            <Ionicons name="menu" size={26} color={colors.foreground} />
           </TouchableOpacity>
         )}
-        {title && <Text style={styles.title}>{title}</Text>}
+        {!!title && <Text style={styles.title}>{title}</Text>}
       </View>
 
       <View style={styles.rightSection}>
@@ -65,18 +65,18 @@ export const Header: React.FC<HeaderProps> = ({
               <WalletBalance
                 label="Admin Wallet"
                 amount={balances.adminBalance}
-                iconColor="var(--primary)"
-                bgColor="rgba(var(--primary-rgb), 0.1)"
-                borderColor="rgba(var(--primary-rgb), 0.2)"
+                iconColor={colors.primary}
+                bgColor={colors.primaryTintBg}
+                borderColor={colors.primaryTintBorder}
               />
             ) : (
               <>
                 <WalletBalance
                   label="AEPS Wallet"
                   amount={balances.aepsBalance}
-                  iconColor="var(--primary)"
-                  bgColor="rgba(var(--primary-rgb), 0.1)"
-                  borderColor="rgba(var(--primary-rgb), 0.2)"
+                  iconColor={colors.primary}
+                  bgColor={colors.primaryTintBg}
+                  borderColor={colors.primaryTintBorder}
                 />
                 <View style={styles.divider} />
                 <WalletBalance
@@ -93,9 +93,9 @@ export const Header: React.FC<HeaderProps> = ({
 
         <TouchableOpacity onPress={toggleTheme} style={styles.iconButton}>
           {resolvedTheme === 'dark' ? (
-            <Ionicons name="sunny" size={24} color="var(--foreground)" />
+            <Ionicons name="sunny" size={24} color={colors.foreground} />
           ) : (
-            <Ionicons name="moon" size={24} color="var(--foreground)" />
+            <Ionicons name="moon" size={24} color={colors.foreground} />
           )}
         </TouchableOpacity>
 
@@ -104,7 +104,7 @@ export const Header: React.FC<HeaderProps> = ({
             {user?.profilePicture ? (
               <Image source={{ uri: user.profilePicture }} style={styles.avatar} />
             ) : (
-              <Ionicons name="person" size={24} color="var(--foreground)" />
+              <Ionicons name="person" size={24} color={colors.foreground} />
             )}
           </View>
         </TouchableOpacity>
@@ -126,12 +126,12 @@ const WalletBalance: React.FC<{
     </View>
     <View style={styles.walletInfo}>
       <Text style={styles.walletLabel}>{label}</Text>
-      <Text style={styles.walletAmount}>₹ {amount.toFixed(2)}</Text>
+      <Text style={styles.walletAmount}>₹ {Number(amount ?? 0).toFixed(2)}</Text>
     </View>
   </View>
 );
 
-const styles = StyleSheet.create({
+const styles = themed((c) => ({
   header: {
     height: 64,
     flexDirection: 'row',
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'var(--border)',
+    borderBottomColor: c.border,
     position: 'relative',
     zIndex: 50,
   },
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: 'var(--foreground)',
+    color: c.foreground,
   },
   walletContainer: {
     flexDirection: 'row',
@@ -192,17 +192,17 @@ const styles = StyleSheet.create({
   walletLabel: {
     fontSize: 10,
     fontWeight: '500',
-    color: 'var(--muted-foreground)',
+    color: c.mutedForeground,
   },
   walletAmount: {
     fontSize: 12,
     fontWeight: '700',
-    color: 'var(--foreground)',
+    color: c.foreground,
   },
   divider: {
     width: 1,
     height: 28,
-    backgroundColor: 'var(--border)',
+    backgroundColor: c.border,
     marginHorizontal: 4,
   },
   profileButton: {
@@ -218,15 +218,15 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'var(--primary)',
+    backgroundColor: c.primary,
     borderWidth: 2,
-    borderColor: 'var(--primary)',
+    borderColor: c.primary,
   },
   avatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
   },
-});
+}));
 
 export default Header;

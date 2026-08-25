@@ -51,27 +51,27 @@ class ApiService {
     this.token = token;
   }
 
-  async get<T>(url: string, params?: Record<string, any>) {
+  async get<T = any>(url: string, params?: Record<string, any>) {
     const response = await this.client.get<T>(url, { params });
     return response.data;
   }
 
-  async post<T>(url: string, data?: Record<string, any>) {
+  async post<T = any>(url: string, data?: Record<string, any>) {
     const response = await this.client.post<T>(url, data);
     return response.data;
   }
 
-  async put<T>(url: string, data?: Record<string, any>) {
+  async put<T = any>(url: string, data?: Record<string, any>) {
     const response = await this.client.put<T>(url, data);
     return response.data;
   }
 
-  async patch<T>(url: string, data?: Record<string, any>) {
+  async patch<T = any>(url: string, data?: Record<string, any>) {
     const response = await this.client.patch<T>(url, data);
     return response.data;
   }
 
-  async delete<T>(url: string) {
+  async delete<T = any>(url: string) {
     const response = await this.client.delete<T>(url);
     return response.data;
   }

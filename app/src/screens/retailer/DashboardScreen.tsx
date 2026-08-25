@@ -9,15 +9,18 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
+import { useNavigation } from '@react-navigation/native';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import api from '@/services/api';
 import { DashboardStats, RecentSale } from '@/types';
 import { QUICK_ACTIONS } from '@/constants';
+import { colors, themed } from '../../theme/colors';
 
 export const DashboardScreen: React.FC = () => {
   const { user, token } = useAuth();
+  const navigation = useNavigation<any>();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentSales, setRecentSales] = useState<RecentSale[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,21 +81,14 @@ export const DashboardScreen: React.FC = () => {
       <View style={styles.statCardHeader}>
         <Text style={styles.statTitle}>{stat.title}</Text>
         <View style={[styles.statIconContainer, { backgroundColor: `${stat.color}20` }]}>
-          <Ionicons name={stat.icon} size={24} color={stat.color} />
+          <MaterialCommunityIcons name={stat.icon as any} size={24} color={stat.color} />
         </View>
       </View>
       <Text style={styles.statValue}>{stat.value}</Text>
     </TouchableOpacity>
   );
 
-  const renderQuickAction = (action: any) => {
-    const iconMap: Record<string, string> = {
-      fingerprint: 'fingerprint',
-      users: 'account-group',
-      'credit-card': 'credit-card',
-      'file-text': 'file-document',
-    };
-
+  const renderQuickAction = (action: any, index: number) => {
     const colorMap: Record<string, string> = {
       blue: '#3B82F6',
       teal: '#14B8A6',
@@ -104,12 +100,13 @@ export const DashboardScreen: React.FC = () => {
 
     return (
       <TouchableOpacity
+        key={index}
         style={[styles.quickActionCard, { borderColor: `${color}40` }]}
-        onPress={() => { /* navigate to action.route */ }}
+        onPress={() => navigation.navigate(action.route)}
         activeOpacity={0.8}
       >
         <View style={[styles.quickActionIcon, { backgroundColor: `${color}20` }]}>
-          <MaterialCommunityIcons name={iconMap[action.icon] || 'help'} size={28} color={color} />
+          <MaterialCommunityIcons name={action.icon as any} size={28} color={color} />
         </View>
         <Text style={styles.quickActionTitle}>{action.name}</Text>
         <Text style={styles.quickActionDesc}>Tap to open</Text>
@@ -119,9 +116,9 @@ export const DashboardScreen: React.FC = () => {
 
   const renderRecentSale = (sale: RecentSale, index: number) => (
     <View key={index} style={styles.recentSaleItem}>
-      <View style={[styles.recentSaleAvatar, { backgroundColor: 'var(--primary)' }]}>
+      <View style={[styles.recentSaleAvatar, { backgroundColor: colors.primary }]}>
         <Text style={styles.recentSaleAvatarText}>
-          {sale.service ? sale.service.charAt(0) : sale.name.charAt(0)}
+          {(sale.service || sale.name || '?').charAt(0)}
         </Text>
       </View>
       <View style={styles.recentSaleInfo}>
@@ -138,7 +135,7 @@ export const DashboardScreen: React.FC = () => {
         ]}>
           {sale.amount}
         </Text>
-        {sale.date && (
+        {!!sale.date && (
           <Text style={styles.recentSaleDate}>
             {new Date(sale.date).toLocaleDateString()}
           </Text>
@@ -171,7 +168,7 @@ export const DashboardScreen: React.FC = () => {
         </View>
         <TouchableOpacity style={styles.datePickerButton}>
           <Text style={styles.datePickerText}>{dateRange}</Text>
-          <Ionicons name="chevron-down" size={18} color="var(--muted-foreground)" />
+          <Ionicons name="chevron-down" size={18} color={colors.mutedForeground} />
         </TouchableOpacity>
       </View>
 
@@ -205,7 +202,7 @@ export const DashboardScreen: React.FC = () => {
             recentSales.map(renderRecentSale)
           ) : (
             <View style={styles.emptyState}>
-              <Ionicons name="receipt-outline" size={48} color="var(--muted-foreground)" />
+              <Ionicons name="receipt-outline" size={48} color={colors.mutedForeground} />
               <Text style={styles.emptyText}>No recent sales found</Text>
             </View>
           )}
@@ -215,7 +212,7 @@ export const DashboardScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themed((c) => ({
   scrollView: {
     flex: 1,
   },
@@ -234,7 +231,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     borderWidth: 3,
-    borderColor: 'var(--primary)',
+    borderColor: c.primary,
     borderTopColor: 'transparent',
   },
   header: {
@@ -246,12 +243,12 @@ const styles = StyleSheet.create({
   headerLeft: {},
   greeting: {
     fontSize: 14,
-    color: 'var(--muted-foreground)',
+    color: c.mutedForeground,
   },
   userName: {
     fontSize: 24,
     fontWeight: '700',
-    color: 'var(--foreground)',
+    color: c.foreground,
   },
   datePickerButton: {
     flexDirection: 'row',
@@ -261,13 +258,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'var(--border)',
-    backgroundColor: 'var(--background)',
+    borderColor: c.border,
+    backgroundColor: c.background,
   },
   datePickerText: {
     fontSize: 13,
     fontWeight: '500',
-    color: 'var(--foreground)',
+    color: c.foreground,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -279,9 +276,9 @@ const styles = StyleSheet.create({
     width: '48%',
     padding: 16,
     borderRadius: 16,
-    backgroundColor: 'var(--card)',
+    backgroundColor: c.card,
     borderWidth: 1,
-    borderColor: 'var(--border)',
+    borderColor: c.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -297,7 +294,7 @@ const styles = StyleSheet.create({
   statTitle: {
     fontSize: 12,
     fontWeight: '500',
-    color: 'var(--muted-foreground)',
+    color: c.mutedForeground,
     flex: 1,
     marginRight: 8,
   },
@@ -311,7 +308,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 22,
     fontWeight: '700',
-    color: 'var(--foreground)',
+    color: c.foreground,
   },
   sectionHeader: {
     marginTop: 8,
@@ -319,7 +316,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: 'var(--foreground)',
+    color: c.foreground,
   },
   quickActionsGrid: {
     flexDirection: 'row',
@@ -331,7 +328,7 @@ const styles = StyleSheet.create({
     width: '48%',
     padding: 16,
     borderRadius: 16,
-    backgroundColor: 'var(--card)',
+    backgroundColor: c.card,
     borderWidth: 1,
     alignItems: 'center',
     gap: 10,
@@ -346,12 +343,12 @@ const styles = StyleSheet.create({
   quickActionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: 'var(--foreground)',
+    color: c.foreground,
     textAlign: 'center',
   },
   quickActionDesc: {
     fontSize: 11,
-    color: 'var(--muted-foreground)',
+    color: c.mutedForeground,
     textAlign: 'center',
   },
   recentSalesCard: {
@@ -362,7 +359,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'var(--border)',
+    borderBottomColor: c.border,
   },
   recentSaleAvatar: {
     width: 40,
@@ -384,16 +381,16 @@ const styles = StyleSheet.create({
   recentSaleService: {
     fontSize: 13,
     fontWeight: '600',
-    color: 'var(--foreground)',
+    color: c.foreground,
   },
   recentSaleName: {
     fontSize: 12,
     fontWeight: '500',
-    color: 'var(--foreground)',
+    color: c.foreground,
   },
   recentSaleDetails: {
     fontSize: 11,
-    color: 'var(--muted-foreground)',
+    color: c.mutedForeground,
   },
   recentSaleAmount: {
     alignItems: 'flex-end',
@@ -414,7 +411,7 @@ const styles = StyleSheet.create({
   },
   recentSaleDate: {
     fontSize: 10,
-    color: 'var(--muted-foreground)',
+    color: c.mutedForeground,
   },
   emptyState: {
     alignItems: 'center',
@@ -423,8 +420,8 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: 'var(--muted-foreground)',
+    color: c.mutedForeground,
   },
-});
+}));
 
 export default DashboardScreen;

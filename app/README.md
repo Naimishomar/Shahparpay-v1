@@ -15,9 +15,9 @@ React Native mobile app for Shahparpay - Financial Services Platform
 ## Tech Stack
 
 - **Framework**: Expo (React Native)
-- **Navigation**: React Navigation v6 (Stack + Drawer)
+- **Navigation**: React Navigation v6 (Stack)
 - **State Management**: React Context + Zustand
-- **Styling**: NativeWind (Tailwind CSS for React Native)
+- **Styling**: React Native `StyleSheet` with a light/dark palette (`src/theme/colors.ts`)
 - **Icons**: Expo Vector Icons (Ionicons, MaterialCommunityIcons)
 - **Storage**: AsyncStorage for persistence
 - **API**: Axios with interceptors
@@ -39,16 +39,16 @@ app/
 │   ├── context/          # React Context providers (Auth, Theme)
 │   ├── services/         # API service layer
 │   ├── hooks/            # Custom React hooks
-│   ├── utils/            # Utility functions (cn, etc.)
 │   ├── constants/        # App constants & config
 │   ├── theme/            # Design tokens (colors, spacing, etc.)
 │   ├── types/            # TypeScript type definitions
 │   └── assets/           # Static assets (logo, images)
+├── scripts/check-routes.js  # `npm run check`: menu routes + icon names
+├── index.js              # Registers App.tsx as the root component
 ├── App.tsx               # App entry point
 ├── app.json              # Expo configuration
 ├── package.json          # Dependencies
 ├── tsconfig.json         # TypeScript configuration
-├── tailwind.config.js    # Tailwind/NativeWind configuration
 └── .env                  # Environment variables
 ```
 

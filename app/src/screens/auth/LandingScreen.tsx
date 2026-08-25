@@ -11,13 +11,14 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/context/ThemeContext';
+import { colors, themed } from '../../theme/colors';
 
 export const LandingScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const { resolvedTheme } = useTheme();
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: 'var(--background)' }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar
         barStyle={resolvedTheme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor="transparent"
@@ -50,19 +51,19 @@ export const LandingScreen: React.FC = () => {
             <View style={styles.features}>
               <View style={styles.featureItem}>
                 <View style={styles.featureIcon}>
-                  <MaterialCommunityIcons name="shield-check" size={20} color="var(--primary)" />
+                  <MaterialCommunityIcons name="shield-check" size={20} color={colors.primary} />
                 </View>
                 <Text style={styles.featureText}>256-bit Encryption</Text>
               </View>
               <View style={styles.featureItem}>
                 <View style={styles.featureIcon}>
-                  <Ionicons name="flash" size={20} color="var(--primary)" />
+                  <Ionicons name="flash" size={20} color={colors.primary} />
                 </View>
                 <Text style={styles.featureText}>Instant Settlement</Text>
               </View>
               <View style={styles.featureItem}>
                 <View style={styles.featureIcon}>
-                  <MaterialCommunityIcons name="server-network" size={20} color="var(--primary)" />
+                  <MaterialCommunityIcons name="server-network" size={20} color={colors.primary} />
                 </View>
                 <Text style={styles.featureText}>99.9% Uptime</Text>
               </View>
@@ -84,7 +85,7 @@ export const LandingScreen: React.FC = () => {
             </View>
 
             <TouchableOpacity
-              onPress={() => navigation.navigate('Login' as any)}
+              onPress={() => navigation.navigate('Login')}
               style={styles.loginButton}
             >
               <Text style={styles.loginButtonText}>Continue to Login</Text>
@@ -107,7 +108,7 @@ export const LandingScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themed((c) => ({
   container: {
     flex: 1,
   },
@@ -160,16 +161,16 @@ const styles = StyleSheet.create({
     fontSize: 42,
     fontWeight: '800',
     lineHeight: 50,
-    color: 'var(--foreground)',
+    color: c.foreground,
     marginBottom: 16,
   },
   headingMuted: {
-    color: 'var(--muted-foreground)',
+    color: c.mutedForeground,
   },
   description: {
     fontSize: 18,
     lineHeight: 28,
-    color: 'var(--muted-foreground)',
+    color: c.mutedForeground,
     marginBottom: 32,
     maxWidth: 400,
   },
@@ -186,9 +187,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 9999,
-    backgroundColor: 'var(--secondary)',
+    backgroundColor: c.secondary,
     borderWidth: 1,
-    borderColor: 'var(--border)',
+    borderColor: c.border,
   },
   featureIcon: {
     padding: 4,
@@ -196,14 +197,14 @@ const styles = StyleSheet.create({
   featureText: {
     fontSize: 13,
     fontWeight: '500',
-    color: 'var(--foreground)',
+    color: c.foreground,
   },
   copyright: {
     paddingTop: 24,
   },
   copyrightText: {
     fontSize: 12,
-    color: 'var(--muted-foreground)',
+    color: c.mutedForeground,
   },
   rightPanel: {
     flex: 1,
@@ -217,9 +218,9 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     padding: 32,
     borderRadius: 24,
-    backgroundColor: 'var(--card)',
+    backgroundColor: c.card,
     borderWidth: 1,
-    borderColor: 'var(--border)',
+    borderColor: c.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1,
@@ -233,12 +234,12 @@ const styles = StyleSheet.create({
   loginTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: 'var(--foreground)',
+    color: c.foreground,
     marginBottom: 4,
   },
   loginSubtitle: {
     fontSize: 14,
-    color: 'var(--muted-foreground)',
+    color: c.mutedForeground,
   },
   loginButton: {
     flexDirection: 'row',
@@ -247,13 +248,13 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
     borderRadius: 12,
-    backgroundColor: 'var(--primary)',
+    backgroundColor: c.primary,
     marginBottom: 20,
   },
   loginButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'var(--primary-foreground)',
+    color: c.primaryForeground,
   },
   divider: {
     flexDirection: 'row',
@@ -264,11 +265,11 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'var(--border)',
+    backgroundColor: c.border,
   },
   dividerText: {
     fontSize: 13,
-    color: 'var(--muted-foreground)',
+    color: c.mutedForeground,
   },
   demoButton: {
     flexDirection: 'row',
@@ -277,14 +278,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'var(--border)',
+    borderColor: c.border,
     backgroundColor: 'transparent',
   },
   demoButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'var(--foreground)',
+    color: c.foreground,
   },
-});
+}));
 
 export default LandingScreen;

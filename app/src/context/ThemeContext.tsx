@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Appearance, ColorSchemeName } from 'react-native';
+import { Appearance } from 'react-native';
+import { setActivePalette } from '@/theme/colors';
 
 type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -79,8 +80,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTheme(themes[nextIndex]);
   };
 
+  // Must run during render (not an effect) so styles read the right palette
+  // on the very first paint.
+  setActivePalette(resolvedTheme);
+
   if (!isLoaded) {
-    return <>{children}</>;
+    return null;
   }
 
   return (

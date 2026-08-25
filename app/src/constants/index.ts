@@ -37,54 +37,40 @@ export const INDIAN_STATES = [
   "Puducherry",
 ];
 
-export const RETAILER_MENU_ITEMS = [
-  { name: "Dashboard", url: "/dashboard", icon: "layout-dashboard" },
-  { name: "AEPS", url: "/aeps", icon: "fingerprint" },
-  { name: "AEPS Settlement", url: "/aeps-settlement", icon: "landmark" },
-  { name: "PAN Card", url: "/pan", icon: "file-text" },
-  { name: "Lead Generation", url: "/lead-generation", icon: "user-plus" },
-  { name: "ITR Filing", url: "/itr", icon: "file-text" },
-  { name: "UPI Payments", url: "/upi-payments", icon: "wallet" },
-  { name: "DMT", url: "/dmt", icon: "send" },
-  { name: "Recharge", url: "/recharge", icon: "zap" },
-  { name: "BBPS", url: "/bbps", icon: "zap" },
-  {
-    name: "Reports",
-    icon: "bar-chart-3",
-    subItems: [
-      { name: "Ledger", url: "/reports/ledger" },
-      { name: "All Reports", url: "/reports/ledger" },
-      { name: "AEPS Reports", url: "/reports/aeps" },
-      { name: "DMT Reports", url: "/reports/dmt" },
-      { name: "Payout Reports", url: "/reports/payout" },
-      { name: "UPI Reports", url: "/reports/upi" },
-      { name: "PAN Reports", url: "/reports/pan" },
-      { name: "ITR Reports", url: "/reports/itr" },
-      { name: "Lead Generation Reports", url: "/reports/lead-generation" },
-      { name: "Wallet Ledger", url: "/reports/wallet-ledger" },
-    ],
-  },
-  { name: "Fund Request", url: "/fund-request", icon: "send" },
-  { name: "AEPS Pipe Status", url: "/aeps/pipes", icon: "fingerprint" },
-  { name: "Biometric Support", url: "/biometric-support", icon: "fingerprint" },
+export interface MenuEntry {
+  name: string;
+  route: string;
+  icon: string; // MaterialCommunityIcons name
+}
+
+// Only routes registered in AppNavigator appear here; adding a screen means
+// adding it to both places.
+export const RETAILER_MENU_ITEMS: MenuEntry[] = [
+  { name: "Dashboard", route: "Dashboard", icon: "view-dashboard-outline" },
+  { name: "AEPS", route: "AEPS", icon: "fingerprint" },
+  { name: "AEPS Settlement", route: "AepsSettlement", icon: "bank-outline" },
+  { name: "PAN Card", route: "PAN", icon: "card-account-details-outline" },
+  { name: "Lead Generation", route: "LeadGeneration", icon: "account-plus-outline" },
+  { name: "ITR Filing", route: "ITR", icon: "file-document-outline" },
+  { name: "UPI Payments", route: "UPIPayments", icon: "qrcode" },
+  { name: "DMT", route: "DMT", icon: "send-outline" },
+  { name: "Recharge", route: "Recharge", icon: "flash-outline" },
+  { name: "BBPS", route: "BBPS", icon: "receipt" },
+  { name: "Wallet Transfer", route: "WalletTransfer", icon: "wallet-outline" },
+  { name: "Direct Payout", route: "DirectPayout", icon: "cash-fast" },
+  { name: "Fund Request", route: "FundRequest", icon: "hand-coin-outline" },
+  { name: "AEPS Pipe Status", route: "PipeStatus", icon: "pipe" },
+  { name: "Biometric Support", route: "BiometricSupport", icon: "fingerprint-off" },
+  { name: "KYC Status", route: "KycStatus", icon: "shield-check-outline" },
+  { name: "My Profile", route: "Profile", icon: "account-circle-outline" },
 ];
 
-export const ADMIN_MENU_ITEMS = [
-  { name: "Overview", url: "/admin", icon: "layout-dashboard" },
-  { name: "Distributors", url: "/admin/distributors", icon: "users" },
-  { name: "Fund Requests", url: "/admin/fund-requests", icon: "store" },
-  { name: "Add New", url: "/admin/create", icon: "user-plus" },
-  { name: "Commissions", url: "/admin/commissions", icon: "file-text" },
-  { name: "Ledger", url: "/reports/ledger", icon: "file-text" },
-  { name: "Lead Generation", url: "/lead-generation", icon: "user-plus" },
+export const ADMIN_MENU_ITEMS: MenuEntry[] = [
+  { name: "Overview", route: "AdminPortal", icon: "view-dashboard-outline" },
 ];
 
-export const DISTRIBUTOR_MENU_ITEMS = [
-  { name: "Overview", url: "/distributor", icon: "layout-dashboard" },
-  { name: "Retailers", url: "/distributor/retailers", icon: "users" },
-  { name: "Fund Requests", url: "/distributor/fund-requests", icon: "store" },
-  { name: "Add New", url: "/distributor/create", icon: "user-plus" },
-  { name: "My Profile", url: "/distributor/profile", icon: "user-circle" },
+export const DISTRIBUTOR_MENU_ITEMS: MenuEntry[] = [
+  { name: "Overview", route: "DistributorPortal", icon: "view-dashboard-outline" },
 ];
 
 export const API_ENDPOINTS = {
@@ -165,10 +151,10 @@ export const STORAGE_KEYS = {
 };
 
 export const QUICK_ACTIONS = [
-  { name: 'AEPS Services', route: '/aeps', icon: 'fingerprint', color: 'blue' },
-  { name: 'Lead Generation', route: '/lead-generation', icon: 'users', color: 'teal' },
-  { name: 'PAN Card', route: '/pan', icon: 'credit-card', color: 'rose' },
-  { name: 'ITR Filing', route: '/itr', icon: 'file-text', color: 'indigo' },
+  { name: 'AEPS Services', route: 'AEPS', icon: 'fingerprint', color: 'blue' },
+  { name: 'Lead Generation', route: 'LeadGeneration', icon: 'account-group', color: 'teal' },
+  { name: 'PAN Card', route: 'PAN', icon: 'credit-card', color: 'rose' },
+  { name: 'ITR Filing', route: 'ITR', icon: 'file-document', color: 'indigo' },
 ];
 
 export const DATE_FILTER_OPTIONS = [

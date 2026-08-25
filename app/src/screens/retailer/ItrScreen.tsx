@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { themed } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -19,19 +20,19 @@ export const ItrScreen: React.FC = () => {
           <Text style={styles.pageTitle}>ITR Filing</Text>
           <Text style={styles.pageSubtitle}>File your income tax returns easily</Text>
         </View>
-        <Ionicons name="file-text" size={32} color="#6366F1" />
+        <MaterialCommunityIcons name="file-document-outline" size={32} color="#6366F1" />
       </View>
 
       <View style={styles.formsGrid}>
         {itrForms.map((form, index) => (
           <View key={index} style={styles.formCard}>
             <View style={[styles.formIcon, { backgroundColor: '#6366F120' }]}>
-              <MaterialCommunityIcons name={form.icon} size={24} color="#6366F1" />
+              <MaterialCommunityIcons name={form.icon as any} size={24} color="#6366F1" />
             </View>
             <Text style={styles.formName}>{form.name}</Text>
             <Text style={styles.formDesc}>{form.desc}</Text>
             <Text style={styles.formEligibility}>{form.eligibility}</Text>
-            <Button variant="outline" size="sm" className="mt-3" fullWidth>File Now</Button>
+            <Button variant="outline" size="sm" style={{ marginTop: 12 }} fullWidth>File Now</Button>
           </View>
         ))}
       </View>
@@ -67,28 +68,28 @@ export const ItrScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  scrollView: { flex: 1, backgroundColor: 'var(--background)' },
+const styles = themed((c) => ({
+  scrollView: { flex: 1, backgroundColor: c.background },
   content: { padding: 16, paddingBottom: 32, gap: 16 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  pageTitle: { fontSize: 24, fontWeight: '700', color: 'var(--foreground)' },
-  pageSubtitle: { fontSize: 13, color: 'var(--muted-foreground)', marginTop: 2 },
+  pageTitle: { fontSize: 24, fontWeight: '700', color: c.foreground },
+  pageSubtitle: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
   formsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' },
-  formCard: { width: '48%', padding: 16, borderRadius: 16, backgroundColor: 'var(--card)', borderWidth: 1, borderColor: 'var(--border)', gap: 8 },
+  formCard: { width: '48%', padding: 16, borderRadius: 16, backgroundColor: c.card, borderWidth: 1, borderColor: c.border, gap: 8 },
   formIcon: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  formName: { fontSize: 14, fontWeight: '600', color: 'var(--foreground)' },
-  formDesc: { fontSize: 11, color: 'var(--muted-foreground)' },
+  formName: { fontSize: 14, fontWeight: '600', color: c.foreground },
+  formDesc: { fontSize: 11, color: c.mutedForeground },
   formEligibility: { fontSize: 11, color: '#6366F1', fontWeight: '500' },
   infoCard: { marginTop: 8 },
   docGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  docTag: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: 'var(--secondary)' },
-  docTagText: { fontSize: 12, color: 'var(--foreground)' },
+  docTag: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: c.secondary },
+  docTagText: { fontSize: 12, color: c.foreground },
   dueDateCard: { marginTop: 8 },
   dueDateContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   dueDateIcon: { width: 50, height: 50, borderRadius: 12, backgroundColor: '#F59E0B20', justifyContent: 'center', alignItems: 'center' },
-  dueDateTitle: { fontSize: 12, color: 'var(--muted-foreground)' },
-  dueDateValue: { fontSize: 16, fontWeight: '700', color: 'var(--foreground)' },
+  dueDateTitle: { fontSize: 12, color: c.mutedForeground },
+  dueDateValue: { fontSize: 16, fontWeight: '700', color: c.foreground },
   dueDateNote: { fontSize: 11, color: '#F59E0B' },
-});
+}));
 
 export default ItrScreen;

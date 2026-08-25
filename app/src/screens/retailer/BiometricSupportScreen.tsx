@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { colors, themed } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -12,7 +13,7 @@ export const BiometricSupportScreen: React.FC = () => {
           <Text style={styles.pageTitle}>Biometric Support</Text>
           <Text style={styles.pageSubtitle}>Device management & troubleshooting</Text>
         </View>
-        <Ionicons name="fingerprint" size={32} color="#EC4899" />
+        <MaterialCommunityIcons name="fingerprint" size={32} color="#EC4899" />
       </View>
 
       <Card style={styles.deviceCard}>
@@ -21,10 +22,10 @@ export const BiometricSupportScreen: React.FC = () => {
         </CardHeader>
         <CardContent>
           <View style={styles.emptyState}>
-            <Ionicons name="hardware-chip-outline" size={48} color="var(--muted-foreground)" />
+            <Ionicons name="hardware-chip-outline" size={48} color={colors.mutedForeground} />
             <Text style={styles.emptyText}>No biometric devices registered</Text>
             <Text style={styles.emptySubtext}>Register your RD service device for AEPS</Text>
-            <Button variant="outline" size="sm" className="mt-3">Register Device</Button>
+            <Button variant="outline" size="sm" style={{ marginTop: 12 }}>Register Device</Button>
           </View>
         </CardContent>
       </Card>
@@ -49,7 +50,7 @@ export const BiometricSupportScreen: React.FC = () => {
                   <Text style={styles.guideTitle}>{guide.title}</Text>
                   <Text style={styles.guideDesc}>{guide.desc}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="var(--muted-foreground)" />
+                <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
               </TouchableOpacity>
             ))}
           </View>
@@ -63,15 +64,15 @@ export const BiometricSupportScreen: React.FC = () => {
         <CardContent>
           <View style={styles.supportButtons}>
             <Button variant="outline" size="sm" fullWidth>
-              <Ionicons name="chatbubbles" size={18} color="var(--primary)" />
+              <Ionicons name="chatbubbles" size={18} color={colors.primary} />
               Live Chat
             </Button>
             <Button variant="outline" size="sm" fullWidth>
-              <Ionicons name="call" size={18} color="var(--primary)" />
+              <Ionicons name="call" size={18} color={colors.primary} />
               Call Support
             </Button>
             <Button variant="outline" size="sm" fullWidth>
-              <Ionicons name="mail" size={18} color="var(--primary)" />
+              <Ionicons name="mail" size={18} color={colors.primary} />
               Email Support
             </Button>
           </View>
@@ -81,26 +82,26 @@ export const BiometricSupportScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  scrollView: { flex: 1, backgroundColor: 'var(--background)' },
+const styles = themed((c) => ({
+  scrollView: { flex: 1, backgroundColor: c.background },
   content: { padding: 16, paddingBottom: 32, gap: 16 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  pageTitle: { fontSize: 24, fontWeight: '700', color: 'var(--foreground)' },
-  pageSubtitle: { fontSize: 13, color: 'var(--muted-foreground)', marginTop: 2 },
+  pageTitle: { fontSize: 24, fontWeight: '700', color: c.foreground },
+  pageSubtitle: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
   deviceCard: {},
   guidesCard: { marginTop: 8 },
   supportCard: { marginTop: 8 },
   emptyState: { alignItems: 'center', paddingVertical: 32, gap: 12 },
-  emptyText: { fontSize: 14, fontWeight: '500', color: 'var(--foreground)' },
-  emptySubtext: { fontSize: 12, color: 'var(--muted-foreground)', textAlign: 'center' },
+  emptyText: { fontSize: 14, fontWeight: '500', color: c.foreground },
+  emptySubtext: { fontSize: 12, color: c.mutedForeground, textAlign: 'center' },
   guidesList: { gap: 12 },
   guideItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   guideIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#6366F120', justifyContent: 'center', alignItems: 'center' },
   guideText: { flex: 1 },
-  guideTitle: { fontSize: 14, fontWeight: '600', color: 'var(--foreground)' },
-  guideDesc: { fontSize: 12, color: 'var(--muted-foreground)', marginTop: 2 },
+  guideTitle: { fontSize: 14, fontWeight: '600', color: c.foreground },
+  guideDesc: { fontSize: 12, color: c.mutedForeground, marginTop: 2 },
   supportButtons: { flexDirection: 'row', gap: 8 },
-});
+}));
 
 import { TouchableOpacity } from 'react-native';
 export default BiometricSupportScreen;

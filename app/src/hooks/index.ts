@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 
 export function useAppState() {
@@ -36,8 +36,6 @@ export function useInterval(callback: () => void, delay: number | null) {
     return () => clearInterval(id);
   }, [delay]);
 }
-
-import { useRef } from 'react';
 
 export function usePrevious<T>(value: T): T | undefined {
   const ref = useRef<T>();

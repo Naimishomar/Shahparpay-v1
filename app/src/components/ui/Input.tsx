@@ -1,7 +1,6 @@
 import React from 'react';
-import { TextInput, TextInputProps, StyleSheet, View, Text } from 'react-native';
-import { cn } from '@/utils/cn';
-import { useTheme } from '@/context/ThemeContext';
+import { TextInput, TextInputProps, View, Text, StyleProp, ViewStyle } from 'react-native';
+import { colors, themed } from '../../theme/colors';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -9,33 +8,31 @@ interface InputProps extends TextInputProps {
   helperText?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
-  className?: string;
-  containerStyle?: any;
+  disabled?: boolean;
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 export const Input = React.forwardRef<TextInput, InputProps>(
   ({
-    className = '',
     label,
     error,
     helperText,
     leftIcon,
     rightIcon,
     containerStyle,
+    disabled,
     style,
     placeholder,
     placeholderTextColor,
     ...props
   }, ref) => {
-    const { resolvedTheme } = useTheme();
-
     return (
-      <View style={[styles.container, containerStyle]}>
-        {label && (
+      <View style={[styles.container, containerStyle, disabled && styles.disabled]}>
+        {!!label && (
           <Text style={styles.label}>{label}</Text>
         )}
         <View style={styles.inputWrapper}>
-          {leftIcon && (
+          {!!leftIcon && (
             <View style={styles.iconLeft}>
               {leftIcon}
             </View>
@@ -44,23 +41,24 @@ export const Input = React.forwardRef<TextInput, InputProps>(
             ref={ref}
             style={[
               styles.input,
-              leftIcon && styles.inputWithLeftIcon,
-              rightIcon && styles.inputWithRightIcon,
-              error && styles.inputError,
+              !!leftIcon && styles.inputWithLeftIcon,
+              !!rightIcon && styles.inputWithRightIcon,
+              !!error && styles.inputError,
               style,
             ]}
             placeholder={placeholder}
-            placeholderTextColor={placeholderTextColor || 'var(--muted-foreground)'}
+            placeholderTextColor={placeholderTextColor || colors.mutedForeground}
+            editable={!disabled && props.editable !== false}
             {...props}
           />
-          {rightIcon && (
+          {!!rightIcon && (
             <View style={styles.iconRight}>
               {rightIcon}
             </View>
           )}
         </View>
-        {error && <Text style={styles.errorText}>{error}</Text>}
-        {helperText && !error && <Text style={styles.helperText}>{helperText}</Text>}
+        {!!error && <Text style={styles.errorText}>{error}</Text>}
+        {!!helperText && !error && <Text style={styles.helperText}>{helperText}</Text>}
       </View>
     );
   }
@@ -68,20 +66,20 @@ export const Input = React.forwardRef<TextInput, InputProps>(
 
 Input.displayName = 'Input';
 
-const styles = StyleSheet.create({
+const styles = themed((c) => ({
   container: {
     gap: 6,
   },
   label: {
     fontSize: 13,
     fontWeight: '500',
-    color: 'var(--muted-foreground)',
+    color: c.mutedForeground,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'var(--border)',
+    borderColor: c.border,
     borderRadius: 10,
     backgroundColor: 'transparent',
   },
@@ -91,7 +89,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 15,
-    color: 'var(--foreground)',
+    color: c.foreground,
     backgroundColor: 'transparent',
   },
   inputWithLeftIcon: {
@@ -101,7 +99,7 @@ const styles = StyleSheet.create({
     paddingRight: 0,
   },
   inputError: {
-    borderColor: 'var(--destructive)',
+    borderColor: c.destructive,
   },
   iconLeft: {
     paddingLeft: 14,
@@ -113,12 +111,15 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 12,
-    color: 'var(--destructive)',
+    color: c.destructive,
   },
   helperText: {
     fontSize: 12,
-    color: 'var(--muted-foreground)',
+    color: c.mutedForeground,
   },
-});
+  disabled: {
+    opacity: 0.5,
+  },
+}));
 
 export default Input;

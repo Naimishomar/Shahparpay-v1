@@ -35,6 +35,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const refreshAuthToken = useCallback(async () => {
+    const stored = await AsyncStorage.getItem(STORAGE_KEYS.token);
+    if (!stored) return; // logged out: nothing to refresh
     try {
       const response = await api.refreshToken();
       if (response.success) {
@@ -51,8 +53,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Session restoration failed:', error);
-    } finally {
-      setIsInitializing(false);
     }
   }, []);
 
