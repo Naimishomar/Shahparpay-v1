@@ -1,89 +1,386 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { themed } from '../../theme/colors';
+import React, { useMemo, useState } from 'react';
+import { View, Text, Pressable, ScrollView } from 'react-native';
+import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Input, SelectField } from '@/components/ui/Input';
+import {
+  Screen,
+  Banner,
+  EmptyState,
+  ErrorBanner,
+  LoadingBlock,
+  Row,
+  Segmented,
+  StatusPill,
+  SuccessBanner,
+  money,
+  shortDate,
+} from '@/components/ui/Screen';
+import { useAsync, useAction } from '@/hooks/useAsync';
+import api from '@/services/api';
 
-const rechargeCategories = [
-  { name: 'Mobile Recharge', icon: 'cellphone', desc: 'Prepaid & Postpaid', color: '#3B82F6', operators: ['Jio', 'Airtel', 'Vi', 'BSNL'] },
-  { name: 'DTH Recharge', icon: 'television', desc: 'All major DTH operators', color: '#8B5CF6', operators: ['Tata Play', 'Airtel DTH', 'Dish TV', 'Sun Direct'] },
-  { name: 'Data Card', icon: 'wifi', desc: 'Datacard & Dongle recharge', color: '#06B6D4', operators: ['JioFi', 'Airtel 4G', 'Vi MiFi'] },
-  { name: 'Broadband', icon: 'lan', desc: 'Landline & Broadband bills', color: '#F59E0B', operators: ['JioFiber', 'Airtel Xstream', 'ACT', 'Hathway'] },
+const TYPES = [
+  { key: 'prepaid', label: 'Prepaid' },
+  { key: 'postpaid', label: 'Postpaid' },
+  { key: 'dth', label: 'DTH' },
+  { key: 'datacard', label: 'Data card' },
 ];
 
+interface Operator {
+  id: string | number;
+  name: string;
+  displayname?: string;
+}
+
 export const RechargeScreen: React.FC = () => {
+  const [type, setType] = useState('prepaid');
+  const [operator, setOperator] = useState<Operator | null>(null);
+  const [showOperators, setShowOperators] = useState(false);
+  const [operatorQuery, setOperatorQuery] = useState('');
+  const [number, setNumber] = useState('');
+  const [amount, setAmount] = useState('');
+  const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
+  const [notice, setNotice] = useState('');
+
+  // Re-fetches whenever the tab changes; the previous operator no longer applies.
+  const operators = useAsync<Operator[]>(async () => {
+    setOperator(null);
+    return (await api.getRechargeOperators(type)).data ?? [];
+  }, [type]);
+
+  const history = useAsync<any[]>(async () => (await api.getRechargeHistory()).data ?? [], []);
+  const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
+
+  const plans = useAction(async () => {
+    const res = await api.browseRechargePlans({
+      mobileNumber: number.trim(),
+      operator: String(operator?.id),
+      operatorName: operator?.name,
+    });
+    if (!res.success) throw new Error(res.message);
+    return res.data;
+  });
+
+  const dthInfo = useAction(async () => {
+    const res = await api.getDthInfo({
+      dthNumber: number.trim(),
+      operator: String(operator?.id),
+      operatorName: operator?.name,
+    });
+    if (!res.success) throw new Error(res.message);
+    return Array.isArray(res.data) ? res.data[0] : res.data;
+  });
+
+  const recharge = useAction(async () => {
+    const res = await api.doRecharge({
+      [type === 'dth' ? 'dthNumber' : 'mobileNumber']: number.trim(),
+      operator: operator?.id,
+      amount: Number(amount),
+      pin,
+      type,
+    });
+    if (!res.success) throw new Error(res.message);
+    return res;
+  });
+
+  const [planList, setPlanList] = useState<any[]>([]);
+  const [dthDetails, setDthDetails] = useState<any>(null);
+
+  const minLength = type === 'dth' || type === 'datacard' ? 6 : 10;
+  const available = balances.data?.mainBalance ?? 0;
+  const overBalance = Number(amount) > available;
+  const valid =
+    !!operator && number.trim().length >= minLength && Number(amount) > 0 && !overBalance && pin.length === 4;
+
+  const filteredOperators = useMemo(
+    () =>
+      (operators.data ?? []).filter((op) =>
+        (op.displayname || op.name || '').toLowerCase().includes(operatorQuery.trim().toLowerCase())
+      ),
+    [operators.data, operatorQuery]
+  );
+
+  const onBrowsePlans = async () => {
+    const grouped = await plans.run();
+    if (!grouped) return;
+    const flat = Array.isArray(grouped)
+      ? grouped
+      : Object.entries(grouped).flatMap(([group, items]: any) =>
+          (Array.isArray(items) ? items : []).map((p: any) => ({ ...p, group }))
+        );
+    setPlanList(flat);
+  };
+
+  const onRecharge = async () => {
+    setNotice('');
+    const res = await recharge.run();
+    if (res) {
+      setNotice(res.message || 'Recharge successful.');
+      setAmount('');
+      setPin('');
+      balances.reload();
+      history.reload();
+    }
+  };
+
   return (
-    <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.pageTitle}>Recharge & Bills</Text>
-          <Text style={styles.pageSubtitle}>Mobile, DTH, Data & Broadband</Text>
-        </View>
-        <MaterialCommunityIcons name="cellphone" size={32} color="#3B82F6" />
-      </View>
-
-      <View style={styles.categoriesGrid}>
-        {rechargeCategories.map((cat, index) => (
-          <View key={index} style={styles.categoryCard}>
-            <View style={[styles.categoryIcon, { backgroundColor: `${cat.color}20` }]}>
-              <MaterialCommunityIcons name={cat.icon as any} size={28} color={cat.color} />
-            </View>
-            <Text style={styles.categoryName}>{cat.name}</Text>
-            <Text style={styles.categoryDesc}>{cat.desc}</Text>
-            <View style={styles.operators}>
-              {cat.operators.slice(0, 3).map((op, i) => (
-                <Text key={i} style={styles.operatorTag}>{op}</Text>
-              ))}
-              {cat.operators.length > 3 && (
-                <Text style={styles.operatorTag}>+{cat.operators.length - 3} more</Text>
-              )}
-            </View>
-            <Button variant="outline" size="sm" style={{ marginTop: 12 }} fullWidth>Recharge</Button>
-          </View>
-        ))}
-      </View>
-
-      <Card style={styles.offersCard}>
-        <CardHeader>
-          <CardTitle>Running Offers</CardTitle>
-        </CardHeader>
+    <Screen
+      refreshing={history.refreshing}
+      onRefresh={() => {
+        history.refresh();
+        balances.refresh();
+        operators.refresh();
+      }}
+    >
+      <Card>
         <CardContent>
-          <View style={styles.offersList}>
-            {[
-              'Jio: Get 10% cashback up to ₹50 on ₹299+ recharge',
-              'Airtel: Free 1GB data on ₹199+ recharge',
-              'Vi: ₹20 cashback on first recharge this month',
-            ].map((offer, i) => (
-              <View key={i} style={styles.offerItem}>
-                <Ionicons name="flash" size={16} color="#F59E0B" />
-                <Text style={styles.offerText}>{offer}</Text>
-              </View>
-            ))}
-          </View>
+          <Row label="Main wallet balance" value={money(available)} mono last />
         </CardContent>
       </Card>
-    </ScrollView>
+
+      <Segmented options={TYPES} value={type} onChange={setType} />
+
+      <Card>
+        <CardHeader>
+          <CardTitle icon="cellphone">Recharge details</CardTitle>
+        </CardHeader>
+        <CardContent style={styles.form}>
+          {!!operators.error && <ErrorBanner message={operators.error} onRetry={operators.reload} />}
+
+          <SelectField
+            label="Operator"
+            required
+            value={operator ? operator.displayname || operator.name : ''}
+            placeholder={operators.loading ? 'Loading operators…' : 'Select operator'}
+            open={showOperators}
+            onPress={() => setShowOperators(!showOperators)}
+          />
+          {showOperators && (
+            <View style={styles.picker}>
+              <Input
+                placeholder="Search operator"
+                value={operatorQuery}
+                onChangeText={setOperatorQuery}
+                leftIcon="magnify"
+                autoCapitalize="none"
+              />
+              {operators.loading ? (
+                <LoadingBlock />
+              ) : (
+                <ScrollView style={styles.pickerList} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                  {filteredOperators.map((op) => (
+                    <Pressable
+                      key={String(op.id)}
+                      onPress={() => {
+                        setOperator(op);
+                        setShowOperators(false);
+                        setOperatorQuery('');
+                      }}
+                      style={({ pressed }) => [styles.pickerItem, pressed && styles.pickerItemPressed]}
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.pickerText}>{op.displayname || op.name}</Text>
+                    </Pressable>
+                  ))}
+                  {!filteredOperators.length && (
+                    <Text style={styles.pickerEmpty}>No operators in this category</Text>
+                  )}
+                </ScrollView>
+              )}
+            </View>
+          )}
+
+          <Input
+            label={type === 'dth' ? 'Subscriber ID' : 'Mobile number'}
+            required
+            value={number}
+            onChangeText={(v) => setNumber(v.replace(/\D/g, '').slice(0, 15))}
+            keyboardType="number-pad"
+            placeholder={type === 'dth' ? 'Customer ID' : '10-digit mobile number'}
+            leftIcon={type === 'dth' ? 'television' : 'phone-outline'}
+            autoComplete={type === 'dth' ? undefined : 'tel'}
+          />
+
+          <View style={styles.toolbar}>
+            {type === 'prepaid' && (
+              <Button
+                variant="outline"
+                size="sm"
+                icon="format-list-bulleted"
+                onPress={onBrowsePlans}
+                loading={plans.pending}
+                disabled={!operator || number.trim().length < 10}
+                style={styles.flex}
+              >
+                Browse plans
+              </Button>
+            )}
+            {type === 'dth' && (
+              <Button
+                variant="outline"
+                size="sm"
+                icon="information-outline"
+                onPress={async () => setDthDetails(await dthInfo.run())}
+                loading={dthInfo.pending}
+                disabled={!operator || number.trim().length < 6}
+                style={styles.flex}
+              >
+                Fetch DTH info
+              </Button>
+            )}
+          </View>
+          {!!plans.error && <ErrorBanner message={plans.error} />}
+          {!!dthInfo.error && <ErrorBanner message={dthInfo.error} />}
+
+          {!!dthDetails && (
+            <View style={styles.infoBox}>
+              <Row label="Customer" value={dthDetails.customerName || dthDetails.name} />
+              <Row label="Balance" value={dthDetails.balance ? money(dthDetails.balance) : '—'} />
+              <Row label="Monthly recharge" value={dthDetails.MonthlyRecharge || '—'} />
+              <Row label="Next recharge" value={dthDetails.NextRechargeDate || '—'} last />
+            </View>
+          )}
+
+          <Input
+            label="Amount"
+            required
+            value={amount}
+            onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))}
+            keyboardType="decimal-pad"
+            placeholder="0.00"
+            leftIcon="currency-inr"
+            error={overBalance ? 'Amount exceeds your main wallet balance' : undefined}
+          />
+          <Input
+            label="Wallet PIN"
+            required
+            value={pin}
+            onChangeText={(v) => setPin(v.replace(/\D/g, '').slice(0, 4))}
+            keyboardType="number-pad"
+            secureTextEntry={!showPin}
+            maxLength={4}
+            placeholder="••••"
+            leftIcon="lock-outline"
+            rightIcon={showPin ? 'eye-off-outline' : 'eye-outline'}
+            onRightIconPress={() => setShowPin(!showPin)}
+            rightIconLabel={showPin ? 'Hide PIN' : 'Show PIN'}
+          />
+
+          {!!recharge.error && <ErrorBanner message={recharge.error} />}
+          {!!notice && <SuccessBanner message={notice} />}
+          <Button
+            onPress={onRecharge}
+            disabled={!valid}
+            loading={recharge.pending}
+            icon="flash-outline"
+            size="lg"
+            fullWidth
+          >
+            Recharge
+          </Button>
+        </CardContent>
+      </Card>
+
+      {planList.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle icon="format-list-bulleted">Available plans</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {planList.slice(0, 40).map((plan: any, i: number) => (
+              <Pressable
+                key={i}
+                style={({ pressed }) => [styles.plan, pressed && { opacity: 0.7 }]}
+                onPress={() => setAmount(String(plan.rs ?? plan.amount ?? ''))}
+                accessibilityRole="button"
+                accessibilityLabel={`Select plan ${money(plan.rs ?? plan.amount)}`}
+              >
+                <View style={styles.planInfo}>
+                  <Text style={styles.planAmount}>{money(plan.rs ?? plan.amount)}</Text>
+                  <Text style={styles.planDesc} numberOfLines={3}>
+                    {plan.desc || plan.description || plan.group}
+                  </Text>
+                </View>
+                {!!plan.validity && <Text style={styles.planValidity}>{plan.validity}</Text>}
+              </Pressable>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle icon="history">Recharge history</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {history.loading ? null : history.data?.length ? (
+            history.data.slice(0, 20).map((txn: any) => (
+              <View key={txn._id || txn.transactionId} style={styles.item}>
+                <View style={styles.itemTop}>
+                  <Text style={styles.itemAmount}>{money(txn.amount)}</Text>
+                  <StatusPill status={txn.status} />
+                </View>
+                <Row label="Number" value={txn.metadata?.caNumber} />
+                <Row label="Reference" value={txn.transactionId} />
+                <Row label="Date" value={shortDate(txn.createdAt)} last />
+              </View>
+            ))
+          ) : (
+            <EmptyState icon="flash-outline" title="No recharges yet" />
+          )}
+        </CardContent>
+      </Card>
+    </Screen>
   );
 };
 
 const styles = themed((c) => ({
-  scrollView: { flex: 1, backgroundColor: c.background },
-  content: { padding: 16, paddingBottom: 32, gap: 16 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  pageTitle: { fontSize: 24, fontWeight: '700', color: c.foreground },
-  pageSubtitle: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
-  categoriesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' },
-  categoryCard: { width: '48%', padding: 16, borderRadius: 16, backgroundColor: c.card, borderWidth: 1, borderColor: c.border, gap: 10 },
-  categoryIcon: { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  categoryName: { fontSize: 14, fontWeight: '600', color: c.foreground },
-  categoryDesc: { fontSize: 11, color: c.mutedForeground },
-  operators: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
-  operatorTag: { fontSize: 10, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: c.secondary, color: c.foreground },
-  offersCard: { marginTop: 8 },
-  offersList: { gap: 8 },
-  offerItem: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
-  offerText: { fontSize: 12, color: c.foreground, flex: 1 },
+  form: { gap: space.lg },
+  toolbar: { flexDirection: 'row', gap: space.sm },
+  flex: { flex: 1 },
+  picker: { gap: space.sm, padding: space.sm, borderRadius: radius.md, backgroundColor: c.secondary },
+  pickerList: { maxHeight: 240 },
+  pickerItem: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: space.md,
+    borderRadius: radius.sm,
+  },
+  pickerItemPressed: { backgroundColor: c.surfaceAlt },
+  pickerText: { fontSize: t.small, color: c.foreground },
+  pickerEmpty: { fontSize: t.caption, color: c.mutedForeground, padding: space.md },
+  infoBox: { padding: space.md, borderRadius: radius.md, backgroundColor: c.secondary },
+  plan: {
+    flexDirection: 'row',
+    gap: space.md,
+    paddingVertical: space.md,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  planInfo: { flex: 1, minWidth: 0, gap: 3 },
+  planAmount: {
+    fontSize: t.body,
+    fontWeight: '700',
+    color: c.foreground,
+    fontVariant: ['tabular-nums'],
+  },
+  planDesc: { fontSize: t.micro, color: c.mutedForeground, lineHeight: 16 },
+  planValidity: { fontSize: t.micro, color: c.mutedForeground },
+  item: { paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
+  itemTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: space.md,
+  },
+  itemAmount: {
+    fontSize: t.body,
+    fontWeight: '700',
+    color: c.foreground,
+    fontVariant: ['tabular-nums'],
+  },
 }));
 
 export default RechargeScreen;

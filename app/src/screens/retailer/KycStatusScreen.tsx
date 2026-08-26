@@ -1,119 +1,223 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { colors, themed } from '../../theme/colors';
+import React, { useState } from 'react';
+import { View, Text, Linking } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-
-const kycSteps = [
-  { id: 'web', name: 'Web KYC (Step 1)', desc: 'Complete PaySprint onboarding', icon: 'earth', status: 'pending' },
-  { id: 'biometric', name: 'Biometric Activation (Step 2)', desc: 'Register fingerprint device', icon: 'fingerprint', status: 'pending' },
-];
+import { Screen, Banner, ErrorBanner, Row, StatusPill, shortDate } from '@/components/ui/Screen';
+import { useAsync, useAction } from '@/hooks/useAsync';
+import { useAuth } from '@/context/AuthContext';
+import api from '@/services/api';
 
 export const KycStatusScreen: React.FC = () => {
-  return (
-    <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.pageTitle}>KYC Status</Text>
-          <Text style={styles.pageSubtitle}>Track your verification progress</Text>
-        </View>
-        <Ionicons name="shield-checkmark" size={32} color="#10B981" />
-      </View>
+  const { user } = useAuth();
+  const [openError, setOpenError] = useState('');
 
-      <Card style={styles.statusCard}>
-        <CardContent>
-          <View style={styles.overallStatus}>
-            <View style={styles.statusCircle}>
-              <Ionicons name="time" size={32} color="#F59E0B" />
-            </View>
-            <View>
-              <Text style={styles.statusTitle}>KYC In Progress</Text>
-              <Text style={styles.statusDesc}>Complete both steps to activate all services</Text>
-            </View>
+  const merchantId = user?.retailerId || user?.code || '';
+  const status = useAsync<any>(
+    async () => (await api.getAepsMerchantStatus({ merchantcode: merchantId })).data,
+    [merchantId]
+  );
+  const pipes = useAsync<any>(async () => (await api.verifyAepsPipes()).data, []);
+
+  const kycDone = !!status.data?.isMerchantKycComplete;
+  const activePipes: string[] = status.data?.activePipes ?? [];
+  const targetPipe = activePipes[0] || 'bank3';
+
+  const plan = useAsync<any>(async () => (await api.getOnboardingPlan(targetPipe)).data, [targetPipe]);
+
+  const onboard = useAction(async () => {
+    const res = await api.getPaysprintOnboardUrl(
+      merchantId,
+      !kycDone,
+      targetPipe,
+      'https://shahparpay-v1.vercel.app/kyc-callback'
+    );
+    if (!res.success) throw new Error(res.message);
+    // The backend answers with `alreadyOnboarded` and no URL once KYC is done.
+    if (!res.url) {
+      throw new Error(
+        res.alreadyOnboarded
+          ? 'This merchant is already onboarded — nothing left to complete.'
+          : res.message || 'PaySprint did not return an onboarding link.'
+      );
+    }
+    return res.url as string;
+  });
+
+  const onOpenOnboarding = async () => {
+    setOpenError('');
+    const url = await onboard.run();
+    if (!url) return;
+    if (await Linking.canOpenURL(url)) await Linking.openURL(url);
+    else setOpenError('This device cannot open the PaySprint onboarding page.');
+  };
+
+  const steps = [
+    { id: 'web', name: 'Web KYC', desc: 'Complete PaySprint merchant onboarding', done: kycDone },
+    {
+      id: 'biometric',
+      name: 'Biometric activation',
+      desc: 'Register your fingerprint device and pass daily 2FA',
+      done: !!status.data?.isDailyAuthDoneToday,
+    },
+  ];
+
+  const planSteps: any[] = plan.data?.steps ?? [];
+
+  return (
+    <Screen
+      loading={status.loading}
+      refreshing={status.refreshing || pipes.refreshing}
+      onRefresh={() => {
+        status.refresh();
+        pipes.refresh();
+        plan.refresh();
+      }}
+      error={status.error}
+      onRetry={status.reload}
+    >
+      <Card variant={kycDone ? 'accent' : 'default'}>
+        <CardContent style={styles.overall}>
+          <View style={[styles.statusCircle, kycDone && styles.statusCircleDone]}>
+            <MaterialCommunityIcons
+              name={kycDone ? 'shield-check' : 'clock-outline'}
+              size={26}
+              color={kycDone ? colors.accentForeground : colors.warning}
+            />
+          </View>
+          <View style={styles.overallText}>
+            <Text style={[styles.statusTitle, kycDone && { color: colors.accentForeground }]}>
+              {kycDone ? 'KYC complete' : 'KYC in progress'}
+            </Text>
+            <Text style={[styles.statusDesc, kycDone && { color: colors.accentForeground }]}>
+              {kycDone
+                ? 'Your merchant account is verified with PaySprint.'
+                : 'Finish web KYC to unlock AEPS services.'}
+            </Text>
           </View>
         </CardContent>
       </Card>
 
-      <Card style={styles.stepsCard}>
+      <Card>
         <CardHeader>
-          <CardTitle>Verification Steps</CardTitle>
+          <CardTitle icon="store-outline">Merchant details</CardTitle>
         </CardHeader>
         <CardContent>
-          {kycSteps.map((step, index) => (
-            <View key={step.id} style={styles.stepItem}>
-              <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>{index + 1}</Text>
+          <Row label="Merchant code" value={merchantId} />
+          <Row label="Active pipes" value={activePipes.length ? activePipes.join(', ') : 'None'} />
+          <Row
+            label="Daily 2FA today"
+            value={<StatusPill status={status.data?.isDailyAuthDoneToday ? 'SUCCESS' : 'PENDING'} />}
+          />
+          <Row label="Last daily auth" value={shortDate(status.data?.lastDailyAuthDate)} last />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle icon="format-list-numbered">Verification steps</CardTitle>
+        </CardHeader>
+        <CardContent style={styles.form}>
+          {steps.map((step, i) => (
+            <View key={step.id} style={styles.step}>
+              <View style={[styles.stepNumber, step.done && styles.stepNumberDone]}>
+                {step.done ? (
+                  <MaterialCommunityIcons name="check" size={15} color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.stepNumberText}>{i + 1}</Text>
+                )}
               </View>
-              <View style={styles.stepContent}>
-                <View style={styles.stepIcon}>
-                  <MaterialCommunityIcons name={step.icon as any} size={24} color={colors.primary} />
-                </View>
-                <View style={styles.stepInfo}>
-                  <Text style={styles.stepName}>{step.name}</Text>
-                  <Text style={styles.stepDesc}>{step.desc}</Text>
-                </View>
+              <View style={styles.stepInfo}>
+                <Text style={styles.stepName}>{step.name}</Text>
+                <Text style={styles.stepDesc}>{step.desc}</Text>
               </View>
-              <View style={styles.stepAction}>
-                <Button variant={step.status === 'completed' ? 'default' : 'outline'} size="sm">
-                  {step.status === 'completed' ? 'Completed' : 'Start'}
-                </Button>
-              </View>
+              <StatusPill status={step.done ? 'COMPLETED' : 'PENDING'} />
             </View>
           ))}
+
+          {!!onboard.error && <ErrorBanner message={onboard.error} />}
+          {!!openError && <ErrorBanner message={openError} />}
+          <Button
+            onPress={onOpenOnboarding}
+            loading={onboard.pending}
+            disabled={!merchantId}
+            icon="open-in-new"
+            size="lg"
+            fullWidth
+          >
+            {kycDone ? 'Reopen onboarding portal' : 'Start web KYC'}
+          </Button>
         </CardContent>
       </Card>
 
-      <Card style={styles.infoCard}>
-        <CardHeader>
-          <CardTitle>Important Notes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <View style={styles.notesList}>
-            {[
-              'Web KYC must be completed first before biometric activation',
-              'Bank 3 (Fino) requires Web KYC; Bank 2 (Yes/NSDL) skips to biometric',
-              'Biometric device must be RD Service registered',
-              'KYC validity: 1 year from completion date',
-              'Contact support if you face issues during verification',
-            ].map((note, i) => (
-              <View key={i} style={styles.noteItem}>
-                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                <Text style={styles.noteText}>{note}</Text>
-              </View>
+      {planSteps.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle icon="map-marker-path">
+              {`Onboarding plan · ${targetPipe}`}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {planSteps.map((step: any, i: number) => (
+              <Row
+                key={i}
+                label={step.label || step.name || `Step ${i + 1}`}
+                value={<StatusPill status={step.done ? 'COMPLETED' : 'PENDING'} />}
+                last={i === planSteps.length - 1}
+              />
             ))}
-          </View>
-        </CardContent>
-      </Card>
-    </ScrollView>
+          </CardContent>
+        </Card>
+      )}
+
+      {!kycDone && (
+        <Banner
+          tone="info"
+          message="After completing onboarding in the browser, come back and pull down to refresh this screen."
+        />
+      )}
+    </Screen>
   );
 };
 
 const styles = themed((c) => ({
-  scrollView: { flex: 1, backgroundColor: c.background },
-  content: { padding: 16, paddingBottom: 32, gap: 16 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  pageTitle: { fontSize: 24, fontWeight: '700', color: c.foreground },
-  pageSubtitle: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
-  statusCard: {},
-  overallStatus: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  statusCircle: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#F59E0B20', justifyContent: 'center', alignItems: 'center' },
-  statusTitle: { fontSize: 18, fontWeight: '700', color: c.foreground },
-  statusDesc: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
-  stepsCard: { marginTop: 8 },
-  stepItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  stepNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: c.primary, justifyContent: 'center', alignItems: 'center' },
-  stepNumberText: { fontSize: 14, fontWeight: '700', color: 'white' },
-  stepContent: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  stepIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: c.primary, justifyContent: 'center', alignItems: 'center' },
-  stepInfo: { flex: 1 },
-  stepName: { fontSize: 14, fontWeight: '600', color: c.foreground },
-  stepDesc: { fontSize: 12, color: c.mutedForeground, marginTop: 2 },
-  stepAction: {},
-  infoCard: { marginTop: 8 },
-  notesList: { gap: 10 },
-  noteItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  noteText: { fontSize: 13, color: c.foreground, flex: 1, lineHeight: 20 },
+  overall: { flexDirection: 'row', alignItems: 'center', gap: space.lg },
+  statusCircle: {
+    width: 50,
+    height: 50,
+    borderRadius: radius.pill,
+    backgroundColor: c.warningSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusCircleDone: { backgroundColor: 'rgba(0,0,0,0.14)' },
+  overallText: { flex: 1, minWidth: 0, gap: 2 },
+  statusTitle: { fontSize: t.bodyLg, fontWeight: '700', color: c.foreground },
+  statusDesc: { fontSize: t.caption, color: c.mutedForeground, lineHeight: 17 },
+  form: { gap: space.md },
+  step: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    paddingVertical: space.md,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  stepNumber: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: c.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepNumberDone: { backgroundColor: c.success, borderColor: c.success },
+  stepNumberText: { fontSize: t.micro, fontWeight: '700', color: c.foreground },
+  stepInfo: { flex: 1, minWidth: 0, gap: 2 },
+  stepName: { fontSize: t.small, fontWeight: '600', color: c.foreground },
+  stepDesc: { fontSize: t.micro, color: c.mutedForeground, lineHeight: 15 },
 }));
 
 export default KycStatusScreen;

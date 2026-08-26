@@ -3,6 +3,7 @@ import {
   loginUser,
   verifyLoginOtp,
   sendVerificationOtp,
+  sendPasswordOtp,
   createDistributor,
   createRetailer,
   refreshAccessToken,
@@ -24,6 +25,7 @@ const router = Router();
 router.post('/login', loginUser);
 router.post('/verify-login-otp', verifyLoginOtp);
 router.post('/send-verification-otp', sendVerificationOtp);
+router.post('/send-password-otp', authMiddlewares, sendPasswordOtp);
 router.post('/verify-email-otp', verifyEmailOtp);
 router.post('/refresh-token', refreshAccessToken);
 router.post('/logout', authMiddlewares, logoutUser);

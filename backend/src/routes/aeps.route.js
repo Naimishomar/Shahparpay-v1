@@ -23,7 +23,7 @@ import { authMiddlewares } from '../middlewares/auth.middleware.js';
 const router = express.Router();
 
 // Merchant Status
-router.get('/merchant-status', getMerchantStatus);
+router.get('/merchant-status', authMiddlewares, getMerchantStatus);
 router.get('/pipes/verify', authMiddlewares, verifyAllPipes);
 router.get('/onboarding/plan', authMiddlewares, getPipeOnboardingPlan);
 router.post('/get-pid-options', authMiddlewares, getPidOptions);
@@ -39,10 +39,10 @@ router.post('/mini-statement', authMiddlewares, miniStatement);
 router.post('/txn-status', authMiddlewares, cashWithdrawalTxnStatus);
 
 // Merchant eKYC & Auth
-router.post('/kyc/send-otp', sendMerchantOtp);
-router.post('/kyc/resend-otp', resendMerchantOtp);
-router.post('/kyc/verify-otp', verifyMerchantOtp);
-router.post('/kyc/activate-merchant', activateMerchant);
-router.post('/daily-auth', dailyAuth);
+router.post('/kyc/send-otp', authMiddlewares, sendMerchantOtp);
+router.post('/kyc/resend-otp', authMiddlewares, resendMerchantOtp);
+router.post('/kyc/verify-otp', authMiddlewares, verifyMerchantOtp);
+router.post('/kyc/activate-merchant', authMiddlewares, activateMerchant);
+router.post('/daily-auth', authMiddlewares, dailyAuth);
 
 export default router;

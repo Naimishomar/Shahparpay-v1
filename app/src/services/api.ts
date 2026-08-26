@@ -139,6 +139,50 @@ class ApiService {
     return response.data;
   }
 
+  /**
+   * Multipart POST for the endpoints behind multer (fund-request slips,
+   * profile pictures, KYC documents). React Native's FormData takes
+   * {uri, name, type} for files; axios must not set its own boundary, so the
+   * Content-Type header is removed and left to the runtime.
+   */
+  async postForm<T = any>(
+    url: string,
+    fields: Record<string, any>,
+    files?: Record<string, { uri: string; name: string; type: string } | undefined>
+  ) {
+    const form = new FormData();
+    Object.entries(fields).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) form.append(key, String(value));
+    });
+    Object.entries(files ?? {}).forEach(([key, file]) => {
+      if (file) form.append(key, file as any);
+    });
+    const response = await this.client.post<T>(url, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      transformRequest: (data) => data,
+    });
+    return response.data;
+  }
+
+  async putForm<T = any>(
+    url: string,
+    fields: Record<string, any>,
+    files?: Record<string, { uri: string; name: string; type: string } | undefined>
+  ) {
+    const form = new FormData();
+    Object.entries(fields).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) form.append(key, String(value));
+    });
+    Object.entries(files ?? {}).forEach(([key, file]) => {
+      if (file) form.append(key, file as any);
+    });
+    const response = await this.client.put<T>(url, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      transformRequest: (data) => data,
+    });
+    return response.data;
+  }
+
   // Auth endpoints
   async login(identifier: string, password: string) {
     return this.post(API_ENDPOINTS.auth.login, { identifier, password });
@@ -166,26 +210,40 @@ class ApiService {
     return this.get(API_ENDPOINTS.wallet.balance);
   }
 
-  async transferWallet(data: { amount: number; toUserId: string; type: string }) {
-    return this.post(API_ENDPOINTS.wallet.transfer, data);
-  }
-
-  async getWalletLedger(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.wallet.ledger, params);
-  }
-
   // Dashboard endpoints
   async getRetailerDashboard(params?: { startDate?: string; endDate?: string }) {
     return this.get(API_ENDPOINTS.dashboard.retailer, params);
   }
 
-  // AEPS endpoints
+  async updateProfile(data: Record<string, any>) {
+    return this.put(API_ENDPOINTS.auth.updateProfile, data);
+  }
+
+  /** Password change is OTP-gated: request the code, then submit it. */
+  async sendPasswordOtp() {
+    return this.post(API_ENDPOINTS.auth.sendPasswordOtp);
+  }
+
+  async changePassword(data: { email: string; otp: string; newPassword: string }) {
+    return this.put(API_ENDPOINTS.auth.changePassword, data);
+  }
+
+  async updateKycStatus(jwt: string) {
+    return this.post(API_ENDPOINTS.auth.paysprintUpdateKyc, { jwt });
+  }
+
+  // ---------------------------------------------------------------- AEPS
   async getAepsBanks() {
     return this.get(API_ENDPOINTS.aeps.banks);
   }
 
-  async getAepsMerchantStatus() {
-    return this.get(API_ENDPOINTS.aeps.merchantStatus);
+  /** merchantcode is optional: the backend falls back to the caller. */
+  async getAepsMerchantStatus(params?: {
+    merchantcode?: string;
+    pipe?: string;
+    forceRefresh?: boolean;
+  }) {
+    return this.get(API_ENDPOINTS.aeps.merchantStatus, params);
   }
 
   async verifyAepsPipes() {
@@ -196,8 +254,61 @@ class ApiService {
     return this.get(API_ENDPOINTS.aeps.onboardingPlan, { pipe });
   }
 
-  // Settlement / payout endpoints
-  async getSettlementHistory(params?: Record<string, any>) {
+  async getPidOptions(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.aeps.pidOptions, data);
+  }
+
+  async aepsBalanceEnquiry(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.aeps.balanceEnquiry, data);
+  }
+
+  /** Withdrawals above the OTP threshold need this first. */
+  async aepsInitiateOtp(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.aeps.initiateOtp, data);
+  }
+
+  async aepsCashWithdrawal(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.aeps.cashWithdrawal, data);
+  }
+
+  async aepsCashDeposit(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.aeps.cashDeposit, data);
+  }
+
+  async aepsAadhaarPay(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.aeps.aadhaarPay, data);
+  }
+
+  async aepsMiniStatement(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.aeps.miniStatement, data);
+  }
+
+  async aepsTxnStatus(reference: string) {
+    return this.post(API_ENDPOINTS.aeps.txnStatus, { reference });
+  }
+
+  async aepsKycSendOtp(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.aeps.kycSendOtp, data);
+  }
+
+  async aepsKycResendOtp(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.aeps.kycResendOtp, data);
+  }
+
+  async aepsKycVerifyOtp(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.aeps.kycVerifyOtp, data);
+  }
+
+  async aepsActivateMerchant(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.aeps.kycActivate, data);
+  }
+
+  async aepsDailyAuth(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.aeps.dailyAuth, data);
+  }
+
+  // ---------------------------------------------------- Settlement / payout
+  async getSettlementHistory(params?: { type?: string }) {
     return this.get(API_ENDPOINTS.settlement.history, params);
   }
 
@@ -205,29 +316,130 @@ class ApiService {
     return this.get(API_ENDPOINTS.settlement.savedBanks);
   }
 
-  async initiateSettlement(data: Record<string, any>) {
+  async syncSavedBanks() {
+    return this.get(API_ENDPOINTS.settlement.syncBanks);
+  }
+
+  async addSettlementBank(data: {
+    accountNumber: string;
+    ifscCode: string;
+    bankName: string;
+    accountHolderName: string;
+    accountType?: string;
+  }) {
+    return this.post(API_ENDPOINTS.settlement.addBank, data);
+  }
+
+  async deleteSettlementBank(id: string) {
+    return this.delete(`${API_ENDPOINTS.settlement.deleteBank}/${id}`);
+  }
+
+  async getSettlementAccountStatus(id: string) {
+    return this.get(`${API_ENDPOINTS.settlement.accountStatus}/${id}`);
+  }
+
+  async initiateSettlement(data: { bankId: string; amount: number; pin: string; mode?: string }) {
     return this.post(API_ENDPOINTS.settlement.initiate, data);
   }
 
-  async directPayout(data: Record<string, any>) {
+  async initiateDirectPayout(data: {
+    accountNumber: string;
+    ifscCode: string;
+    accountHolderName: string;
+    bankName?: string;
+    amount: number;
+    pin: string;
+    mode?: string;
+  }) {
     return this.post(API_ENDPOINTS.settlement.directPayout, data);
   }
 
-  // DMT endpoints
-  async getDmtBanks(data?: Record<string, any>) {
-    return this.post(API_ENDPOINTS.dmt.banks, data);
+  async checkSettlementStatus(transactionId: string) {
+    return this.post(API_ENDPOINTS.settlement.status, { transactionId });
   }
 
-  async getDmtHistory(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.dmt.history, params);
+  // ----------------------------------------------------------------- DMT
+  async getDmtBanks() {
+    return this.post(API_ENDPOINTS.dmt.banks);
   }
 
-  // Recharge / BBPS endpoints (BBPS bill pay runs through the recharge routes)
+  async queryDmtRemitter(mobile: string) {
+    return this.post(API_ENDPOINTS.dmt.remitterQuery, { mobile });
+  }
+
+  async dmtRemitterEkyc(data: {
+    mobile: string;
+    aadhaar_number: string;
+    pidData: any;
+    lat?: string;
+    long?: string;
+  }) {
+    return this.post(API_ENDPOINTS.dmt.remitterEkyc, data);
+  }
+
+  async registerDmtRemitter(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.dmt.remitterRegister, data);
+  }
+
+  async fetchDmtBeneficiaries(mobile: string) {
+    return this.post(API_ENDPOINTS.dmt.beneficiaryFetch, { mobile });
+  }
+
+  async addDmtBeneficiary(data: {
+    mobile: string;
+    bankid: string | number;
+    benename: string;
+    beneaccount: string;
+    ifsc: string;
+    pincode: string;
+  }) {
+    return this.post(API_ENDPOINTS.dmt.beneficiaryAdd, data);
+  }
+
+  async deleteDmtBeneficiary(data: { mobile: string; beneid: string }) {
+    return this.post(API_ENDPOINTS.dmt.beneficiaryDelete, data);
+  }
+
+  async transferDmt(data: {
+    mobile: string;
+    beneid: string;
+    amount: number;
+    beneaccount: string;
+    ifsc: string;
+    pin: string;
+  }) {
+    return this.post(API_ENDPOINTS.dmt.transfer, data);
+  }
+
+  async getDmtHistory() {
+    return this.get(API_ENDPOINTS.dmt.history);
+  }
+
+  // ------------------------------------------------- Recharge / BBPS
   async getRechargeOperators(type: string) {
     return this.get(`${API_ENDPOINTS.recharge.operators}/${type}`);
   }
 
-  async fetchBill(data: Record<string, any>) {
+  async browseRechargePlans(data: {
+    mobileNumber: string;
+    operator: string;
+    operatorName?: string;
+    circle?: string;
+  }) {
+    return this.post(API_ENDPOINTS.recharge.browsePlan, data);
+  }
+
+  async getDthInfo(data: { dthNumber: string; operator: string; operatorName?: string }) {
+    return this.post(API_ENDPOINTS.recharge.dthInfo, data);
+  }
+
+  async fetchBill(data: {
+    caNumber: string;
+    operator: string;
+    ad1?: string;
+    ad2?: string;
+    ad3?: string;
+  }) {
     return this.post(API_ENDPOINTS.recharge.fetchBill, data);
   }
 
@@ -235,79 +447,267 @@ class ApiService {
     return this.post(API_ENDPOINTS.recharge.doRecharge, data);
   }
 
-  async getRechargeHistory(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.recharge.history, params);
+  async getRechargeHistory() {
+    return this.get(API_ENDPOINTS.recharge.history);
   }
 
-  // UPI endpoints
+  async getRechargeStatus(transid: string) {
+    return this.get(`${API_ENDPOINTS.recharge.status}/${transid}`);
+  }
+
+  // ----------------------------------------------------------------- UPI
   async getUpiMerchantStatus() {
     return this.get(API_ENDPOINTS.upi.merchantStatus);
   }
 
-  async generateUpiToken(data: Record<string, any>) {
+  async generateUpiToken(data: { mobile: string; amount: number; redirectUrl?: string }) {
     return this.post(API_ENDPOINTS.upi.generateToken, data);
   }
 
-  // PAN endpoints
-  async applyPanService(data: Record<string, any>) {
+  async getUpiTxnStatus(data: { transactionId?: string; refid?: string }) {
+    return this.post(API_ENDPOINTS.upi.status, data);
+  }
+
+  // ----------------------------------------------------------------- PAN
+  async getMyPsaStatus() {
+    return this.get(API_ENDPOINTS.pan.myPsaStatus);
+  }
+
+  async registerBioPsa(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.pan.registerBioPsa, data);
+  }
+
+  async buyPanCoupons(data: { psa_id: string; amount: number }) {
+    return this.post(API_ENDPOINTS.pan.buyCoupons, data);
+  }
+
+  async setPsaId(psa_id: string) {
+    return this.patch(API_ENDPOINTS.pan.setPsaId, { psa_id });
+  }
+
+  async syncPsaStatus(data: { psa_id: string; status: string }) {
+    return this.patch(API_ENDPOINTS.pan.syncPsaStatus, data);
+  }
+
+  async getMyStdPsaStatus() {
+    return this.get(API_ENDPOINTS.pan.myStdPsaStatus);
+  }
+
+  async registerStdPsa(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.pan.registerStdPsa, data);
+  }
+
+  async updateStdPsa(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.pan.updateStdPsa, data);
+  }
+
+  async buyStdPanCoupons(data: Record<string, any>) {
+    return this.post(API_ENDPOINTS.pan.buyStdCoupons, data);
+  }
+
+  async getStdPsaPassword() {
+    return this.get(API_ENDPOINTS.pan.stdPsaPassword);
+  }
+
+  async applyPanService(data: {
+    pan_number: string;
+    shop_name: string;
+    shop_address: string;
+    state_name: string;
+    district_name: string;
+    pincode: string;
+  }) {
     return this.post(API_ENDPOINTS.pan.esevaApplyService, data);
   }
 
-  async getPanHistory(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.pan.esevaHistory, params);
+  async applyPanCoupon(data: {
+    psa_id: string;
+    number_of_coupons: number;
+    pan_agency_name: string;
+  }) {
+    return this.post(API_ENDPOINTS.pan.esevaApplyCoupon, data);
   }
 
-  // ITR endpoints
-  async launchItr(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.itr.launch, data);
+  async getPanServiceStatus(application_number: string) {
+    return this.post(API_ENDPOINTS.pan.esevaServiceStatus, { application_number });
   }
 
-  async getItrHistory(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.itr.history, params);
+  async getPanCouponStatus(application_number: string) {
+    return this.post(API_ENDPOINTS.pan.esevaCouponStatus, { application_number });
   }
 
-  // Lead Generation endpoints
-  async generateLead(data: Record<string, any>) {
+  async getPanHistory() {
+    return this.get(API_ENDPOINTS.pan.esevaHistory);
+  }
+
+  async getMyPsaId() {
+    return this.get(API_ENDPOINTS.pan.esevaMyPsa);
+  }
+
+  // ----------------------------------------------------------------- ITR
+  async launchItr() {
+    return this.post(API_ENDPOINTS.itr.launch);
+  }
+
+  async getItrHistory() {
+    return this.get(API_ENDPOINTS.itr.history);
+  }
+
+  // ------------------------------------------------------- Lead generation
+  async generateLead(data: {
+    name: string;
+    mobile_no: string;
+    email?: string;
+    product: string;
+    pincode: string;
+    state: string;
+  }) {
     return this.post(API_ENDPOINTS.lead.generate, data);
   }
 
-  async getLeadHistory(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.lead.history, params);
+  async getLeadStatus(refid: string) {
+    return this.get(`${API_ENDPOINTS.lead.status}/${refid}`);
   }
 
-  // Fund Request endpoints
-  async getRetailerFundRequests(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.fundRequest.retailer, params);
+  async getLeadHistory() {
+    return this.get(API_ENDPOINTS.lead.history);
   }
 
-  async getDistributorFundRequests(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.fundRequest.distributor, params);
+  // -------------------------------------------------------- Fund requests
+  /** Multipart: the deposit slip is an optional image. */
+  async createFundRequest(
+    data: {
+      transactionMode: string;
+      amount: number;
+      bankUtr: string;
+      depositDate: string;
+      remarks?: string;
+    },
+    depositSlip?: { uri: string; name: string; type: string }
+  ) {
+    return this.postForm(API_ENDPOINTS.fundRequest.create, data, { depositSlip });
   }
 
-  async updateFundRequest(data: Record<string, any>) {
+  async getRetailerFundRequests() {
+    return this.get(API_ENDPOINTS.fundRequest.retailer);
+  }
+
+  async getDistributorFundRequests() {
+    return this.get(API_ENDPOINTS.fundRequest.distributor);
+  }
+
+  async updateFundRequest(data: { requestId: string; status: string; adminRemarks?: string }) {
     return this.put(API_ENDPOINTS.fundRequest.update, data);
   }
 
-  // Distributor endpoints
+  async createDistributorFundRequest(
+    data: Record<string, any>,
+    depositSlip?: { uri: string; name: string; type: string }
+  ) {
+    return this.postForm(API_ENDPOINTS.fundRequest.distributorCreate, data, { depositSlip });
+  }
+
+  async getDistributorOwnFundRequests() {
+    return this.get(API_ENDPOINTS.fundRequest.distributorMine);
+  }
+
+  async getAdminFundRequests() {
+    return this.get(API_ENDPOINTS.fundRequest.admin);
+  }
+
+  async updateAdminFundRequest(data: { requestId: string; status: string; adminRemarks?: string }) {
+    return this.put(API_ENDPOINTS.fundRequest.adminUpdate, data);
+  }
+
+  async deleteFundRequest(id: string) {
+    return this.delete(`${API_ENDPOINTS.fundRequest.delete}/${id}`);
+  }
+
+  // -------------------------------------------------------------- Wallet
+  async setWalletPin(pin: string) {
+    return this.post(API_ENDPOINTS.wallet.setPin, { pin });
+  }
+
+  async transferAepsToMain(data: { amount: number; pin: string }) {
+    return this.post(API_ENDPOINTS.wallet.transfer, data);
+  }
+
+  async getWalletHistory() {
+    return this.get(API_ENDPOINTS.wallet.history);
+  }
+
+  async getWalletLedger(params?: Record<string, any>) {
+    return this.get(API_ENDPOINTS.wallet.ledger, params);
+  }
+
+  async getPaysprintCreditLedger(params?: Record<string, any>) {
+    return this.get(API_ENDPOINTS.paysprintLedger.creditLedger, params);
+  }
+
+  // ----------------------------------------------------------- Reporting
+  async getRecentTransactions(params?: {
+    type?: string;
+    limit?: number;
+    startDate?: string;
+    endDate?: string;
+  }) {
+    return this.get(API_ENDPOINTS.dashboard.recentTransactions, params);
+  }
+
+  // --------------------------------------------------------- Distributor
   async getDistributorStats() {
     return this.get(API_ENDPOINTS.distributor.stats);
   }
 
-  async getDistributorRetailers(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.distributor.retailers, params);
+  async getDistributorRetailers() {
+    return this.get(API_ENDPOINTS.distributor.retailers);
   }
 
-  // Admin endpoints
+  async getDistributorProfile() {
+    return this.get(API_ENDPOINTS.distributor.profile);
+  }
+
+  async updateRetailer(id: string, data: Record<string, any>) {
+    return this.put(`${API_ENDPOINTS.distributor.retailers}/${id}`, data);
+  }
+
+  async createRetailer(
+    data: Record<string, any>,
+    files?: Record<string, { uri: string; name: string; type: string } | undefined>
+  ) {
+    return this.postForm(API_ENDPOINTS.auth.createRetailer, data, files);
+  }
+
+  // --------------------------------------------------------------- Admin
   async getAdminStats() {
     return this.get(API_ENDPOINTS.admin.stats);
   }
 
-  async getAdminDistributors(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.admin.distributors, params);
+  async getAdminDistributors() {
+    return this.get(API_ENDPOINTS.admin.distributors);
   }
 
-  async getAdminFundRequests(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.fundRequest.admin, params);
+  async getAdminProfile() {
+    return this.get(API_ENDPOINTS.admin.profile);
+  }
+
+  async getAdminRecentTransactions(params?: Record<string, any>) {
+    return this.get(API_ENDPOINTS.admin.recentTransactions, params);
+  }
+
+  async getGlobalSettings() {
+    return this.get(API_ENDPOINTS.admin.settings);
+  }
+
+  async updateGlobalSettings(data: Record<string, any>) {
+    return this.put(API_ENDPOINTS.admin.settings, data);
+  }
+
+  async createDistributor(
+    data: Record<string, any>,
+    files?: Record<string, { uri: string; name: string; type: string } | undefined>
+  ) {
+    return this.postForm(API_ENDPOINTS.auth.createDistributor, data, files);
   }
 }
 

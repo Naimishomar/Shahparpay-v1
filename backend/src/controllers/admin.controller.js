@@ -9,8 +9,6 @@ import { addClient } from '../utils/sse.js';
 
 // Get dashboard statistics
 export const getDashboardStats = async (req, res) => {
-  // ...
-  // We will skip editing the top functions using a targeted replace. Let's just target updateAdminProfile.
   try {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Unauthorized access' });

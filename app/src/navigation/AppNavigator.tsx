@@ -26,6 +26,20 @@ import { ProfileScreen } from '@/screens/retailer/ProfileScreen';
 import { KycStatusScreen } from '@/screens/retailer/KycStatusScreen';
 import { AdminPortalScreen } from '@/screens/admin/AdminPortalScreen';
 import { DistributorPortalScreen } from '@/screens/distributor/DistributorPortalScreen';
+import { ServicesScreen } from '@/screens/ServicesScreen';
+import { ReportsScreen } from '@/screens/ReportsScreen';
+import {
+  AepsReport,
+  DmtReport,
+  RechargeReport,
+  UpiReport,
+  ItrReport,
+  PanReport,
+  PayoutReport,
+  LeadReport,
+  WalletLedgerReport,
+  PaysprintLedgerReport,
+} from '@/screens/reports';
 
 const Stack = createStackNavigator();
 
@@ -52,9 +66,26 @@ const withLayout = (Screen: React.ComponentType<any>) => {
   return wrapped;
 };
 
-// Route names must match `route` in the sidebar menus (src/constants).
+// Every report route, shared by all three roles.
+const REPORT_SCREENS: [string, React.ComponentType<any>][] = [
+  ['Reports', ReportsScreen],
+  ['WalletLedgerReport', WalletLedgerReport],
+  ['AepsReport', AepsReport],
+  ['DmtReport', DmtReport],
+  ['PayoutReport', PayoutReport],
+  ['RechargeReport', RechargeReport],
+  ['UpiReport', UpiReport],
+  ['PanReport', PanReport],
+  ['ItrReport', ItrReport],
+  ['LeadReport', LeadReport],
+  ['PaysprintLedgerReport', PaysprintLedgerReport],
+];
+
+// Route names must match `route` in SERVICE_ITEMS / REPORT_ITEMS (src/constants).
 const RETAILER_SCREENS: [string, React.ComponentType<any>][] = [
   ['Dashboard', DashboardScreen],
+  ['Services', ServicesScreen],
+  ...REPORT_SCREENS,
   ['AEPS', AepsScreen],
   ['AepsSettlement', AepsSettlementScreen],
   ['PAN', PanCardScreen],
@@ -73,9 +104,16 @@ const RETAILER_SCREENS: [string, React.ComponentType<any>][] = [
   ['KycStatus', KycStatusScreen],
 ];
 
-const ADMIN_SCREENS: [string, React.ComponentType<any>][] = [['AdminPortal', AdminPortalScreen]];
+const ADMIN_SCREENS: [string, React.ComponentType<any>][] = [
+  ['AdminPortal', AdminPortalScreen],
+  ['Profile', ProfileScreen],
+  ...REPORT_SCREENS,
+];
+
 const DISTRIBUTOR_SCREENS: [string, React.ComponentType<any>][] = [
   ['DistributorPortal', DistributorPortalScreen],
+  ['Profile', ProfileScreen],
+  ...REPORT_SCREENS,
 ];
 
 const buildNavigator = (screens: [string, React.ComponentType<any>][], background: string) => (

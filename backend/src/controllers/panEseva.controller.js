@@ -565,6 +565,7 @@ export const getEsevaPanHistory = async (req, res) => {
     return res.status(200).json({
       success: true,
       transactions,
+      data: transactions, // every other list endpoint uses `data`
     });
   } catch (error) {
     console.error('Error fetching eSeva PAN history:', error);

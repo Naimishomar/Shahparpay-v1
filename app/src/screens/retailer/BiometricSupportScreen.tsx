@@ -1,107 +1,160 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { colors, themed } from '../../theme/colors';
+import { View, Text, Pressable, Linking, Platform } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Screen, Banner, Row, StatusPill, shortDate } from '@/components/ui/Screen';
+import { useAsync } from '@/hooks/useAsync';
+import { useAuth } from '@/context/AuthContext';
+import api from '@/services/api';
+
+/**
+ * Fingerprint capture needs a vendor RD service app installed on the device;
+ * the store links below are the only actionable part of this screen. Everything
+ * else reports the merchant's live biometric readiness from the backend.
+ */
+const RD_SERVICES = [
+  { name: 'Mantra RD Service', pkg: 'com.mantra.rdservice' },
+  { name: 'Morpho RD Service', pkg: 'com.scl.rdservice' },
+  { name: 'Startek RD Service', pkg: 'com.acpl.registersdk' },
+  { name: 'Evolute RD Service', pkg: 'com.evolute.rdservice' },
+  { name: 'Precision RD Service', pkg: 'com.precision.pb510.rdservice' },
+];
+
+const TIPS = [
+  'Device not detected: reconnect the scanner and open the RD service app once.',
+  'Capture timeout: clean the sensor and press firmly for the full countdown.',
+  'Daily 2FA failing: complete it from the AEPS screen before the first transaction of the day.',
+  'Pipe inactive: check Pipe Status — onboarding may still be pending with the bank.',
+];
 
 export const BiometricSupportScreen: React.FC = () => {
+  const { user } = useAuth();
+  const merchantcode = user?.retailerId || user?.code;
+  const status = useAsync<any>(
+    async () => (await api.getAepsMerchantStatus({ merchantcode })).data,
+    [merchantcode]
+  );
+
+  const openStore = (pkg: string) => {
+    const url =
+      Platform.OS === 'android'
+        ? `https://play.google.com/store/apps/details?id=${pkg}`
+        : 'https://play.google.com/store/search?q=rd%20service';
+    Linking.openURL(url).catch(() => {});
+  };
+
+  const activePipes: string[] = status.data?.activePipes ?? [];
+
   return (
-    <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.pageTitle}>Biometric Support</Text>
-          <Text style={styles.pageSubtitle}>Device management & troubleshooting</Text>
-        </View>
-        <MaterialCommunityIcons name="fingerprint" size={32} color="#EC4899" />
-      </View>
-
-      <Card style={styles.deviceCard}>
+    <Screen
+      loading={status.loading}
+      refreshing={status.refreshing}
+      onRefresh={status.refresh}
+      error={status.error}
+      onRetry={status.reload}
+    >
+      <Card>
         <CardHeader>
-          <CardTitle>Registered Devices</CardTitle>
+          <CardTitle icon="shield-check-outline">Biometric readiness</CardTitle>
         </CardHeader>
         <CardContent>
-          <View style={styles.emptyState}>
-            <Ionicons name="hardware-chip-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyText}>No biometric devices registered</Text>
-            <Text style={styles.emptySubtext}>Register your RD service device for AEPS</Text>
-            <Button variant="outline" size="sm" style={{ marginTop: 12 }}>Register Device</Button>
-          </View>
+          <Row
+            label="Merchant eKYC"
+            value={<StatusPill status={status.data?.isMerchantKycComplete ? 'COMPLETED' : 'PENDING'} />}
+          />
+          <Row
+            label="Daily 2FA today"
+            value={<StatusPill status={status.data?.isDailyAuthDoneToday ? 'SUCCESS' : 'PENDING'} />}
+          />
+          <Row label="Last daily auth" value={shortDate(status.data?.lastDailyAuthDate)} />
+          <Row label="Active pipes" value={activePipes.length ? activePipes.join(', ') : 'None'} last />
         </CardContent>
       </Card>
 
-      <Card style={styles.guidesCard}>
+      <Card>
         <CardHeader>
-          <CardTitle>Setup Guides</CardTitle>
+          <CardTitle icon="fingerprint">RD service apps</CardTitle>
         </CardHeader>
         <CardContent>
-          <View style={styles.guidesList}>
-            {[
-              { title: 'Morpho RD Service Setup', desc: 'Step-by-step guide for Morpho devices' },
-              { title: 'Mantra RD Service Setup', desc: 'Configuration for Mantra biometric devices' },
-              { title: 'Startek RD Service Setup', desc: 'Setup guide for Startek fingerprint scanners' },
-              { title: 'Troubleshooting Common Issues', desc: 'Fix device detection & capture errors' },
-            ].map((guide, i) => (
-              <TouchableOpacity key={i} style={styles.guideItem} activeOpacity={0.8}>
-                <View style={styles.guideIcon}>
-                  <Ionicons name="document-text" size={22} color="#6366F1" />
-                </View>
-                <View style={styles.guideText}>
-                  <Text style={styles.guideTitle}>{guide.title}</Text>
-                  <Text style={styles.guideDesc}>{guide.desc}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
-              </TouchableOpacity>
-            ))}
-          </View>
+          <Text style={styles.help}>
+            Install the RD service matching your fingerprint scanner, then register the device once.
+            AEPS capture will not start without it.
+          </Text>
+          {RD_SERVICES.map((rd, i) => (
+            <Pressable
+              key={rd.pkg}
+              style={({ pressed }) => [
+                styles.rdItem,
+                i === RD_SERVICES.length - 1 && styles.rdItemLast,
+                pressed && { opacity: 0.7 },
+              ]}
+              onPress={() => openStore(rd.pkg)}
+              accessibilityRole="link"
+              accessibilityLabel={`Open ${rd.name} in the Play Store`}
+            >
+              <View style={styles.rdIcon}>
+                <MaterialCommunityIcons name="fingerprint" size={18} color={colors.accent} />
+              </View>
+              <View style={styles.rdText}>
+                <Text style={styles.rdTitle}>{rd.name}</Text>
+                <Text style={styles.rdPkg} numberOfLines={1}>
+                  {rd.pkg}
+                </Text>
+              </View>
+              <MaterialCommunityIcons name="open-in-new" size={17} color={colors.mutedForeground} />
+            </Pressable>
+          ))}
         </CardContent>
       </Card>
 
-      <Card style={styles.supportCard}>
+      <Card>
         <CardHeader>
-          <CardTitle>Need Help?</CardTitle>
+          <CardTitle icon="lifebuoy">Troubleshooting</CardTitle>
         </CardHeader>
         <CardContent>
-          <View style={styles.supportButtons}>
-            <Button variant="outline" size="sm" fullWidth>
-              <Ionicons name="chatbubbles" size={18} color={colors.primary} />
-              Live Chat
-            </Button>
-            <Button variant="outline" size="sm" fullWidth>
-              <Ionicons name="call" size={18} color={colors.primary} />
-              Call Support
-            </Button>
-            <Button variant="outline" size="sm" fullWidth>
-              <Ionicons name="mail" size={18} color={colors.primary} />
-              Email Support
-            </Button>
-          </View>
+          {TIPS.map((tip, i) => (
+            <View key={i} style={styles.tip}>
+              <MaterialCommunityIcons name="information" size={15} color={colors.info} />
+              <Text style={styles.tipText}>{tip}</Text>
+            </View>
+          ))}
         </CardContent>
       </Card>
-    </ScrollView>
+
+      <Banner
+        tone="info"
+        message="This build cannot drive an RD service directly. Use the web portal on a machine with the device attached for biometric transactions."
+      />
+    </Screen>
   );
 };
 
 const styles = themed((c) => ({
-  scrollView: { flex: 1, backgroundColor: c.background },
-  content: { padding: 16, paddingBottom: 32, gap: 16 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  pageTitle: { fontSize: 24, fontWeight: '700', color: c.foreground },
-  pageSubtitle: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
-  deviceCard: {},
-  guidesCard: { marginTop: 8 },
-  supportCard: { marginTop: 8 },
-  emptyState: { alignItems: 'center', paddingVertical: 32, gap: 12 },
-  emptyText: { fontSize: 14, fontWeight: '500', color: c.foreground },
-  emptySubtext: { fontSize: 12, color: c.mutedForeground, textAlign: 'center' },
-  guidesList: { gap: 12 },
-  guideItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
-  guideIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#6366F120', justifyContent: 'center', alignItems: 'center' },
-  guideText: { flex: 1 },
-  guideTitle: { fontSize: 14, fontWeight: '600', color: c.foreground },
-  guideDesc: { fontSize: 12, color: c.mutedForeground, marginTop: 2 },
-  supportButtons: { flexDirection: 'row', gap: 8 },
+  help: { fontSize: t.caption, color: c.mutedForeground, lineHeight: 18, marginBottom: space.md },
+  rdItem: {
+    minHeight: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    paddingVertical: space.md,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  rdItemLast: { borderBottomWidth: 0 },
+  rdIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    backgroundColor: c.accentSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rdText: { flex: 1, minWidth: 0, gap: 2 },
+  rdTitle: { fontSize: t.small, fontWeight: '600', color: c.foreground },
+  rdPkg: { fontSize: t.micro, color: c.mutedForeground },
+  tip: { flexDirection: 'row', gap: space.sm, paddingVertical: space.sm },
+  tipText: { flex: 1, fontSize: t.caption, color: c.foreground, lineHeight: 18 },
 }));
 
-import { TouchableOpacity } from 'react-native';
 export default BiometricSupportScreen;

@@ -41,36 +41,95 @@ export interface MenuEntry {
   name: string;
   route: string;
   icon: string; // MaterialCommunityIcons name
+  /** Short line shown under the name in the Services grid. */
+  hint?: string;
+  group?: string;
 }
 
-// Only routes registered in AppNavigator appear here; adding a screen means
-// adding it to both places.
-export const RETAILER_MENU_ITEMS: MenuEntry[] = [
-  { name: "Dashboard", route: "Dashboard", icon: "view-dashboard-outline" },
-  { name: "AEPS", route: "AEPS", icon: "fingerprint" },
-  { name: "AEPS Settlement", route: "AepsSettlement", icon: "bank-outline" },
-  { name: "PAN Card", route: "PAN", icon: "card-account-details-outline" },
-  { name: "Lead Generation", route: "LeadGeneration", icon: "account-plus-outline" },
-  { name: "ITR Filing", route: "ITR", icon: "file-document-outline" },
-  { name: "UPI Payments", route: "UPIPayments", icon: "qrcode" },
-  { name: "DMT", route: "DMT", icon: "send-outline" },
-  { name: "Recharge", route: "Recharge", icon: "flash-outline" },
-  { name: "BBPS", route: "BBPS", icon: "receipt" },
-  { name: "Wallet Transfer", route: "WalletTransfer", icon: "wallet-outline" },
-  { name: "Direct Payout", route: "DirectPayout", icon: "cash-fast" },
-  { name: "Fund Request", route: "FundRequest", icon: "hand-coin-outline" },
-  { name: "AEPS Pipe Status", route: "PipeStatus", icon: "pipe" },
-  { name: "Biometric Support", route: "BiometricSupport", icon: "fingerprint-off" },
-  { name: "KYC Status", route: "KycStatus", icon: "shield-check-outline" },
-  { name: "My Profile", route: "Profile", icon: "account-circle-outline" },
+export interface TabEntry {
+  key: string;
+  name: string;
+  route: string;
+  icon: string;
+  iconActive: string;
+}
+
+/**
+ * Bottom navigation: five top-level destinations, the platform maximum.
+ * Everything else lives one level down under Services or Reports, so the bar
+ * never carries sub-navigation.
+ */
+export const RETAILER_TABS: TabEntry[] = [
+  { key: 'home', name: 'Home', route: 'Dashboard', icon: 'home-outline', iconActive: 'home' },
+  { key: 'services', name: 'Services', route: 'Services', icon: 'apps', iconActive: 'apps' },
+  { key: 'reports', name: 'Reports', route: 'Reports', icon: 'chart-box-outline', iconActive: 'chart-box' },
+  { key: 'wallet', name: 'Wallet', route: 'WalletTransfer', icon: 'wallet-outline', iconActive: 'wallet' },
+  // Tab labels stay short; MainLayout uses `name` for the header title too.
+  { key: 'account', name: 'Account', route: 'Profile', icon: 'account-outline', iconActive: 'account' },
 ];
 
-export const ADMIN_MENU_ITEMS: MenuEntry[] = [
-  { name: "Overview", route: "AdminPortal", icon: "view-dashboard-outline" },
+export const ADMIN_TABS: TabEntry[] = [
+  { key: 'home', name: 'Overview', route: 'AdminPortal', icon: 'view-dashboard-outline', iconActive: 'view-dashboard' },
+  { key: 'reports', name: 'Reports', route: 'Reports', icon: 'chart-box-outline', iconActive: 'chart-box' },
+  { key: 'account', name: 'Account', route: 'Profile', icon: 'account-outline', iconActive: 'account' },
 ];
 
-export const DISTRIBUTOR_MENU_ITEMS: MenuEntry[] = [
-  { name: "Overview", route: "DistributorPortal", icon: "view-dashboard-outline" },
+export const DISTRIBUTOR_TABS: TabEntry[] = [
+  { key: 'home', name: 'Overview', route: 'DistributorPortal', icon: 'view-dashboard-outline', iconActive: 'view-dashboard' },
+  { key: 'reports', name: 'Reports', route: 'Reports', icon: 'chart-box-outline', iconActive: 'chart-box' },
+  { key: 'account', name: 'Account', route: 'Profile', icon: 'account-outline', iconActive: 'account' },
+];
+
+/** Services grid — every route must also be registered in AppNavigator. */
+export const SERVICE_ITEMS: MenuEntry[] = [
+  { name: 'AEPS', route: 'AEPS', icon: 'fingerprint', hint: 'Aadhaar banking', group: 'Banking' },
+  { name: 'DMT', route: 'DMT', icon: 'bank-transfer', hint: 'Money transfer', group: 'Banking' },
+  { name: 'Settlement', route: 'AepsSettlement', icon: 'bank-outline', hint: 'Wallet to bank', group: 'Banking' },
+  { name: 'Direct Payout', route: 'DirectPayout', icon: 'cash-fast', hint: 'Pay any account', group: 'Banking' },
+  { name: 'UPI Collect', route: 'UPIPayments', icon: 'qrcode', hint: 'Collect on UPI', group: 'Banking' },
+
+  { name: 'Recharge', route: 'Recharge', icon: 'cellphone', hint: 'Mobile & DTH', group: 'Payments' },
+  { name: 'BBPS', route: 'BBPS', icon: 'receipt', hint: 'Utility bills', group: 'Payments' },
+  { name: 'Fund Request', route: 'FundRequest', icon: 'hand-coin-outline', hint: 'Top up wallet', group: 'Payments' },
+
+  { name: 'PAN Card', route: 'PAN', icon: 'card-account-details-outline', hint: 'PSA & applications', group: 'Government' },
+  { name: 'ITR Filing', route: 'ITR', icon: 'file-document-outline', hint: 'Income tax returns', group: 'Government' },
+  { name: 'Lead Generation', route: 'LeadGeneration', icon: 'account-plus-outline', hint: 'Loans & cards', group: 'Government' },
+
+  { name: 'KYC Status', route: 'KycStatus', icon: 'shield-check-outline', hint: 'Verification', group: 'Account' },
+  { name: 'Pipe Status', route: 'PipeStatus', icon: 'pipe', hint: 'Bank connectivity', group: 'Account' },
+  { name: 'Biometric', route: 'BiometricSupport', icon: 'fingerprint-off', hint: 'Device help', group: 'Account' },
+];
+
+/** Report destinations. `type` filters /api/dashboard/recent-transactions. */
+export interface ReportEntry {
+  name: string;
+  route: string;
+  icon: string;
+  hint: string;
+  /** Transaction type prefix the report filters on, when it uses that endpoint. */
+  type?: string;
+}
+
+export const REPORT_ITEMS: ReportEntry[] = [
+  { name: 'Wallet Ledger', route: 'WalletLedgerReport', icon: 'notebook-outline', hint: 'Every credit and debit' },
+  { name: 'AEPS Report', route: 'AepsReport', icon: 'fingerprint', hint: 'Withdrawals and enquiries', type: 'AEPS' },
+  { name: 'DMT Report', route: 'DmtReport', icon: 'bank-transfer', hint: 'Money transfers', type: 'DMT' },
+  { name: 'Payout Report', route: 'PayoutReport', icon: 'cash-fast', hint: 'Settlements and payouts' },
+  { name: 'Recharge Report', route: 'RechargeReport', icon: 'cellphone', hint: 'Recharges and bills', type: 'RECHARGE' },
+  { name: 'UPI Report', route: 'UpiReport', icon: 'qrcode', hint: 'UPI collections', type: 'WALLET_TOPUP' },
+  { name: 'PAN Report', route: 'PanReport', icon: 'card-account-details-outline', hint: 'PAN applications' },
+  { name: 'ITR Report', route: 'ItrReport', icon: 'file-document-outline', hint: 'Filings and charges' },
+  { name: 'Lead Report', route: 'LeadReport', icon: 'account-plus-outline', hint: 'Referred customers' },
+  { name: 'PaySprint Ledger', route: 'PaysprintLedgerReport', icon: 'swap-horizontal', hint: 'Upstream credit ledger' },
+];
+
+/** Home screen shortcuts. */
+export const QUICK_ACTIONS: MenuEntry[] = [
+  { name: 'AEPS', route: 'AEPS', icon: 'fingerprint' },
+  { name: 'Recharge', route: 'Recharge', icon: 'cellphone' },
+  { name: 'DMT', route: 'DMT', icon: 'bank-transfer' },
+  { name: 'Payout', route: 'DirectPayout', icon: 'cash-fast' },
 ];
 
 export const API_ENDPOINTS = {
@@ -79,9 +138,16 @@ export const API_ENDPOINTS = {
     verifyOtp: '/api/auth/verify-login-otp',
     logout: '/api/auth/logout',
     refreshToken: '/api/auth/refresh-token',
+    sendVerificationOtp: '/api/auth/send-verification-otp',
+    sendPasswordOtp: '/api/auth/send-password-otp',
+    verifyEmailOtp: '/api/auth/verify-email-otp',
     updateProfile: '/api/auth/update-profile',
     changePassword: '/api/auth/change-password',
     paysprintOnboardUrl: '/api/auth/paysprint/get-onboard-url',
+    paysprintUpdateKyc: '/api/auth/paysprint/update-kyc-status',
+    aadhaarSendOtp: '/api/auth/paysprint/aadhaar/send-otp',
+    aadhaarVerifyOtp: '/api/auth/paysprint/aadhaar/verify-otp',
+    verifyPan: '/api/auth/paysprint/pan/verify',
     createRetailer: '/api/auth/create-retailer',
     createDistributor: '/api/auth/create-distributor',
   },
@@ -100,32 +166,53 @@ export const API_ENDPOINTS = {
     merchantStatus: '/api/aeps/merchant-status',
     pipesVerify: '/api/aeps/pipes/verify',
     onboardingPlan: '/api/aeps/onboarding/plan',
+    pidOptions: '/api/aeps/get-pid-options',
     banks: '/api/aeps/banks',
     balanceEnquiry: '/api/aeps/balance-enquiry',
+    initiateOtp: '/api/aeps/initiate-otp',
     cashWithdrawal: '/api/aeps/cash-withdrawal',
+    cashDeposit: '/api/aeps/cash-deposit',
+    aadhaarPay: '/api/aeps/aadhaar-pay',
     miniStatement: '/api/aeps/mini-statement',
+    txnStatus: '/api/aeps/txn-status',
+    kycSendOtp: '/api/aeps/kyc/send-otp',
+    kycResendOtp: '/api/aeps/kyc/resend-otp',
+    kycVerifyOtp: '/api/aeps/kyc/verify-otp',
+    kycActivate: '/api/aeps/kyc/activate-merchant',
     dailyAuth: '/api/aeps/daily-auth',
   },
   settlement: {
     savedBanks: '/api/settlement/saved-banks',
+    syncBanks: '/api/settlement/sync-banks',
     addBank: '/api/settlement/add-bank',
+    deleteBank: '/api/settlement/bank', // append /:id
+    accountStatus: '/api/settlement/account-status', // append /:id
     initiate: '/api/settlement/initiate',
     directPayout: '/api/settlement/direct-payout',
+    status: '/api/settlement/status',
     history: '/api/settlement/history',
+    uploadDocument: '/api/settlement/upload-document',
   },
   dmt: {
     banks: '/api/dmt/banks',
     remitterQuery: '/api/dmt/remitter/query',
+    remitterEkyc: '/api/dmt/remitter/ekyc',
+    remitterRegister: '/api/dmt/remitter/register',
     beneficiaryFetch: '/api/dmt/beneficiary/fetch',
+    beneficiaryAdd: '/api/dmt/beneficiary/add',
+    beneficiaryDelete: '/api/dmt/beneficiary/delete',
     transfer: '/api/dmt/transfer',
     history: '/api/dmt/history',
   },
   recharge: {
     operators: '/api/recharge/operators', // append /:type
     browsePlan: '/api/recharge/browse-plan',
+    dthInfo: '/api/recharge/dth-info',
     fetchBill: '/api/recharge/fetch-bill',
     doRecharge: '/api/recharge/do-recharge',
     history: '/api/recharge/history',
+    balance: '/api/recharge/balance',
+    status: '/api/recharge/status', // append /:transid
   },
   upi: {
     merchantStatus: '/api/upi/cashout/merchant-status',
@@ -133,10 +220,25 @@ export const API_ENDPOINTS = {
     status: '/api/upi/cashout/status',
   },
   pan: {
-    esevaApplyService: '/api/pan/eseva/apply-service',
-    esevaServiceStatus: '/api/pan/eseva/service-status',
-    esevaHistory: '/api/pan/eseva/history',
+    // Biometric PSA (PaySprint)
     myPsaStatus: '/api/pan/my-psa-status',
+    registerBioPsa: '/api/pan/register-bio-psa',
+    buyCoupons: '/api/pan/buy-coupons',
+    setPsaId: '/api/pan/set-psa-id',
+    syncPsaStatus: '/api/pan/sync-psa-status',
+    // Standard PSA (PaySprint)
+    myStdPsaStatus: '/api/pan/my-std-psa-status',
+    registerStdPsa: '/api/pan/register-std-psa',
+    updateStdPsa: '/api/pan/update-std-psa',
+    buyStdCoupons: '/api/pan/buy-std-coupons',
+    stdPsaPassword: '/api/pan/std-psa-password',
+    // eSeva PAN
+    esevaApplyService: '/api/pan/eseva/apply-service',
+    esevaApplyCoupon: '/api/pan/eseva/apply-coupon',
+    esevaServiceStatus: '/api/pan/eseva/service-status',
+    esevaCouponStatus: '/api/pan/eseva/coupon-status',
+    esevaHistory: '/api/pan/eseva/history',
+    esevaMyPsa: '/api/pan/eseva/my-psa',
   },
   itr: {
     launch: '/api/itr/launch',
@@ -148,15 +250,19 @@ export const API_ENDPOINTS = {
     history: '/api/lead/history',
   },
   fundRequest: {
+    create: '/api/fund-request/create',
     retailer: '/api/fund-request/retailer',
     distributor: '/api/fund-request/distributor',
     update: '/api/fund-request/update',
+    distributorCreate: '/api/fund-request/distributor/create',
+    distributorMine: '/api/fund-request/distributor/mine',
     admin: '/api/fund-request/admin',
     adminUpdate: '/api/fund-request/admin/update',
+    delete: '/api/fund-request/delete', // append /:id
   },
   distributor: {
     stats: '/api/distributor/stats',
-    retailers: '/api/distributor/retailers',
+    retailers: '/api/distributor/retailers', // append /:id to update
     profile: '/api/distributor/profile',
   },
   admin: {
@@ -165,6 +271,9 @@ export const API_ENDPOINTS = {
     profile: '/api/admin/profile',
     recentTransactions: '/api/admin/recent-transactions',
     settings: '/api/admin/settings',
+  },
+  paysprintLedger: {
+    creditLedger: '/api/paysprint/credit-ledger',
   },
 };
 
@@ -175,13 +284,6 @@ export const STORAGE_KEYS = {
   theme: 'theme',
   selectedPipe: 'selectedPipe',
 };
-
-export const QUICK_ACTIONS = [
-  { name: 'AEPS Services', route: 'AEPS', icon: 'fingerprint', color: 'blue' },
-  { name: 'Lead Generation', route: 'LeadGeneration', icon: 'account-group', color: 'teal' },
-  { name: 'PAN Card', route: 'PAN', icon: 'credit-card', color: 'rose' },
-  { name: 'ITR Filing', route: 'ITR', icon: 'file-document', color: 'indigo' },
-];
 
 export const DATE_FILTER_OPTIONS = [
   'Today',

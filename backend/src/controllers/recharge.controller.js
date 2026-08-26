@@ -228,17 +228,20 @@ export const fetchBill = async (req, res) => {
 
 export const doRecharge = async (req, res) => {
   try {
-    const { mobileNumber, dthNumber, number, operator, amount, pin, type, userId, ad1, ad2, ad3 } =
+    const { mobileNumber, dthNumber, number, operator, amount, pin, type, ad1, ad2, ad3 } =
       req.body;
+
+    // The wallet to debit comes from the access token, never from the body:
+    // a caller must not be able to spend someone else's balance.
+    const userId = req.user.id;
 
     const referenceId = `PAY${Date.now()}${Math.floor(Math.random() * 1000)}`;
     const caNumber = mobileNumber || dthNumber || number;
 
-    // Ensure userId is present
-    if (!userId) {
+    if (!caNumber || !operator || !amount) {
       return res
-        .status(401)
-        .json({ success: false, message: 'User ID is required for authentication.' });
+        .status(400)
+        .json({ success: false, message: 'Number, operator and amount are required.' });
     }
 
     // Verify PIN

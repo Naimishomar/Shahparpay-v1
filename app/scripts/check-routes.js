@@ -7,7 +7,8 @@ const nav = fs.readFileSync('src/navigation/AppNavigator.tsx', 'utf8');
 const constants = fs.readFileSync('src/constants/index.ts', 'utf8');
 
 const registered = new Set([
-  ...[...nav.matchAll(/\[\s*'([A-Za-z]+)',\s*[A-Za-z]+Screen\s*\]/g)].map((m) => m[1]),
+  // Component names vary (FooScreen, FooReport), so match any identifier.
+  ...[...nav.matchAll(/\[\s*'([A-Za-z]+)',\s*[A-Za-z][A-Za-z0-9_]*\s*\]/g)].map((m) => m[1]),
   ...[...nav.matchAll(/<Stack\.Screen\s+name="([A-Za-z]+)"/g)].map((m) => m[1]),
 ]);
 

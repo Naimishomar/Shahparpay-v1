@@ -5,7 +5,10 @@ import App from './App.tsx'
 import { ThemeProvider } from './contexts/theme-provider.tsx'
 
 import { AuthProvider } from './context/AuthContext.tsx'
+import { installAuthHeaders } from './lib/authHeaders.ts'
 import { LocationProvider } from './context/LocationContext.tsx'
+
+installAuthHeaders()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

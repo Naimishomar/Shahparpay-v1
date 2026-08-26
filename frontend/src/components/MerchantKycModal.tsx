@@ -22,7 +22,7 @@ const PIPE_WADH: Record<string, string> = {
 };
 
 const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, longitude }) => {
-    const { user } = useAuth();
+    const { user, token } = useAuth();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [kycMethod, setKycMethod] = useState<'bank3' | 'bank2'>('bank2');
@@ -54,7 +54,7 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
             try {
                 const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/kyc/send-otp`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({
                         merchantcode: merchantCode,
                         aadhaar: aadhaar,
@@ -108,7 +108,8 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
             toast.error("Please enter OTP and capture your fingerprint first.");
             return;
         }
-        if (kycMethod === 'bank2' && !pidData) {
+        if (!pidData) {
+            // bank3 eKYC also needs the PID — /aeps/kyc/V3/kyc takes piddata.
             toast.error("Please capture your fingerprint first.");
             return;
         }
@@ -120,7 +121,7 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
             if (kycMethod === 'bank3') {
                 response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/kyc/verify-otp`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({
                         merchantcode: merchantCode,
                         aadhaar: aadhaar,
@@ -136,7 +137,7 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
             } else {
                 response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/kyc/activate-merchant`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({
                         merchantcode: merchantCode,
                         aadhaar: aadhaar,

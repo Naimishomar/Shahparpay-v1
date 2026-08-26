@@ -1,203 +1,395 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { colors, themed } from '../../theme/colors';
+import React, { useState } from 'react';
+import { View, Text } from 'react-native';
+import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Input } from '@/components/ui/Input';
+import {
+  Screen,
+  EmptyState,
+  ErrorBanner,
+  Grid,
+  Row,
+  Segmented,
+  StatusPill,
+  SuccessBanner,
+  money,
+  shortDate,
+} from '@/components/ui/Screen';
+import { useAsync, useAction } from '@/hooks/useAsync';
+import api from '@/services/api';
 
-const distributorTabs = [
-  { name: 'Overview', icon: 'home', count: null },
-  { name: 'Retailers', icon: 'account-group', count: 25 },
-  { name: 'Fund Requests', icon: 'cash', count: 3 },
-  { name: 'Create Retailer', icon: 'account-plus', count: null },
-  { name: 'Profile', icon: 'person', count: null },
+const TABS = [
+  { key: 'overview', label: 'Overview' },
+  { key: 'requests', label: 'Retailer requests' },
+  { key: 'retailers', label: 'Retailers' },
+  { key: 'mine', label: 'My requests' },
 ];
 
+const MODES = ['NEFT', 'IMPS', 'RTGS', 'UPI', 'CASH_DEPOSIT', 'CHEQUE'];
+const today = () => new Date().toISOString().slice(0, 10);
+
 export const DistributorPortalScreen: React.FC = () => {
-  const [activeTab, setActiveTab] = React.useState(0);
+  const [tab, setTab] = useState('overview');
+  const [remarks, setRemarks] = useState<Record<string, string>>({});
+  const [notice, setNotice] = useState('');
+
+  const [mode, setMode] = useState<string>('NEFT');
+  const [amount, setAmount] = useState('');
+  const [bankUtr, setBankUtr] = useState('');
+  const [depositDate, setDepositDate] = useState(today());
+  const [ownRemarks, setOwnRemarks] = useState('');
+
+  const stats = useAsync<any>(async () => (await api.getDistributorStats()).data, []);
+  const retailers = useAsync<any[]>(async () => (await api.getDistributorRetailers()).data ?? [], []);
+  const fundRequests = useAsync<any[]>(
+    async () => (await api.getDistributorFundRequests()).data ?? [],
+    []
+  );
+  const ownRequests = useAsync<any[]>(
+    async () => (await api.getDistributorOwnFundRequests()).data ?? [],
+    []
+  );
+
+  const decide = useAction(async (requestId: string, status: 'APPROVED' | 'REJECTED') => {
+    const res = await api.updateFundRequest({
+      requestId,
+      status,
+      adminRemarks: remarks[requestId] || '',
+    });
+    if (!res.success) throw new Error(res.message);
+    return res;
+  });
+
+  const requestFunds = useAction(async () => {
+    const res = await api.createDistributorFundRequest({
+      transactionMode: mode,
+      amount: Number(amount),
+      bankUtr: bankUtr.trim(),
+      depositDate,
+      remarks: ownRemarks.trim(),
+    });
+    if (!res.success) throw new Error(res.message);
+    return res;
+  });
+
+  const pending = (fundRequests.data ?? []).filter(
+    (r: any) => String(r.status).toUpperCase() === 'PENDING'
+  );
+
+  const onDecide = async (requestId: string, status: 'APPROVED' | 'REJECTED') => {
+    setNotice('');
+    const res = await decide.run(requestId, status);
+    if (res) {
+      setNotice(res.message || `Request ${status.toLowerCase()}.`);
+      fundRequests.reload();
+      stats.reload();
+    }
+  };
+
+  const retailerName = (r: any) =>
+    r.retailerId?.businessName ||
+    r.retailerId?.retailerId ||
+    `${r.retailerId?.firstName ?? ''} ${r.retailerId?.lastName ?? ''}`.trim() ||
+    '—';
 
   return (
-    <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.pageTitle}>Distributor Portal</Text>
-          <Text style={styles.pageSubtitle}>Manage your retailer network</Text>
-        </View>
-        <MaterialCommunityIcons name="store" size={32} color="#14B8A6" />
-      </View>
+    <Screen
+      loading={stats.loading}
+      refreshing={stats.refreshing || retailers.refreshing}
+      onRefresh={() => {
+        stats.refresh();
+        retailers.refresh();
+        fundRequests.refresh();
+        ownRequests.refresh();
+      }}
+      error={stats.error}
+      onRetry={stats.reload}
+    >
+      <Segmented options={TABS} value={tab} onChange={setTab} />
+      {!!notice && <SuccessBanner message={notice} />}
 
-      <View style={styles.tabs}>
-        {distributorTabs.map((tab, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[
-              styles.tab,
-              activeTab === index && styles.tabActive,
-            ]}
-            onPress={() => setActiveTab(index)}
-          >
-            <Text style={[
-              styles.tabText,
-              activeTab === index && styles.tabTextActive,
-            ]}>
-              {tab.name}
-              {tab.count !== null && (
-                <Text style={[
-                  styles.tabBadge,
-                  activeTab === index && styles.tabBadgeActive,
-                ]}>
-                  {tab.count}
-                </Text>
+      {tab === 'overview' && (
+        <Grid columns={2}>
+          <Tile label="Retailers" value={String(stats.data?.totalRetailers ?? 0)} />
+          <Tile label="Commissions" value={money(stats.data?.totalCommissions)} />
+          <Tile label="Active users" value={String(stats.data?.activeUsers ?? 0)} />
+          <Tile label="Pending requests" value={String(pending.length)} tone="warning" />
+        </Grid>
+      )}
+
+      {tab === 'requests' && (
+        <Card>
+          <CardHeader>
+            <CardTitle icon="clipboard-check-outline">
+              {`Retailer fund requests (${pending.length} pending)`}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!!decide.error && <ErrorBanner message={decide.error} />}
+            {fundRequests.loading ? null : fundRequests.data?.length ? (
+              fundRequests.data.map((req: any) => (
+                <View key={req._id} style={styles.requestItem}>
+                  <View style={styles.requestTop}>
+                    <Text style={styles.requestAmount}>{money(req.amount)}</Text>
+                    <StatusPill status={req.status} />
+                  </View>
+                  <Row label="Retailer" value={retailerName(req)} />
+                  <Row label="Mode" value={String(req.transactionMode || '').replace(/_/g, ' ')} />
+                  <Row label="UTR" value={req.bankUtr} />
+                  <Row label="Deposited" value={shortDate(req.depositDate)} />
+                  <Row label="Requested" value={shortDate(req.createdAt)} last />
+
+                  {String(req.status).toUpperCase() === 'PENDING' && (
+                    <View style={styles.actions}>
+                      <Input
+                        placeholder="Remarks (optional)"
+                        value={remarks[req._id] || ''}
+                        onChangeText={(v) => setRemarks((r) => ({ ...r, [req._id]: v }))}
+                        leftIcon="note-text-outline"
+                      />
+                      <View style={styles.actionRow}>
+                        <Button
+                          size="sm"
+                          icon="check"
+                          onPress={() => onDecide(req._id, 'APPROVED')}
+                          loading={decide.pending}
+                          style={styles.flex}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          icon="close"
+                          onPress={() => onDecide(req._id, 'REJECTED')}
+                          loading={decide.pending}
+                          style={styles.flex}
+                        >
+                          Reject
+                        </Button>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              ))
+            ) : (
+              <EmptyState icon="clipboard-check-outline" title="No fund requests" />
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {tab === 'retailers' && (
+        <Card>
+          <CardHeader>
+            <CardTitle icon="store-outline">
+              {`My retailers (${retailers.data?.length ?? 0})`}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {retailers.loading ? null : retailers.data?.length ? (
+              retailers.data.map((ret: any, i: number) => (
+                <View
+                  key={ret._id}
+                  style={[styles.listItem, i === retailers.data!.length - 1 && styles.listItemLast]}
+                >
+                  <View style={styles.listInfo}>
+                    <Text style={styles.listName} numberOfLines={1}>
+                      {ret.businessName || ret.name || ret.retailerId}
+                    </Text>
+                    <Text style={styles.listMeta} numberOfLines={1}>
+                      {ret.retailerId} · {ret.contactNumber}
+                    </Text>
+                    <Text style={styles.listMeta} numberOfLines={1}>
+                      {`AEPS ${money(ret.aepsWalletBalance)} · Main ${money(ret.mainWalletBalance)}`}
+                    </Text>
+                  </View>
+                  <View style={styles.listRight}>
+                    <Text style={styles.listAmount}>{money(ret.commissionsEarned)}</Text>
+                    <StatusPill status={ret.isActive ? 'ACTIVE' : 'INACTIVE'} />
+                  </View>
+                </View>
+              ))
+            ) : (
+              <EmptyState icon="store-outline" title="No retailers yet" />
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {tab === 'mine' && (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle icon="hand-coin-outline">Request funds from admin</CardTitle>
+            </CardHeader>
+            <CardContent style={styles.form}>
+              <View style={styles.field}>
+                <Text style={styles.label}>How did you pay?</Text>
+                <Segmented
+                  options={MODES.map((m) => ({ key: m, label: m.replace('_', ' ') }))}
+                  value={mode}
+                  onChange={setMode}
+                />
+              </View>
+              <Input
+                label="Amount"
+                required
+                value={amount}
+                onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))}
+                keyboardType="decimal-pad"
+                leftIcon="currency-inr"
+              />
+              <Input
+                label="Bank UTR / reference"
+                required
+                value={bankUtr}
+                onChangeText={setBankUtr}
+                autoCapitalize="characters"
+                leftIcon="pound"
+              />
+              <Input
+                label="Deposit date"
+                required
+                value={depositDate}
+                onChangeText={setDepositDate}
+                placeholder="YYYY-MM-DD"
+                leftIcon="calendar-outline"
+              />
+              <Input
+                label="Remarks"
+                value={ownRemarks}
+                onChangeText={setOwnRemarks}
+                multiline
+                leftIcon="note-text-outline"
+              />
+              {!!requestFunds.error && <ErrorBanner message={requestFunds.error} />}
+              <Button
+                onPress={async () => {
+                  setNotice('');
+                  const res = await requestFunds.run();
+                  if (res) {
+                    setNotice(res.message || 'Fund request submitted to admin.');
+                    setAmount('');
+                    setBankUtr('');
+                    setOwnRemarks('');
+                    ownRequests.reload();
+                  }
+                }}
+                disabled={Number(amount) <= 0 || bankUtr.trim().length < 4}
+                loading={requestFunds.pending}
+                icon="send-outline"
+                fullWidth
+              >
+                Submit request
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle icon="history">My request history</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {ownRequests.loading ? null : ownRequests.data?.length ? (
+                ownRequests.data.map((req: any) => (
+                  <View key={req._id} style={styles.requestItem}>
+                    <View style={styles.requestTop}>
+                      <Text style={styles.requestAmount}>{money(req.amount)}</Text>
+                      <StatusPill status={req.status} />
+                    </View>
+                    <Row label="Mode" value={String(req.transactionMode || '').replace(/_/g, ' ')} />
+                    <Row label="UTR" value={req.bankUtr} />
+                    <Row label="Requested" value={shortDate(req.createdAt)} last={!req.adminRemarks} />
+                    {!!req.adminRemarks && <Row label="Remarks" value={req.adminRemarks} last />}
+                  </View>
+                ))
+              ) : (
+                <EmptyState icon="clipboard-text-outline" title="No requests submitted yet" />
               )}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {activeTab === 0 && <OverviewTab />}
-      {activeTab === 1 && <RetailersTab />}
-      {activeTab === 2 && <FundRequestsTab />}
-      {activeTab === 3 && <CreateRetailerTab />}
-      {activeTab === 4 && <ProfileTab />}
-    </ScrollView>
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </Screen>
   );
 };
 
-const OverviewTab = () => (
-  <View style={styles.tabContent}>
-    <View style={styles.statsGrid}>
-      {[
-        { label: 'Total Retailers', value: '25', color: '#3B82F6' },
-        { label: 'Active Retailers', value: '18', color: '#10B981' },
-        { label: 'Pending Fund Requests', value: '3', color: '#F59E0B' },
-        { label: 'Total Commission', value: '₹ 45,000', color: '#8B5CF6' },
-      ].map((stat, i) => (
-        <Card key={i} style={styles.statCard}>
-          <CardContent>
-            <Text style={[styles.statLabel, { color: stat.color }]}>{stat.label}</Text>
-            <Text style={styles.statValue}>{stat.value}</Text>
-          </CardContent>
-        </Card>
-      ))}
-    </View>
-
-    <Card style={styles.recentCard}>
-      <CardHeader>
-        <CardTitle>Recent Activity</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <View style={styles.emptyState}>
-          <Ionicons name="information-circle" size={48} color={colors.mutedForeground} />
-          <Text style={styles.emptyText}>No recent activity</Text>
-        </View>
-      </CardContent>
-    </Card>
-  </View>
-);
-
-const RetailersTab = () => (
-  <View style={styles.tabContent}>
-    <Card>
-      <CardContent>
-        <View style={styles.emptyState}>
-          <MaterialCommunityIcons name="account-group" size={48} color={colors.mutedForeground} />
-          <Text style={styles.emptyText}>25 Retailers</Text>
-          <Text style={styles.emptySubtext}>Manage your retailer network</Text>
-        </View>
-      </CardContent>
-    </Card>
-  </View>
-);
-
-const FundRequestsTab = () => (
-  <View style={styles.tabContent}>
-    <Card>
-      <CardContent>
-        <View style={styles.emptyState}>
-          <Ionicons name="cash" size={48} color={colors.mutedForeground} />
-          <Text style={styles.emptyText}>3 Pending Requests</Text>
-          <Text style={styles.emptySubtext}>Review and approve</Text>
-        </View>
-      </CardContent>
-    </Card>
-  </View>
-);
-
-const CreateRetailerTab = () => (
-  <View style={styles.tabContent}>
-    <Card>
-      <CardHeader>
-        <CardTitle>Create New Retailer</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <View style={styles.formField}>
-          <Text style={styles.fieldLabel}>Name *</Text>
-          <Text style={styles.fieldValue}>Enter full name</Text>
-        </View>
-        <View style={styles.formField}>
-          <Text style={styles.fieldLabel}>Email *</Text>
-          <Text style={styles.fieldValue}>Enter email address</Text>
-        </View>
-        <View style={styles.formField}>
-          <Text style={styles.fieldLabel}>Mobile *</Text>
-          <Text style={styles.fieldValue}>Enter mobile number</Text>
-        </View>
-        <View style={styles.formField}>
-          <Text style={styles.fieldLabel}>Password *</Text>
-          <Text style={styles.fieldValue}>Enter password</Text>
-        </View>
-        <View style={styles.formField}>
-          <Text style={styles.fieldLabel}>Location *</Text>
-          <Text style={styles.fieldValue}>Select city/state</Text>
-        </View>
-        <Button style={{ marginTop: 16 }} size="lg">Create Retailer</Button>
-      </CardContent>
-    </Card>
-  </View>
-);
-
-const ProfileTab = () => (
-  <View style={styles.tabContent}>
-    <Card>
-      <CardContent>
-        <View style={styles.emptyState}>
-          <Ionicons name="person" size={48} color={colors.mutedForeground} />
-          <Text style={styles.emptyText}>Profile Settings</Text>
-          <Text style={styles.emptySubtext}>Manage your account</Text>
-        </View>
-      </CardContent>
-    </Card>
+const Tile: React.FC<{ label: string; value: string; tone?: 'warning' }> = ({
+  label,
+  value,
+  tone,
+}) => (
+  <View style={styles.tile}>
+    <Text style={styles.tileLabel} numberOfLines={1}>
+      {label}
+    </Text>
+    <Text
+      style={[styles.tileValue, tone === 'warning' && { color: colors.warning }]}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+    >
+      {value}
+    </Text>
   </View>
 );
 
 const styles = themed((c) => ({
-  scrollView: { flex: 1, backgroundColor: c.background },
-  content: { padding: 16, paddingBottom: 32, gap: 16 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  pageTitle: { fontSize: 24, fontWeight: '700', color: c.foreground },
-  pageSubtitle: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
-  tabs: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  tab: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: c.border, backgroundColor: c.background },
-  tabActive: { backgroundColor: '#14B8A6', borderColor: '#14B8A6' },
-  tabText: { fontSize: 13, fontWeight: '500', color: c.foreground, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  tabTextActive: { color: 'white' },
-  tabBadge: { fontSize: 10, fontWeight: '700', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, backgroundColor: c.secondary, color: c.foreground },
-  tabBadgeActive: { backgroundColor: 'white', color: '#14B8A6' },
-  tabContent: { gap: 16 },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  statCard: { width: '48%', borderRadius: 16 },
-  statLabel: { fontSize: 12, fontWeight: '500' },
-  statValue: { fontSize: 20, fontWeight: '700', color: c.foreground, marginTop: 4 },
-  recentCard: { marginTop: 8 },
-  emptyState: { alignItems: 'center', paddingVertical: 32, gap: 12 },
-  emptyText: { fontSize: 14, fontWeight: '500', color: c.foreground },
-  emptySubtext: { fontSize: 12, color: c.mutedForeground },
-  formField: { marginBottom: 16, gap: 8 },
-  fieldLabel: { fontSize: 12, fontWeight: '500', color: c.mutedForeground },
-  selectWrapper: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 14, borderRadius: 10, borderWidth: 1, borderColor: c.border, backgroundColor: c.background },
-  selectValue: { fontSize: 14, color: c.foreground },
-  fieldValue: { fontSize: 14, color: c.foreground },
+  tile: {
+    padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: c.card,
+    borderWidth: 1,
+    borderColor: c.border,
+    gap: 3,
+  },
+  tileLabel: { fontSize: t.micro, fontWeight: '600', color: c.mutedForeground },
+  tileValue: {
+    fontSize: t.bodyLg,
+    fontWeight: '700',
+    color: c.foreground,
+    fontVariant: ['tabular-nums'],
+  },
+  form: { gap: space.lg },
+  field: { gap: space.sm },
+  label: { fontSize: t.caption, fontWeight: '600', color: c.mutedForeground },
+  requestItem: { paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
+  requestTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: space.md,
+    marginBottom: 2,
+  },
+  requestAmount: {
+    fontSize: t.bodyLg,
+    fontWeight: '700',
+    color: c.foreground,
+    fontVariant: ['tabular-nums'],
+  },
+  actions: { gap: space.md, marginTop: space.md },
+  actionRow: { flexDirection: 'row', gap: space.sm },
+  flex: { flex: 1 },
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    paddingVertical: space.md,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  listItemLast: { borderBottomWidth: 0 },
+  listInfo: { flex: 1, minWidth: 0, gap: 2 },
+  listName: { fontSize: t.small, fontWeight: '600', color: c.foreground },
+  listMeta: { fontSize: t.micro, color: c.mutedForeground },
+  listRight: { alignItems: 'flex-end', gap: 4 },
+  listAmount: {
+    fontSize: t.small,
+    fontWeight: '700',
+    color: c.foreground,
+    fontVariant: ['tabular-nums'],
+  },
 }));
 
-import { TouchableOpacity } from 'react-native';
 export default DistributorPortalScreen;

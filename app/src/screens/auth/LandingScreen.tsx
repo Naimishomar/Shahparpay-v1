@@ -1,291 +1,139 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  SafeAreaView,
-  StatusBar,
-} from 'react-native';
+import { View, Text, ScrollView, Image, StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/context/ThemeContext';
-import { colors, themed } from '../../theme/colors';
+import { Button } from '@/components/ui/Button';
+import { useResponsive } from '@/hooks/useResponsive';
+import { colors, themed, radius, space, type as t } from '../../theme/colors';
+
+const FEATURES = [
+  { icon: 'fingerprint', title: 'AEPS banking', desc: 'Withdrawals, balance and mini statements' },
+  { icon: 'bank-transfer', title: 'Money transfer', desc: 'IMPS and NEFT to any bank account' },
+  { icon: 'cellphone', title: 'Recharge & bills', desc: 'Mobile, DTH and every BBPS category' },
+  { icon: 'cash-fast', title: 'Instant payouts', desc: 'Settle your wallet straight to bank' },
+];
 
 export const LandingScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { resolvedTheme } = useTheme();
+  const { padding } = useResponsive();
+  const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={styles.container}>
       <StatusBar
         barStyle={resolvedTheme === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor="transparent"
+        backgroundColor={colors.background}
       />
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingHorizontal: padding + 8,
+            paddingTop: insets.top + space.xxl,
+            paddingBottom: insets.bottom + space.xxl,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.hero}>
+          <Image source={require('@/assets/logo.png')} style={styles.logo} resizeMode="contain" />
+          <Text style={styles.heading} accessibilityRole="header">
+            One app for every counter service
+          </Text>
+          <Text style={styles.description}>
+            AEPS, money transfer, recharge, bill payments and payouts — settled to your wallet the
+            moment they succeed.
+          </Text>
+        </View>
 
-      <View style={styles.backgroundElements}>
-        <View style={styles.bgElement1} />
-        <View style={styles.bgElement2} />
-      </View>
-
-      <View style={styles.content}>
-        <View style={styles.leftPanel}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('@/assets/logo.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
-
-          <View style={styles.brandContent}>
-            <Text style={styles.heading}>
-              Next-Gen <Text style={styles.headingMuted}>Financial Network.</Text>
-            </Text>
-            <Text style={styles.description}>
-              The ultimate unified platform for AePS, DMT, and Recharge services.
-              Secure, fast, and reliable.
-            </Text>
-
-            <View style={styles.features}>
-              <View style={styles.featureItem}>
-                <View style={styles.featureIcon}>
-                  <MaterialCommunityIcons name="shield-check" size={20} color={colors.primary} />
-                </View>
-                <Text style={styles.featureText}>256-bit Encryption</Text>
+        <View style={styles.features}>
+          {FEATURES.map((feature) => (
+            <View key={feature.title} style={styles.feature}>
+              <View style={styles.featureIcon}>
+                <MaterialCommunityIcons
+                  name={feature.icon as any}
+                  size={20}
+                  color={colors.accent}
+                />
               </View>
-              <View style={styles.featureItem}>
-                <View style={styles.featureIcon}>
-                  <Ionicons name="flash" size={20} color={colors.primary} />
-                </View>
-                <Text style={styles.featureText}>Instant Settlement</Text>
-              </View>
-              <View style={styles.featureItem}>
-                <View style={styles.featureIcon}>
-                  <MaterialCommunityIcons name="server-network" size={20} color={colors.primary} />
-                </View>
-                <Text style={styles.featureText}>99.9% Uptime</Text>
+              <View style={styles.featureText}>
+                <Text style={styles.featureTitle}>{feature.title}</Text>
+                <Text style={styles.featureDesc}>{feature.desc}</Text>
               </View>
             </View>
-          </View>
+          ))}
+        </View>
 
-          <View style={styles.copyright}>
-            <Text style={styles.copyrightText}>
-              © {new Date().getFullYear()} Shahparpay Networks. All rights reserved.
-            </Text>
+        <View style={styles.actions}>
+          <Button
+            onPress={() => navigation.navigate('Login')}
+            icon="login"
+            size="lg"
+            fullWidth
+          >
+            Continue to sign in
+          </Button>
+          <View style={styles.trust}>
+            <MaterialCommunityIcons name="shield-check-outline" size={14} color={colors.mutedForeground} />
+            <Text style={styles.trustText}>NPCI-compliant · Two-factor secured</Text>
           </View>
         </View>
 
-        <View style={styles.rightPanel}>
-          <View style={styles.loginCard}>
-            <View style={styles.loginHeader}>
-              <Text style={styles.loginTitle}>Sign In</Text>
-              <Text style={styles.loginSubtitle}>Access your dashboard</Text>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Login')}
-              style={styles.loginButton}
-            >
-              <Text style={styles.loginButtonText}>Continue to Login</Text>
-              <Ionicons name="arrow-forward" size={20} color="white" />
-            </TouchableOpacity>
-
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>Or</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <TouchableOpacity style={styles.demoButton}>
-              <Text style={styles.demoButtonText}>Explore Demo</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </SafeAreaView>
+        <Text style={styles.footer}>© {new Date().getFullYear()} Shahparpay Networks</Text>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = themed((c) => ({
-  container: {
-    flex: 1,
-  },
-  backgroundElements: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  bgElement1: {
-    position: 'absolute',
-    top: '-10%',
-    left: '-10%',
-    width: '60%',
-    height: '60%',
-    borderRadius: 9999,
-    backgroundColor: 'rgba(99, 102, 241, 0.08)',
-  },
-  bgElement2: {
-    position: 'absolute',
-    bottom: '-20%',
-    right: '-10%',
-    width: '70%',
-    height: '70%',
-    borderRadius: 9999,
-    backgroundColor: 'rgba(6, 182, 212, 0.08)',
-  },
-  content: {
-    flex: 1,
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-  },
-  leftPanel: {
-    flex: 1,
-    justifyContent: 'space-between',
-    paddingVertical: 40,
-  },
-  logoContainer: {
-    alignItems: 'flex-start',
-  },
-  logo: {
-    width: 140,
-    height: 50,
-  },
-  brandContent: {
-    maxWidth: 400,
-  },
+  container: { flex: 1, backgroundColor: c.background },
+  content: { flexGrow: 1, justifyContent: 'center', gap: space.xxxl },
+  hero: { alignItems: 'center', gap: space.sm, maxWidth: 460, alignSelf: 'center' },
+  logo: { width: 148, height: 52, marginBottom: space.sm },
   heading: {
-    fontSize: 42,
+    fontSize: t.h1,
+    lineHeight: 38,
     fontWeight: '800',
-    lineHeight: 50,
     color: c.foreground,
-    marginBottom: 16,
-  },
-  headingMuted: {
-    color: c.mutedForeground,
+    textAlign: 'center',
   },
   description: {
-    fontSize: 18,
-    lineHeight: 28,
+    fontSize: t.body,
     color: c.mutedForeground,
-    marginBottom: 32,
+    textAlign: 'center',
+    lineHeight: 23,
+    // ~50 characters per line keeps this readable on a phone.
     maxWidth: 400,
   },
-  features: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    marginBottom: 32,
-  },
-  featureItem: {
+  features: { gap: space.md, width: '100%', maxWidth: 460, alignSelf: 'center' },
+  feature: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 9999,
-    backgroundColor: c.secondary,
+    gap: space.md,
+    padding: space.lg,
+    borderRadius: radius.lg,
+    backgroundColor: c.card,
     borderWidth: 1,
     borderColor: c.border,
   },
   featureIcon: {
-    padding: 4,
-  },
-  featureText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: c.foreground,
-  },
-  copyright: {
-    paddingTop: 24,
-  },
-  copyrightText: {
-    fontSize: 12,
-    color: c.mutedForeground,
-  },
-  rightPanel: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    maxWidth: 400,
-    width: '100%',
-  },
-  loginCard: {
-    width: '100%',
-    maxWidth: 400,
-    padding: 32,
-    borderRadius: 24,
-    backgroundColor: c.card,
-    borderWidth: 1,
-    borderColor: c.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 5,
-  },
-  loginHeader: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  loginTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: c.foreground,
-    marginBottom: 4,
-  },
-  loginSubtitle: {
-    fontSize: 14,
-    color: c.mutedForeground,
-  },
-  loginButton: {
-    flexDirection: 'row',
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: c.accentSubtle,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 12,
-    backgroundColor: c.primary,
-    marginBottom: 20,
   },
-  loginButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: c.primaryForeground,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 20,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: c.border,
-  },
-  dividerText: {
-    fontSize: 13,
-    color: c.mutedForeground,
-  },
-  demoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: c.border,
-    backgroundColor: 'transparent',
-  },
-  demoButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: c.foreground,
-  },
+  featureText: { flex: 1, minWidth: 0, gap: 2 },
+  featureTitle: { fontSize: t.small, fontWeight: '700', color: c.foreground },
+  featureDesc: { fontSize: t.caption, color: c.mutedForeground, lineHeight: 17 },
+  actions: { gap: space.md, width: '100%', maxWidth: 460, alignSelf: 'center' },
+  trust: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  trustText: { fontSize: t.micro, color: c.mutedForeground },
+  footer: { fontSize: t.micro, color: c.mutedForeground, textAlign: 'center' },
 }));
 
 export default LandingScreen;

@@ -4,6 +4,7 @@ import {
   generatePaySprintToken,
   encryptPayload,
   getOnboardStatusEndpoint,
+  getOnboardStatus,
   postAepsTransactionWithGeoRecovery,
   isWebKycDone,
 } from '../utils/paysprint.util.js';
@@ -1288,255 +1289,139 @@ export const cashWithdrawalTxnStatus = async (req, res) => {
   }
 };
 
+// ──────────────────────────────────────────────────────────────────────────
+// Bank3 merchant eKYC — PaySprint /service/aeps/kyc/V3/{send_otp,verify_otp,kyc}
+// (docs: "SEND OTP" / "Verify OTP" / "Ekyc" in the Onboarding section).
+// /aeps/v3/merchantkyc/* is the Bank1 (City Union) flow — calling it with a
+// bank3 merchantcode answers response_code 3 "Merchantcode not found".
+// ──────────────────────────────────────────────────────────────────────────
+const kycV3Url = (path) =>
+  `${process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1'}/service/aeps/kyc/V3/${path}`;
+
+const psHeaders = () => ({
+  Token: generatePaySprintToken(),
+  Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
+  'Content-Type': 'application/json',
+});
+
+// Web KYC must be finished on the pipe before eKYC can run. Returns an error
+// payload when PaySprint says the merchant is not there yet, otherwise null.
+const webKycBlocker = async (merchantcode, pipe) => {
+  const user =
+    (await Retailer.findOne({ retailerId: merchantcode })) ||
+    (await Distributor.findOne({ distributorId: merchantcode }));
+  const mobile = user?.contactNumber ? String(user.contactNumber) : '';
+  const statusData = await getOnboardStatus(merchantcode, mobile, pipe);
+  if (!statusData) return null; // status API unreachable — let PaySprint decide
+  console.log(`[eKYC] ${pipe} onboard status:`, JSON.stringify(statusData));
+  if (statusData.is_approved === 'Accepted' || isWebKycDone(statusData)) return null;
+  return {
+    code: 'PIPE_NOT_ONBOARDED',
+    message:
+      statusData.is_approved === 'Rejected'
+        ? `Onboarding was rejected by the bank on ${pipe}. Redo the Web KYC step.`
+        : `Web KYC on ${pipe} is not complete yet. Finish Web KYC, then run eKYC.`,
+    data: statusData,
+  };
+};
+
 export const sendMerchantOtp = async (req, res) => {
   try {
-    const { merchantcode, aadhaar, latitude, longitude, pipe } = req.body;
-    if (!merchantcode || !aadhaar) {
-      return res.status(400).json({
-        success: false,
-        message: 'merchantcode and aadhaar required',
-      });
+    const { merchantcode, pipe } = req.body;
+    if (!merchantcode) {
+      return res.status(400).json({ success: false, message: 'merchantcode required' });
     }
+    const selectedPipe = String(pipe || 'bank3').toLowerCase();
 
-    const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
-    let mobile = '9999999999';
-    const user =
-      (await Retailer.findOne({ retailerId: merchantcode })) ||
-      (await Distributor.findOne({ distributorId: merchantcode }));
-    if (user && user.contactNumber) mobile = user.contactNumber;
+    const blocked = await webKycBlocker(merchantcode, selectedPipe);
+    if (blocked) return res.status(400).json({ success: false, ...blocked });
 
-    const selectedPipe = pipe || 'bank3';
-
-    // ──────────────────────────────────────────────────────────────────────
-    // STEP 1: Check if merchant is already onboarded on this pipe.
-    //         Bank3 uses Web Onboarding (getonboardurl) — there is NO direct
-    //         API endpoint to auto-onboard. If not onboarded or rejected,
-    //         we must return an error.
-    // ──────────────────────────────────────────────────────────────────────
-    try {
-      const checkToken = generatePaySprintToken();
-      const checkHeaders = {
-        Token: checkToken,
-        Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-        'Content-Type': 'application/json',
-      };
-      const statusRes = await axios.post(
-        getOnboardStatusEndpoint(selectedPipe),
-        { merchantcode, mobile, pipe: selectedPipe },
-        { headers: checkHeaders, validateStatus: () => true }
-      );
-      const statusData = statusRes.data;
-      console.log(`[SendOTP] Onboard status for pipe ${selectedPipe}:`, JSON.stringify(statusData));
-
-      const approvalStatus = statusData?.is_approved;
-
-      if (approvalStatus === 'Rejected') {
-        return res.status(400).json({
-          success: false,
-          message: `Onboarding has been rejected by the bank for ${selectedPipe}. Please contact the service provider.`,
-          data: statusData,
-        });
-      }
-
-      if (approvalStatus === 'Not-Onboarded' || statusData?.response_code === 0) {
-        return res.status(400).json({
-          success: false,
-          message: `Merchant is not onboarded on ${selectedPipe}. Please complete Web KYC first.`,
-          data: statusData,
-        });
-      }
-
-      if (
-        approvalStatus !== 'Accepted' &&
-        approvalStatus !== 'Pending' &&
-        approvalStatus !== 'In-Process' &&
-        approvalStatus !== 'Verification-Pending'
-      ) {
-        console.log(
-          `[SendOTP] Unexpected onboarding status for ${selectedPipe}: ${approvalStatus}. Proceeding anyway.`
-        );
-      }
-    } catch (onboardErr) {
-      console.warn(`[SendOTP] Warning: Could not check onboarding status:`, onboardErr.message);
-      // Non-fatal — proceed with OTP attempt
-    }
-
-    // ──────────────────────────────────────────────────────────────────────
-    // STEP 2: Send OTP for KYC
-    // Endpoint + payload match PaySprint /aeps/v3/merchantkyc/send_otp docs.
-    // ──────────────────────────────────────────────────────────────────────
-    const payload = {
-      merchantcode,
-      accessmode: 'SITE',
-      latitude: latitude || '28.7041',
-      longitude: longitude || '77.1025',
-      aadhaar,
-    };
-
-    const token = generatePaySprintToken();
-    const headers = {
-      Token: token,
-      Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-      'Content-Type': 'application/json',
-    };
-
-    console.log('=== SEND OTP DEBUG ===');
-    console.log('URL:', `${baseUrl}/service/aeps/v3/merchantkyc/send_otp`);
-    console.log('Payload:', JSON.stringify(payload, null, 2));
-    console.log('Headers:', JSON.stringify(headers, null, 2));
-
-    const response = await axios.post(`${baseUrl}/service/aeps/v3/merchantkyc/send_otp`, payload, {
-      headers,
-      validateStatus: () => true,
-    });
-
+    const response = await axios.post(
+      kycV3Url('send_otp'),
+      { merchantcode },
+      { headers: psHeaders(), validateStatus: () => true }
+    );
     const psData = response.data;
-    console.log('=== SEND OTP RESPONSE ===', JSON.stringify(psData));
+    console.log('=== KYC SEND OTP RESPONSE ===', JSON.stringify(psData));
 
     if (!psData || psData.response_code !== 1 || psData.status === false) {
       return res.status(400).json({
         success: false,
-        message: psData?.message || 'Failed to send OTP. Merchant code may not be valid for this pipe.',
+        message: psData?.message || 'Failed to send OTP.',
         data: psData,
       });
     }
 
-    return res.status(200).json({
-      success: true,
-      data: psData,
-    });
+    return res.status(200).json({ success: true, data: psData });
   } catch (error) {
     console.error('Send OTP Error:', error?.response?.data || error.message);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal Error',
-      error: error.message,
-    });
+    return res.status(500).json({ success: false, message: 'Internal Error', error: error.message });
   }
 };
 
-export const resendMerchantOtp = async (req, res) => {
-  try {
-    const { merchantcode, aadhaar, latitude, longitude, stateresp, ekyc_id, pipe } = req.body;
-    if (!merchantcode || !ekyc_id) {
-      return res.status(400).json({
-        success: false,
-        message: 'Required fields missing',
-      });
-    }
-
-    const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
-
-    const payload = {
-      merchantcode,
-      aadhaar,
-      latitude: latitude || '28.7041',
-      longitude: longitude || '77.1025',
-      stateresp,
-      ekyc_id,
-      accessmode: 'SITE',
-    };
-
-    const token = generatePaySprintToken();
-    const headers = {
-      Token: token,
-      Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-      'Content-Type': 'application/json',
-    };
-
-    const response = await axios.post(
-      `${baseUrl}/service/aeps/v3/merchantkyc/resend_otp`,
-      payload,
-      { headers, validateStatus: () => true }
-    );
-
-    return res.status(200).json({
-      success: true,
-      data: response.data,
-    });
-  } catch (error) {
-    console.error('Resend OTP Error:', error?.response?.data || error.message);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal Error',
-      error: error.message,
-    });
-  }
-};
+// No separate resend endpoint on the kyc/V3 flow — a fresh send_otp is the resend.
+export const resendMerchantOtp = (req, res) => sendMerchantOtp(req, res);
 
 export const verifyMerchantOtp = async (req, res) => {
   try {
-    const { merchantcode, aadhaar, latitude, longitude, otp, stateresp, ekyc_id, pidData, pipe } =
+    const { merchantcode, aadhaar, otp, otpreqid, ekyc_id, refid, pidData, pipe, accessmode } =
       req.body;
-    if (!merchantcode || !otp || !pidData) {
+    const reqId = otpreqid || ekyc_id;
+    if (!merchantcode || !aadhaar || !otp || !reqId || !pidData) {
       return res.status(400).json({
         success: false,
-        message: 'Required fields missing',
+        message: 'merchantcode, aadhaar, otp, otpreqid and pidData are required',
       });
     }
+    const selectedPipe = String(pipe || 'bank3').toLowerCase();
 
-    const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
-
-    // pidData needs to be AES encrypted for this specific endpoint.
-    const encryptedPidData = encryptPayload(pidData);
-
-    // Endpoint + payload match PaySprint /aeps/v3/merchantkyc/verify_otp docs.
-    const payload = {
-      merchantcode,
-      aadhaar,
-      latitude: latitude || '28.7041',
-      longitude: longitude || '77.1025',
-      otp,
-      stateresp,
-      ekyc_id,
-      accessmode: 'SITE',
-      piddata: encryptedPidData,
-    };
-
-    const token = generatePaySprintToken();
-    const headers = {
-      Token: token,
-      Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-      'Content-Type': 'application/json',
-    };
-
-    const response = await axios.post(
-      `${baseUrl}/service/aeps/v3/merchantkyc/verify_otp`,
-      payload,
-      { headers, validateStatus: () => true }
+    // STEP 1: validate the OTP that send_otp triggered.
+    const verifyRes = await axios.post(
+      kycV3Url('verify_otp'),
+      { merchantcode, otp, otpreqid: reqId },
+      { headers: psHeaders(), validateStatus: () => true }
     );
-
-    const psData = response.data;
-    console.log('=== VERIFY OTP RESPONSE ===', JSON.stringify(psData));
-
-    if (!psData || psData.response_code !== 1 || psData.status === false) {
+    const verifyData = verifyRes.data;
+    console.log('=== KYC VERIFY OTP RESPONSE ===', JSON.stringify(verifyData));
+    if (!verifyData || verifyData.response_code !== 1 || verifyData.status === false) {
       return res.status(400).json({
         success: false,
-        message: psData?.message || 'OTP verification failed.',
-        data: psData,
+        message: verifyData?.message || 'OTP verification failed.',
+        data: verifyData,
       });
     }
 
-    // Update the Retailer's KYC completion status and add to activeAepsPipes
+    // STEP 2: finish eKYC with the biometric PID (AES-128-CBC, bank3 wadh).
+    const kycRes = await axios.post(
+      kycV3Url('kyc'),
+      {
+        refid: refid || reqId,
+        merchantcode,
+        aadhaar,
+        piddata: encryptPayload(pidData),
+        accessmode: accessmode || 'SITE',
+      },
+      { headers: psHeaders(), validateStatus: () => true }
+    );
+    const kycData = kycRes.data;
+    console.log('=== KYC RESPONSE ===', JSON.stringify(kycData));
+    if (!kycData || kycData.response_code !== 1 || kycData.status === false) {
+      return res.status(400).json({
+        success: false,
+        message: kycData?.message || 'eKYC failed.',
+        data: kycData,
+      });
+    }
+
     await Retailer.findOneAndUpdate(
       { retailerId: merchantcode },
-      {
-        isMerchantKycComplete: true,
-        $addToSet: { activeAepsPipes: pipe },
-      }
+      { isMerchantKycComplete: true, $addToSet: { activeAepsPipes: selectedPipe } }
     );
 
-    return res.status(200).json({
-      success: true,
-      data: psData,
-    });
+    return res.status(200).json({ success: true, data: kycData });
   } catch (error) {
     console.error('Verify OTP Error:', error?.response?.data || error.message);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal Error',
-      error: error.message,
-    });
+    return res.status(500).json({ success: false, message: 'Internal Error', error: error.message });
   }
 };
 
@@ -1917,7 +1802,10 @@ export const syncMerchantPipes = async (merchantcode) => {
 
 export const getMerchantStatus = async (req, res) => {
   try {
-    const { merchantcode, forceRefresh } = req.query;
+    // Callers that are asking about themselves (the mobile app) can omit
+    // merchantcode; it falls back to the retailer on the access token.
+    const merchantcode = req.query.merchantcode || req.user?.retailerId;
+    const { forceRefresh } = req.query;
     if (!merchantcode) {
       return res.status(400).json({
         success: false,
@@ -2428,7 +2316,9 @@ export const activateMerchant = async (req, res) => {
     // instead of hitting the activation endpoint blindly (avoids response_code 5).
     let mobile = '';
     try {
-      const retailer = await Retailer.findById(req.user.id);
+      const retailer = req.user?.id
+        ? await Retailer.findById(req.user.id)
+        : await Retailer.findOne({ retailerId: merchantcode });
       mobile = retailer?.contactNumber ? String(retailer.contactNumber) : '';
     } catch (e) {
       console.warn('[activateMerchant] Could not load mobile for pre-flight:', e.message);
@@ -2451,7 +2341,9 @@ export const activateMerchant = async (req, res) => {
       );
       const preData = preRes.data || {};
       const approved = preData.is_approved || null;
-      const onboarded = preData.response_code === 1 && approved === 'Accepted';
+      // 'Pending' + "Onboarding complete, kindly activate the merchant by ekyc
+      // process" IS the state activate_merchant is meant for — isWebKycDone covers it.
+      const onboarded = preData.response_code === 1 && isWebKycDone(preData);
 
       if (!onboarded) {
         const hint =

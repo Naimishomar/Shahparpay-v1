@@ -14,7 +14,7 @@ interface DailyAuthModalProps {
 
 const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = [], latitude, longitude }) => {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, token } = useAuth();
     const actualMerchantCode = user?.retailerId || user?.distributorId || user?.adminId || "";
     const actualAadhaar = user?.aadhaarNumber || "";
     const [loading, setLoading] = useState(false);
@@ -35,7 +35,7 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = 
             // 2. Submit to Daily Auth Endpoint
             const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/daily-auth`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
                     merchantcode: merchantCode,
                     aadhaarNumber: aadhaar,

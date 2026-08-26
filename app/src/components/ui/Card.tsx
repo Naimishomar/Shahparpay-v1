@@ -1,89 +1,111 @@
 import React from 'react';
-import { View, Text, StyleProp, ViewStyle, TextStyle } from 'react-native';
-import { themed } from '../../theme/colors';
+import { View, Text, Pressable, StyleProp, ViewStyle, TextStyle } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { colors, themed, radius, space, type as t } from '../../theme/colors';
 
 interface CardProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
-  variant?: 'default' | 'glass' | 'outlined';
+  /** `flat` drops the shadow for cards nested inside another surface. */
+  variant?: 'default' | 'flat' | 'accent';
   padding?: number;
+  onPress?: () => void;
+  accessibilityLabel?: string;
 }
 
-const variantStyles = themed((c) => ({
+export const Card: React.FC<CardProps> = ({
+  children,
+  style,
+  variant = 'default',
+  padding = space.lg,
+  onPress,
+  accessibilityLabel,
+}) => {
+  const content = [styles.base, styles[variant], { padding }, style];
+  if (!onPress) return <View style={content}>{children}</View>;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={({ pressed }) => [...content, pressed && styles.pressed]}
+    >
+      {children}
+    </Pressable>
+  );
+};
+
+export const CardHeader: React.FC<{
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}> = ({ children, style }) => <View style={[styles.header, style]}>{children}</View>;
+
+export const CardTitle: React.FC<{
+  children: React.ReactNode;
+  icon?: string;
+  style?: StyleProp<TextStyle>;
+}> = ({ children, icon, style }) => (
+  <View style={styles.titleRow}>
+    {!!icon && (
+      <MaterialCommunityIcons name={icon as any} size={17} color={colors.accent} />
+    )}
+    <Text style={[styles.title, style]} accessibilityRole="header">
+      {children}
+    </Text>
+  </View>
+);
+
+export const CardDescription: React.FC<{
+  children: React.ReactNode;
+  style?: StyleProp<TextStyle>;
+}> = ({ children, style }) => <Text style={[styles.description, style]}>{children}</Text>;
+
+export const CardContent: React.FC<{
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}> = ({ children, style }) => <View style={[styles.content, style]}>{children}</View>;
+
+export const CardFooter: React.FC<{
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}> = ({ children, style }) => <View style={[styles.footer, style]}>{children}</View>;
+
+const styles = themed((c) => ({
+  base: { borderRadius: radius.lg, overflow: 'hidden' },
   default: {
     backgroundColor: c.card,
     borderWidth: 1,
     borderColor: c.border,
-    borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  glass: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  flat: { backgroundColor: c.secondary, borderWidth: 1, borderColor: c.border },
+  // Solid gold, not the subtle tint: `accentForeground` is a near-black meant
+  // to sit on full-strength accent. Over the 16% tint it fails contrast in
+  // dark mode.
+  accent: {
+    backgroundColor: c.accent,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 16,
+    borderColor: c.accent,
   },
-  outlined: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 16,
-  },
-}));
-
-export const Card: React.FC<CardProps> = ({ children, style, variant = 'default', padding = 16 }) => (
-  <View style={[styles.base, variantStyles[variant], { padding }, style]}>{children}</View>
-);
-
-export const CardHeader: React.FC<{ children: React.ReactNode; style?: StyleProp<ViewStyle> }> = ({ children, style }) => (
-  <View style={[styles.header, style]}>{children}</View>
-);
-
-export const CardTitle: React.FC<{ children: React.ReactNode; style?: StyleProp<TextStyle> }> = ({ children, style }) => (
-  <Text style={[styles.title, style]}>{children}</Text>
-);
-
-export const CardDescription: React.FC<{ children: React.ReactNode; style?: StyleProp<TextStyle> }> = ({ children, style }) => (
-  <Text style={[styles.description, style]}>{children}</Text>
-);
-
-export const CardContent: React.FC<{ children: React.ReactNode; style?: StyleProp<ViewStyle> }> = ({ children, style }) => (
-  <View style={[styles.content, style]}>{children}</View>
-);
-
-export const CardFooter: React.FC<{ children: React.ReactNode; style?: StyleProp<ViewStyle> }> = ({ children, style }) => (
-  <View style={[styles.footer, style]}>{children}</View>
-);
-
-const styles = themed((c) => ({
-  base: {
-    overflow: 'hidden',
-  },
-  header: {
-    paddingBottom: 8,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: c.cardForeground,
-  },
-  description: {
-    fontSize: 13,
-    color: c.mutedForeground,
-    marginTop: 2,
-  },
+  // Opacity only: scaling a card shifts everything below it.
+  pressed: { opacity: 0.75 },
+  header: { paddingBottom: space.md },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  title: { flex: 1, fontSize: t.body, fontWeight: '700', color: c.cardForeground },
+  description: { fontSize: t.caption, color: c.mutedForeground, marginTop: 3, lineHeight: 17 },
   content: {},
   footer: {
-    paddingTop: 12,
+    paddingTop: space.md,
+    marginTop: space.md,
     borderTopWidth: 1,
     borderTopColor: c.border,
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 8,
+    gap: space.sm,
   },
 }));
 

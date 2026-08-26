@@ -1,426 +1,276 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  RefreshControl,
-} from 'react-native';
-import { useAuth } from '@/context/AuthContext';
+import React from 'react';
+import { View, Text, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Card, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
-import api from '@/services/api';
-import { DashboardStats, RecentSale } from '@/types';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { colors, themed, radius, space, type as t } from '../../theme/colors';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import {
+  Screen,
+  EmptyState,
+  Grid,
+  SectionTitle,
+  StatusPill,
+  money,
+  dateTime,
+} from '@/components/ui/Screen';
+import { useAsync } from '@/hooks/useAsync';
+import { useAuth } from '@/context/AuthContext';
 import { QUICK_ACTIONS } from '@/constants';
-import { colors, themed } from '../../theme/colors';
+import { DashboardStats } from '@/types';
+import api from '@/services/api';
+
+interface DashboardData {
+  stats: DashboardStats;
+  recentSales: any[];
+}
+
+/** Only the metrics a retailer acts on. The rest live in Reports. */
+const METRICS: { key: keyof DashboardStats; label: string; icon: string }[] = [
+  { key: 'AEPS_WITHDRAWAL', label: 'AEPS', icon: 'fingerprint' },
+  { key: 'DMT', label: 'Money transfer', icon: 'bank-transfer' },
+  { key: 'RECHARGE', label: 'Recharge', icon: 'cellphone' },
+  { key: 'BILL_PAYMENT', label: 'Bill payments', icon: 'receipt' },
+  { key: 'AEPS_SETTLEMENT', label: 'Payouts', icon: 'cash-fast' },
+  { key: 'WALLET_TOPUP', label: 'UPI collected', icon: 'qrcode' },
+];
 
 export const DashboardScreen: React.FC = () => {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const navigation = useNavigation<any>();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [recentSales, setRecentSales] = useState<RecentSale[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [dateRange, setDateRange] = useState('Today');
 
-  const fetchStats = async (showLoading = true) => {
-    if (!token) return;
-    try {
-      if (showLoading) setLoading(true);
-      const res = await api.getRetailerDashboard();
-      if (res.success) {
-        setStats(res.data.stats);
-        setRecentSales(res.data.recentSales);
-      }
-    } catch (error) {
-      console.error('Failed to fetch dashboard stats:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStats();
-  }, [token]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchStats(false);
-  };
-
-  const topStats = [
-    { title: 'Total Success DMT', value: stats?.DMT ? `₹ ${stats.DMT.toFixed(2)}` : '₹ 0.00', icon: 'currency-inr', color: '#3B82F6' },
-    { title: 'Total Success Recharge', value: stats?.RECHARGE ? `₹ ${stats.RECHARGE.toFixed(2)}` : '₹ 0.00', icon: 'cellphone', color: '#8B5CF6' },
-    { title: 'Total Success AEPS', value: stats?.AEPS_WITHDRAWAL ? `₹ ${stats.AEPS_WITHDRAWAL.toFixed(2)}` : '₹ 0.00', icon: 'fingerprint', color: '#EC4899' },
-    { title: 'Total Success Payout', value: stats?.AEPS_SETTLEMENT ? `₹ ${stats.AEPS_SETTLEMENT.toFixed(2)}` : '₹ 0.00', icon: 'bank', color: '#06B6D4' },
-  ];
-
-  const bottomStats = [
-    { title: 'Total Success BBPS', value: stats?.BILL_PAYMENT ? `₹ ${stats.BILL_PAYMENT.toFixed(2)}` : '₹ 0.00', icon: 'receipt', color: '#F59E0B' },
-    { title: 'Total Success UPI', value: stats?.WALLET_TOPUP ? `₹ ${stats.WALLET_TOPUP.toFixed(2)}` : '₹ 0.00', icon: 'wallet', color: '#10B981' },
-    { title: 'Total Earnings', value: stats?.TotalCommission ? `₹ ${stats.TotalCommission.toFixed(2)}` : '₹ 0.00', icon: 'currency-inr', color: '#6366F1' },
-  ];
-
-  const bottomStats2 = [
-    { title: 'Total Customers', value: stats?.TotalCustomers?.toString() || '0', icon: 'account-group', color: '#8B5CF6' },
-    { title: 'Total Transactions', value: stats?.TotalTransactionsAmount ? `₹ ${stats.TotalTransactionsAmount.toFixed(2)}` : '₹ 0.00', icon: 'wallet', color: '#06B6D4' },
-    { title: 'Total Commission', value: stats?.TotalCommission ? `₹ ${stats.TotalCommission.toFixed(2)}` : '₹ 0.00', icon: 'currency-inr', color: '#F59E0B' },
-  ];
-
-  const renderStatCard = (stat: any, index: number) => (
-    <TouchableOpacity
-      key={index}
-      style={styles.statCard}
-      activeOpacity={0.9}
-    >
-      <View style={styles.statCardHeader}>
-        <Text style={styles.statTitle}>{stat.title}</Text>
-        <View style={[styles.statIconContainer, { backgroundColor: `${stat.color}20` }]}>
-          <MaterialCommunityIcons name={stat.icon as any} size={24} color={stat.color} />
-        </View>
-      </View>
-      <Text style={styles.statValue}>{stat.value}</Text>
-    </TouchableOpacity>
+  const dashboard = useAsync<DashboardData>(
+    async () => (await api.getRetailerDashboard()).data,
+    []
   );
-
-  const renderQuickAction = (action: any, index: number) => {
-    const colorMap: Record<string, string> = {
-      blue: '#3B82F6',
-      teal: '#14B8A6',
-      rose: '#F43F5E',
-      indigo: '#6366F1',
-    };
-
-    const color = colorMap[action.color] || '#3B82F6';
-
-    return (
-      <TouchableOpacity
-        key={index}
-        style={[styles.quickActionCard, { borderColor: `${color}40` }]}
-        onPress={() => navigation.navigate(action.route)}
-        activeOpacity={0.8}
-      >
-        <View style={[styles.quickActionIcon, { backgroundColor: `${color}20` }]}>
-          <MaterialCommunityIcons name={action.icon as any} size={28} color={color} />
-        </View>
-        <Text style={styles.quickActionTitle}>{action.name}</Text>
-        <Text style={styles.quickActionDesc}>Tap to open</Text>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderRecentSale = (sale: RecentSale, index: number) => (
-    <View key={index} style={styles.recentSaleItem}>
-      <View style={[styles.recentSaleAvatar, { backgroundColor: colors.primary }]}>
-        <Text style={styles.recentSaleAvatarText}>
-          {(sale.service || sale.name || '?').charAt(0)}
-        </Text>
-      </View>
-      <View style={styles.recentSaleInfo}>
-        <Text style={styles.recentSaleService}>{sale.service || sale.name}</Text>
-        <Text style={styles.recentSaleName}>{sale.name}</Text>
-        <Text style={styles.recentSaleDetails}>{sale.details || sale.date}</Text>
-      </View>
-      <View style={styles.recentSaleAmount}>
-        <Text style={[
-          styles.recentSaleAmountText,
-          sale.status === 'SUCCESS' && styles.amountSuccess,
-          sale.status === 'FAILED' && styles.amountFailed,
-          sale.status === 'PENDING' && styles.amountPending,
-        ]}>
-          {sale.amount}
-        </Text>
-        {!!sale.date && (
-          <Text style={styles.recentSaleDate}>
-            {new Date(sale.date).toLocaleDateString()}
-          </Text>
-        )}
-      </View>
-    </View>
-  );
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <View style={styles.spinner} />
-      </View>
-    );
-  }
+  const stats = dashboard.data?.stats;
+  const sales = dashboard.data?.recentSales ?? [];
 
   return (
-    <ScrollView
-      style={styles.scrollView}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.scrollContent}
+    <Screen
+      loading={dashboard.loading}
+      refreshing={dashboard.refreshing}
+      onRefresh={dashboard.refresh}
+      error={dashboard.error}
+      onRetry={dashboard.reload}
     >
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.greeting}>Welcome back,</Text>
-          <Text style={styles.userName}>{user?.name || 'User'}</Text>
+      <View style={styles.greeting}>
+        <Text style={styles.greetingLabel}>Welcome back</Text>
+        <Text style={styles.greetingName} numberOfLines={1}>
+          {user?.name || 'Retailer'}
+        </Text>
+      </View>
+
+      <Card variant="accent" padding={space.lg}>
+        <Text style={styles.earningsLabel}>Total earnings</Text>
+        <Text style={styles.earningsValue} numberOfLines={1} adjustsFontSizeToFit>
+          {money(stats?.TotalCommission)}
+        </Text>
+        <View style={styles.earningsMeta}>
+          <MetaItem label="Customers" value={String(stats?.TotalCustomers ?? 0)} />
+          <View style={styles.metaDivider} />
+          <MetaItem label="Volume" value={money(stats?.TotalTransactionsAmount)} />
         </View>
-        <TouchableOpacity style={styles.datePickerButton}>
-          <Text style={styles.datePickerText}>{dateRange}</Text>
-          <Ionicons name="chevron-down" size={18} color={colors.mutedForeground} />
-        </TouchableOpacity>
-      </View>
+      </Card>
 
-      <View style={styles.statsGrid}>
-        {topStats.map(renderStatCard)}
-      </View>
-
-      <View style={styles.statsGrid}>
-        {bottomStats.map(renderStatCard)}
-      </View>
-
-      <View style={styles.statsGrid}>
-        {bottomStats2.map(renderStatCard)}
-      </View>
-
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-      </View>
-
-      <View style={styles.quickActionsGrid}>
-        {QUICK_ACTIONS.map(renderQuickAction)}
-      </View>
-
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Recent Sales</Text>
-      </View>
-
-      <Card style={styles.recentSalesCard}>
-        <CardContent>
-          {recentSales.length > 0 ? (
-            recentSales.map(renderRecentSale)
-          ) : (
-            <View style={styles.emptyState}>
-              <Ionicons name="receipt-outline" size={48} color={colors.mutedForeground} />
-              <Text style={styles.emptyText}>No recent sales found</Text>
+      <SectionTitle>Quick actions</SectionTitle>
+      <Grid columns={4}>
+        {QUICK_ACTIONS.map((action) => (
+          <Pressable
+            key={action.route}
+            onPress={() => navigation.navigate(action.route)}
+            style={({ pressed }) => [styles.quick, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel={action.name}
+          >
+            <View style={styles.quickIcon}>
+              <MaterialCommunityIcons name={action.icon as any} size={21} color={colors.accent} />
             </View>
+            <Text style={styles.quickLabel} numberOfLines={1}>
+              {action.name}
+            </Text>
+          </Pressable>
+        ))}
+      </Grid>
+
+      <SectionTitle
+        action={
+          <Pressable
+            onPress={() => navigation.navigate('Reports')}
+            hitSlop={10}
+            accessibilityRole="button"
+          >
+            <Text style={styles.link}>All reports</Text>
+          </Pressable>
+        }
+      >
+        This month
+      </SectionTitle>
+      <Grid columns={2}>
+        {METRICS.map((metric) => (
+          <View key={metric.key} style={styles.metric}>
+            <View style={styles.metricTop}>
+              <MaterialCommunityIcons
+                name={metric.icon as any}
+                size={16}
+                color={colors.mutedForeground}
+              />
+              <Text style={styles.metricLabel} numberOfLines={1}>
+                {metric.label}
+              </Text>
+            </View>
+            <Text style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit>
+              {money(stats?.[metric.key])}
+            </Text>
+          </View>
+        ))}
+      </Grid>
+
+      <Card>
+        <CardHeader>
+          <CardTitle icon="history">Recent activity</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {sales.length ? (
+            sales.slice(0, 8).map((sale: any, index: number) => (
+              <View
+                key={sale.id ?? sale._id ?? index}
+                style={[styles.sale, index === Math.min(sales.length, 8) - 1 && styles.saleLast]}
+              >
+                <View style={styles.saleAvatar}>
+                  <Text style={styles.saleAvatarText}>
+                    {(sale.service || sale.name || '?').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                <View style={styles.saleInfo}>
+                  <Text style={styles.saleTitle} numberOfLines={1}>
+                    {sale.service || sale.name}
+                  </Text>
+                  <Text style={styles.saleMeta} numberOfLines={1}>
+                    {sale.details || dateTime(sale.date)}
+                  </Text>
+                </View>
+                <View style={styles.saleRight}>
+                  <Text style={styles.saleAmount} numberOfLines={1}>
+                    {typeof sale.amount === 'number' ? money(sale.amount) : sale.amount}
+                  </Text>
+                  <StatusPill status={sale.status} />
+                </View>
+              </View>
+            ))
+          ) : (
+            <EmptyState
+              icon="receipt-text-outline"
+              title="No transactions yet"
+              subtitle="Your most recent sales will appear here"
+              action={{ label: 'Browse services', onPress: () => navigation.navigate('Services') }}
+            />
           )}
         </CardContent>
       </Card>
-    </ScrollView>
+    </Screen>
   );
 };
 
+const MetaItem: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <View style={styles.metaItem}>
+    <Text style={styles.metaLabel}>{label}</Text>
+    <Text style={styles.metaValue} numberOfLines={1}>
+      {value}
+    </Text>
+  </View>
+);
+
 const styles = themed((c) => ({
-  scrollView: {
-    flex: 1,
+  greeting: { gap: 2 },
+  greetingLabel: { fontSize: t.small, color: c.mutedForeground },
+  greetingName: { fontSize: t.h2, fontWeight: '700', color: c.foreground },
+  earningsLabel: { fontSize: t.caption, fontWeight: '600', color: c.accentForeground, opacity: 0.85 },
+  earningsValue: {
+    fontSize: t.h1,
+    fontWeight: '800',
+    color: c.accentForeground,
+    marginTop: 2,
+    fontVariant: ['tabular-nums'],
   },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 32,
-    gap: 16,
+  earningsMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.lg,
+    marginTop: space.lg,
+    paddingTop: space.md,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.12)',
   },
-  loadingContainer: {
-    flex: 1,
+  metaItem: { flex: 1, minWidth: 0, gap: 1 },
+  metaDivider: { width: 1, height: 26, backgroundColor: 'rgba(0,0,0,0.12)' },
+  metaLabel: { fontSize: t.micro, color: c.accentForeground, opacity: 0.75 },
+  metaValue: { fontSize: t.body, fontWeight: '700', color: c.accentForeground },
+  quick: {
+    minHeight: 78,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-  },
-  spinner: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 3,
-    borderColor: c.primary,
-    borderTopColor: 'transparent',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  headerLeft: {},
-  greeting: {
-    fontSize: 14,
-    color: c.mutedForeground,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: c.foreground,
-  },
-  datePickerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: c.border,
-    backgroundColor: c.background,
-  },
-  datePickerText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: c.foreground,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    justifyContent: 'space-between',
-  },
-  statCard: {
-    width: '48%',
-    padding: 16,
-    borderRadius: 16,
+    paddingVertical: space.md,
+    paddingHorizontal: 4,
+    borderRadius: radius.md,
     backgroundColor: c.card,
     borderWidth: 1,
     borderColor: c.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
   },
-  statCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  statTitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: c.mutedForeground,
-    flex: 1,
-    marginRight: 8,
-  },
-  statIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
+  pressed: { opacity: 0.75 },
+  quickIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.pill,
+    backgroundColor: c.accentSubtle,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  statValue: {
-    fontSize: 22,
+  quickLabel: { fontSize: t.micro, fontWeight: '600', color: c.foreground },
+  link: { fontSize: t.small, fontWeight: '700', color: c.accent },
+  metric: {
+    padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: c.card,
+    borderWidth: 1,
+    borderColor: c.border,
+    gap: 6,
+  },
+  metricTop: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  metricLabel: { flex: 1, fontSize: t.micro, fontWeight: '600', color: c.mutedForeground },
+  metricValue: {
+    fontSize: t.title,
     fontWeight: '700',
     color: c.foreground,
+    fontVariant: ['tabular-nums'],
   },
-  sectionHeader: {
-    marginTop: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: c.foreground,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    justifyContent: 'space-between',
-  },
-  quickActionCard: {
-    width: '48%',
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: c.card,
-    borderWidth: 1,
-    alignItems: 'center',
-    gap: 10,
-  },
-  quickActionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quickActionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: c.foreground,
-    textAlign: 'center',
-  },
-  quickActionDesc: {
-    fontSize: 11,
-    color: c.mutedForeground,
-    textAlign: 'center',
-  },
-  recentSalesCard: {
-    marginTop: 8,
-  },
-  recentSaleItem: {
+  sale: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    gap: space.md,
+    paddingVertical: space.md,
     borderBottomWidth: 1,
     borderBottomColor: c.border,
   },
-  recentSaleAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  saleLast: { borderBottomWidth: 0, paddingBottom: 0 },
+  saleAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.pill,
+    backgroundColor: c.secondary,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
   },
-  recentSaleAvatarText: {
-    fontSize: 16,
+  saleAvatarText: { fontSize: t.small, fontWeight: '700', color: c.foreground },
+  saleInfo: { flex: 1, minWidth: 0, gap: 2 },
+  saleTitle: { fontSize: t.small, fontWeight: '600', color: c.foreground },
+  saleMeta: { fontSize: t.micro, color: c.mutedForeground },
+  saleRight: { alignItems: 'flex-end', gap: 4 },
+  saleAmount: {
+    fontSize: t.small,
     fontWeight: '700',
-    color: 'white',
-  },
-  recentSaleInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  recentSaleService: {
-    fontSize: 13,
-    fontWeight: '600',
     color: c.foreground,
-  },
-  recentSaleName: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: c.foreground,
-  },
-  recentSaleDetails: {
-    fontSize: 11,
-    color: c.mutedForeground,
-  },
-  recentSaleAmount: {
-    alignItems: 'flex-end',
-    gap: 2,
-  },
-  recentSaleAmountText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  amountSuccess: {
-    color: '#10B981',
-  },
-  amountFailed: {
-    color: '#EF4444',
-  },
-  amountPending: {
-    color: '#F59E0B',
-  },
-  recentSaleDate: {
-    fontSize: 10,
-    color: c.mutedForeground,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    gap: 12,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: c.mutedForeground,
+    fontVariant: ['tabular-nums'],
   },
 }));
 

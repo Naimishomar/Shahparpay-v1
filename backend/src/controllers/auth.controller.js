@@ -311,14 +311,48 @@ export const refreshAccessToken = async (req, res) => {
 
 export const logoutUser = async (req, res) => {
   try {
+    // Must mirror the attributes used when setting it, or the browser keeps it.
     res.clearCookie('refreshToken', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true,
+      sameSite: 'none',
     });
     return res.status(200).json({ success: true, message: 'Logged out successfully' });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Error during logout' });
+  }
+};
+
+/**
+ * OTP for changing the password of the *signed-in* user.
+ * `sendVerificationOtp` deliberately refuses addresses that already belong to
+ * an account (it guards signup), so it can never serve this flow. The email is
+ * taken from the access token, never from the body.
+ * @route POST /api/auth/send-password-otp
+ */
+export const sendPasswordOtp = async (req, res) => {
+  try {
+    const email = req.user?.email;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'No email on file for this account.' });
+    }
+
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    await Otp.findOneAndUpdate(
+      { email },
+      { otp: otpCode, createdAt: Date.now() },
+      { upsert: true, returnDocument: 'after' }
+    );
+
+    const sent = await sendEmailOTP(email, req.user?.name || 'User', otpCode);
+    if (!sent) {
+      return res.status(500).json({ success: false, message: 'Failed to send OTP email.' });
+    }
+
+    return res.status(200).json({ success: true, message: 'OTP sent to your registered email', email });
+  } catch (error) {
+    console.error('Send password OTP error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
