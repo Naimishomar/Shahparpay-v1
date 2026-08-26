@@ -58,3 +58,4 @@ export function useMediaQuery(query: string): boolean {
 }
 export { useResponsive } from './useResponsive';
 export { useAsync, useAction } from './useAsync';
+export { useKycCallback } from './useKycCallback';

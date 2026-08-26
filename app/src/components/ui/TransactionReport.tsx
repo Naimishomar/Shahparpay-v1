@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable, FlatList, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, themed, radius, space, type as t, TOUCH } from '../../theme/colors';
 import { Input } from './Input';
 import { Button } from './Button';
+import { Sheet } from './Sheet';
 import {
   Banner,
   EmptyState,
@@ -18,6 +19,7 @@ import {
 } from './Screen';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAsync } from '@/hooks/useAsync';
+import { useDebounce } from '@/hooks';
 
 export interface ReportColumn {
   label: string;
@@ -36,8 +38,22 @@ interface Props {
   dateOf?: (item: any) => string | undefined;
   /** Extra rows shown when a row is expanded into the detail sheet. */
   details: ReportColumn[];
+  /**
+   * Summary tiles above the list. Defaults to count/volume/success/failed,
+   * which suits transaction reports; a ledger overrides it with the money
+   * columns that actually matter there (commission, TDS, GST, net).
+   */
+  summary?: (rows: any[]) => SummaryTile[];
+  /** Status values offered in the filter sheet. Ledgers use CREDIT/DEBIT. */
+  statuses?: readonly string[];
   emptyTitle?: string;
   emptyIcon?: string;
+}
+
+export interface SummaryTile {
+  label: string;
+  value: string;
+  tone?: 'success' | 'warning' | 'error';
 }
 
 const RANGES = [
@@ -79,26 +95,32 @@ export const TransactionReport: React.FC<Props> = ({
   subtitleOf,
   dateOf = (i) => i?.createdAt,
   details,
+  summary,
+  statuses = STATUSES,
   emptyTitle = 'Nothing to report yet',
   emptyIcon = 'chart-box-outline',
 }) => {
   const { padding, gap } = useResponsive();
   const insets = useSafeAreaInsets();
   const [range, setRange] = useState<RangeKey>('30d');
-  const [status, setStatus] = useState<(typeof STATUSES)[number]>('ALL');
+  const [status, setStatus] = useState<string>('ALL');
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<any>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  // Filtering a thousand rows on every keystroke re-rendered the whole list
+  // and made typing visibly lag.
+  const debouncedQuery = useDebounce(query, 200);
 
   const report = useAsync<any[]>(() => fetcher(rangeToDates(range)), [range]);
 
   const rows = useMemo(() => {
-    const term = query.trim().toLowerCase();
+    const term = debouncedQuery.trim().toLowerCase();
     return (report.data ?? []).filter((item) => {
       if (status !== 'ALL' && String(statusOf(item) ?? '').toUpperCase() !== status) return false;
       if (!term) return true;
       return searchFields(item).toLowerCase().includes(term);
     });
-  }, [report.data, query, status, statusOf, searchFields]);
+  }, [report.data, debouncedQuery, status, statusOf, searchFields]);
 
   const totals = useMemo(
     () =>
@@ -117,10 +139,99 @@ export const TransactionReport: React.FC<Props> = ({
     [rows, amountOf, statusOf]
   );
 
+  /**
+   * The accessors are called once per row here rather than five times inside
+   * renderItem on every re-render, and the result is what the row component
+   * memoises against.
+   */
+  const items = useMemo(
+    () =>
+      rows.map((item, index) => ({
+        item,
+        key: String(item?._id ?? item?.transactionId ?? item?.UTR ?? item?.SNO ?? index),
+        title: titleOf(item),
+        subtitle: subtitleOf?.(item) ?? '',
+        date: dateTime(dateOf(item)),
+        amount: money(amountOf(item)),
+        status: statusOf(item),
+      })),
+    [rows, titleOf, subtitleOf, dateOf, amountOf, statusOf]
+  );
+
+  const tiles: SummaryTile[] = useMemo(
+    () =>
+      summary
+        ? summary(rows)
+        : [
+            { label: 'Transactions', value: String(totals.count) },
+            { label: 'Total volume', value: money(totals.volume) },
+            { label: 'Successful', value: money(totals.success), tone: 'success' },
+            { label: 'Failed', value: String(totals.failed), tone: 'error' },
+          ],
+    [summary, rows, totals]
+  );
+
+  // Anything narrowing the list, so the filter button can show a count and the
+  // empty state can offer to clear them.
+  const activeFilters = (range !== 'all' ? 1 : 0) + (status !== 'ALL' ? 1 : 0);
+  const clearFilters = useCallback(() => {
+    setQuery('');
+    setStatus('ALL');
+    setRange('all');
+  }, []);
+
+  // Memoised alongside renderItem: a fresh element here re-renders the header
+  // (and its four summary tiles) on every keystroke.
+  const listHeader = useMemo(
+    () => (
+      <View style={{ gap }}>
+        {!!report.error && (
+          <Banner
+            tone="error"
+            message={report.error}
+            action={{ label: 'Retry', onPress: report.reload }}
+          />
+        )}
+        <Grid columns={2}>
+          {tiles.map((tile) => (
+            <Tile key={tile.label} label={tile.label} value={tile.value} tone={tile.tone} />
+          ))}
+        </Grid>
+      </View>
+    ),
+    [gap, report.error, report.reload, tiles]
+  );
+
+  const hasFilters = !!query || activeFilters > 0;
+  const listEmpty = useMemo(
+    () => (
+      <EmptyState
+        icon={emptyIcon}
+        title={hasFilters ? 'No matching entries' : emptyTitle}
+        subtitle={
+          hasFilters
+            ? 'Try a wider date range or clear the filters.'
+            : 'Completed transactions show up here.'
+        }
+        action={hasFilters ? { label: 'Clear filters', onPress: clearFilters } : undefined}
+      />
+    ),
+    [emptyIcon, emptyTitle, hasFilters, clearFilters]
+  );
+
+  const keyExtractor = useCallback((row: ReportItem) => row.key, []);
+  const renderItem = useCallback(
+    ({ item }: { item: ReportItem }) => <ReportRow row={item} onPress={setSelected} />,
+    []
+  );
+
   return (
     <View style={styles.container}>
-      <View style={[styles.filters, { paddingHorizontal: padding, gap }]}>
+      {/* Search stays on the surface; the range and status pickers moved behind
+          the filter button so the list starts near the top of the screen. */}
+      <View style={[styles.filters, { paddingHorizontal: padding }]}>
         <Input
+          containerStyle={styles.searchField}
           placeholder="Search reference, name, number"
           value={query}
           onChangeText={setQuery}
@@ -131,96 +242,48 @@ export const TransactionReport: React.FC<Props> = ({
           autoCapitalize="none"
           returnKeyType="search"
         />
-        <Segmented
-          options={RANGES.map((r) => ({ key: r.key, label: r.label }))}
-          value={range}
-          onChange={setRange}
-        />
-        <Segmented
-          options={STATUSES.map((s) => ({ key: s, label: s === 'ALL' ? 'All status' : s }))}
-          value={status}
-          onChange={setStatus}
-        />
+        <Pressable
+          onPress={() => setFiltersOpen(true)}
+          style={({ pressed }) => [
+            styles.filterButton,
+            activeFilters > 0 && styles.filterButtonActive,
+            pressed && { opacity: 0.75 },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={
+            activeFilters > 0 ? `Filters, ${activeFilters} active` : 'Filters'
+          }
+        >
+          <MaterialCommunityIcons
+            name="tune-variant"
+            size={20}
+            color={activeFilters > 0 ? colors.accent : colors.foreground}
+          />
+          {activeFilters > 0 && (
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>{activeFilters}</Text>
+            </View>
+          )}
+        </Pressable>
       </View>
 
       {report.loading ? (
         <LoadingBlock label="Loading report" />
       ) : (
         <FlatList
-          data={rows}
-          keyExtractor={(item, index) => String(item?._id ?? item?.transactionId ?? index)}
+          data={items}
+          keyExtractor={keyExtractor}
           contentContainerStyle={{ padding, paddingBottom: padding * 2 + insets.bottom, gap }}
           refreshing={report.refreshing}
           onRefresh={report.refresh}
           initialNumToRender={12}
           windowSize={7}
           removeClippedSubviews
-          ListHeaderComponent={
-            <View style={{ gap }}>
-              {!!report.error && (
-                <Banner
-                  tone="error"
-                  message={report.error}
-                  action={{ label: 'Retry', onPress: report.reload }}
-                />
-              )}
-              <Grid columns={2}>
-                <Tile label="Transactions" value={String(totals.count)} />
-                <Tile label="Total volume" value={money(totals.volume)} />
-                <Tile label="Successful" value={money(totals.success)} tone="success" />
-                <Tile label="Failed" value={String(totals.failed)} tone="error" />
-              </Grid>
-            </View>
-          }
-          ListEmptyComponent={
-            <EmptyState
-              icon={emptyIcon}
-              title={query || status !== 'ALL' ? 'No matching entries' : emptyTitle}
-              subtitle={
-                query || status !== 'ALL'
-                  ? 'Try a wider date range or clear the filters.'
-                  : 'Completed transactions show up here.'
-              }
-              action={
-                query || status !== 'ALL'
-                  ? {
-                      label: 'Clear filters',
-                      onPress: () => {
-                        setQuery('');
-                        setStatus('ALL');
-                        setRange('all');
-                      },
-                    }
-                  : undefined
-              }
-            />
-          }
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => setSelected(item)}
-              style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
-              accessibilityRole="button"
-              accessibilityLabel={`${titleOf(item)}, ${money(amountOf(item))}, ${statusOf(item) ?? 'unknown status'}`}
-            >
-              <View style={styles.itemMain}>
-                <Text style={styles.itemTitle} numberOfLines={1}>
-                  {titleOf(item)}
-                </Text>
-                {!!subtitleOf?.(item) && (
-                  <Text style={styles.itemSubtitle} numberOfLines={1}>
-                    {subtitleOf(item)}
-                  </Text>
-                )}
-                <Text style={styles.itemDate}>{dateTime(dateOf(item))}</Text>
-              </View>
-              <View style={styles.itemRight}>
-                <Text style={styles.itemAmount} numberOfLines={1}>
-                  {money(amountOf(item))}
-                </Text>
-                <StatusPill status={statusOf(item)} />
-              </View>
-            </Pressable>
-          )}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={listEmpty}
+          renderItem={renderItem}
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={60}
         />
       )}
 
@@ -273,11 +336,105 @@ export const TransactionReport: React.FC<Props> = ({
           </View>
         </View>
       </Modal>
+
+      <Sheet
+        visible={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        title="Filters"
+        subtitle={`${rows.length} of ${report.data?.length ?? 0} entries`}
+        icon="tune-variant"
+        footer={
+          <View style={styles.sheetActions}>
+            <Button
+              variant="secondary"
+              onPress={() => {
+                clearFilters();
+                setFiltersOpen(false);
+              }}
+              style={styles.flex}
+            >
+              Clear all
+            </Button>
+            <Button icon="check" onPress={() => setFiltersOpen(false)} style={styles.flex}>
+              Show results
+            </Button>
+          </View>
+        }
+      >
+        <View style={styles.filterGroup}>
+          <Text style={styles.filterLabel}>Date range</Text>
+          <Segmented
+            options={RANGES.map((r) => ({ key: r.key, label: r.label }))}
+            value={range}
+            onChange={setRange}
+          />
+        </View>
+
+        {statuses.length > 1 && (
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>Status</Text>
+            <Segmented
+              options={statuses.map((value) => ({
+                key: value,
+                label: value === 'ALL' ? 'All status' : value,
+              }))}
+              value={status}
+              onChange={setStatus}
+            />
+          </View>
+        )}
+      </Sheet>
     </View>
   );
 };
 
-const Tile: React.FC<{ label: string; value: string; tone?: 'success' | 'error' }> = ({
+interface ReportItem {
+  item: any;
+  key: string;
+  title: string;
+  subtitle: string;
+  date: string;
+  amount: string;
+  status?: string;
+}
+
+/**
+ * Memoised: FlatList re-renders every visible row whenever renderItem changes
+ * identity, so with an inline renderItem a single keystroke re-rendered the
+ * whole viewport. All the display work is already done in `items`, leaving
+ * this a pure function of primitives.
+ */
+const ReportRow = React.memo<{ row: ReportItem; onPress: (item: any) => void }>(
+  ({ row, onPress }) => (
+    <Pressable
+      onPress={() => onPress(row.item)}
+      style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+      accessibilityRole="button"
+      accessibilityLabel={`${row.title}, ${row.amount}, ${row.status ?? 'unknown status'}`}
+    >
+      <View style={styles.itemMain}>
+        <Text style={styles.itemTitle} numberOfLines={1}>
+          {row.title}
+        </Text>
+        {!!row.subtitle && (
+          <Text style={styles.itemSubtitle} numberOfLines={1}>
+            {row.subtitle}
+          </Text>
+        )}
+        <Text style={styles.itemDate}>{row.date}</Text>
+      </View>
+      <View style={styles.itemRight}>
+        <Text style={styles.itemAmount} numberOfLines={1}>
+          {row.amount}
+        </Text>
+        <StatusPill status={row.status} />
+      </View>
+    </Pressable>
+  )
+);
+ReportRow.displayName = 'ReportRow';
+
+const Tile: React.FC<{ label: string; value: string; tone?: SummaryTile['tone'] }> = ({
   label,
   value,
   tone,
@@ -290,6 +447,7 @@ const Tile: React.FC<{ label: string; value: string; tone?: 'success' | 'error' 
       style={[
         styles.tileValue,
         tone === 'success' && { color: colors.success },
+        tone === 'warning' && { color: colors.warning },
         tone === 'error' && { color: colors.destructive },
       ]}
       numberOfLines={1}
@@ -303,12 +461,44 @@ const Tile: React.FC<{ label: string; value: string; tone?: 'success' | 'error' 
 const styles = themed((c) => ({
   container: { flex: 1, backgroundColor: c.background },
   filters: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
     paddingTop: space.md,
     paddingBottom: space.md,
     borderBottomWidth: 1,
     borderBottomColor: c.border,
     backgroundColor: c.background,
   },
+  searchField: { flex: 1 },
+  filterButton: {
+    width: TOUCH,
+    height: TOUCH,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: c.input,
+    backgroundColor: c.secondary,
+  },
+  filterButtonActive: { borderColor: c.accent, backgroundColor: c.accentSubtle },
+  filterBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 4,
+    borderRadius: radius.pill,
+    backgroundColor: c.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterBadgeText: { fontSize: 10, fontWeight: '700', color: c.accentForeground },
+  filterGroup: { gap: space.sm },
+  sheetActions: { flexDirection: 'row', gap: space.sm },
+  flex: { flex: 1 },
+  filterLabel: { fontSize: t.caption, fontWeight: '600', color: c.mutedForeground },
   tile: {
     padding: space.md,
     borderRadius: radius.md,

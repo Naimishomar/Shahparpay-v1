@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import api from '@/services/api';
 
 interface AsyncState<T> {
   data: T | null;
@@ -40,6 +41,9 @@ export function useAsync<T>(fetcher: () => Promise<T>, deps: any[] = [], enabled
       setLoading(false);
       return;
     }
+    // An explicit pull-to-refresh means "get me the real numbers", so the
+    // cached responses are dropped before the fetcher runs.
+    if (isRefresh) api.invalidateCache();
     isRefresh ? setRefreshing(true) : setLoading(true);
     setError(null);
     try {

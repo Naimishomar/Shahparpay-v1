@@ -51,6 +51,12 @@ export const RechargeScreen: React.FC = () => {
   }, [type]);
 
   const history = useAsync<any[]>(async () => (await api.getRechargeHistory()).data ?? [], []);
+
+  const checkStatus = useAction(async (transactionId: string) => {
+    const res = await api.getRechargeStatus(transactionId);
+    if (!res.success) throw new Error(res.message);
+    return res;
+  });
   const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
 
   const plans = useAction(async () => {
@@ -315,6 +321,7 @@ export const RechargeScreen: React.FC = () => {
           <CardTitle icon="history">Recharge history</CardTitle>
         </CardHeader>
         <CardContent>
+          {!!checkStatus.error && <ErrorBanner message={checkStatus.error} />}
           {history.loading ? null : history.data?.length ? (
             history.data.slice(0, 20).map((txn: any) => (
               <View key={txn._id || txn.transactionId} style={styles.item}>
@@ -325,6 +332,24 @@ export const RechargeScreen: React.FC = () => {
                 <Row label="Number" value={txn.metadata?.caNumber} />
                 <Row label="Reference" value={txn.transactionId} />
                 <Row label="Date" value={shortDate(txn.createdAt)} last />
+                {/* Operators settle asynchronously: a PENDING row can still
+                    flip to SUCCESS or FAILED minutes later. */}
+                {String(txn.status).toUpperCase() === 'PENDING' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon="refresh"
+                    onPress={async () => {
+                      const res = await checkStatus.run(txn.transactionId);
+                      if (res) history.reload();
+                    }}
+                    loading={checkStatus.pending}
+                    style={{ marginTop: space.sm }}
+                    fullWidth
+                  >
+                    Check operator status
+                  </Button>
+                )}
               </View>
             ))
           ) : (

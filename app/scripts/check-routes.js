@@ -52,6 +52,14 @@ for (const file of walk('src')) {
     if (!glyphs[m[1]].has(m[2])) bad.push(`${file}: <${m[1]} name="${m[2]}">`);
   }
 
+  // `icon="literal"` on our own components (Button, CardTitle, EmptyState,
+  // Banner, Sheet, BiometricCapture). Every one of them forwards the name to
+  // MaterialCommunityIcons, so a typo here renders "?" just as silently as a
+  // bad name on the icon component itself.
+  for (const m of src.matchAll(/\sicon="([^"]+)"/g)) {
+    if (!glyphs.MaterialCommunityIcons.has(m[1])) bad.push(`${file}: icon="${m[1]}"`);
+  }
+
   // data-driven icons: `icon: 'name'` in this file, rendered by one family
   const families = [...new Set([...src.matchAll(/<(Ionicons|MaterialCommunityIcons|FontAwesome5|MaterialIcons)\s+name=\{[a-z]\w*\.icon/g)].map((m) => m[1]))];
   if (families.length === 1) {

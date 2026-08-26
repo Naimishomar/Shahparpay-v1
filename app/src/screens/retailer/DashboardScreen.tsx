@@ -159,7 +159,7 @@ export const DashboardScreen: React.FC = () => {
             ))
           ) : (
             <EmptyState
-              icon="receipt-text-outline"
+              icon="text-box-outline"
               title="No transactions yet"
               subtitle="Your most recent sales will appear here"
               action={{ label: 'Browse services', onPress: () => navigation.navigate('Services') }}

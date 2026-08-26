@@ -9,7 +9,6 @@ interface ThemeContextType {
   theme: ThemeMode;
   resolvedTheme: 'light' | 'dark';
   setTheme: (theme: ThemeMode) => void;
-  toggleTheme: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -73,13 +72,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const toggleTheme = () => {
-    const themes: ThemeMode[] = ['light', 'dark', 'system'];
-    const currentIndex = themes.indexOf(theme);
-    const nextIndex = (currentIndex + 1) % themes.length;
-    setTheme(themes[nextIndex]);
-  };
-
   // Must run during render (not an effect) so styles read the right palette
   // on the very first paint.
   setActivePalette(resolvedTheme);
@@ -89,7 +81,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

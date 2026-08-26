@@ -8,6 +8,7 @@ import {
   postAepsTransactionWithGeoRecovery,
   isWebKycDone,
 } from '../utils/paysprint.util.js';
+import { getTwoFactorEndpoints, classifyTwoFactorResponse } from '../utils/aepsTwoFactor.js';
 import Retailer from '../models/users/retailer.model.js';
 import Distributor from '../models/users/distributor.model.js';
 import Transaction from '../models/transaction.model.js';
@@ -21,158 +22,64 @@ import {
 // than this threshold (PaySprint rule). At or below it, no OTP is needed.
 export const AEPS_OTP_THRESHOLD = 5000;
 
-// Helper function to resolve which bank pipe is verified for the merchant
-export const getVerifiedPipe = async (merchantcode, mobile) => {
-  // Check pipes in order of preference. We prioritize bank1 and bank5
-  // because bank2 (older gateway) often rejects L1 scanners providing FIR+FMR data.
-  // Note: bank1 is UAT-only and intentionally excluded.
-  const pipesToCheck = ['bank2', 'bank3', 'bank4', 'bank5', 'bank6'];
+/**
+ * The order pipes are tried in, shared by every caller so the app can never
+ * disagree with itself about which pipe a merchant is on. bank1 is UAT-only
+ * and deliberately excluded.
+ *
+ * ponytail: order is by PaySprint onboarding maturity, not scanner
+ * compatibility. bank2 is the oldest gateway and is known to be fussy with L1
+ * FMR+FIR captures; move bank5/bank6 ahead of it here if that starts biting.
+ */
+export const PIPE_PREFERENCE = ['bank2', 'bank3', 'bank4', 'bank5', 'bank6'];
 
-  for (const pipe of pipesToCheck) {
-    try {
-      const currentToken = generatePaySprintToken();
+/**
+ * Every pipe the merchant is approved on, in preference order. Checked in
+ * parallel — this used to be five sequential round trips on the critical path
+ * of every AEPS transaction.
+ */
+export const getApprovedPipes = async (merchantcode, mobile) => {
+  const results = await Promise.allSettled(
+    PIPE_PREFERENCE.map(async (pipe) => {
+      // A fresh JWT per request: PaySprint rejects a reused token.
       const headers = {
-        Token: currentToken,
+        Token: generatePaySprintToken(),
         Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
         'Content-Type': 'application/json',
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-        Accept: 'application/json',
       };
-
       const res = await axios.post(
         getOnboardStatusEndpoint(pipe),
-        {
-          merchantcode: merchantcode,
-          mobile: String(mobile),
-          pipe: pipe,
-        },
-        { headers, validateStatus: () => true }
+        { merchantcode, mobile: String(mobile), pipe },
+        { headers, validateStatus: () => true, timeout: 15000 }
       );
-      // Check if this pipe is approved - must be exactly "Accepted"
-      if (res.data && res.data.response_code === 1 && res.data.is_approved === 'Accepted') {
-        console.log(`[getVerifiedPipe] ✅ ${pipe} is verified and approved`);
-        return pipe;
-      } else {
-        console.log(
-          `[getVerifiedPipe] ❌ ${pipe} is NOT approved (is_approved: ${res.data?.is_approved})`
-        );
-      }
-    } catch (e) {
-      console.log(`[getVerifiedPipe] ⚠️ Error checking ${pipe}:`, e.message);
-    }
-  }
-
-  console.log(`[getVerifiedPipe] No verified pipes found, defaulting to bank2`);
-  return 'bank2';
-};
-
-// Helper function for merchant 2FA auth (used in cash withdrawal/deposit)
-const performMerchantAuth = async (merchantPidData, retailer, req) => {
-  const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
-
-  const twfPayload = {
-    latitude: req.body.latitude || '28.7041',
-    longitude: req.body.longitude || '77.1025',
-    mobilenumber: retailer.contactNumber || '9999999999',
-    referenceno: `AUTH${Date.now()}`,
-    ipaddress: req.ip === '::1' ? '127.0.0.1' : req.ip || '127.0.0.1',
-    adhaarnumber: retailer.aadhaarNumber,
-    accessmodetype: 'SITE',
-    data: merchantPidData,
-    submerchantid: retailer.retailerId,
-    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-    is_iris: 'No',
-  };
-
-  const twfToken = generatePaySprintToken();
-  const twfEncrypted = encryptPayload(JSON.stringify(twfPayload));
-  const twfHeaders = {
-    Token: twfToken,
-    Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-    'Content-Type': 'application/json',
-  };
-
-  console.log(`[MerchantAuth Request] Payload:`, JSON.stringify(twfPayload, null, 2));
-
-  const twfResponse = await axios.post(
-    `${baseUrl}/service/aeps/kyc/Twofactorkyc/authentication`,
-    { body: twfEncrypted },
-    { headers: twfHeaders, validateStatus: () => true }
+      const approved = res.data?.response_code === 1 && res.data?.is_approved === 'Accepted';
+      return { pipe, approved, is_approved: res.data?.is_approved };
+    })
   );
 
-  console.log(`[MerchantAuth Response]`, JSON.stringify(twfResponse.data, null, 2));
-
-  // Check if registration is needed
-  if (
-    twfResponse.data &&
-    (twfResponse.data.response_code === 2 ||
-      twfResponse.data.response_code === 24 ||
-      (twfResponse.data.message &&
-        twfResponse.data.message.toLowerCase().includes('registration is pending')))
-  ) {
-    console.log(`[MerchantAuth] Registration pending, attempting auto-register...`);
-
-    const regPayload = {
-      ...twfPayload,
-      referenceno: `REG${Date.now()}`,
-    };
-    const regEncrypted = encryptPayload(JSON.stringify(regPayload));
-    const regToken = generatePaySprintToken();
-    const regHeaders = {
-      Token: regToken,
-      Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-      'Content-Type': 'application/json',
-    };
-
-    const regResponse = await axios.post(
-      `${baseUrl}/service/aeps/kyc/Twofactorkyc/registration`,
-      { body: regEncrypted },
-      { headers: regHeaders, validateStatus: () => true }
-    );
-
-    if (regResponse.data && regResponse.data.response_code === 1) {
-      // Registration successful, try auth again with new token
-      const secondToken = generatePaySprintToken();
-      const secondHeaders = {
-        Token: secondToken,
-        Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-        'Content-Type': 'application/json',
-      };
-      const secondPayload = { ...twfPayload, referenceno: `AUTH${Date.now()}` };
-      const secondEncrypted = encryptPayload(JSON.stringify(secondPayload));
-      const secondResponse = await axios.post(
-        `${baseUrl}/service/aeps/kyc/Twofactorkyc/authentication`,
-        { body: secondEncrypted },
-        { headers: secondHeaders, validateStatus: () => true }
-      );
-
-      if (secondResponse.data && secondResponse.data.status) {
-        return { success: true, data: secondResponse.data };
-      } else {
-        return {
-          success: false,
-          message: 'Registration successful but auth failed. Please scan fingerprint again.',
-        };
-      }
-    } else {
-      return {
-        success: false,
-        message: regResponse.data?.message || 'Merchant 2FA Registration Failed',
-        needsWebOnboarding: true,
-      };
+  const approved = [];
+  results.forEach((result, index) => {
+    const pipe = PIPE_PREFERENCE[index];
+    if (result.status !== 'fulfilled') {
+      console.log(`[getApprovedPipes] ⚠️ ${pipe} check failed:`, result.reason?.message);
+      return;
     }
-  }
+    if (result.value.approved) {
+      console.log(`[getApprovedPipes] ✅ ${pipe} approved`);
+      approved.push(pipe);
+    } else {
+      console.log(`[getApprovedPipes] ❌ ${pipe} not approved (${result.value.is_approved})`);
+    }
+  });
+  return approved;
+};
 
-  // Check if auth was successful
-  if (twfResponse.data && twfResponse.data.status) {
-    return { success: true, data: twfResponse.data };
-  } else {
-    return {
-      success: false,
-      message: twfResponse.data?.message || 'Merchant 2FA Auth Failed',
-    };
-  }
+/** First approved pipe, or bank2 as a last resort so callers always get one. */
+export const getVerifiedPipe = async (merchantcode, mobile) => {
+  const approved = await getApprovedPipes(merchantcode, mobile);
+  if (approved.length) return approved[0];
+  console.log('[getVerifiedPipe] No verified pipes found, defaulting to bank2');
+  return 'bank2';
 };
 
 export const balanceEnquiry = async (req, res) => {
@@ -480,7 +387,6 @@ export const cashWithdrawal = async (req, res) => {
       aadhaarNumber,
       bankIIN,
       pidData,
-      merchantPidData,
       amount,
       latitude,
       longitude,
@@ -755,7 +661,6 @@ export const aadhaarPay = async (req, res) => {
       aadhaarNumber,
       bankIIN,
       pidData,
-      merchantPidData,
       amount,
       latitude,
       longitude,
@@ -999,7 +904,6 @@ export const cashDeposit = async (req, res) => {
       aadhaarNumber,
       bankIIN,
       pidData,
-      merchantPidData,
       amount,
       bankName,
       customerName,
@@ -1333,6 +1237,15 @@ export const sendMerchantOtp = async (req, res) => {
     }
     const selectedPipe = String(pipe || 'bank3').toLowerCase();
 
+    // This endpoint is bank3's OTP eKYC (kyc/V3). Running it for another pipe
+    // would mark that pipe active on a merchant who was never onboarded there.
+    if (selectedPipe !== 'bank3') {
+      return res.status(400).json({
+        success: false,
+        message: `OTP eKYC is only available on bank3. ${selectedPipe} uses the biometric activation flow instead.`,
+      });
+    }
+
     const blocked = await webKycBlocker(merchantcode, selectedPipe);
     if (blocked) return res.status(400).json({ success: false, ...blocked });
 
@@ -1355,7 +1268,9 @@ export const sendMerchantOtp = async (req, res) => {
     return res.status(200).json({ success: true, data: psData });
   } catch (error) {
     console.error('Send OTP Error:', error?.response?.data || error.message);
-    return res.status(500).json({ success: false, message: 'Internal Error', error: error.message });
+    return res
+      .status(500)
+      .json({ success: false, message: 'Internal Error', error: error.message });
   }
 };
 
@@ -1374,6 +1289,15 @@ export const verifyMerchantOtp = async (req, res) => {
       });
     }
     const selectedPipe = String(pipe || 'bank3').toLowerCase();
+
+    // This endpoint is bank3's OTP eKYC (kyc/V3). Running it for another pipe
+    // would mark that pipe active on a merchant who was never onboarded there.
+    if (selectedPipe !== 'bank3') {
+      return res.status(400).json({
+        success: false,
+        message: `OTP eKYC is only available on bank3. ${selectedPipe} uses the biometric activation flow instead.`,
+      });
+    }
 
     // STEP 1: validate the OTP that send_otp triggered.
     const verifyRes = await axios.post(
@@ -1421,7 +1345,9 @@ export const verifyMerchantOtp = async (req, res) => {
     return res.status(200).json({ success: true, data: kycData });
   } catch (error) {
     console.error('Verify OTP Error:', error?.response?.data || error.message);
-    return res.status(500).json({ success: false, message: 'Internal Error', error: error.message });
+    return res
+      .status(500)
+      .json({ success: false, message: 'Internal Error', error: error.message });
   }
 };
 
@@ -1462,6 +1388,81 @@ const deductDailyAuthCharge = async (merchantcode, pipe) => {
   }
 };
 
+/**
+ * Runs one 2FA attempt (auth, then registration + re-auth when the pipe needs
+ * it) against a single pipe. Returns a classification the caller can act on
+ * rather than a raw provider response.
+ */
+const attemptTwoFactor = async ({ pipe, payload, baseUrl }) => {
+  const endpoints = getTwoFactorEndpoints(pipe);
+  if (!endpoints) {
+    // bank4 publishes no 2FA endpoint. Silently posting to bank2's URL (the
+    // old behaviour) produced a misleading partner error.
+    return {
+      outcome: 'unsupported',
+      nextPipe: true,
+      message: `${pipe} does not support daily 2FA authentication.`,
+    };
+  }
+
+  const post = async (path, body) => {
+    // A fresh JWT per call: PaySprint rejects a reused token on the second hop.
+    const headers = {
+      Token: generatePaySprintToken(),
+      Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
+      'Content-Type': 'application/json',
+    };
+    const response = await axios.post(
+      `${baseUrl}${path}`,
+      { body: encryptPayload(JSON.stringify(body)) },
+      { headers, validateStatus: () => true }
+    );
+    return response.data;
+  };
+
+  const authData = await post(endpoints.auth, payload);
+  console.log(
+    `[DailyAuth] ${pipe} auth response_code=${authData?.response_code}`,
+    JSON.stringify(authData)
+  );
+  let verdict = classifyTwoFactorResponse(authData, { stage: 'auth' });
+
+  if (verdict.outcome !== 'needs_registration') {
+    return { ...verdict, data: authData, pipe };
+  }
+
+  if (!endpoints.register) {
+    // bank5/bank6 have no registration step; onboarding is the only fix.
+    return {
+      outcome: 'needs_web_onboarding',
+      message: `${pipe} has no separate 2FA registration. Complete Web KYC for this pipe first.`,
+      data: authData,
+      pipe,
+    };
+  }
+
+  console.log(`[DailyAuth] ${pipe} registration pending, auto-registering...`);
+  const regData = await post(endpoints.register, { ...payload, referenceno: `REG${Date.now()}` });
+  console.log(
+    `[DailyAuth] ${pipe} register response_code=${regData?.response_code}`,
+    JSON.stringify(regData)
+  );
+  const regVerdict = classifyTwoFactorResponse(regData, { stage: 'register' });
+
+  if (regVerdict.outcome !== 'registered') {
+    return { ...regVerdict, data: regData, pipe };
+  }
+
+  // Registration accepted — retry auth with a fresh reference number.
+  const retryData = await post(endpoints.auth, { ...payload, referenceno: `AUTH${Date.now()}` });
+  console.log(
+    `[DailyAuth] ${pipe} re-auth response_code=${retryData?.response_code}`,
+    JSON.stringify(retryData)
+  );
+  verdict = classifyTwoFactorResponse(retryData, { stage: 'auth' });
+  return { ...verdict, data: retryData, pipe };
+};
+
 export const dailyAuth = async (req, res) => {
   try {
     const { merchantcode, aadhaarNumber, mobileNumber, pidData, latitude, longitude } = req.body;
@@ -1484,15 +1485,19 @@ export const dailyAuth = async (req, res) => {
       }
     }
 
-    // Determine which pipe to use
-    const pipe = await getVerifiedPipe(merchantcode, actualMobile);
-    console.log(`[DailyAuth] Using pipe: ${pipe}`);
+    // Every approved pipe, not just the first: a pipe the partner account has
+    // no entitlement for (response_code 13) is a dead end for THIS pipe only,
+    // and dead-ending there left the retailer permanently unable to transact.
+    const requested = String(req.body.pipe || '').toLowerCase();
+    let pipes = await getApprovedPipes(merchantcode, actualMobile);
+    if (requested) pipes = [requested, ...pipes.filter((p) => p !== requested)];
+    if (!pipes.length) pipes = [await getVerifiedPipe(merchantcode, actualMobile)];
+    console.log(`[DailyAuth] Pipes to try: ${pipes.join(', ')}`);
 
-    const payload = {
+    const basePayload = {
       latitude: String(latitude || '28.7041'),
       longitude: String(longitude || '77.1025'),
       mobilenumber: String(actualMobile || '9999999999'),
-      referenceno: `AUTH${Date.now()}`,
       ipaddress: req.ip
         ? req.ip === '::1'
           ? '127.0.0.1'
@@ -1505,220 +1510,69 @@ export const dailyAuth = async (req, res) => {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
       is_iris: 'No',
     };
-    console.log('========== DAILY AUTH PAYLOAD ==========');
-    console.log(JSON.stringify(payload, null, 2));
-    console.log('========================================');
 
-    const token = generatePaySprintToken();
-    const encryptedData = encryptPayload(JSON.stringify(payload));
+    const attempts = [];
+    for (const pipe of pipes) {
+      const verdict = await attemptTwoFactor({
+        pipe,
+        baseUrl,
+        payload: { ...basePayload, referenceno: `AUTH${Date.now()}` },
+      });
+      attempts.push({ pipe, outcome: verdict.outcome, message: verdict.message });
 
-    const headers = {
-      Token: token,
-      Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-      'Content-Type': 'application/json',
-    };
+      if (verdict.outcome === 'success' || verdict.outcome === 'already_done') {
+        const updateData = { lastDailyAuthDate: new Date() };
+        updateData[`dailyAuthDates.${pipe}`] = new Date();
+        await Retailer.findOneAndUpdate({ retailerId: merchantcode }, updateData);
 
-    // First attempt: Try daily auth login
-    const authEndpoint =
-      pipe === 'bank3'
-        ? '/service/aeps/kyc/Twofactorkyc/auth_login'
-        : '/service/aeps/kyc/Twofactorkyc/authentication';
+        // Idempotent: deductDailyAuthCharge only bills once per calendar day.
+        const dailyAuthCharge = await deductDailyAuthCharge(merchantcode, pipe);
 
-    let response = await axios.post(
-      `${baseUrl}${authEndpoint}`,
-      { body: encryptedData },
-      { headers, validateStatus: () => true }
-    );
-
-    let resultData = response.data;
-    console.log(`[DailyAuth] Auth response code: ${resultData?.response_code}`);
-    console.log(`[DailyAuth] Auth response:`, JSON.stringify(resultData, null, 2));
-
-    // Check if the merchant is onboarded but not registered for 2FA
-    // Sometimes authentication returns 24 even when onboarded, but registration might work
-    const needsRegistration =
-      resultData &&
-      (resultData.response_code === 2 ||
-        resultData.response_code === 24 ||
-        (resultData.message &&
-          resultData.message.toLowerCase().includes('registration is pending')) ||
-        (resultData.message && resultData.message.toLowerCase().includes('not registered')) ||
-        (resultData.message && resultData.message.toLowerCase().includes('onboading is pending')));
-
-    if (needsRegistration) {
-      console.log(`[DailyAuth] Registration pending detected. Attempting auto-registration...`);
-
-      // Create registration payload with NEW reference number
-      const regPayload = {
-        ...payload,
-        referenceno: `REG${Date.now()}`,
-      };
-
-      const regEncryptedData = encryptPayload(JSON.stringify(regPayload));
-
-      // Generate a NEW JWT token for registration
-      const regToken = generatePaySprintToken();
-      const regHeaders = {
-        Token: regToken,
-        Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-        'Content-Type': 'application/json',
-      };
-
-      console.log(`[DailyAuth] Registration payload:`, JSON.stringify(regPayload, null, 2));
-
-      try {
-        const regEndpoint =
-          pipe === 'bank3'
-            ? '/service/aeps/kyc/Twofactorkyc/register_agent'
-            : '/service/aeps/kyc/Twofactorkyc/registration';
-
-        const regResponse = await axios.post(
-          `${baseUrl}${regEndpoint}`,
-          { body: regEncryptedData },
-          { headers: regHeaders, validateStatus: () => true }
-        );
-
-        console.log(
-          `[DailyAuth] Registration response:`,
-          JSON.stringify(regResponse.data, null, 2)
-        );
-
-        const regData = regResponse.data;
-
-        // Check if registration was successful (response_code 1)
-        if (regData && regData.response_code === 1) {
-          // Registration successful! Now try the login again
-          console.log(`[DailyAuth] Registration successful! Attempting login again...`);
-
-          // Re-generate token for the second auth attempt
-          const secondToken = generatePaySprintToken();
-          const secondHeaders = {
-            Token: secondToken,
-            Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-            'Content-Type': 'application/json',
-          };
-
-          // Use a NEW auth payload (with new AUTH reference, not REG)
-          const secondPayload = { ...payload, referenceno: `AUTH${Date.now()}` };
-          const secondEncrypted = encryptPayload(JSON.stringify(secondPayload));
-
-          const secondResponse = await axios.post(
-            `${baseUrl}${authEndpoint}`,
-            { body: secondEncrypted },
-            { headers: secondHeaders, validateStatus: () => true }
-          );
-
-          const secondResult = secondResponse.data;
-          console.log(
-            `[DailyAuth] Second auth attempt response:`,
-            JSON.stringify(secondResult, null, 2)
-          );
-
-          if (secondResult && secondResult.status) {
-            // Update merchant's daily auth date for this specific pipe
-            const updateData = { lastDailyAuthDate: new Date() };
-            updateData[`dailyAuthDates.${pipe}`] = new Date();
-
-            await Retailer.findOneAndUpdate({ retailerId: merchantcode }, updateData);
-
-            // Cut ₹1 from the merchant's MAIN wallet for the daily 2FA auth
-            const dailyAuthCharge = await deductDailyAuthCharge(merchantcode, pipe);
-
-            return res.status(200).json({
-              success: true,
-              message: 'Registration and Daily Auth Successful!',
-              data: secondResult,
-              dailyAuthCharge,
-            });
-          } else {
-            // If second auth fails, the merchant might need to complete web onboarding
-            return res.status(400).json({
-              success: false,
-              message:
-                'Registration successful but login failed. Please complete Web Onboarding first.',
-              data: secondResult,
-              needsWebOnboarding: true,
-              pipe: pipe,
-            });
-          }
-        } else if (regData && regData.response_code === 24) {
-          // Registration returned 24 - merchant needs web onboarding
-          return res.status(400).json({
-            success: false,
-            message: 'Merchant needs to complete Web Onboarding first.',
-            data: regData,
-            needsWebOnboarding: true,
-            pipe: pipe,
-          });
-        } else {
-          // Registration failed for other reasons
-          const regMsg = (regData?.message || '').toLowerCase();
-          const isDeviceMapped =
-            regData?.response_code === 26 ||
-            (regData?.response_code === 27 && regMsg.includes('mapped')) ||
-            regMsg.includes('already mapped') ||
-            regMsg.includes('mapped with other merchant');
-          const isDeviceError =
-            isDeviceMapped || regMsg.includes('device') || regMsg.includes('capture failed');
-          return res.status(400).json({
-            success: false,
-            message: isDeviceMapped
-              ? 'Your biometric scanner is already mapped to another merchant on this pipe. Please contact your service provider to unbind the device, or use a different scanner.'
-              : regData?.message || '2FA Registration Failed.',
-            data: regData,
-            needsWebOnboarding: !isDeviceError,
-            deviceMapped: isDeviceMapped,
-            pipe: pipe,
-          });
-        }
-      } catch (regError) {
-        console.error(
-          `[DailyAuth] Registration API error:`,
-          regError?.response?.data || regError.message
-        );
-        return res.status(500).json({
-          success: false,
+        return res.status(200).json({
+          success: true,
           message:
-            'Registration API error: ' + (regError?.response?.data?.message || regError.message),
-          error: regError?.response?.data || regError.message,
+            verdict.outcome === 'already_done'
+              ? 'Daily authentication was already complete for today.'
+              : 'Daily Auth Successful',
+          pipe,
+          data: verdict.data,
+          dailyAuthCharge,
+          attempts,
         });
       }
+
+      // Only pipe-level dead ends are worth retrying elsewhere. A blocked
+      // merchant, a bad fingerprint or a credential fault fails the same way
+      // on every pipe, so stop and say so.
+      if (!verdict.nextPipe) {
+        return res.status(400).json({
+          success: false,
+          message: verdict.message,
+          outcome: verdict.outcome,
+          pipe,
+          data: verdict.data,
+          needsWebOnboarding: verdict.outcome === 'needs_web_onboarding',
+          deviceMapped: verdict.outcome === 'device_mapped',
+          retryable: !!verdict.retryable,
+          attempts,
+        });
+      }
+
+      console.log(`[DailyAuth] ${pipe} unusable (${verdict.outcome}); trying next pipe.`);
     }
 
-    // Handle successful login (no registration needed)
-    if (resultData && resultData.status) {
-      // Update merchant's daily auth date for this specific pipe
-      const updateData = { lastDailyAuthDate: new Date() };
-      updateData[`dailyAuthDates.${pipe}`] = new Date();
-
-      await Retailer.findOneAndUpdate({ retailerId: merchantcode }, updateData);
-
-      // Cut ₹1 from the merchant's MAIN wallet for the daily 2FA auth
-      const dailyAuthCharge = await deductDailyAuthCharge(merchantcode, pipe);
-
-      return res.status(200).json({
-        success: true,
-        message: 'Daily Auth Successful',
-        data: resultData,
-        dailyAuthCharge,
-      });
-    } else {
-      // Login failed for other reasons
-      // Check if the merchant needs web onboarding
-      const needsWebOnboarding =
-        resultData &&
-        (resultData.response_code === 24 ||
-          (resultData.message &&
-            resultData.message.toLowerCase().includes('onboading is pending')));
-
-      return res.status(400).json({
-        success: false,
-        message: resultData?.message || 'Daily Auth Failed',
-        data: resultData,
-        needsWebOnboarding: needsWebOnboarding,
-        pipe: pipe,
-      });
-    }
+    // Every pipe refused at the pipe level.
+    const last = attempts[attempts.length - 1];
+    return res.status(400).json({
+      success: false,
+      message: attempts.every(
+        (a) => a.outcome === 'pipe_not_activated' || a.outcome === 'unsupported'
+      )
+        ? 'No AEPS bank pipe is activated on the Shahparpay partner account. Ask PaySprint to enable a pipe — this cannot be fixed from the retailer side.'
+        : last?.message || 'Daily authentication failed on every available pipe.',
+      outcome: last?.outcome || 'failed',
+      attempts,
+    });
   } catch (error) {
     console.error('Daily Auth Error:', error?.response?.data || error.message);
     return res.status(500).json({
@@ -1742,7 +1596,7 @@ export const syncMerchantPipes = async (merchantcode) => {
       'Content-Type': 'application/json',
     };
 
-    const pipesToCheck = ['bank2', 'bank4', 'bank5', 'bank6', 'bank3'];
+    const pipesToCheck = PIPE_PREFERENCE;
     const activePipes = [];
     let isActuallyOnboarded = false;
 
@@ -2128,10 +1982,7 @@ export const getPipeOnboardingPlan = async (req, res) => {
       const data = statusRes.data || {};
       is_approved = data.is_approved || null;
       message = data.message || null;
-      console.log(
-        `[getPipeOnboardingPlan] ${pipeNorm} getonboardstatus:`,
-        JSON.stringify(data)
-      );
+      console.log(`[getPipeOnboardingPlan] ${pipeNorm} getonboardstatus:`, JSON.stringify(data));
       if (data.response_code === 1 && is_approved === 'Accepted') status = 'ACCEPTED';
       else if (
         is_approved === 'Pending' ||

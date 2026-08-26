@@ -39,7 +39,15 @@ export const LandingScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.hero}>
-          <Image source={require('@/assets/logo.png')} style={styles.logo} resizeMode="contain" />
+          <Image
+            source={require('@/assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+            // Black-on-transparent asset: untinted it disappears on the dark
+            // background. One tint keeps a single file correct in both themes.
+            tintColor={colors.foreground}
+            accessibilityLabel="Shahparpay"
+          />
           <Text style={styles.heading} accessibilityRole="header">
             One app for every counter service
           </Text>
@@ -82,7 +90,7 @@ export const LandingScreen: React.FC = () => {
           </View>
         </View>
 
-        <Text style={styles.footer}>© {new Date().getFullYear()} Shahparpay Networks</Text>
+        <Text style={styles.footer}>© {new Date().getFullYear()} Shahparpay Solutions Pvt. Ltd.</Text>
       </ScrollView>
     </View>
   );

@@ -6,7 +6,7 @@ export interface User {
   role: UserRole;
   code?: string;
   retailerId?: string;
-  distributorId?: string;
+  distributorId?: string | { distributorId?: string; name?: string };
   adminId?: string;
   name: string;
   email: string;
@@ -15,7 +15,21 @@ export interface User {
   isMerchantKycComplete?: boolean;
   activeAepsPipes?: string[];
   aadhaarNumber?: string;
+  aadhaarPicture?: string;
+  panNumber?: string;
+  panPicture?: string;
   dob?: string;
+  businessName?: string;
+  businessAddress?: string;
+  gstNumber?: string;
+  isActive?: boolean;
+  address?: {
+    city?: string;
+    landmark?: string;
+    district?: string;
+    state?: string;
+  };
+  createdAt?: string;
 }
 
 export interface AuthState {

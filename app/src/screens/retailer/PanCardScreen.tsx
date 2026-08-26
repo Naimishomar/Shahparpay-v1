@@ -16,6 +16,7 @@ import {
   money,
   shortDate,
 } from '@/components/ui/Screen';
+import { PsaRegistrationSheet } from '@/components/pan/PsaRegistrationSheet';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import { INDIAN_STATES } from '@/constants';
 import api from '@/services/api';
@@ -120,8 +121,13 @@ const EsevaTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void }> 
     return res;
   });
 
-  const checkStatus = useAction(async () => {
-    const res = await api.getPanServiceStatus(statusQuery.trim());
+  // Agency applications and coupon purchases have separate application
+  // numbers at eSeva, so each is queried against its own endpoint.
+  const checkStatus = useAction(async (kind: 'service' | 'coupon') => {
+    const res =
+      kind === 'coupon'
+        ? await api.getPanCouponStatus(statusQuery.trim())
+        : await api.getPanServiceStatus(statusQuery.trim());
     if (!res.success) throw new Error(res.message);
     return res;
   });
@@ -290,19 +296,34 @@ const EsevaTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void }> 
             leftIcon="identifier"
           />
           {!!checkStatus.error && <ErrorBanner message={checkStatus.error} />}
-          <Button
-            variant="outline"
-            onPress={async () => {
-              const res = await checkStatus.run();
-              if (res) onNotice(res.message || `Status: ${res.data?.status ?? 'updated'}`);
-            }}
-            loading={checkStatus.pending}
-            disabled={statusQuery.trim().length < 4}
-            icon="magnify"
-            fullWidth
-          >
-            Check status
-          </Button>
+          <View style={styles.statusRow}>
+            <Button
+              variant="outline"
+              onPress={async () => {
+                const res = await checkStatus.run('service');
+                if (res) onNotice(res.message || `Status: ${res.data?.status ?? 'updated'}`);
+              }}
+              loading={checkStatus.pending}
+              disabled={statusQuery.trim().length < 4}
+              icon="store-search-outline"
+              style={styles.flex}
+            >
+              Agency
+            </Button>
+            <Button
+              variant="outline"
+              onPress={async () => {
+                const res = await checkStatus.run('coupon');
+                if (res) onNotice(res.message || `Status: ${res.data?.status ?? 'updated'}`);
+              }}
+              loading={checkStatus.pending}
+              disabled={statusQuery.trim().length < 4}
+              icon="ticket-confirmation-outline"
+              style={styles.flex}
+            >
+              Coupon
+            </Button>
+          </View>
         </CardContent>
       </Card>
     </>
@@ -318,6 +339,7 @@ const BiometricTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void
   const [linkPsaId, setLinkPsaId] = useState('');
   const [manualStatus, setManualStatus] = useState('APPROVED');
   const [couponAmount, setCouponAmount] = useState('');
+  const [showRegister, setShowRegister] = useState(false);
 
   const psa = useAsync<any>(async () => await api.getMyPsaStatus(), []);
 
@@ -363,8 +385,16 @@ const BiometricTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void
           <CardContent style={styles.form}>
             <Banner
               tone="info"
-              message="Registering a new biometric PSA agent requires a fingerprint capture from a certified RD service, which this build cannot drive. Register from the web portal, then link the PSA ID here."
+              message="Register once as a biometric PSA agent to start filing PAN applications. Already registered elsewhere? Link the PSA ID instead."
             />
+            <Button
+              icon="account-plus-outline"
+              onPress={() => setShowRegister(true)}
+              size="lg"
+              fullWidth
+            >
+              Register as PSA agent
+            </Button>
             <Input
               label="Existing PSA ID"
               value={linkPsaId}
@@ -460,6 +490,16 @@ const BiometricTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void
           </CardContent>
         </Card>
       )}
+
+      <PsaRegistrationSheet
+        visible={showRegister}
+        kind="biometric"
+        onClose={() => setShowRegister(false)}
+        onDone={(message) => {
+          onNotice(message);
+          psa.reload();
+        }}
+      />
     </>
   );
 };
@@ -471,6 +511,7 @@ const StandardTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void 
   onDone,
 }) => {
   const [couponAmount, setCouponAmount] = useState('');
+  const [showRegister, setShowRegister] = useState(false);
 
   const psa = useAsync<any>(async () => await api.getMyStdPsaStatus(), []);
   const password = useAction(async () => {
@@ -500,16 +541,36 @@ const StandardTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void 
           <Row label="PSA ID" value={existing?.psa_id || 'Not registered'} />
           <Row label="Status" value={<StatusPill status={existing?.status || 'PENDING'} />} />
           <Row label="Registered" value={shortDate(existing?.createdAt)} last />
+          {/* The provider only accepts a resubmission after a rejection. */}
+          {['REJECTED', 'FAILED'].includes(String(existing?.status).toUpperCase()) && (
+            <Button
+              variant="outline"
+              icon="refresh"
+              onPress={() => setShowRegister(true)}
+              style={{ marginTop: space.md }}
+              fullWidth
+            >
+              Fix and resubmit application
+            </Button>
+          )}
         </CardContent>
       </Card>
 
       {!hasPsa ? (
         <Card>
-          <CardContent>
+          <CardContent style={styles.form}>
             <Banner
               tone="info"
-              message="Standard PSA registration needs signed agreement documents uploaded from the web portal. Once approved it appears here and you can buy coupons."
+              message="Register as a standard PSA agent to file PAN applications through the PSA portal. Approval usually takes a working day."
             />
+            <Button
+              icon="account-plus-outline"
+              onPress={() => setShowRegister(true)}
+              size="lg"
+              fullWidth
+            >
+              Register as standard PSA
+            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -569,11 +630,24 @@ const StandardTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void 
           </Card>
         </>
       )}
+
+      <PsaRegistrationSheet
+        visible={showRegister}
+        kind="standard"
+        existing={existing}
+        onClose={() => setShowRegister(false)}
+        onDone={(message) => {
+          onNotice(message);
+          psa.reload();
+        }}
+      />
     </>
   );
 };
 
 const styles = themed((c) => ({
+  statusRow: { flexDirection: 'row', gap: space.sm },
+  flex: { flex: 1 },
   form: { gap: space.lg },
   picker: { gap: space.sm, padding: space.sm, borderRadius: radius.md, backgroundColor: c.secondary },
   pickerList: { maxHeight: 220 },

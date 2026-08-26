@@ -23,7 +23,13 @@
         "foregroundImage": "./src/assets/icon.png",
         "backgroundColor": "#FAFAFA"
       },
-      "package": "com.shahparpay.app"
+      "package": "com.shahparpay.app",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./src/assets/icon.png",
@@ -38,7 +44,21 @@
           "resizeMode": "contain",
           "backgroundColor": "#FAFAFA"
         }
-      ]
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Shahparpay records your shop location with every AEPS and DMT transaction, as required by NPCI."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Shahparpay needs your photo library to attach deposit slips and your profile photo.",
+          "cameraPermission": "Shahparpay needs the camera to photograph deposit slips and KYC documents."
+        }
+      ],
+      "./plugins/withRdServiceQueries"
     ],
     "scheme": "shahparpay",
     "extra": {

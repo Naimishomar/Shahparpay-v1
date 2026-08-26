@@ -5,6 +5,8 @@ import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Screen, Banner, ErrorBanner, Row, StatusPill, shortDate } from '@/components/ui/Screen';
+import { MerchantKycSheet } from '@/components/aeps/MerchantKycSheet';
+import { DailyAuthSheet } from '@/components/aeps/DailyAuthSheet';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/services/api';
@@ -12,6 +14,8 @@ import api from '@/services/api';
 export const KycStatusScreen: React.FC = () => {
   const { user } = useAuth();
   const [openError, setOpenError] = useState('');
+  const [showKyc, setShowKyc] = useState(false);
+  const [showDailyAuth, setShowDailyAuth] = useState(false);
 
   const merchantId = user?.retailerId || user?.code || '';
   const status = useAsync<any>(
@@ -148,6 +152,24 @@ export const KycStatusScreen: React.FC = () => {
           >
             {kycDone ? 'Reopen onboarding portal' : 'Start web KYC'}
           </Button>
+          <Button
+            variant="outline"
+            icon="fingerprint"
+            onPress={() => setShowKyc(true)}
+            disabled={!merchantId}
+            fullWidth
+          >
+            {kycDone ? 'Run eKYC on another pipe' : 'Complete biometric eKYC'}
+          </Button>
+          <Button
+            variant="outline"
+            icon="shield-key-outline"
+            onPress={() => setShowDailyAuth(true)}
+            disabled={!merchantId || !!status.data?.isDailyAuthDoneToday}
+            fullWidth
+          >
+            {status.data?.isDailyAuthDoneToday ? 'Daily 2FA done for today' : 'Do daily 2FA now'}
+          </Button>
         </CardContent>
       </Card>
 
@@ -162,7 +184,7 @@ export const KycStatusScreen: React.FC = () => {
             {planSteps.map((step: any, i: number) => (
               <Row
                 key={i}
-                label={step.label || step.name || `Step ${i + 1}`}
+                label={step.title || step.label || `Step ${i + 1}`}
                 value={<StatusPill status={step.done ? 'COMPLETED' : 'PENDING'} />}
                 last={i === planSteps.length - 1}
               />
@@ -177,6 +199,23 @@ export const KycStatusScreen: React.FC = () => {
           message="After completing onboarding in the browser, come back and pull down to refresh this screen."
         />
       )}
+
+      <MerchantKycSheet
+        visible={showKyc}
+        initialPipe={targetPipe}
+        onClose={() => setShowKyc(false)}
+        onCompleted={() => {
+          status.refresh();
+          plan.refresh();
+          pipes.refresh();
+        }}
+      />
+      <DailyAuthSheet
+        visible={showDailyAuth}
+        onClose={() => setShowDailyAuth(false)}
+        onCompleted={status.refresh}
+        onNeedsKyc={() => setShowKyc(true)}
+      />
     </Screen>
   );
 };

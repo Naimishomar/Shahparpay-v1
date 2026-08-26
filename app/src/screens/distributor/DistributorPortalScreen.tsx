@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,7 +17,11 @@ import {
   money,
   shortDate,
 } from '@/components/ui/Screen';
+import { ImageField } from '@/components/ui/ImageField';
+import { OnboardMemberSheet } from '@/components/network/OnboardMemberSheet';
+import { EditRetailerSheet } from '@/components/network/EditRetailerSheet';
 import { useAsync, useAction } from '@/hooks/useAsync';
+import type { PickedFile } from '@/services/imagePicker';
 import api from '@/services/api';
 
 const TABS = [
@@ -39,6 +44,9 @@ export const DistributorPortalScreen: React.FC = () => {
   const [bankUtr, setBankUtr] = useState('');
   const [depositDate, setDepositDate] = useState(today());
   const [ownRemarks, setOwnRemarks] = useState('');
+  const [ownSlip, setOwnSlip] = useState<PickedFile | null>(null);
+  const [onboarding, setOnboarding] = useState(false);
+  const [selectedRetailer, setSelectedRetailer] = useState<any | null>(null);
 
   const stats = useAsync<any>(async () => (await api.getDistributorStats()).data, []);
   const retailers = useAsync<any[]>(async () => (await api.getDistributorRetailers()).data ?? [], []);
@@ -62,13 +70,16 @@ export const DistributorPortalScreen: React.FC = () => {
   });
 
   const requestFunds = useAction(async () => {
-    const res = await api.createDistributorFundRequest({
-      transactionMode: mode,
-      amount: Number(amount),
-      bankUtr: bankUtr.trim(),
-      depositDate,
-      remarks: ownRemarks.trim(),
-    });
+    const res = await api.createDistributorFundRequest(
+      {
+        transactionMode: mode,
+        amount: Number(amount),
+        bankUtr: bankUtr.trim(),
+        depositDate,
+        remarks: ownRemarks.trim(),
+      },
+      ownSlip ?? undefined
+    );
     if (!res.success) throw new Error(res.message);
     return res;
   });
@@ -188,11 +199,26 @@ export const DistributorPortalScreen: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <Button
+              icon="account-plus-outline"
+              onPress={() => setOnboarding(true)}
+              style={{ marginBottom: space.md }}
+              fullWidth
+            >
+              Onboard a retailer
+            </Button>
             {retailers.loading ? null : retailers.data?.length ? (
               retailers.data.map((ret: any, i: number) => (
-                <View
+                <Pressable
                   key={ret._id}
-                  style={[styles.listItem, i === retailers.data!.length - 1 && styles.listItemLast]}
+                  onPress={() => setSelectedRetailer(ret)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${ret.businessName || ret.name || ret.retailerId}`}
+                  style={({ pressed }) => [
+                    styles.listItem,
+                    i === retailers.data!.length - 1 && styles.listItemLast,
+                    pressed && { opacity: 0.7 },
+                  ]}
                 >
                   <View style={styles.listInfo}>
                     <Text style={styles.listName} numberOfLines={1}>
@@ -209,10 +235,20 @@ export const DistributorPortalScreen: React.FC = () => {
                     <Text style={styles.listAmount}>{money(ret.commissionsEarned)}</Text>
                     <StatusPill status={ret.isActive ? 'ACTIVE' : 'INACTIVE'} />
                   </View>
-                </View>
+                  <MaterialCommunityIcons
+                    name="chevron-right"
+                    size={20}
+                    color={colors.mutedForeground}
+                  />
+                </Pressable>
               ))
             ) : (
-              <EmptyState icon="store-outline" title="No retailers yet" />
+              <EmptyState
+                icon="store-outline"
+                title="No retailers yet"
+                subtitle="Onboard your first retailer to start earning commission"
+                action={{ label: 'Onboard a retailer', onPress: () => setOnboarding(true) }}
+              />
             )}
           </CardContent>
         </Card>
@@ -256,6 +292,12 @@ export const DistributorPortalScreen: React.FC = () => {
                 onChangeText={setDepositDate}
                 placeholder="YYYY-MM-DD"
                 leftIcon="calendar-outline"
+              />
+              <ImageField
+                label="Deposit slip"
+                value={ownSlip}
+                onChange={setOwnSlip}
+                helperText="A photo of the receipt gets your request approved faster"
               />
               <Input
                 label="Remarks"
@@ -311,6 +353,24 @@ export const DistributorPortalScreen: React.FC = () => {
             </CardContent>
           </Card>
         </>
+      )}
+
+      <OnboardMemberSheet
+        visible={onboarding}
+        kind="retailer"
+        onClose={() => setOnboarding(false)}
+        onCreated={() => {
+          retailers.reload();
+          stats.reload();
+        }}
+      />
+
+      {!!selectedRetailer && (
+        <EditRetailerSheet
+          retailer={selectedRetailer}
+          onClose={() => setSelectedRetailer(null)}
+          onSaved={retailers.reload}
+        />
       )}
     </Screen>
   );

@@ -33,6 +33,24 @@ for (const [name, w, h] of DEVICES) {
   assert.ok(l.sidebarWidth < w, `${name}: sidebar covers the whole screen`);
 }
 
+// The Grid sizes children against its own measured width, so the same column
+// arithmetic has to hold for a container narrower than the screen — a grid
+// inside a card loses that card's horizontal padding on both sides.
+for (const [name, w, h] of DEVICES) {
+  const l = responsiveLayout(w, h);
+  // A card nested one level deep: screen gutters, then the card's own padding.
+  const nested = l.contentWidth - 16 * 2;
+  for (const columns of [1, 2, 3, 4]) {
+    const width = Math.floor((nested - l.gap * (columns - 1)) / columns);
+    if (width <= 0) continue; // too narrow for that many columns; caller picks fewer
+    const rowWidth = width * columns + l.gap * (columns - 1);
+    assert.ok(
+      rowWidth <= nested,
+      `${name}: ${columns} columns (${rowWidth}px) overflow a nested ${nested}px container`
+    );
+  }
+}
+
 // A phone in landscape must not still be treated as a tablet-width grid.
 assert.strictEqual(responsiveLayout(320, 568).columns, 1, 'SE should be single column');
 assert.strictEqual(responsiveLayout(393, 851).columns, 2, 'standard phone should be two columns');

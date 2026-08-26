@@ -2,42 +2,52 @@ import { StyleSheet } from 'react-native';
 
 /**
  * Design system: "Trust & Authority" — Minimalism/Swiss for a fintech retailer
- * app. Navy surfaces carry the trust signal, gold is the single brand accent,
- * and every functional colour (success/warn/danger) is paired with an icon or
- * label at the call site so meaning never rests on hue alone.
+ * app, in a monochrome key. Near-black is the brand: it carries every primary
+ * action and selected state, and inverts to near-white in dark mode so the
+ * accent always reads against its own ground.
+ *
+ * Status colours (success/warning/danger/info) stay chromatic on purpose —
+ * they encode meaning, not brand — and each is paired with its own icon at the
+ * call site so nothing rests on hue alone.
  *
  * Both themes are authored together so contrast is checked per mode rather
  * than inferred by inverting one palette.
  */
 const brand = {
-  gold: '#F59E0B',
-  goldSoft: '#FBBF24',
-  navy: '#0F172A',
+  /** Light-mode brand. Off-black rather than #000: pure black on white edges
+   *  into halation on OLED and reads harsher than it needs to. */
+  ink: '#111113',
+  inkSoft: '#26262B',
+  /** Dark-mode brand — the same role, inverted. */
+  chalk: '#FAFAFA',
+  chalkSoft: '#D6D6DB',
 };
 
 export const palettes = {
   light: {
-    background: '#F6F7F9',
-    foreground: '#0F172A',
+    // Neutral grey, not blue-grey, so an elevated white card reads as lifted
+    // without tinting the whole page cool.
+    background: '#F5F5F6',
+    foreground: '#0A0A0B',
     card: '#FFFFFF',
-    cardForeground: '#0F172A',
+    cardForeground: '#0A0A0B',
     // Elevated surface for sheets/menus that must separate from `card`.
     surface: '#FFFFFF',
-    surfaceAlt: '#EEF1F5',
+    surfaceAlt: '#E9E9EC',
     popover: '#FFFFFF',
-    popoverForeground: '#0F172A',
+    popoverForeground: '#0A0A0B',
 
-    primary: brand.navy,
+    primary: brand.ink,
     primaryForeground: '#FFFFFF',
-    accent: brand.gold,
-    accentForeground: '#3D2600',
+    accent: brand.ink,
+    accentForeground: '#FFFFFF',
 
-    secondary: '#EEF1F5',
-    secondaryForeground: '#0F172A',
-    muted: '#EEF1F5',
-    // 4.6:1 on #F6F7F9 — passes AA for body text, not just large text.
-    mutedForeground: '#5A6577',
-    accentSubtle: 'rgba(245, 158, 11, 0.12)',
+    secondary: '#F0F0F2',
+    secondaryForeground: '#0A0A0B',
+    muted: '#F0F0F2',
+    // 5.1:1 on #F5F5F6 — passes AA for body text, not just large text.
+    mutedForeground: '#5C5C66',
+    accentSubtle: 'rgba(17, 17, 19, 0.07)',
 
     success: '#047857',
     successSubtle: 'rgba(4, 120, 87, 0.12)',
@@ -48,38 +58,42 @@ export const palettes = {
     info: '#1D4ED8',
     infoSubtle: 'rgba(29, 78, 216, 0.10)',
 
-    border: '#DDE3EA',
-    borderStrong: '#C4CDD8',
-    input: '#DDE3EA',
-    ring: brand.gold,
-    overlay: 'rgba(15, 23, 42, 0.55)',
-    skeleton: '#E4E9EF',
+    border: '#E2E2E6',
+    borderStrong: '#C7C7CE',
+    input: '#E2E2E6',
+    ring: brand.ink,
+    overlay: 'rgba(10, 10, 11, 0.55)',
+    skeleton: '#E6E6EA',
 
     tabBar: '#FFFFFF',
-    tabBarActive: brand.navy,
-    tabBarInactive: '#5A6577',
+    tabBarActive: brand.ink,
+    tabBarInactive: '#8A8A94',
   },
   dark: {
-    background: '#0B1220',
-    foreground: '#F8FAFC',
-    card: '#151D2C',
-    cardForeground: '#F8FAFC',
-    surface: '#1B2434',
-    surfaceAlt: '#222B3D',
-    popover: '#151D2C',
-    popoverForeground: '#F8FAFC',
+    // Dark mode separates by lightening the surface, never by shadow — a
+    // shadow is invisible on a dark ground.
+    background: '#08080A',
+    foreground: '#FAFAFA',
+    card: '#141417',
+    cardForeground: '#FAFAFA',
+    surface: '#1B1B1F',
+    surfaceAlt: '#242429',
+    popover: '#161619',
+    popoverForeground: '#FAFAFA',
 
-    primary: brand.gold,
-    primaryForeground: '#231400',
-    accent: brand.gold,
-    accentForeground: '#231400',
+    // The brand inverts: near-white now carries primary actions, because
+    // near-black on near-black would be invisible.
+    primary: brand.chalk,
+    primaryForeground: '#0A0A0B',
+    accent: brand.chalk,
+    accentForeground: '#0A0A0B',
 
-    secondary: '#222B3D',
-    secondaryForeground: '#F8FAFC',
-    muted: '#222B3D',
-    // 7.1:1 on #0B1220 — normal text needs 4.5:1 in dark mode too.
-    mutedForeground: '#A9B4C6',
-    accentSubtle: 'rgba(245, 158, 11, 0.16)',
+    secondary: '#212126',
+    secondaryForeground: '#FAFAFA',
+    muted: '#212126',
+    // 8.2:1 on #08080A — normal text needs 4.5:1 in dark mode too.
+    mutedForeground: '#A1A1AC',
+    accentSubtle: 'rgba(250, 250, 250, 0.10)',
 
     success: '#34D399',
     successSubtle: 'rgba(52, 211, 153, 0.16)',
@@ -90,18 +104,72 @@ export const palettes = {
     info: '#60A5FA',
     infoSubtle: 'rgba(96, 165, 250, 0.16)',
 
-    border: '#2A3547',
-    borderStrong: '#3A4759',
-    input: '#2A3547',
-    ring: brand.gold,
-    overlay: 'rgba(3, 7, 18, 0.7)',
-    skeleton: '#1E2739',
+    border: '#2A2A31',
+    borderStrong: '#3B3B44',
+    input: '#2A2A31',
+    ring: brand.chalk,
+    overlay: 'rgba(0, 0, 0, 0.72)',
+    skeleton: '#1F1F24',
 
-    tabBar: '#0F1727',
-    tabBarActive: brand.gold,
-    tabBarInactive: '#8494AB',
+    tabBar: '#101013',
+    tabBarActive: brand.chalk,
+    tabBarInactive: '#8A8A94',
   },
 };
+
+/**
+ * One elevation ladder for the whole app. Levels map to meaning, not to taste:
+ * 0 flush, 1 card, 2 raised/pressable, 3 menu, 4 sheet.
+ *
+ * Android reads only `elevation`; iOS reads only the shadow triple. Both are
+ * set per level so a surface sits at the same visual height on either
+ * platform. Dark mode overrides these to `none` at the call site — a drop
+ * shadow on a near-black ground just muddies the edge.
+ */
+export const elevation = {
+  none: {},
+  sm: {
+    shadowColor: '#0A0A0B',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  md: {
+    shadowColor: '#0A0A0B',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.09,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  lg: {
+    shadowColor: '#0A0A0B',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.13,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  xl: {
+    shadowColor: '#0A0A0B',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    elevation: 16,
+  },
+} as const;
+
+/**
+ * Motion tokens. Durations follow the distance travelled: a press reacts
+ * instantly, a sheet has further to go. Exit is ~70% of enter so dismissing
+ * never feels sluggish.
+ */
+export const motion = {
+  instant: 90,
+  fast: 160,
+  normal: 220,
+  slow: 300,
+  exit: 150,
+} as const;
 
 /** 4pt rhythm. Every gap/padding in the app comes from here. */
 export const space = {
@@ -156,13 +224,27 @@ export const colors = new Proxy({} as Palette, {
   get: (_t, key: string) => palettes[active][key as keyof Palette],
 }) as Palette;
 
-/** Theme-aware StyleSheet: built once per theme, resolved on property access. */
+export type ElevationLevel = keyof typeof elevation;
+
+/**
+ * Elevation for the current theme. Dark mode gets nothing: a black drop shadow
+ * on a near-black background reads as a smudge, so those surfaces separate by
+ * their own lighter fill instead.
+ */
+export const lift = (level: ElevationLevel, isDark: boolean) =>
+  isDark ? elevation.none : elevation[level];
+
+/**
+ * Theme-aware StyleSheet: built once per theme, resolved on property access.
+ * The factory also receives `isDark` so shadows and other mode-specific
+ * treatments are decided per palette rather than guessed at the call site.
+ */
 export function themed<T extends StyleSheet.NamedStyles<T> | StyleSheet.NamedStyles<any>>(
-  factory: (c: Palette) => T & StyleSheet.NamedStyles<any>,
+  factory: (c: Palette, isDark: boolean) => T & StyleSheet.NamedStyles<any>,
 ): T {
   const sheets = {
-    light: StyleSheet.create(factory(palettes.light)),
-    dark: StyleSheet.create(factory(palettes.dark)),
+    light: StyleSheet.create(factory(palettes.light, false)),
+    dark: StyleSheet.create(factory(palettes.dark, true)),
   };
   return new Proxy({} as T, {
     get: (_t, key: string) => (sheets[active] as any)[key],

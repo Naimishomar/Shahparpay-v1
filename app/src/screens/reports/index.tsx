@@ -152,20 +152,62 @@ export const LeadReport: React.FC = () => (
   />
 );
 
+
+/** Signed amount: debits leave the wallet, so they subtract from the net. */
+const ledgerAmount = (i: any) =>
+  String(i?.TYPE).toLowerCase() === 'debit' ? -Number(i?.AMOUNT ?? 0) : Number(i?.AMOUNT ?? 0);
+
+/**
+ * Ledger totals mirror the web portal: net movement plus what was earned and
+ * withheld. A "failed" count is meaningless here — a ledger only ever contains
+ * money that actually moved.
+ */
+const ledgerSummary = (rows: any[]) => {
+  const sum = (key: string) => rows.reduce((acc, r) => acc + Number(r?.[key] ?? 0), 0);
+  const net = rows.reduce((acc, r) => acc + ledgerAmount(r), 0);
+  return [
+    { label: 'Net amount', value: money(net), tone: net >= 0 ? ('success' as const) : ('error' as const) },
+    { label: 'Commission', value: money(sum('COMMISSION')), tone: 'success' as const },
+    { label: 'TDS', value: money(sum('TDS')), tone: 'warning' as const },
+    { label: 'GST', value: money(sum('GST')), tone: 'warning' as const },
+  ];
+};
+
+/** Ledger rows carry a direction, not a transaction status. */
+const LEDGER_STATUSES = ['ALL', 'CREDIT', 'DEBIT'] as const;
+
+/**
+ * Both ledger endpoints answer with PaySprint's uppercase column names
+ * (UTR/WALLET/AMOUNT/TYPE/NARRATION/remarks/DATE), not the camelCase
+ * transaction shape the other reports use. Reading the wrong keys left every
+ * field blank — amounts at ₹0.00 and an UNKNOWN pill on every row.
+ */
 export const WalletLedgerReport: React.FC = () => (
   <TransactionReport
     fetcher={async (range) => (await api.getWalletLedger(range)).data ?? []}
     searchFields={(i) =>
-      [i?.transactionId, i?.type, i?.wallet, i?.narration, i?.status].filter(Boolean).join(' ')
+      [i?.UTR, i?.TXNTYPE, i?.WALLET, i?.NARRATION, i?.remarks].filter(Boolean).join(' ')
     }
-    titleOf={(i) => i?.narration ?? String(i?.type ?? 'Entry').replace(/_/g, ' ')}
-    subtitleOf={(i) => `${i?.wallet ?? ''} ${i?.direction ?? ''}`.trim()}
+    // Signed: a ledger that renders debits as positive does not add up.
+    amountOf={ledgerAmount}
+    summary={ledgerSummary}
+    statuses={LEDGER_STATUSES}
+    // Direction is what a ledger row is filtered and coloured by; the
+    // underlying transaction status stays available in the detail sheet.
+    statusOf={(i) => i?.TYPE}
+    dateOf={(i) => i?.DATE}
+    titleOf={(i) => i?.NARRATION || i?.TXNTYPE || 'Ledger entry'}
+    subtitleOf={(i) => [i?.WALLET, i?.TXNTYPE].filter(Boolean).join(' · ')}
     details={[
-      { label: 'Reference', value: (i: any) => i?.transactionId ?? '—' },
-      { label: 'Wallet', value: (i: any) => i?.wallet ?? '—' },
-      { label: 'Direction', value: (i: any) => i?.direction ?? '—' },
-      { label: 'Opening', value: (i: any) => (i?.openingBalance != null ? money(i.openingBalance) : '—') },
-      { label: 'Closing', value: (i: any) => (i?.closingBalance != null ? money(i.closingBalance) : '—') },
+      { label: 'Reference', value: (i: any) => i?.UTR || '—' },
+      { label: 'Wallet', value: (i: any) => i?.WALLET || '—' },
+      { label: 'Direction', value: (i: any) => (i?.TYPE ? String(i.TYPE).toUpperCase() : '—') },
+      { label: 'Transaction status', value: (i: any) => i?.remarks || '—' },
+      { label: 'Opening', value: (i: any) => (i?.OPENING != null ? money(i.OPENING) : '—') },
+      { label: 'Closing', value: (i: any) => (i?.CLOSING != null ? money(i.CLOSING) : '—') },
+      { label: 'Commission', value: (i: any) => (i?.COMMISSION ? money(i.COMMISSION) : '—') },
+      { label: 'TDS', value: (i: any) => (i?.TDS ? money(i.TDS) : '—') },
+      { label: 'GST', value: (i: any) => (i?.GST ? money(i.GST) : '—') },
     ]}
     emptyIcon="notebook-outline"
     emptyTitle="No ledger entries"
@@ -178,17 +220,24 @@ export const PaysprintLedgerReport: React.FC = () => (
       const res = await api.getPaysprintCreditLedger(range);
       return res.data ?? res.ledger ?? [];
     }}
-    searchFields={(i) => [i?.refid, i?.remark, i?.type, i?.status].filter(Boolean).join(' ')}
-    amountOf={(i) => Number(i?.amount ?? i?.credit ?? i?.debit ?? 0)}
-    statusOf={(i) => i?.status}
-    titleOf={(i) => i?.remark ?? i?.type ?? 'Ledger entry'}
-    subtitleOf={(i) => i?.refid ?? ''}
-    dateOf={(i) => i?.createdAt ?? i?.date ?? i?.datetime}
+    searchFields={(i) => [i?.SNO, i?.NARRATION, i?.TXNTYPE, i?.remarks].filter(Boolean).join(' ')}
+    amountOf={ledgerAmount}
+    summary={ledgerSummary}
+    statuses={LEDGER_STATUSES}
+    // The upstream ledger carries no status column — credit/debit is the only
+    // per-row state, and StatusPill colours both.
+    statusOf={(i) => i?.TYPE}
+    titleOf={(i) => i?.NARRATION || i?.TXNTYPE || 'Ledger entry'}
+    subtitleOf={(i) => [i?.TXNTYPE, i?.remarks].filter(Boolean).join(' · ')}
+    dateOf={(i) => i?.DATE}
     details={[
-      { label: 'Reference', value: (i: any) => i?.refid ?? '—' },
-      { label: 'Opening', value: (i: any) => (i?.opening_bal != null ? money(i.opening_bal) : '—') },
-      { label: 'Closing', value: (i: any) => (i?.closing_bal != null ? money(i.closing_bal) : '—') },
-      { label: 'Date', value: (i: any) => shortDate(i?.createdAt ?? i?.date) },
+      { label: 'Reference', value: (i: any) => i?.SNO || '—' },
+      { label: 'Direction', value: (i: any) => (i?.TYPE ? String(i.TYPE).toUpperCase() : '—') },
+      { label: 'Opening', value: (i: any) => (i?.OPENING != null ? money(i.OPENING) : '—') },
+      { label: 'Closing', value: (i: any) => (i?.CLOSING != null ? money(i.CLOSING) : '—') },
+      { label: 'Commission', value: (i: any) => (i?.COMMISSION ? money(i.COMMISSION) : '—') },
+      { label: 'Remarks', value: (i: any) => i?.remarks || '—' },
+      { label: 'Date', value: (i: any) => shortDate(i?.DATE) },
     ]}
     emptyIcon="swap-horizontal"
     emptyTitle="No upstream ledger entries"

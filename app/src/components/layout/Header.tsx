@@ -1,8 +1,15 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Pressable, Image, ScrollView } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, themed, radius, space, type as t, TOUCH } from '../../theme/colors';
-import { useTheme } from '@/context/ThemeContext';
+import React, { useCallback, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  Image,
+  Modal,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/services/api';
 import { WalletBalances } from '@/types';
@@ -10,66 +17,87 @@ import { WalletBalances } from '@/types';
 interface HeaderProps {
   title?: string;
   subtitle?: string;
-  showBack?: boolean;
-  onBack?: () => void;
-  /** Home shows the wallet strip; inner screens keep the bar to one line. */
-  showWallets?: boolean;
+  /** Avatar opens Account — it replaced the bottom bar's Account tab. */
+  onAccount?: () => void;
+  /** Safe-area top inset, applied as the header's own padding. */
+  topInset?: number;
+}
+
+const money = (value?: number) =>
+  `₹${Number(value ?? 0).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+
+/** Where the popover is pinned, measured from the button that opened it. */
+interface Anchor {
+  top: number;
+  left: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   title,
   subtitle,
-  showBack,
-  onBack,
-  showWallets,
+  onAccount,
+  topInset = 0,
 }) => {
   const { user, token } = useAuth();
-  const { resolvedTheme, toggleTheme } = useTheme();
   const [balances, setBalances] = useState<WalletBalances>({
     aepsBalance: 0,
     mainBalance: 0,
     adminBalance: 0,
   });
+  const [anchor, setAnchor] = useState<Anchor | null>(null);
+  const [loading, setLoading] = useState(false);
+  const menuButton = useRef<View>(null);
 
-  const fetchBalances = useCallback(async () => {
-    if (!user || !token || !showWallets) return;
+  const loadBalances = useCallback(async () => {
+    if (!user || !token) return;
     try {
       const res = await api.getWalletBalance();
       if (res?.success && res.data) setBalances((prev) => ({ ...prev, ...res.data }));
     } catch {
       // A transient balance failure must not blank the header.
     }
-  }, [user, token, showWallets]);
-
-  useEffect(() => {
-    fetchBalances();
-    if (!showWallets) return;
-    const interval = setInterval(fetchBalances, 30000);
-    return () => clearInterval(interval);
-  }, [fetchBalances, showWallets]);
+  }, [user, token]);
 
   const wallets =
     user?.role === 'admin'
-      ? [{ label: 'Admin', amount: balances.adminBalance, icon: 'shield-account' }]
+      ? [{ label: 'Admin wallet', amount: balances.adminBalance, icon: 'shield-account' }]
       : [
-          { label: 'AEPS', amount: balances.aepsBalance, icon: 'fingerprint' },
-          { label: 'Main', amount: balances.mainBalance, icon: 'wallet' },
+          { label: 'AEPS wallet', amount: balances.aepsBalance, icon: 'fingerprint' },
+          { label: 'Main wallet', amount: balances.mainBalance, icon: 'wallet' },
         ];
 
+  const openMenu = () => {
+    // Measured on press rather than assumed: the header's offset changes with
+    // the safe-area inset and whether the back button is showing.
+    menuButton.current?.measureInWindow((x, y, _width, height) => {
+      setAnchor({ top: y + height + space.xs, left: x });
+    });
+    setLoading(true);
+    loadBalances().finally(() => setLoading(false));
+  };
+
+  // The inset is the header's own top padding rather than a spacer view above
+  // it: two stacked paddings pushed the title a visible step further down than
+  // the safe area actually requires.
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingTop: topInset }]}>
       <View style={styles.row}>
-        {showBack && (
-          <Pressable
-            onPress={onBack}
-            style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            hitSlop={8}
-          >
-            <Ionicons name="chevron-back" size={24} color={colors.foreground} />
-          </Pressable>
-        )}
+        {/* Balance peek, reachable from every screen so checking a wallet never
+            means navigating back to Home. */}
+        <Pressable
+          ref={menuButton}
+          onPress={openMenu}
+          style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+          accessibilityRole="button"
+          accessibilityLabel="Show wallet balances"
+          accessibilityState={{ expanded: !!anchor }}
+          hitSlop={8}
+        >
+          <MaterialCommunityIcons name="menu" size={22} color={colors.foreground} />
+        </Pressable>
 
         <View style={styles.titleBlock}>
           <Text style={styles.title} numberOfLines={1}>
@@ -83,45 +111,74 @@ export const Header: React.FC<HeaderProps> = ({
         </View>
 
         <Pressable
-          onPress={toggleTheme}
-          style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+          onPress={onAccount}
+          disabled={!onAccount}
+          style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
           accessibilityRole="button"
-          accessibilityLabel={resolvedTheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          accessibilityLabel={user?.name ? `Account — ${user.name}` : 'Account'}
           hitSlop={8}
         >
-          <Ionicons
-            name={resolvedTheme === 'dark' ? 'sunny-outline' : 'moon-outline'}
-            size={21}
-            color={colors.foreground}
-          />
-        </Pressable>
-
-        <View style={styles.avatar} accessibilityLabel={user?.name || 'Account'}>
           {user?.profilePicture ? (
             <Image source={{ uri: user.profilePicture }} style={styles.avatarImage} />
           ) : (
             <Text style={styles.avatarInitial}>{user?.name?.charAt(0).toUpperCase() || 'U'}</Text>
           )}
-        </View>
+        </Pressable>
       </View>
 
-      {showWallets && !!user && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.walletStrip}
+      <Modal
+        visible={!!anchor}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setAnchor(null)}
+      >
+        {/* Tapping anywhere outside closes it — the popover has no other
+            dismiss affordance, so this backdrop covers the whole screen. */}
+        <Pressable
+          style={styles.backdrop}
+          onPress={() => setAnchor(null)}
+          accessibilityRole="button"
+          accessibilityLabel="Close wallet balances"
         >
-          {wallets.map((w) => (
-            <View key={w.label} style={styles.walletChip}>
-              <MaterialCommunityIcons name={w.icon as any} size={15} color={colors.accent} />
-              <Text style={styles.walletLabel}>{w.label}</Text>
-              <Text style={styles.walletAmount} numberOfLines={1}>
-                ₹{Number(w.amount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </Text>
+          <View
+            style={[styles.popover, { top: anchor?.top ?? 0, left: anchor?.left ?? 0 }]}
+            // Stops a tap on the panel itself from closing it.
+            onStartShouldSetResponder={() => true}
+          >
+            <View style={styles.popoverHeader}>
+              <Text style={styles.popoverTitle}>Wallet balances</Text>
+              {loading ? (
+                <ActivityIndicator size="small" color={colors.accent} />
+              ) : (
+                <Pressable
+                  onPress={openMenu}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Refresh balances"
+                >
+                  <MaterialCommunityIcons name="refresh" size={17} color={colors.mutedForeground} />
+                </Pressable>
+              )}
             </View>
-          ))}
-        </ScrollView>
-      )}
+
+            {wallets.map((w, index) => (
+              <View
+                key={w.label}
+                style={[styles.popoverRow, index === wallets.length - 1 && styles.popoverRowLast]}
+              >
+                <MaterialCommunityIcons name={w.icon as any} size={17} color={colors.accent} />
+                <Text style={styles.popoverLabel} numberOfLines={1}>
+                  {w.label}
+                </Text>
+                <Text style={styles.popoverAmount} numberOfLines={1}>
+                  {money(w.amount)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -132,13 +189,13 @@ const styles = themed((c) => ({
     borderBottomWidth: 1,
     borderBottomColor: c.border,
     paddingHorizontal: space.md,
-    paddingTop: space.sm,
     paddingBottom: space.sm,
-    gap: space.sm,
     zIndex: 50,
   },
   row: {
-    minHeight: TOUCH,
+    // 44 rather than 48: the controls inside are 40pt with hitSlop, so the tap
+    // targets still clear the minimum while the bar sits tighter to the top.
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.xs,
@@ -167,20 +224,47 @@ const styles = themed((c) => ({
   },
   avatarImage: { width: 36, height: 36 },
   avatarInitial: { fontSize: t.small, fontWeight: '700', color: c.accent },
-  walletStrip: { flexDirection: 'row', gap: space.sm, paddingRight: space.xs },
-  walletChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: space.md,
-    paddingVertical: 7,
-    borderRadius: radius.pill,
-    backgroundColor: c.card,
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: c.overlay },
+  popover: {
+    position: 'absolute',
+    minWidth: 232,
+    paddingHorizontal: space.lg,
+    paddingBottom: space.xs,
+    borderRadius: radius.lg,
+    backgroundColor: c.popover,
     borderWidth: 1,
     borderColor: c.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  walletLabel: { fontSize: t.micro, fontWeight: '600', color: c.mutedForeground },
-  walletAmount: { fontSize: t.small, fontWeight: '700', color: c.foreground },
+  popoverHeader: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space.md,
+    paddingTop: space.sm,
+  },
+  popoverTitle: { fontSize: t.caption, fontWeight: '700', color: c.mutedForeground },
+  popoverRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    paddingVertical: space.md,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  popoverRowLast: { borderBottomWidth: 0 },
+  popoverLabel: { flex: 1, fontSize: t.small, color: c.foreground },
+  popoverAmount: {
+    fontSize: t.body,
+    fontWeight: '700',
+    color: c.foreground,
+    fontVariant: ['tabular-nums'],
+  },
 }));
 
 export default Header;

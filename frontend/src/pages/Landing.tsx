@@ -519,7 +519,7 @@ const Landing = () => {
                     </div>
                 </div>
                 <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-zinc-200 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 text-zinc-500">
-                    <p>© {new Date().getFullYear()} Shahparpay Networks. All rights reserved.</p>
+                    <p>© {new Date().getFullYear()} Shahparpay Solutions Pvt. Ltd. All rights reserved.</p>
                     <div className="flex items-center gap-3 text-xs">
                         <span className="flex items-center gap-1.5">
                             <IndianRupee className="w-3.5 h-3.5 text-zinc-500" />

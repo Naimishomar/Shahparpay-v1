@@ -1,13 +1,13 @@
 import React from 'react';
 import { View, Text, Pressable, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, themed, radius, space, type as t } from '../../theme/colors';
+import { colors, themed, lift, radius, space, type as t } from '../../theme/colors';
 
 interface CardProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   /** `flat` drops the shadow for cards nested inside another surface. */
-  variant?: 'default' | 'flat' | 'accent';
+  variant?: 'default' | 'flat' | 'accent' | 'elevated' | 'outline';
   padding?: number;
   onPress?: () => void;
   accessibilityLabel?: string;
@@ -70,19 +70,24 @@ export const CardFooter: React.FC<{
   style?: StyleProp<ViewStyle>;
 }> = ({ children, style }) => <View style={[styles.footer, style]}>{children}</View>;
 
-const styles = themed((c) => ({
+const styles = themed((c, isDark) => ({
   base: { borderRadius: radius.lg, overflow: 'hidden' },
   default: {
     backgroundColor: c.card,
     borderWidth: 1,
     borderColor: c.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+    ...lift('sm', isDark),
+  },
+  /** Lifted off the page — summary tiles, anything that invites a tap. */
+  elevated: {
+    backgroundColor: c.card,
+    borderWidth: 1,
+    borderColor: isDark ? c.border : 'transparent',
+    ...lift('md', isDark),
   },
   flat: { backgroundColor: c.secondary, borderWidth: 1, borderColor: c.border },
+  /** Border only: groups content without adding another filled plane. */
+  outline: { backgroundColor: 'transparent', borderWidth: 1, borderColor: c.border },
   // Solid gold, not the subtle tint: `accentForeground` is a near-black meant
   // to sit on full-strength accent. Over the 16% tint it fails contrast in
   // dark mode.
@@ -90,12 +95,13 @@ const styles = themed((c) => ({
     backgroundColor: c.accent,
     borderWidth: 1,
     borderColor: c.accent,
+    ...lift('md', isDark),
   },
   // Opacity only: scaling a card shifts everything below it.
   pressed: { opacity: 0.75 },
-  header: { paddingBottom: space.md },
+  header: { paddingBottom: space.lg },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  title: { flex: 1, fontSize: t.body, fontWeight: '700', color: c.cardForeground },
+  title: { flex: 1, fontSize: t.bodyLg, fontWeight: '700', color: c.cardForeground, letterSpacing: -0.2 },
   description: { fontSize: t.caption, color: c.mutedForeground, marginTop: 3, lineHeight: 17 },
   content: {},
   footer: {

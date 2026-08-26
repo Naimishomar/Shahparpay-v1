@@ -15,6 +15,7 @@ import {
   money,
   shortDate,
 } from '@/components/ui/Screen';
+import { RemitterRegistrationSheet } from '@/components/dmt/RemitterRegistrationSheet';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
 
@@ -32,6 +33,7 @@ export const DmtScreen: React.FC = () => {
   const [mobile, setMobile] = useState('');
   const [remitter, setRemitter] = useState<any>(null);
   const [needsEkyc, setNeedsEkyc] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
   const [selected, setSelected] = useState<Beneficiary | null>(null);
   const [amount, setAmount] = useState('');
@@ -129,12 +131,24 @@ export const DmtScreen: React.FC = () => {
     ifscValid &&
     benePincode.length === 6;
 
+  // Same story as the AEPS bank list: PaySprint returns the same bankid more
+  // than once. Collapse before filtering so the picker never shows two rows
+  // that select identically.
+  const uniqueBanks = useMemo(() => {
+    const seen = new Map<string, any>();
+    for (const bank of banks.data ?? []) {
+      const key = String(bank?.bankid ?? bank?.id ?? bank?.bankname ?? bank?.name ?? '');
+      if (key && !seen.has(key)) seen.set(key, bank);
+    }
+    return [...seen.values()];
+  }, [banks.data]);
+
   const filteredBanks = useMemo(
     () =>
-      (banks.data ?? []).filter((b: any) =>
+      uniqueBanks.filter((b: any) =>
         String(b.bankname ?? b.name ?? '').toLowerCase().includes(bankQuery.trim().toLowerCase())
       ),
-    [banks.data, bankQuery]
+    [uniqueBanks, bankQuery]
   );
 
   const remitterName =
@@ -206,10 +220,20 @@ export const DmtScreen: React.FC = () => {
           </Button>
 
           {needsEkyc && (
-            <Banner
-              tone="warning"
-              message="This customer is not registered. RBI mandates Aadhaar biometric eKYC to register a new remitter, which needs a certified fingerprint device — complete it from the web portal."
-            />
+            <>
+              <Banner
+                tone="warning"
+                message="This sender is not registered yet. RBI mandates a one-time Aadhaar biometric eKYC before they can transfer money."
+              />
+              <Button
+                variant="outline"
+                icon="account-plus-outline"
+                onPress={() => setShowRegister(true)}
+                fullWidth
+              >
+                Register this sender
+              </Button>
+            </>
           )}
 
           {!!remitter && (
@@ -309,9 +333,9 @@ export const DmtScreen: React.FC = () => {
                       autoCapitalize="none"
                     />
                     <ScrollView style={styles.pickerList} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-                      {filteredBanks.slice(0, 60).map((b: any, i: number) => (
+                      {filteredBanks.slice(0, 60).map((b: any) => (
                         <Pressable
-                          key={String(b.bankid ?? b.id ?? i)}
+                          key={String(b.bankid ?? b.id ?? b.bankname ?? b.name)}
                           onPress={() => {
                             setBank(b);
                             setShowBanks(false);
@@ -486,6 +510,16 @@ export const DmtScreen: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <RemitterRegistrationSheet
+        visible={showRegister}
+        onClose={() => setShowRegister(false)}
+        mobile={mobile.trim()}
+        onRegistered={() => {
+          setNeedsEkyc(false);
+          lookup.run();
+        }}
+      />
     </Screen>
   );
 };

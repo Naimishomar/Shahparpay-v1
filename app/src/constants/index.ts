@@ -37,6 +37,68 @@ export const INDIAN_STATES = [
   "Puducherry",
 ];
 
+/**
+ * Exact values PaySprint's `activate_merchant` accepts for
+ * `nature_of_bussiness` (bank5 only). The backend rejects anything else, so
+ * this list must stay in step with NATURE_OF_BUSINESS_OPTIONS in
+ * backend/src/controllers/aepsPayment.controller.js.
+ */
+export const NATURE_OF_BUSINESS = [
+  'Agriculture',
+  'Antique Dealer',
+  'Arms Dealer',
+  'Art Dealer',
+  'Banking',
+  'Mobility',
+  'Barber',
+  'Parlour',
+  'Salon',
+  'Bullion Dealer and Jeweller',
+  'Casino',
+  'Gaming Application',
+  'Educational Institute',
+  'Financial Institution',
+  'Healthcare',
+  'Pharma',
+  'Import And Export Trader',
+  'Law',
+  'Accountancy firm',
+  'Liquor',
+  'Manufacturing',
+  'Marketing including Multi-level Marketing',
+  'Media',
+  'Pawn Shop',
+  'Money Lender',
+  'Money Changer',
+  'Real Estate',
+  'Restaurant and Hospitality',
+  'Retail Shop',
+  'Service Provider',
+  'Small vendor',
+  'Kirana shop',
+  'Stock Trading',
+  'Brokerage',
+  'Transport',
+  'Logistics',
+  'Wholesale Trading',
+  'Others',
+];
+
+/** Every AEPS pipe the backend can onboard, in the order PaySprint lists them. */
+export const AEPS_PIPES = [
+  { key: 'bank2', label: 'Bank 2' },
+  { key: 'bank3', label: 'Bank 3' },
+  { key: 'bank4', label: 'Bank 4 (City Union)' },
+  { key: 'bank5', label: 'Bank 5' },
+  { key: 'bank6', label: 'Bank 6' },
+];
+
+/** AEPS cash withdrawals at or above this need a customer OTP first. */
+export const AEPS_OTP_THRESHOLD = 5000;
+
+/** PaySprint caps a single AEPS cash withdrawal at this amount. */
+export const AEPS_MAX_WITHDRAWAL = 10000;
+
 export interface MenuEntry {
   name: string;
   route: string;
@@ -58,33 +120,35 @@ export interface TabEntry {
  * Bottom navigation: five top-level destinations, the platform maximum.
  * Everything else lives one level down under Services or Reports, so the bar
  * never carries sub-navigation.
+ *
+ * Account is deliberately NOT a tab — the header avatar opens it, which frees
+ * the slot for AEPS, the service retailers open many times a day.
  */
 export const RETAILER_TABS: TabEntry[] = [
   { key: 'home', name: 'Home', route: 'Dashboard', icon: 'home-outline', iconActive: 'home' },
+  // Same glyph either way: MaterialCommunityIcons has no outline fingerprint,
+  // and the active pill plus colour already carry the selected state.
+  { key: 'aeps', name: 'AEPS', route: 'AEPS', icon: 'fingerprint', iconActive: 'fingerprint' },
   { key: 'services', name: 'Services', route: 'Services', icon: 'apps', iconActive: 'apps' },
   { key: 'reports', name: 'Reports', route: 'Reports', icon: 'chart-box-outline', iconActive: 'chart-box' },
-  { key: 'wallet', name: 'Wallet', route: 'WalletTransfer', icon: 'wallet-outline', iconActive: 'wallet' },
-  // Tab labels stay short; MainLayout uses `name` for the header title too.
-  { key: 'account', name: 'Account', route: 'Profile', icon: 'account-outline', iconActive: 'account' },
+  { key: 'settlement', name: 'Settlement', route: 'AepsSettlement', icon: 'bank-outline', iconActive: 'bank' },
 ];
 
 export const ADMIN_TABS: TabEntry[] = [
   { key: 'home', name: 'Overview', route: 'AdminPortal', icon: 'view-dashboard-outline', iconActive: 'view-dashboard' },
   { key: 'reports', name: 'Reports', route: 'Reports', icon: 'chart-box-outline', iconActive: 'chart-box' },
-  { key: 'account', name: 'Account', route: 'Profile', icon: 'account-outline', iconActive: 'account' },
 ];
 
 export const DISTRIBUTOR_TABS: TabEntry[] = [
   { key: 'home', name: 'Overview', route: 'DistributorPortal', icon: 'view-dashboard-outline', iconActive: 'view-dashboard' },
   { key: 'reports', name: 'Reports', route: 'Reports', icon: 'chart-box-outline', iconActive: 'chart-box' },
-  { key: 'account', name: 'Account', route: 'Profile', icon: 'account-outline', iconActive: 'account' },
 ];
 
 /** Services grid — every route must also be registered in AppNavigator. */
 export const SERVICE_ITEMS: MenuEntry[] = [
   { name: 'AEPS', route: 'AEPS', icon: 'fingerprint', hint: 'Aadhaar banking', group: 'Banking' },
   { name: 'DMT', route: 'DMT', icon: 'bank-transfer', hint: 'Money transfer', group: 'Banking' },
-  { name: 'Settlement', route: 'AepsSettlement', icon: 'bank-outline', hint: 'Wallet to bank', group: 'Banking' },
+  { name: 'Wallet Transfer', route: 'WalletTransfer', icon: 'wallet-plus-outline', hint: 'AEPS to main wallet', group: 'Banking' },
   { name: 'Direct Payout', route: 'DirectPayout', icon: 'cash-fast', hint: 'Pay any account', group: 'Banking' },
   { name: 'UPI Collect', route: 'UPIPayments', icon: 'qrcode', hint: 'Collect on UPI', group: 'Banking' },
 

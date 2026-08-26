@@ -15,7 +15,9 @@ import {
   money,
   shortDate,
 } from '@/components/ui/Screen';
+import { ImageField } from '@/components/ui/ImageField';
 import { useAsync, useAction } from '@/hooks/useAsync';
+import type { PickedFile } from '@/services/imagePicker';
 import api from '@/services/api';
 
 const MODES = [
@@ -36,18 +38,22 @@ export const FundRequestScreen: React.FC = () => {
   const [bankUtr, setBankUtr] = useState('');
   const [depositDate, setDepositDate] = useState(today());
   const [remarks, setRemarks] = useState('');
+  const [depositSlip, setDepositSlip] = useState<PickedFile | null>(null);
   const [notice, setNotice] = useState('');
 
   const requests = useAsync<any[]>(async () => (await api.getRetailerFundRequests()).data ?? [], []);
 
   const submit = useAction(async () => {
-    const res = await api.createFundRequest({
-      transactionMode: mode,
-      amount: Number(amount),
-      bankUtr: bankUtr.trim(),
-      depositDate,
-      remarks: remarks.trim(),
-    });
+    const res = await api.createFundRequest(
+      {
+        transactionMode: mode,
+        amount: Number(amount),
+        bankUtr: bankUtr.trim(),
+        depositDate,
+        remarks: remarks.trim(),
+      },
+      depositSlip ?? undefined
+    );
     if (!res.success) throw new Error(res.message);
     return res;
   });
@@ -69,6 +75,7 @@ export const FundRequestScreen: React.FC = () => {
       setAmount('');
       setBankUtr('');
       setRemarks('');
+      setDepositSlip(null);
       requests.reload();
     }
   };
@@ -143,6 +150,12 @@ export const FundRequestScreen: React.FC = () => {
             keyboardType="numbers-and-punctuation"
             leftIcon="calendar-outline"
             error={depositDate && !dateValid ? 'Use the format YYYY-MM-DD' : undefined}
+          />
+          <ImageField
+            label="Deposit slip"
+            value={depositSlip}
+            onChange={setDepositSlip}
+            helperText="A photo of the receipt or transfer screenshot gets your request approved faster"
           />
           <Input
             label="Remarks"

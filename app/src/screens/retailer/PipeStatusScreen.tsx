@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Screen, EmptyState, Row, StatusPill, dateTime } from '@/components/ui/Screen';
+import { Card, CardContent } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Screen, Banner, EmptyState, Row, StatusPill, dateTime } from '@/components/ui/Screen';
+import { MerchantKycSheet } from '@/components/aeps/MerchantKycSheet';
 import { useAsync } from '@/hooks/useAsync';
 import api from '@/services/api';
 
@@ -18,6 +20,7 @@ interface Pipe {
 
 export const PipeStatusScreen: React.FC = () => {
   const pipes = useAsync<any>(async () => (await api.verifyAepsPipes()).data, []);
+  const [onboarding, setOnboarding] = useState<string | null>(null);
 
   const list: Pipe[] = pipes.data?.pipes ?? [];
   const active: string[] = pipes.data?.activePipes ?? [];
@@ -60,6 +63,17 @@ export const PipeStatusScreen: React.FC = () => {
               </View>
               <Row label="Approval" value={pipe.is_approved || '—'} />
               <Row label="Message" value={pipe.message || 'No message from the bank'} last />
+              {!pipe.onboarded && (
+                <Button
+                  variant="outline"
+                  icon="shield-account-outline"
+                  onPress={() => setOnboarding(pipe.pipe)}
+                  style={{ marginTop: space.md }}
+                  fullWidth
+                >
+                  {pipe.status === 'REJECTED' ? 'Restart onboarding' : 'Continue onboarding'}
+                </Button>
+              )}
             </CardContent>
           </Card>
         ))
@@ -74,6 +88,18 @@ export const PipeStatusScreen: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      <Banner
+        tone="info"
+        message="Each bank pipe is onboarded separately. A pipe only carries transactions once the bank marks it Accepted and merchant eKYC is complete on it."
+      />
+
+      <MerchantKycSheet
+        visible={!!onboarding}
+        initialPipe={onboarding ?? undefined}
+        onClose={() => setOnboarding(null)}
+        onCompleted={pipes.refresh}
+      />
     </Screen>
   );
 };

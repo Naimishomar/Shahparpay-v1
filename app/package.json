@@ -7,9 +7,10 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "check": "node scripts/check-routes.js"
+    "check": "node scripts/check-routes.js && node src/hooks/useResponsive.test.mjs && node src/services/rdService.test.mjs && node src/screens/retailer/AepsScreen.test.mjs && node src/theme/fonts.test.mjs && node src/services/api.test.mjs && node src/services/cache.test.mjs && node src/screens/reports/ledger.test.mjs && node src/components/ui/Screen.test.mjs && node src/screens/auth/LoginScreen.test.mjs && tsc --noEmit"
   },
   "dependencies": {
+    "@expo-google-fonts/ibm-plex-sans": "^0.4.1",
     "@expo/metro-runtime": "~3.2.3",
     "@expo/vector-icons": "^14.0.2",
     "@react-native-async-storage/async-storage": "1.23.1",
@@ -19,6 +20,10 @@
     "expo": "~51.0.28",
     "expo-constants": "~16.0.2",
     "expo-font": "~12.0.10",
+    "expo-haptics": "~13.0.1",
+    "expo-image-picker": "~15.1.0",
+    "expo-intent-launcher": "~11.0.1",
+    "expo-location": "~17.0.1",
     "expo-splash-screen": "~0.27.6",
     "expo-status-bar": "~1.12.1",
     "expo-system-ui": "~3.0.7",

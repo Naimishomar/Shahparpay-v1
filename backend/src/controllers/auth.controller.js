@@ -50,7 +50,9 @@ export const registerAdmin = async (req, res) => {
       ...(req.body.address
         ? {
             address:
-              typeof req.body.address === 'string' ? JSON.parse(req.body.address) : req.body.address,
+              typeof req.body.address === 'string'
+                ? JSON.parse(req.body.address)
+                : req.body.address,
           }
         : {}),
     });
@@ -132,6 +134,25 @@ export const loginUser = async (req, res) => {
   }
 };
 
+/**
+ * Cookie flags for the refresh token, matched to how the request actually
+ * arrived. Behind a proxy the original scheme is only visible in
+ * x-forwarded-proto, so both are checked.
+ *
+ * Native clients never use this cookie — they get the refresh token in the
+ * response body, which is the only path that survives plain HTTP.
+ */
+const refreshCookieOptions = (req) => {
+  const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+  return {
+    httpOnly: true,
+    secure: isHttps,
+    // SameSite=None is invalid without Secure; browsers reject the whole cookie.
+    sameSite: isHttps ? 'none' : 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  };
+};
+
 export const verifyLoginOtp = async (req, res) => {
   try {
     const { identifier, otp } = req.body;
@@ -191,12 +212,11 @@ export const verifyLoginOtp = async (req, res) => {
     const userObj = user.toObject();
     delete userObj.password;
 
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    // `secure: true` makes the browser drop the cookie entirely over plain
+    // HTTP, and `sameSite: 'none'` is only legal alongside it — so a server
+    // reachable over http:// silently issued no refresh cookie at all. Follow
+    // the actual protocol instead of assuming TLS.
+    res.cookie('refreshToken', refreshToken, refreshCookieOptions(req));
 
     // Fire off background pipe synchronization for retailers
     if (role === 'retailer') {
@@ -312,11 +332,9 @@ export const refreshAccessToken = async (req, res) => {
 export const logoutUser = async (req, res) => {
   try {
     // Must mirror the attributes used when setting it, or the browser keeps it.
-    res.clearCookie('refreshToken', {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-    });
+    // Flags must match the ones the cookie was set with, or the browser keeps it.
+    const { maxAge: _ignored, ...clearOptions } = refreshCookieOptions(req);
+    res.clearCookie('refreshToken', clearOptions);
     return res.status(200).json({ success: true, message: 'Logged out successfully' });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Error during logout' });
@@ -334,7 +352,9 @@ export const sendPasswordOtp = async (req, res) => {
   try {
     const email = req.user?.email;
     if (!email) {
-      return res.status(400).json({ success: false, message: 'No email on file for this account.' });
+      return res
+        .status(400)
+        .json({ success: false, message: 'No email on file for this account.' });
     }
 
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -349,7 +369,9 @@ export const sendPasswordOtp = async (req, res) => {
       return res.status(500).json({ success: false, message: 'Failed to send OTP email.' });
     }
 
-    return res.status(200).json({ success: true, message: 'OTP sent to your registered email', email });
+    return res
+      .status(200)
+      .json({ success: true, message: 'OTP sent to your registered email', email });
   } catch (error) {
     console.error('Send password OTP error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -1021,7 +1043,9 @@ export const updateKycStatus = async (req, res) => {
     // omit `mobile`, and PaySprint's getonboardstatus needs it for the verification call.
     let existingUser = await Retailer.findOne({ retailerId: merchantCode });
     if (!existingUser) existingUser = await Distributor.findOne({ distributorId: merchantCode });
-    const mobile = existingUser?.contactNumber ? String(existingUser.contactNumber) : String(decoded.mobile || '');
+    const mobile = existingUser?.contactNumber
+      ? String(existingUser.contactNumber)
+      : String(decoded.mobile || '');
 
     // status "0" means onboarding is still PENDING -> must not be marked complete.
     // Only accept a genuinely successful callback status.
@@ -1048,9 +1072,9 @@ export const updateKycStatus = async (req, res) => {
     let webKycVerified = false;
     if (isSuccess) {
       const pipesToVerify =
-        (updateData.activeAepsPipes && updateData.activeAepsPipes.length
+        updateData.activeAepsPipes && updateData.activeAepsPipes.length
           ? updateData.activeAepsPipes
-          : ['bank3', 'bank2', 'bank4', 'bank5', 'bank6']);
+          : ['bank3', 'bank2', 'bank4', 'bank5', 'bank6'];
       for (const p of pipesToVerify) {
         const live = await getOnboardStatus(merchantCode, mobile, p);
         console.log(

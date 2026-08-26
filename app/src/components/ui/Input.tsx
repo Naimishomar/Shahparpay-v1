@@ -180,8 +180,8 @@ export const SelectField: React.FC<{
 );
 
 const styles = themed((c) => ({
-  container: { gap: 6 },
-  label: { fontSize: t.caption, fontWeight: '600', color: c.mutedForeground },
+  container: { gap: 7 },
+  label: { fontSize: t.caption, fontWeight: '600', color: c.mutedForeground, letterSpacing: 0.1 },
   required: { color: c.destructive },
   wrapper: {
     flexDirection: 'row',
@@ -189,11 +189,19 @@ const styles = themed((c) => ({
     borderWidth: 1,
     borderColor: c.input,
     borderRadius: radius.md,
-    backgroundColor: c.card,
+    // Fields sit *into* the card rather than on top of it, so a form reads as
+    // one surface with inputs cut into it.
+    backgroundColor: c.secondary,
     minHeight: TOUCH,
   },
-  // 2px ring: focus must be visible without relying on colour alone.
-  wrapperFocused: { borderColor: c.ring, borderWidth: 2 },
+  // 2px ring plus a tinted halo: focus stays visible without relying on colour
+  // alone, and survives at the largest Dynamic Type sizes.
+  wrapperFocused: {
+    borderColor: c.ring,
+    borderWidth: 2,
+    backgroundColor: c.card,
+    ...({ shadowColor: c.ring, shadowOpacity: 0.18, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } } as const),
+  },
   wrapperError: { borderColor: c.destructive },
   select: { paddingHorizontal: space.md, justifyContent: 'space-between' },
   selectValue: { flex: 1, fontSize: t.body, color: c.foreground },

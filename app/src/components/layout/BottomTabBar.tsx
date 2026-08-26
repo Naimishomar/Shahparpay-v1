@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, Pressable, Platform } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, View, Text, Pressable, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, themed, radius, space, type as t, TOUCH } from '../../theme/colors';
+import { colors, themed, motion, radius, space, type as t, TOUCH } from '../../theme/colors';
 import { TabEntry } from '@/constants';
 
 interface Props {
@@ -28,38 +28,75 @@ export const BottomTabBar: React.FC<Props> = ({ tabs, activeRoute, onNavigate })
       style={[styles.bar, { paddingBottom: Math.max(insets.bottom, space.sm) }]}
       accessibilityRole="tablist"
     >
-      {tabs.map((tab) => {
-        const active = tab.route === activeRoute;
-        return (
-          <Pressable
-            key={tab.key}
-            onPress={() => onNavigate(tab.route)}
-            style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
-            accessibilityRole="tab"
-            accessibilityLabel={tab.name}
-            accessibilityState={{ selected: active }}
-            hitSlop={4}
-          >
-            <View style={[styles.iconWrap, active && styles.iconWrapActive]}>
-              <MaterialCommunityIcons
-                name={(active ? tab.iconActive : tab.icon) as any}
-                size={22}
-                color={active ? colors.tabBarActive : colors.tabBarInactive}
-              />
-            </View>
-            <Text
-              style={[styles.label, active && styles.labelActive]}
-              numberOfLines={1}
-              // The label repeats the tab name already announced by the row.
-              accessibilityElementsHidden
-              importantForAccessibility="no"
-            >
-              {tab.name}
-            </Text>
-          </Pressable>
-        );
-      })}
+      {tabs.map((tab) => (
+        <TabItem
+          key={tab.key}
+          tab={tab}
+          active={tab.route === activeRoute}
+          onPress={() => onNavigate(tab.route)}
+        />
+      ))}
     </View>
+  );
+};
+
+/**
+ * One tab. The active pill grows into place instead of snapping, which is what
+ * makes the bar feel like a physical control rather than a set of links.
+ */
+const TabItem: React.FC<{ tab: TabEntry; active: boolean; onPress: () => void }> = ({
+  tab,
+  active,
+  onPress,
+}) => {
+  const progress = useRef(new Animated.Value(active ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: active ? 1 : 0,
+      duration: active ? motion.normal : motion.exit,
+      // Scale and opacity only, so this stays on the UI thread.
+      useNativeDriver: true,
+    }).start();
+  }, [active, progress]);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+      accessibilityRole="tab"
+      accessibilityLabel={tab.name}
+      accessibilityState={{ selected: active }}
+      hitSlop={4}
+    >
+      <View style={styles.iconWrap}>
+        <Animated.View
+          style={[
+            styles.iconPill,
+            {
+              opacity: progress,
+              transform: [
+                { scaleX: progress.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) },
+              ],
+            },
+          ]}
+        />
+        <MaterialCommunityIcons
+          name={(active ? tab.iconActive : tab.icon) as any}
+          size={22}
+          color={active ? colors.tabBarActive : colors.tabBarInactive}
+        />
+      </View>
+      <Text
+        style={[styles.label, active && styles.labelActive]}
+        numberOfLines={1}
+        // The label repeats the tab name already announced by the row.
+        accessibilityElementsHidden
+        importantForAccessibility="no"
+      >
+        {tab.name}
+      </Text>
+    </Pressable>
   );
 };
 
@@ -94,15 +131,23 @@ const styles = themed((c) => ({
   itemPressed: { opacity: 0.6 },
   iconWrap: {
     minWidth: 44,
-    height: 26,
-    borderRadius: radius.pill,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconWrapActive: { backgroundColor: c.accentSubtle },
+  // Sits behind the glyph so the pill can animate without moving the icon.
+  iconPill: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    borderRadius: radius.pill,
+    backgroundColor: c.accentSubtle,
+  },
   label: {
     fontSize: t.micro,
-    fontWeight: '500',
+    fontWeight: '600',
     color: c.tabBarInactive,
   },
   labelActive: { color: c.tabBarActive, fontWeight: '700' },

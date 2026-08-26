@@ -24,6 +24,7 @@ const TITLES: Record<string, { title: string; subtitle?: string }> = {
   Dashboard: { title: 'Home' },
   Services: { title: 'Services', subtitle: 'Everything you can sell' },
   Reports: { title: 'Reports', subtitle: 'Transaction history' },
+  AepsSettlement: { title: 'Settlement', subtitle: 'AEPS wallet to your bank' },
   AdminPortal: { title: 'Overview' },
   DistributorPortal: { title: 'Overview' },
 };
@@ -42,7 +43,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         ? DISTRIBUTOR_TABS
         : RETAILER_TABS;
 
-  const isTabRoute = tabs.some((tab) => tab.route === route.name);
+  // No back chevron anywhere: the bottom bar is always present, and the stack
+  // sets gestureEnabled, so the Android back button and the iOS swipe-back
+  // gesture still pop every screen. Nothing is unreachable without it.
 
   const named =
     TITLES[route.name] ??
@@ -76,14 +79,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         backgroundColor={colors.background}
       />
 
-      <View style={{ paddingTop: insets.top, backgroundColor: colors.background }} />
-
       <Header
+        topInset={insets.top}
         title={named.title}
         subtitle={named.subtitle}
-        showBack={!isTabRoute}
-        onBack={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate(tabs[0].route))}
-        showWallets={route.name === 'Dashboard' || route.name === 'AdminPortal' || route.name === 'DistributorPortal'}
+        onAccount={route.name === 'Profile' ? undefined : () => navigation.navigate('Profile')}
       />
 
       {/* minHeight 0: on react-native-web a flex child defaults to

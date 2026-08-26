@@ -107,7 +107,7 @@ export const AepsSettlementScreen: React.FC = () => {
     { pending: 0, settled: 0, failed: 0 }
   );
 
-  const available = balances.data?.mainBalance ?? 0;
+  const available = balances.data?.aepsBalance ?? 0;
   const overBalance = Number(amount) > available;
   const ifscValid = IFSC_RE.test(ifscCode.trim().toUpperCase());
   const canSettle = !!bankId && Number(amount) > 0 && !overBalance && pin.length === 4;
@@ -146,7 +146,7 @@ export const AepsSettlementScreen: React.FC = () => {
       onRetry={banks.reload}
     >
       <Grid columns={2}>
-        <Tile label="Main wallet" value={money(available)} />
+        <Tile label="AEPS wallet" value={money(available)} />
         <Tile label="Pending" value={money(summary.pending)} tone="warning" />
         <Tile label="Settled" value={money(summary.settled)} tone="success" />
         <Tile label="Failed" value={String(summary.failed)} tone="error" />
@@ -350,7 +350,8 @@ export const AepsSettlementScreen: React.FC = () => {
             keyboardType="decimal-pad"
             placeholder="0.00"
             leftIcon="currency-inr"
-            error={overBalance ? 'Amount exceeds your main wallet balance' : undefined}
+            error={overBalance ? 'Amount exceeds your AEPS wallet balance' : undefined}
+            helperText={`Settled from your AEPS wallet · ${money(available)} available. A settlement charge is deducted on top of this amount.`}
           />
           <Input
             label="Wallet PIN"
@@ -380,6 +381,7 @@ export const AepsSettlementScreen: React.FC = () => {
             disabled={!canSettle}
             loading={settle.pending}
             icon="bank-transfer-out"
+            haptic="medium"
             size="lg"
             fullWidth
           >
@@ -400,6 +402,19 @@ export const AepsSettlementScreen: React.FC = () => {
                   <Text style={styles.itemAmount}>{money(txn.amount)}</Text>
                   <StatusPill status={txn.status} />
                 </View>
+                <Row label="Bank" value={txn.metadata?.bankName || '—'} />
+                <Row
+                  label="Account"
+                  value={
+                    txn.metadata?.bankAccount
+                      ? `••••${String(txn.metadata.bankAccount).slice(-4)}`
+                      : '—'
+                  }
+                  mono
+                />
+                {!!txn.metadata?.beneficiaryName && (
+                  <Row label="Beneficiary" value={txn.metadata.beneficiaryName} />
+                )}
                 <Row label="Reference" value={txn.transactionId} />
                 <Row label="Date" value={shortDate(txn.createdAt)} last />
                 {['PENDING', 'PROCESSING'].includes(String(txn.status).toUpperCase()) && (

@@ -177,4 +177,4 @@ expo export --platform web
 
 ## License
 
-Proprietary - Shahparpay Networks
+Proprietary - Shahparpay Solutions Pvt. Ltd.

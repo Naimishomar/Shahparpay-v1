@@ -16,11 +16,71 @@ export const BASE_URL = resolveBaseUrl();
 
 type RetriableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
+interface RefreshResult {
+  token: string | null;
+  /** The server refused the refresh token — the session is over. */
+  rejected: boolean;
+}
+
+type TokenRefreshedHandler = (token: string, user?: any, role?: string) => void;
+
+/**
+ * How long a GET response stays reusable, per endpoint. Only what is listed
+ * here is cached — anything absent always hits the network, so a new endpoint
+ * can never become quietly stale by default.
+ *
+ * TTLs are set by how fast the data actually moves, not by convenience:
+ * reference lists barely change in a day; balances must not lag a transaction.
+ * Every mutation clears the whole cache regardless (see `invalidateCache`), so
+ * these ceilings only apply to idle browsing.
+ */
+const MINUTE = 60_000;
+const CACHE_TTL: Record<string, number> = {
+  // Reference data: PaySprint caches the bank list server-side for 24h.
+  [API_ENDPOINTS.aeps.banks]: 60 * MINUTE,
+  [API_ENDPOINTS.recharge.operators]: 60 * MINUTE,
+  // Onboarding state changes only through flows that mutate and thus flush.
+  [API_ENDPOINTS.aeps.merchantStatus]: 2 * MINUTE,
+  [API_ENDPOINTS.aeps.pipesVerify]: 5 * MINUTE,
+  [API_ENDPOINTS.pan.myPsaStatus]: 5 * MINUTE,
+  [API_ENDPOINTS.pan.myStdPsaStatus]: 5 * MINUTE,
+  // Money: short enough that a stale read is never how a retailer finds out.
+  [API_ENDPOINTS.wallet.balance]: 20_000,
+  [API_ENDPOINTS.dashboard.retailer]: MINUTE,
+  [API_ENDPOINTS.dashboard.recentTransactions]: 30_000,
+  [API_ENDPOINTS.settlement.savedBanks]: 5 * MINUTE,
+  [API_ENDPOINTS.distributor.retailers]: MINUTE,
+  [API_ENDPOINTS.distributor.stats]: MINUTE,
+  [API_ENDPOINTS.admin.stats]: MINUTE,
+  [API_ENDPOINTS.admin.distributors]: MINUTE,
+};
+
+/** The TTL for a URL, matching on prefix so `/status/:id` inherits `/status`. */
+export const cacheTtlFor = (url: string): number => {
+  if (CACHE_TTL[url] !== undefined) return CACHE_TTL[url];
+  for (const [path, ttl] of Object.entries(CACHE_TTL)) {
+    if (url.startsWith(`${path}/`)) return ttl;
+  }
+  return 0;
+};
+
+/** Endpoints that legitimately answer 401 while logged out. */
+const PUBLIC_AUTH_PATHS = [
+  API_ENDPOINTS.auth.login,
+  API_ENDPOINTS.auth.verifyOtp,
+  API_ENDPOINTS.auth.refreshToken,
+  API_ENDPOINTS.auth.sendVerificationOtp,
+  API_ENDPOINTS.auth.verifyEmailOtp,
+];
+
 class ApiService {
   private client: AxiosInstance;
   private token: string | null = null;
-  private refreshPromise: Promise<string | null> | null = null;
+  private refreshPromise: Promise<RefreshResult> | null = null;
   private onUnauthorized: (() => void) | null = null;
+  private onTokenRefreshed: TokenRefreshedHandler | null = null;
+  private cache = new Map<string, { data: any; at: number }>();
+  private inFlight = new Map<string, Promise<any>>();
 
   constructor() {
     this.client = axios.create({
@@ -48,29 +108,42 @@ class ApiService {
       (response) => response,
       async (error: AxiosError) => {
         const original = error.config as RetriableConfig | undefined;
-        const isAuthCall = original?.url?.startsWith('/api/auth/');
+
+        // Only the genuinely public endpoints are exempt. `/api/auth/` also
+        // hosts authenticated routes (update-profile, change-password,
+        // paysprint/*, create-retailer); excluding the whole prefix meant an
+        // expired token failed those outright instead of refreshing.
+        const isPublicAuthCall = PUBLIC_AUTH_PATHS.some((path) => original?.url?.startsWith(path));
 
         // Access tokens live 15 minutes; refresh once and replay the request
         // instead of dumping the user back on the login screen.
-        if (error.response?.status === 401 && original && !original._retry && !isAuthCall) {
+        if (error.response?.status === 401 && original && !original._retry && !isPublicAuthCall) {
           original._retry = true;
-          const refreshed = await this.refreshAccessToken();
-          if (refreshed) {
-            original.headers.Authorization = `Bearer ${refreshed}`;
+          const result = await this.refreshAccessToken();
+          if (result.token) {
+            original.headers.Authorization = `Bearer ${result.token}`;
             return this.client(original);
           }
-          await this.handleUnauthorized();
+          // Only a server that actually rejected the refresh token ends the
+          // session. A timeout or a dropped connection leaves it intact — on a
+          // flaky connection the old code logged the retailer out mid-shift.
+          if (result.rejected) await this.handleUnauthorized();
         }
         return Promise.reject(error);
       }
     );
   }
 
-  private refreshAccessToken(): Promise<string | null> {
+  /**
+   * `rejected` means the server refused the refresh token (or there isn't
+   * one), so the session is genuinely over. Anything else — timeout, DNS,
+   * offline, 5xx — leaves `rejected` false and the session untouched.
+   */
+  private refreshAccessToken(): Promise<RefreshResult> {
     if (!this.refreshPromise) {
-      this.refreshPromise = (async () => {
+      this.refreshPromise = (async (): Promise<RefreshResult> => {
         const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.refreshToken);
-        if (!refreshToken) return null;
+        if (!refreshToken) return { token: null, rejected: true };
         try {
           // Raw axios: going through this.client would recurse on a 401.
           const { data } = await axios.post(
@@ -78,18 +151,31 @@ class ApiService {
             { refreshToken },
             { timeout: 30000 }
           );
-          if (!data?.success || !data?.token) return null;
+          if (!data?.success || !data?.token) return { token: null, rejected: true };
           this.token = data.token;
           await AsyncStorage.setItem(STORAGE_KEYS.token, data.token);
-          return data.token as string;
-        } catch {
-          return null;
+          this.onTokenRefreshed?.(data.token, data.user, data.role);
+          return { token: data.token as string, rejected: false };
+        } catch (error) {
+          const status = (error as AxiosError)?.response?.status;
+          // 401/403 = the refresh token is dead. No status at all = we never
+          // reached the server, so we cannot conclude anything about it.
+          return { token: null, rejected: status === 401 || status === 403 };
         }
       })().finally(() => {
         this.refreshPromise = null;
       });
     }
     return this.refreshPromise;
+  }
+
+  /** Proactive refresh, used when the app returns to the foreground. */
+  async ensureFreshToken(): Promise<RefreshResult> {
+    return this.refreshAccessToken();
+  }
+
+  setTokenRefreshedHandler(handler: TokenRefreshedHandler | null) {
+    this.onTokenRefreshed = handler;
   }
 
   private async handleUnauthorized() {
@@ -99,6 +185,7 @@ class ApiService {
 
   async clearSession() {
     this.token = null;
+    this.invalidateCache();
     await AsyncStorage.multiRemove([
       STORAGE_KEYS.token,
       STORAGE_KEYS.refreshToken,
@@ -114,27 +201,70 @@ class ApiService {
     this.token = token;
   }
 
+  /**
+   * GET with a short-lived response cache.
+   *
+   * Two screens asking for the wallet balance at the same moment share one
+   * request, and revisiting a screen inside its TTL costs nothing — which is
+   * the common case, since every screen refetches on mount.
+   */
   async get<T = any>(url: string, params?: Record<string, any>) {
-    const response = await this.client.get<T>(url, { params });
-    return response.data;
+    const ttl = cacheTtlFor(url);
+    if (!ttl) return (await this.client.get<T>(url, { params })).data;
+
+    const key = `${url}?${JSON.stringify(params ?? {})}`;
+    const hit = this.cache.get(key);
+    if (hit && Date.now() - hit.at < ttl) return hit.data as T;
+
+    // Coalesce: a second caller during the first request awaits the same
+    // promise instead of opening its own connection.
+    const inFlight = this.inFlight.get(key);
+    if (inFlight) return inFlight as Promise<T>;
+
+    const request = this.client
+      .get<T>(url, { params })
+      .then((response) => {
+        this.cache.set(key, { data: response.data, at: Date.now() });
+        return response.data;
+      })
+      .finally(() => {
+        this.inFlight.delete(key);
+      });
+
+    this.inFlight.set(key, request);
+    return request;
+  }
+
+  /**
+   * Drops every cached response. Called after any mutation and by
+   * pull-to-refresh — once money has moved, nothing cached is trustworthy,
+   * and picking which entries to expire would be guesswork.
+   */
+  invalidateCache() {
+    this.cache.clear();
+    this.inFlight.clear();
   }
 
   async post<T = any>(url: string, data?: Record<string, any>) {
+    this.invalidateCache();
     const response = await this.client.post<T>(url, data);
     return response.data;
   }
 
   async put<T = any>(url: string, data?: Record<string, any>) {
+    this.invalidateCache();
     const response = await this.client.put<T>(url, data);
     return response.data;
   }
 
   async patch<T = any>(url: string, data?: Record<string, any>) {
+    this.invalidateCache();
     const response = await this.client.patch<T>(url, data);
     return response.data;
   }
 
   async delete<T = any>(url: string) {
+    this.invalidateCache();
     const response = await this.client.delete<T>(url);
     return response.data;
   }
@@ -150,6 +280,7 @@ class ApiService {
     fields: Record<string, any>,
     files?: Record<string, { uri: string; name: string; type: string } | undefined>
   ) {
+    this.invalidateCache();
     const form = new FormData();
     Object.entries(fields).forEach(([key, value]) => {
       if (value !== undefined && value !== null) form.append(key, String(value));
@@ -169,6 +300,7 @@ class ApiService {
     fields: Record<string, any>,
     files?: Record<string, { uri: string; name: string; type: string } | undefined>
   ) {
+    this.invalidateCache();
     const form = new FormData();
     Object.entries(fields).forEach(([key, value]) => {
       if (value !== undefined && value !== null) form.append(key, String(value));
@@ -201,6 +333,15 @@ class ApiService {
     return this.post(API_ENDPOINTS.auth.refreshToken, refreshToken ? { refreshToken } : undefined);
   }
 
+  /** Signup-time email check used when onboarding a retailer or distributor. */
+  async sendVerificationOtp(email: string, name?: string) {
+    return this.post(API_ENDPOINTS.auth.sendVerificationOtp, { email, name });
+  }
+
+  async verifyEmailOtp(email: string, otp: string) {
+    return this.post(API_ENDPOINTS.auth.verifyEmailOtp, { email, otp });
+  }
+
   async getPaysprintOnboardUrl(merchantId: string, isNew: boolean, pipe: string, callbackUrl: string) {
     return this.post(API_ENDPOINTS.auth.paysprintOnboardUrl, { merchantId, isNew, pipe, callbackUrl });
   }
@@ -217,6 +358,23 @@ class ApiService {
 
   async updateProfile(data: Record<string, any>) {
     return this.put(API_ENDPOINTS.auth.updateProfile, data);
+  }
+
+  /**
+   * Same endpoint as updateProfile, but multipart so the profile photo can
+   * ride along. `address` is nested, and multer flattens form fields, so it
+   * goes over as JSON — the controller parses it back.
+   */
+  async updateProfileWithPhoto(
+    data: Record<string, any>,
+    profilePicture?: { uri: string; name: string; type: string }
+  ) {
+    const { address, ...rest } = data;
+    return this.putForm(
+      API_ENDPOINTS.auth.updateProfile,
+      { ...rest, ...(address ? { address: JSON.stringify(address) } : {}) },
+      { profilePicture }
+    );
   }
 
   /** Password change is OTP-gated: request the code, then submit it. */

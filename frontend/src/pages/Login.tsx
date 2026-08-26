@@ -114,7 +114,7 @@ const Login = () => {
                 </div>
 
                 <div className="relative z-10 text-sm text-muted-foreground">
-                    &copy; {new Date().getFullYear()} Shahparpay Networks. All rights reserved.
+                    &copy; {new Date().getFullYear()} Shahparpay Solutions Pvt. Ltd. All rights reserved.
                 </div>
             </div>
 

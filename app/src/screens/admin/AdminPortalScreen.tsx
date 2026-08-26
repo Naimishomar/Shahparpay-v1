@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -17,6 +18,8 @@ import {
   dateTime,
   shortDate,
 } from '@/components/ui/Screen';
+import { Sheet } from '@/components/ui/Sheet';
+import { OnboardMemberSheet } from '@/components/network/OnboardMemberSheet';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
 
@@ -32,6 +35,8 @@ export const AdminPortalScreen: React.FC = () => {
   const [remarks, setRemarks] = useState<Record<string, string>>({});
   const [commission, setCommission] = useState('');
   const [notice, setNotice] = useState('');
+  const [onboarding, setOnboarding] = useState(false);
+  const [selectedDistributor, setSelectedDistributor] = useState<any | null>(null);
 
   const stats = useAsync<any>(async () => (await api.getAdminStats()).data, []);
   const distributors = useAsync<any[]>(async () => (await api.getAdminDistributors()).data ?? [], []);
@@ -132,7 +137,7 @@ export const AdminPortalScreen: React.FC = () => {
                   </View>
                 ))
               ) : (
-                <EmptyState icon="receipt-text-outline" title="No transactions yet" />
+                <EmptyState icon="text-box-outline" title="No transactions yet" />
               )}
             </CardContent>
           </Card>
@@ -217,11 +222,26 @@ export const AdminPortalScreen: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <Button
+              icon="account-plus-outline"
+              onPress={() => setOnboarding(true)}
+              style={{ marginBottom: space.md }}
+              fullWidth
+            >
+              Onboard a distributor
+            </Button>
             {distributors.loading ? null : distributors.data?.length ? (
               distributors.data.map((dist: any, i: number) => (
-                <View
+                <Pressable
                   key={dist._id}
-                  style={[styles.listItem, i === distributors.data!.length - 1 && styles.listItemLast]}
+                  onPress={() => setSelectedDistributor(dist)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${dist.businessName || dist.name}`}
+                  style={({ pressed }) => [
+                    styles.listItem,
+                    i === distributors.data!.length - 1 && styles.listItemLast,
+                    pressed && { opacity: 0.7 },
+                  ]}
                 >
                   <View style={styles.listInfo}>
                     <Text style={styles.listName} numberOfLines={1}>
@@ -235,10 +255,20 @@ export const AdminPortalScreen: React.FC = () => {
                     <Text style={styles.listAmount}>{money(dist.commissionsEarned)}</Text>
                     <StatusPill status={dist.isActive ? 'ACTIVE' : 'INACTIVE'} />
                   </View>
-                </View>
+                  <MaterialCommunityIcons
+                    name="chevron-right"
+                    size={20}
+                    color={colors.mutedForeground}
+                  />
+                </Pressable>
               ))
             ) : (
-              <EmptyState icon="account-group-outline" title="No distributors yet" />
+              <EmptyState
+                icon="account-group-outline"
+                title="No distributors yet"
+                subtitle="Onboard a distributor to start building the network"
+                action={{ label: 'Onboard a distributor', onPress: () => setOnboarding(true) }}
+              />
             )}
           </CardContent>
         </Card>
@@ -279,6 +309,59 @@ export const AdminPortalScreen: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      <OnboardMemberSheet
+        visible={onboarding}
+        kind="distributor"
+        onClose={() => setOnboarding(false)}
+        onCreated={() => {
+          distributors.reload();
+          stats.reload();
+        }}
+      />
+
+      <Sheet
+        visible={!!selectedDistributor}
+        onClose={() => setSelectedDistributor(null)}
+        title={selectedDistributor?.businessName || selectedDistributor?.name || 'Distributor'}
+        subtitle={selectedDistributor?.distributorId}
+        icon="account-group-outline"
+      >
+        {!!selectedDistributor && (
+          <View style={styles.detailCard}>
+            <Row
+              label="Status"
+              value={<StatusPill status={selectedDistributor.isActive ? 'ACTIVE' : 'INACTIVE'} />}
+            />
+            <Row label="Distributor ID" value={selectedDistributor.distributorId} mono />
+            <Row label="Owner" value={selectedDistributor.name} />
+            <Row label="Email" value={selectedDistributor.email} />
+            <Row label="Mobile" value={selectedDistributor.contactNumber} mono />
+            <Row
+              label="Address"
+              value={
+                [
+                  selectedDistributor.address?.city,
+                  selectedDistributor.address?.district,
+                  selectedDistributor.address?.state,
+                ]
+                  .filter(Boolean)
+                  .join(', ') || '—'
+              }
+            />
+            <Row label="Aadhaar" value={selectedDistributor.aadhaarNumber || '—'} mono />
+            <Row label="PAN" value={selectedDistributor.panNumber || '—'} mono />
+            <Row label="Retailers" value={String(selectedDistributor.retailers?.length ?? 0)} />
+            <Row label="Wallet" value={money(selectedDistributor.mainWalletBalance)} mono />
+            <Row
+              label="Commissions earned"
+              value={money(selectedDistributor.commissionsEarned)}
+              mono
+            />
+            <Row label="Joined" value={shortDate(selectedDistributor.createdAt)} last />
+          </View>
+        )}
+      </Sheet>
     </Screen>
   );
 };
@@ -303,6 +386,13 @@ const Tile: React.FC<{ label: string; value: string; tone?: 'warning' }> = ({
 );
 
 const styles = themed((c) => ({
+  detailCard: {
+    paddingHorizontal: space.lg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.card,
+  },
   tile: {
     padding: space.md,
     borderRadius: radius.md,
