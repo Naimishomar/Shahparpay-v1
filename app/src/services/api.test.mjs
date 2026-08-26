@@ -111,4 +111,23 @@ assert.ok(
 assert.ok(/no refresh token/i.test(auth), 'warn when restoring a session with no refresh token');
 assert.ok(/no refreshToken/i.test(auth), 'warn when login returns no refresh token');
 
-console.log('api: refresh failure classification + startup contract OK');
+// --- base URL ------------------------------------------------------------
+// A gitignored .env never reaches the EAS git archive, so a standalone build
+// resolved to the handset's own loopback and every request failed with
+// "could not reach the server". The URL must come from build config.
+import { readFileSync as read } from 'node:fs';
+const easJson = JSON.parse(read(new URL('../../eas.json', import.meta.url), 'utf8'));
+for (const profile of ['apk', 'production']) {
+  const url = easJson.build?.[profile]?.env?.EXPO_PUBLIC_BACKEND_URL;
+  assert.ok(url, `eas.json build.${profile}.env must set EXPO_PUBLIC_BACKEND_URL`);
+  assert.ok(/^https?:\/\//.test(url), `${profile}: ${url} is not an absolute URL`);
+  assert.ok(!/localhost|127\.0\.0\.1/.test(url), `${profile} points at loopback: ${url}`);
+}
+
+// And the fallback has to complain rather than quietly ship loopback again.
+assert.ok(
+  /EXPO_PUBLIC_BACKEND_URL is missing from this build/.test(src),
+  'the localhost fallback must warn in a release build'
+);
+
+console.log('api: refresh classification + startup contract + base URL OK');

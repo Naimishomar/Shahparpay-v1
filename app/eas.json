@@ -8,13 +8,19 @@
       "android": {
         "buildType": "apk"
       },
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "http://65.2.132.248:4000"
+      }
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
       },
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "http://65.2.132.248:4000"
+      }
     }
   },
   "submit": {

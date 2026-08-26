@@ -8,8 +8,24 @@ import { API_ENDPOINTS, STORAGE_KEYS } from '@/constants';
 const resolveBaseUrl = () => {
   const fromEnv = process.env.EXPO_PUBLIC_BACKEND_URL;
   if (fromEnv) return fromEnv.replace(/\/+$/, '');
+
+  // Metro's host, so a dev build on a device reaches the laptop running the
+  // API rather than the device's own loopback.
   const host = Constants.expoConfig?.hostUri?.split(':')[0];
-  return host ? `http://${host}:3000` : 'http://localhost:3000';
+  if (host) return `http://${host}:3000`;
+
+  // No env var and no Metro host means a standalone build shipped without
+  // EXPO_PUBLIC_BACKEND_URL — every request then goes to the handset's own
+  // loopback and fails as "could not reach the server". Say so, loudly:
+  // silently pointing at localhost is how it shipped that way once already.
+  if (!__DEV__) {
+    console.error(
+      '[api] EXPO_PUBLIC_BACKEND_URL is missing from this build. ' +
+        'Set it in eas.json under build.<profile>.env — a gitignored .env ' +
+        'never reaches the EAS build.'
+    );
+  }
+  return 'http://localhost:3000';
 };
 
 export const BASE_URL = resolveBaseUrl();
