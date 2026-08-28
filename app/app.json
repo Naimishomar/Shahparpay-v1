@@ -61,13 +61,15 @@
         }
       ],
       "./plugins/withRdServiceQueries",
-      "expo-build-properties",
+      "./plugins/withAndroidAbis",
       [
         "expo-build-properties",
         {
           "android": {
             "minSdkVersion": 23,
-            "usesCleartextTraffic": true
+            "usesCleartextTraffic": true,
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
           }
         }
       ]

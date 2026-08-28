@@ -1,5 +1,5 @@
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Phone, MapPin, Building2, ShieldCheck, KeyRound, ChevronRight, LogOut, Camera, Edit2, Save, X } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Building2, ShieldCheck, KeyRound, Lock, ChevronRight, LogOut, Camera, Edit2, Save, X } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -12,7 +12,10 @@ const Profile = () => {
     // Password Change State
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
     const [passwordStep, setPasswordStep] = useState(1);
-    const [passwordFormData, setPasswordFormData] = useState({ email: '', otp: '', newPassword: '' });
+    // The password and wallet-PIN changes are the same OTP-gated modal; only
+    // the final field and the endpoint it posts to differ.
+    const [securityMode, setSecurityMode] = useState<'password' | 'pin'>('password');
+    const [passwordFormData, setPasswordFormData] = useState({ email: '', otp: '', newPassword: '', newPin: '' });
     const [isPasswordLoading, setIsPasswordLoading] = useState(false);
     
     // Form State
@@ -106,10 +109,14 @@ const Profile = () => {
         }
         setIsPasswordLoading(true);
         try {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/send-verification-otp`, {
+            // send-verification-otp guards signup and refuses an address that
+            // already has an account — i.e. every address that could reach this
+            // screen. send-password-otp is the signed-in equivalent and takes
+            // the address off the access token.
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/send-password-otp`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: user.email, name: user.name })
+                credentials: 'include',
             });
             const data = await res.json();
             if (data.success) {
@@ -147,7 +154,7 @@ const Profile = () => {
                 toast.success("Password changed successfully!");
                 setIsPasswordModalOpen(false);
                 setPasswordStep(1);
-                setPasswordFormData({ email: '', otp: '', newPassword: '' });
+                setPasswordFormData({ email: '', otp: '', newPassword: '', newPin: '' });
             } else {
                 toast.error(data.message || "Failed to change password");
             }
@@ -156,6 +163,42 @@ const Profile = () => {
         } finally {
             setIsPasswordLoading(false);
         }
+    };
+
+    const handleVerifyAndChangePin = async () => {
+        if (!/^\d{4}$/.test(passwordFormData.newPin)) {
+            toast.error("PIN must be exactly 4 digits");
+            return;
+        }
+        setIsPasswordLoading(true);
+        try {
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/wallet/change-pin`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ otp: passwordFormData.otp, newPin: passwordFormData.newPin })
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success("Wallet PIN changed successfully!");
+                setIsPasswordModalOpen(false);
+                setPasswordStep(1);
+                setPasswordFormData({ email: '', otp: '', newPassword: '', newPin: '' });
+            } else {
+                toast.error(data.message || "Failed to change PIN");
+            }
+        } catch (error) {
+            toast.error("Network error");
+        } finally {
+            setIsPasswordLoading(false);
+        }
+    };
+
+    const openSecurityModal = (mode: 'password' | 'pin') => {
+        setSecurityMode(mode);
+        setPasswordStep(1);
+        setPasswordFormData({ email: '', otp: '', newPassword: '', newPin: '' });
+        setIsPasswordModalOpen(true);
     };
 
     return (
@@ -456,7 +499,7 @@ const Profile = () => {
                     {/* Quick Settings */}
                     <div className="glass-card rounded-3xl p-4 bg-card shadow-sm border border-border">
                         <button 
-                            onClick={() => setIsPasswordModalOpen(true)}
+                            onClick={() => openSecurityModal('password')}
                             className="w-full flex items-center justify-between p-4 hover:bg-muted/50 rounded-2xl transition-colors group"
                         >
                             <div className="flex items-center gap-3">
@@ -466,6 +509,21 @@ const Profile = () => {
                                 <div className="text-left">
                                     <p className="font-semibold text-foreground group-hover:text-primary transition-colors">Change Password</p>
                                     <p className="text-xs text-muted-foreground">Update your security credentials</p>
+                                </div>
+                            </div>
+                            <ChevronRight size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                        </button>
+                        <button 
+                            onClick={() => openSecurityModal('pin')}
+                            className="w-full flex items-center justify-between p-4 hover:bg-muted/50 rounded-2xl transition-colors group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-amber-500/10 text-amber-500 rounded-lg">
+                                    <Lock size={20} />
+                                </div>
+                                <div className="text-left">
+                                    <p className="font-semibold text-foreground group-hover:text-primary transition-colors">Change Wallet PIN</p>
+                                    <p className="text-xs text-muted-foreground">4-digit PIN for transfers, DMT and settlements</p>
                                 </div>
                             </div>
                             <ChevronRight size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
@@ -483,7 +541,7 @@ const Profile = () => {
                             onClick={() => {
                                 setIsPasswordModalOpen(false);
                                 setPasswordStep(1);
-                                setPasswordFormData({ email: '', otp: '', newPassword: '' });
+                                setPasswordFormData({ email: '', otp: '', newPassword: '', newPin: '' });
                             }}
                             className="absolute top-4 right-4 p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors"
                         >
@@ -494,9 +552,15 @@ const Profile = () => {
                             <div className="w-16 h-16 bg-purple-500/10 text-purple-500 rounded-full flex items-center justify-center mb-4">
                                 <KeyRound size={32} />
                             </div>
-                            <h2 className="text-2xl font-bold text-foreground">Change Password</h2>
+                            <h2 className="text-2xl font-bold text-foreground">
+                                {securityMode === 'pin' ? 'Change Wallet PIN' : 'Change Password'}
+                            </h2>
                             <p className="text-sm text-muted-foreground mt-2">
-                                {passwordStep === 1 ? "Verify your identity to proceed." : "Enter OTP and your new password."}
+                                {passwordStep === 1
+                                    ? "Verify your identity to proceed."
+                                    : securityMode === 'pin'
+                                        ? "Enter the OTP and your new 4-digit PIN."
+                                        : "Enter OTP and your new password."}
                             </p>
                         </div>
 
@@ -537,22 +601,43 @@ const Profile = () => {
                                             className="w-full p-3 bg-background dark:bg-black/20 border border-border dark:border-white/20 text-foreground dark:text-white rounded-xl focus:ring-1 focus:ring-primary focus:border-primary outline-none"
                                         />
                                     </div>
-                                    <div className="text-left space-y-2">
-                                        <label className="text-sm font-medium text-foreground">New Password</label>
-                                        <input 
-                                            type="password" 
-                                            placeholder="Enter new password"
-                                            value={passwordFormData.newPassword}
-                                            onChange={(e) => setPasswordFormData({...passwordFormData, newPassword: e.target.value})}
-                                            className="w-full p-3 bg-background dark:bg-black/20 border border-border dark:border-white/20 text-foreground dark:text-white rounded-xl focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-                                        />
-                                    </div>
+                                    {securityMode === 'pin' ? (
+                                        <div className="text-left space-y-2">
+                                            <label className="text-sm font-medium text-foreground">New Wallet PIN</label>
+                                            <input 
+                                                type="password" 
+                                                inputMode="numeric"
+                                                maxLength={4}
+                                                placeholder="4 digits"
+                                                value={passwordFormData.newPin}
+                                                onChange={(e) => setPasswordFormData({...passwordFormData, newPin: e.target.value.replace(/\D/g, '').slice(0, 4)})}
+                                                className="w-full p-3 bg-background dark:bg-black/20 border border-border dark:border-white/20 text-foreground dark:text-white rounded-xl focus:ring-1 focus:ring-primary focus:border-primary outline-none tracking-[0.5em]"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="text-left space-y-2">
+                                            <label className="text-sm font-medium text-foreground">New Password</label>
+                                            <input 
+                                                type="password" 
+                                                placeholder="Enter new password"
+                                                value={passwordFormData.newPassword}
+                                                onChange={(e) => setPasswordFormData({...passwordFormData, newPassword: e.target.value})}
+                                                className="w-full p-3 bg-background dark:bg-black/20 border border-border dark:border-white/20 text-foreground dark:text-white rounded-xl focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                                            />
+                                        </div>
+                                    )}
                                     <button 
-                                        onClick={handleVerifyAndChangePassword}
-                                        disabled={isPasswordLoading || !passwordFormData.otp || !passwordFormData.newPassword}
+                                        onClick={securityMode === 'pin' ? handleVerifyAndChangePin : handleVerifyAndChangePassword}
+                                        disabled={
+                                            isPasswordLoading ||
+                                            passwordFormData.otp.length !== 6 ||
+                                            (securityMode === 'pin'
+                                                ? passwordFormData.newPin.length !== 4
+                                                : passwordFormData.newPassword.length < 6)
+                                        }
                                         className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
                                     >
-                                        {isPasswordLoading ? "Updating..." : "Change Password"}
+                                        {isPasswordLoading ? "Updating..." : securityMode === 'pin' ? "Change PIN" : "Change Password"}
                                     </button>
                                 </>
                             )}

@@ -104,6 +104,10 @@ class ApiService {
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
+        // PaySprint wants accessmode APP for Android-captured biometrics and
+        // SITE for the web dashboard. The backend reads this header to decide;
+        // without it every AEPS/eKYC call from the app is sent as SITE.
+        'X-Client': 'APP',
       },
     });
 
@@ -800,6 +804,11 @@ class ApiService {
   // -------------------------------------------------------------- Wallet
   async setWalletPin(pin: string) {
     return this.post(API_ENDPOINTS.wallet.setPin, { pin });
+  }
+
+  /** Replaces the wallet PIN. Gated on the OTP from `sendPasswordOtp`, not the old PIN. */
+  async changeWalletPin(data: { otp: string; newPin: string }) {
+    return this.post(API_ENDPOINTS.wallet.changePin, data);
   }
 
   async transferAepsToMain(data: { amount: number; pin: string }) {

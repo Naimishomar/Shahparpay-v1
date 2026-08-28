@@ -18,14 +18,25 @@ import {
   verifyAllPipes,
   getPipeOnboardingPlan,
 } from '../controllers/aepsPayment.controller.js';
+import {
+  onboardTransactionCallback,
+  onboardStatusCallback,
+  getOnboardSdkParams,
+} from '../controllers/onboardCallback.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
+
+// PaySprint server-to-server onboarding callbacks. Deliberately outside
+// authMiddlewares — they carry PAYSPRINT_CALLBACK_KEY instead of a user token.
+router.post('/onboard/callback/transaction', onboardTransactionCallback);
+router.post('/onboard/callback/status', onboardStatusCallback);
 
 // Merchant Status
 router.get('/merchant-status', authMiddlewares, getMerchantStatus);
 router.get('/pipes/verify', authMiddlewares, verifyAllPipes);
 router.get('/onboarding/plan', authMiddlewares, getPipeOnboardingPlan);
+router.get('/onboard/sdk-params', authMiddlewares, getOnboardSdkParams);
 router.post('/get-pid-options', authMiddlewares, getPidOptions);
 
 // Core AEPS Services

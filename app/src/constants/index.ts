@@ -218,6 +218,7 @@ export const API_ENDPOINTS = {
   wallet: {
     balance: '/api/wallet/balance',
     setPin: '/api/wallet/set-pin',
+    changePin: '/api/wallet/change-pin',
     transfer: '/api/wallet/transfer',
     history: '/api/wallet/history',
     ledger: '/api/wallet/ledger',
