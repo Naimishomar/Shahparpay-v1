@@ -7,6 +7,7 @@ import { transferBetweenWallets } from '../utils/wallet.util.js';
 import { transferAepsToMainWalletApi, fetchAepsBalance } from '../utils/paysprint.util.js';
 import Retailer from '../models/users/retailer.model.js';
 import Distributor from '../models/users/distributor.model.js';
+import Otp from '../models/otp.model.js';
 
 // Helper to initialize wallets if they don't exist
 const initializeWallets = async (userId, userModel) => {
@@ -80,6 +81,49 @@ export const setPin = async (req, res) => {
     return res.status(200).json({ success: true, message: 'PIN set successfully.' });
   } catch (error) {
     console.error('Set PIN error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+/**
+ * Changes the wallet PIN of the signed-in user. The old PIN is deliberately
+ * NOT required — a retailer who has forgotten it still needs a way back in —
+ * so the email OTP is the whole authorisation. Request one from
+ * POST /api/auth/send-password-otp first; it is sent to the address on the
+ * access token, never to an address supplied here.
+ * @route POST /api/wallet/change-pin
+ */
+export const changePin = async (req, res) => {
+  try {
+    const { otp, newPin } = req.body;
+    const email = req.user?.email;
+
+    if (!otp || !newPin) {
+      return res.status(400).json({ success: false, message: 'OTP and new PIN are required.' });
+    }
+    const pin = String(newPin);
+    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+      return res.status(400).json({ success: false, message: 'A valid 4-digit PIN is required.' });
+    }
+    if (!email) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'No email on file for this account.' });
+    }
+
+    if (!(await Otp.consume(email, otp))) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP.' });
+    }
+
+    const userModel = req.user.role === 'distributor' ? 'Distributor' : 'Retailer';
+    const { aepsWallet } = await initializeWallets(req.user.id, userModel);
+
+    aepsWallet.pin = await bcrypt.hash(pin, 10);
+    await aepsWallet.save();
+
+    return res.status(200).json({ success: true, message: 'PIN changed successfully.' });
+  } catch (error) {
+    console.error('Change PIN error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

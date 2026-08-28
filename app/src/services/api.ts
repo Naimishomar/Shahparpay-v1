@@ -8,8 +8,24 @@ import { API_ENDPOINTS, STORAGE_KEYS } from '@/constants';
 const resolveBaseUrl = () => {
   const fromEnv = process.env.EXPO_PUBLIC_BACKEND_URL;
   if (fromEnv) return fromEnv.replace(/\/+$/, '');
+
+  // Metro's host, so a dev build on a device reaches the laptop running the
+  // API rather than the device's own loopback.
   const host = Constants.expoConfig?.hostUri?.split(':')[0];
-  return host ? `http://${host}:3000` : 'http://localhost:3000';
+  if (host) return `http://${host}:3000`;
+
+  // No env var and no Metro host means a standalone build shipped without
+  // EXPO_PUBLIC_BACKEND_URL — every request then goes to the handset's own
+  // loopback and fails as "could not reach the server". Say so, loudly:
+  // silently pointing at localhost is how it shipped that way once already.
+  if (!__DEV__) {
+    console.error(
+      '[api] EXPO_PUBLIC_BACKEND_URL is missing from this build. ' +
+        'Set it in eas.json under build.<profile>.env — a gitignored .env ' +
+        'never reaches the EAS build.'
+    );
+  }
+  return 'http://localhost:3000';
 };
 
 export const BASE_URL = resolveBaseUrl();
@@ -88,6 +104,10 @@ class ApiService {
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
+        // PaySprint wants accessmode APP for Android-captured biometrics and
+        // SITE for the web dashboard. The backend reads this header to decide;
+        // without it every AEPS/eKYC call from the app is sent as SITE.
+        'X-Client': 'APP',
       },
     });
 
@@ -784,6 +804,11 @@ class ApiService {
   // -------------------------------------------------------------- Wallet
   async setWalletPin(pin: string) {
     return this.post(API_ENDPOINTS.wallet.setPin, { pin });
+  }
+
+  /** Replaces the wallet PIN. Gated on the OTP from `sendPasswordOtp`, not the old PIN. */
+  async changeWalletPin(data: { otp: string; newPin: string }) {
+    return this.post(API_ENDPOINTS.wallet.changePin, data);
   }
 
   async transferAepsToMain(data: { amount: number; pin: string }) {

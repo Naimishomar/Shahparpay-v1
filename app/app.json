@@ -25,11 +25,13 @@
       },
       "package": "com.shahparpay.app",
       "permissions": [
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION",
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE"
-      ]
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "versionCode": 1
     },
     "web": {
       "favicon": "./src/assets/icon.png",
@@ -58,13 +60,26 @@
           "cameraPermission": "Shahparpay needs the camera to photograph deposit slips and KYC documents."
         }
       ],
-      "./plugins/withRdServiceQueries"
+      "./plugins/withRdServiceQueries",
+      "./plugins/withAndroidAbis",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 23,
+            "usesCleartextTraffic": true,
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ]
     ],
     "scheme": "shahparpay",
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "a389186d-6781-493e-b47b-fb4d23c76cb0"
       }
-    }
+    },
+    "owner": "naimishomar"
   }
 }

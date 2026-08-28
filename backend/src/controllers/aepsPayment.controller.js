@@ -6,6 +6,7 @@ import {
   getOnboardStatusEndpoint,
   getOnboardStatus,
   postAepsTransactionWithGeoRecovery,
+  accessModeOf,
   isWebKycDone,
 } from '../utils/paysprint.util.js';
 import { getTwoFactorEndpoints, classifyTwoFactorResponse } from '../utils/aepsTwoFactor.js';
@@ -109,7 +110,7 @@ export const balanceEnquiry = async (req, res) => {
           : req.ip.replace(/^::ffff:/, '')
         : '127.0.0.1',
       adhaarnumber: String(aadhaarNumber),
-      accessmodetype: 'SITE',
+      accessmodetype: accessModeOf(req),
       nationalbankidentification: Number(bankIIN),
       requestremarks: 'Balance Enquiry',
       data: pidData,
@@ -474,7 +475,7 @@ export const cashWithdrawal = async (req, res) => {
       referenceno: referenceNo,
       ipaddress: req.ip === '::1' ? '127.0.0.1' : req.ip || '127.0.0.1',
       adhaarnumber: String(aadhaarNumber),
-      accessmodetype: 'SITE',
+      accessmodetype: accessModeOf(req),
       nationalbankidentification: Number(bankIIN),
       requestremarks: 'Cash Withdrawal',
       data: pidData,
@@ -707,7 +708,7 @@ export const aadhaarPay = async (req, res) => {
       referenceno: referenceNo,
       ipaddress: req.ip === '::1' ? '127.0.0.1' : req.ip || '127.0.0.1',
       adhaarnumber: String(aadhaarNumber),
-      accessmodetype: 'SITE',
+      accessmodetype: accessModeOf(req),
       nationalbankidentification: Number(bankIIN),
       requestremarks: 'Aadhaar Pay',
       data: pidData,
@@ -819,7 +820,7 @@ export const miniStatement = async (req, res) => {
       referenceno: `MS${Date.now()}`,
       ipaddress: req.ip === '::1' ? '127.0.0.1' : req.ip || '127.0.0.1',
       adhaarnumber: String(aadhaarNumber),
-      accessmodetype: 'SITE',
+      accessmodetype: accessModeOf(req),
       nationalbankidentification: Number(bankIIN),
       requestremarks: 'Mini Statement',
       data: pidData,
@@ -964,7 +965,7 @@ export const cashDeposit = async (req, res) => {
     // 3. Make the API Call to PaySprint
     const payload = {
       mobilenumber: String(mobileNumber || retailer.contactNumber || '9999999999'),
-      accessmodetype: 'SITE',
+      accessmodetype: accessModeOf(req),
       adhaarnumber: String(aadhaarNumber),
       latitude: String(latitude || '28.7041'),
       longitude: String(longitude || '77.1025'),
@@ -1323,7 +1324,7 @@ export const verifyMerchantOtp = async (req, res) => {
         merchantcode,
         aadhaar,
         piddata: encryptPayload(pidData),
-        accessmode: accessmode || 'SITE',
+        accessmode: accessmode || accessModeOf(req),
       },
       { headers: psHeaders(), validateStatus: () => true }
     );
@@ -1504,7 +1505,7 @@ export const dailyAuth = async (req, res) => {
           : req.ip.replace(/^::ffff:/, '')
         : '127.0.0.1',
       adhaarnumber: String(aadhaarNumber),
-      accessmodetype: 'SITE',
+      accessmodetype: accessModeOf(req),
       data: pidData,
       submerchantid: String(merchantcode),
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
@@ -2234,7 +2235,7 @@ export const activateMerchant = async (req, res) => {
       payload.nature_of_bussiness = nature_of_bussiness;
     }
     if (pipeNorm === 'bank5' || pipeNorm === 'bank6') {
-      payload.accessmode = 'SITE';
+      payload.accessmode = accessModeOf(req);
     }
 
     const headers = {

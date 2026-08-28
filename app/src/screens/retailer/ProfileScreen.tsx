@@ -42,10 +42,15 @@ export const ProfileScreen: React.FC = () => {
   const [stateOpen, setStateOpen] = useState(false);
   const [photo, setPhoto] = useState<PickedFile | null>(null);
 
+  // Password and PIN share one OTP-gated flow: the code request in step 1 is
+  // identical for both, only the fields in step 2 differ.
+  const [securityMode, setSecurityMode] = useState<'password' | 'pin'>('password');
   const [passwordStep, setPasswordStep] = useState<0 | 1 | 2>(0);
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [notice, setNotice] = useState('');
   const [showKyc, setShowKyc] = useState(false);
@@ -99,8 +104,24 @@ export const ProfileScreen: React.FC = () => {
     return res;
   });
 
-  const passwordValid =
-    otp.trim().length === 6 && newPassword.length >= 6 && newPassword === confirmPassword;
+  const changePin = useAction(async () => {
+    const res = await api.changeWalletPin({ otp: otp.trim(), newPin });
+    if (!res.success) throw new Error(res.message);
+    return res;
+  });
+
+  const otpValid = otp.trim().length === 6;
+  const passwordValid = otpValid && newPassword.length >= 6 && newPassword === confirmPassword;
+  const pinValid = otpValid && /^\d{4}$/.test(newPin) && newPin === confirmPin;
+
+  const resetSecurity = () => {
+    setPasswordStep(0);
+    setOtp('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setNewPin('');
+    setConfirmPin('');
+  };
 
   const cancelEdit = () => {
     setEditing(false);
@@ -436,9 +457,30 @@ export const ProfileScreen: React.FC = () => {
         </CardHeader>
         <CardContent style={styles.form}>
           {passwordStep === 0 && (
-            <Button variant="outline" icon="key-outline" onPress={() => setPasswordStep(1)} fullWidth>
-              Change password
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                icon="key-outline"
+                onPress={() => {
+                  setSecurityMode('password');
+                  setPasswordStep(1);
+                }}
+                fullWidth
+              >
+                Change password
+              </Button>
+              <Button
+                variant="outline"
+                icon="dialpad"
+                onPress={() => {
+                  setSecurityMode('pin');
+                  setPasswordStep(1);
+                }}
+                fullWidth
+              >
+                Change wallet PIN
+              </Button>
+            </>
           )}
 
           {passwordStep === 1 && (
@@ -449,7 +491,7 @@ export const ProfileScreen: React.FC = () => {
               />
               {!!requestOtp.error && <ErrorBanner message={requestOtp.error} />}
               <View style={styles.actionRow}>
-                <Button variant="secondary" onPress={() => setPasswordStep(0)} style={styles.flex}>
+                <Button variant="secondary" onPress={resetSecurity} style={styles.flex}>
                   Cancel
                 </Button>
                 <Button
@@ -483,58 +525,80 @@ export const ProfileScreen: React.FC = () => {
                 autoComplete="one-time-code"
                 placeholder="6 digits"
               />
-              <Input
-                label="New password"
-                required
-                value={newPassword}
-                onChangeText={setNewPassword}
-                secureTextEntry={!showPassword}
-                leftIcon="lock-outline"
-                rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                onRightIconPress={() => setShowPassword(!showPassword)}
-                rightIconLabel={showPassword ? 'Hide password' : 'Show password'}
-                helperText="At least 6 characters"
-              />
-              <Input
-                label="Confirm new password"
-                required
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showPassword}
-                leftIcon="lock-check-outline"
-                error={
-                  confirmPassword && confirmPassword !== newPassword
-                    ? 'Passwords do not match'
-                    : undefined
-                }
-              />
+              {securityMode === 'password' ? (
+                <>
+                  <Input
+                    label="New password"
+                    required
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    secureTextEntry={!showPassword}
+                    leftIcon="lock-outline"
+                    rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    onRightIconPress={() => setShowPassword(!showPassword)}
+                    rightIconLabel={showPassword ? 'Hide password' : 'Show password'}
+                    helperText="At least 6 characters"
+                  />
+                  <Input
+                    label="Confirm new password"
+                    required
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showPassword}
+                    leftIcon="lock-check-outline"
+                    error={
+                      confirmPassword && confirmPassword !== newPassword
+                        ? 'Passwords do not match'
+                        : undefined
+                    }
+                  />
+                </>
+              ) : (
+                <>
+                  <Input
+                    label="New wallet PIN"
+                    required
+                    value={newPin}
+                    onChangeText={(v) => setNewPin(v.replace(/\D/g, '').slice(0, 4))}
+                    secureTextEntry={!showPassword}
+                    keyboardType="number-pad"
+                    maxLength={4}
+                    leftIcon="dialpad"
+                    rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    onRightIconPress={() => setShowPassword(!showPassword)}
+                    rightIconLabel={showPassword ? 'Hide PIN' : 'Show PIN'}
+                    helperText="4 digits — approves wallet transfers, DMT and settlements"
+                  />
+                  <Input
+                    label="Confirm new PIN"
+                    required
+                    value={confirmPin}
+                    onChangeText={(v) => setConfirmPin(v.replace(/\D/g, '').slice(0, 4))}
+                    secureTextEntry={!showPassword}
+                    keyboardType="number-pad"
+                    maxLength={4}
+                    leftIcon="dialpad"
+                    error={confirmPin && confirmPin !== newPin ? 'PINs do not match' : undefined}
+                  />
+                </>
+              )}
               {!!changePassword.error && <ErrorBanner message={changePassword.error} />}
+              {!!changePin.error && <ErrorBanner message={changePin.error} />}
               <View style={styles.actionRow}>
-                <Button
-                  variant="secondary"
-                  onPress={() => {
-                    setPasswordStep(0);
-                    setOtp('');
-                    setNewPassword('');
-                    setConfirmPassword('');
-                  }}
-                  style={styles.flex}
-                >
+                <Button variant="secondary" onPress={resetSecurity} style={styles.flex}>
                   Cancel
                 </Button>
                 <Button
                   onPress={async () => {
-                    const res = await changePassword.run();
+                    const isPin = securityMode === 'pin';
+                    const res = isPin ? await changePin.run() : await changePassword.run();
                     if (res) {
-                      setNotice('Password updated.');
-                      setPasswordStep(0);
-                      setOtp('');
-                      setNewPassword('');
-                      setConfirmPassword('');
+                      setNotice(isPin ? 'Wallet PIN updated.' : 'Password updated.');
+                      resetSecurity();
                     }
                   }}
-                  disabled={!passwordValid}
-                  loading={changePassword.pending}
+                  disabled={securityMode === 'pin' ? !pinValid : !passwordValid}
+                  loading={changePassword.pending || changePin.pending}
                   icon="shield-check-outline"
                   style={styles.flex}
                 >

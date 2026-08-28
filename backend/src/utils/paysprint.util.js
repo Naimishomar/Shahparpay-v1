@@ -2,6 +2,13 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import axios from 'axios';
 
+// PaySprint AEPS/eKYC docs: "For Android use the accessmode APP else SITE".
+// The mobile app tags every request with `X-Client: APP`; the web dashboard
+// sends nothing, so it keeps the SITE default. Getting this wrong makes
+// PaySprint reject the RD-service PID captured on the handset.
+export const accessModeOf = (req) =>
+  String(req?.headers?.['x-client'] || '').toUpperCase() === 'APP' ? 'APP' : 'SITE';
+
 // Pipes that use the City Union / v2 onboarding endpoints.
 // Bank4 is onboarded via /onboard/v2/onboard/* , all others via /onboard/onboard/*.
 // (bank1 is UAT-only and intentionally not implemented.)
@@ -130,7 +137,14 @@ export const isGeoFenceDecline = (data) => {
 // base location so geo-fencing compares against the real shop coordinates.
 // NOTE: PaySprint allows a max of 3 location updates per merchant per calendar
 // year, so this must only be called when actually needed (geo-fence decline).
-export const updateMerchantLocation = async ({ merchantcode, mobile, lat, long, pipe }) => {
+export const updateMerchantLocation = async ({
+  merchantcode,
+  mobile,
+  lat,
+  long,
+  pipe,
+  accessmode = 'SITE',
+}) => {
   try {
     const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
     const payload = {
@@ -138,7 +152,7 @@ export const updateMerchantLocation = async ({ merchantcode, mobile, lat, long, 
       mobile: String(mobile),
       lat: String(lat),
       long: String(long),
-      accessmode: 'SITE',
+      accessmode,
     };
     if (pipe) payload.pipe = String(pipe);
 
@@ -213,6 +227,8 @@ export const postAepsTransactionWithGeoRecovery = async ({
       lat: payload.latitude,
       long: payload.longitude,
       pipe,
+      // Same channel the declined transaction used (APP for the mobile app).
+      accessmode: payload.accessmodetype || payload.accessmode || 'SITE',
     });
 
     if (
@@ -304,12 +320,18 @@ export const onboardMerchant = async (merchantData) => {
   }
 };
 
-export const sendAadhaarOtp = async (merchantcode, aadhaar, latitude, longitude) => {
+export const sendAadhaarOtp = async (
+  merchantcode,
+  aadhaar,
+  latitude,
+  longitude,
+  accessmode = 'SITE'
+) => {
   try {
     const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://sit.paysprint.in/service-api/api/v1';
     const payload = {
       merchantcode,
-      accessmode: 'SITE',
+      accessmode,
       latitude: latitude || '22.44543',
       longitude: longitude || '77.434',
       aadhaar,
@@ -349,7 +371,8 @@ export const verifyAadhaarOtp = async (
   stateresp,
   ekyc_id,
   latitude,
-  longitude
+  longitude,
+  accessmode = 'SITE'
 ) => {
   try {
     const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://sit.paysprint.in/service-api/api/v1';
@@ -362,7 +385,7 @@ export const verifyAadhaarOtp = async (
       stateresp,
       ekyc_id,
       piddata: '', // Pass empty if biometric is not used, or mock if needed
-      accessmode: 'SITE',
+      accessmode,
     };
 
     const token = generatePaySprintToken();

@@ -2,6 +2,7 @@ import express from 'express';
 import {
   getBalances,
   setPin,
+  changePin,
   transferAepsToMain,
   getTransferHistory,
 } from '../controllers/wallet.controller.js';
@@ -14,6 +15,7 @@ router.use(authMiddlewares);
 
 router.get('/balance', getBalances);
 router.post('/set-pin', setPin);
+router.post('/change-pin', changePin);
 router.post('/transfer', transferAepsToMain);
 router.get('/history', getTransferHistory);
 router.get('/ledger', getWalletLedger);

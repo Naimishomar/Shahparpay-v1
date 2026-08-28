@@ -14,6 +14,7 @@ import { sendEmailOTP } from '../utils/email.js';
 import {
   onboardMerchant,
   sendAadhaarOtp,
+  accessModeOf,
   verifyAadhaarOtp as verifyAadhaarOtpApi,
   verifyPanDetails,
   getWebOnboardingUrl,
@@ -407,7 +408,13 @@ export const generateAadhaarOtp = async (req, res) => {
         .json({ success: false, message: 'merchantcode and aadhaar are required' });
     }
 
-    const response = await sendAadhaarOtp(merchantcode, aadhaar, latitude, longitude);
+    const response = await sendAadhaarOtp(
+      merchantcode,
+      aadhaar,
+      latitude,
+      longitude,
+      accessModeOf(req)
+    );
     if (response.success) {
       return res.status(200).json(response);
     } else {
@@ -434,7 +441,8 @@ export const verifyAadhaarOtp = async (req, res) => {
       stateresp,
       ekyc_id,
       latitude,
-      longitude
+      longitude,
+      accessModeOf(req)
     );
     if (response.success) {
       return res.status(200).json(response);
@@ -1204,24 +1212,15 @@ export const changePassword = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email does not match our records.' });
     }
 
-    // Verify OTP
-    const otpRecord = await Otp.findOne({ email });
-    if (!otpRecord) {
-      return res.status(400).json({ success: false, message: 'OTP not found or expired.' });
+    if (!(await Otp.consume(email, otp))) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP.' });
     }
 
-    const isOtpValid = await bcrypt.compare(otp.toString(), otpRecord.otp);
-    if (!isOtpValid) {
-      return res.status(400).json({ success: false, message: 'Invalid OTP.' });
-    }
-
-    // Hash new password and save
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
+    // Assigned in the clear: every user schema's pre('save') hook hashes a
+    // modified password, so hashing here too would store a hash of a hash and
+    // lock the user out.
+    user.password = newPassword;
     await user.save();
-
-    // Delete OTP
-    await Otp.deleteOne({ email });
 
     res.status(200).json({ success: true, message: 'Password changed successfully.' });
   } catch (error) {

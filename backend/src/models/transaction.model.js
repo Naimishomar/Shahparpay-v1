@@ -34,6 +34,7 @@ const transactionSchema = new mongoose.Schema(
         'PAN_COUPON',
         'DAILY_AUTH_CHARGE',
         'UPI_CASHOUT',
+        'MERCHANT_ONBOARDING_CHARGE',
       ],
       required: true,
     },
