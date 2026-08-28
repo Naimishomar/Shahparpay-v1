@@ -823,10 +823,6 @@ class ApiService {
     return this.get(API_ENDPOINTS.wallet.ledger, params);
   }
 
-  async getPaysprintCreditLedger(params?: Record<string, any>) {
-    return this.get(API_ENDPOINTS.paysprintLedger.creditLedger, params);
-  }
-
   // ----------------------------------------------------------- Reporting
   async getRecentTransactions(params?: {
     type?: string;

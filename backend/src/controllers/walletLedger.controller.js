@@ -29,7 +29,7 @@ const WALLET_LABELS = {
   AEPSTOMAIN: 'AEPS→Main',
 };
 
-const getWalletLabel = (tx) => WALLET_LABELS[tx.type] || 'Main';
+export const getWalletLabel = (tx) => WALLET_LABELS[tx.type] || 'Main';
 
 const TXNTYPE_LABELS = {
   AEPS_WITHDRAWAL: 'AEPS Wallet',
@@ -47,6 +47,7 @@ const TXNTYPE_LABELS = {
   ITR: 'ITR',
   GST_REGISTRATION: 'GST Registration',
   DAILY_AUTH_CHARGE: 'Daily Auth',
+  MERCHANT_ONBOARDING_CHARGE: 'Onboarding Charge',
   AEPSTOMAIN: 'Wallet Transfer',
   DIRECT_PAYOUT_REFUND: 'Refund',
   AEPS_DEPOSIT_REFUND: 'Refund',
@@ -69,7 +70,7 @@ const round2 = (v) => Math.round(toNumber(v) * 100) / 100;
 // not miscounted as debits.
 const isRefundTxnId = (id) => /^REF(UND)?-/.test(String(id || ''));
 
-const getNarration = (tx) => {
+export const getNarration = (tx) => {
   const m = tx.metadata || {};
   const isRefund = isRefundTxnId(tx.transactionId);
   if (isRefund)
@@ -107,6 +108,8 @@ const getNarration = (tx) => {
       return `GST Registration ${m.name || ''}`.trim();
     case 'DAILY_AUTH_CHARGE':
       return 'Daily 2FA Auth Charge';
+    case 'MERCHANT_ONBOARDING_CHARGE':
+      return `PaySprint onboarding charge${m.requestId ? ' ref ' + m.requestId : ''}`;
     case 'AEPSTOMAIN':
       return 'AEPS → Main Transfer';
     default:
@@ -155,7 +158,7 @@ const getCommissionSplit = (tx) => {
  * Positive = money in, negative = money out. AEPSTOMAIN moves AEPS → Main.
  * Commission is credited NET of 2% TDS.
  */
-const getWalletDeltas = (tx) => {
+export const getWalletDeltas = (tx) => {
   const amount = toNumber(tx.amount);
   const { net } = getCommissionSplit(tx);
   const isRefund = isRefundTxnId(tx.transactionId);
@@ -303,9 +306,7 @@ export const getWalletLedger = async (req, res) => {
       const isRefundRow = isRefundTxnId(tx.transactionId);
       // Commission is never shown on refund rows (refunds credit the amount only).
       const hasCommission =
-        gross > 0 &&
-        (tx.type === 'AEPS_WITHDRAWAL' || tx.type === 'AEPS_DEPOSIT') &&
-        !isRefundRow;
+        gross > 0 && (tx.type === 'AEPS_WITHDRAWAL' || tx.type === 'AEPS_DEPOSIT') && !isRefundRow;
 
       // TDS (2%) is deducted ONLY from commission-paying transactions, never
       // from the principal. The daily 2FA auth charge is shown under GST (₹1).

@@ -185,7 +185,6 @@ export const REPORT_ITEMS: ReportEntry[] = [
   { name: 'PAN Report', route: 'PanReport', icon: 'card-account-details-outline', hint: 'PAN applications' },
   { name: 'ITR Report', route: 'ItrReport', icon: 'file-document-outline', hint: 'Filings and charges' },
   { name: 'Lead Report', route: 'LeadReport', icon: 'account-plus-outline', hint: 'Referred customers' },
-  { name: 'PaySprint Ledger', route: 'PaysprintLedgerReport', icon: 'swap-horizontal', hint: 'Upstream credit ledger' },
 ];
 
 /** Home screen shortcuts. */
@@ -336,9 +335,6 @@ export const API_ENDPOINTS = {
     profile: '/api/admin/profile',
     recentTransactions: '/api/admin/recent-transactions',
     settings: '/api/admin/settings',
-  },
-  paysprintLedger: {
-    creditLedger: '/api/paysprint/credit-ledger',
   },
 };
 
