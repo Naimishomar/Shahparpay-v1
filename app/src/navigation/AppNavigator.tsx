@@ -38,7 +38,6 @@ import {
   PayoutReport,
   LeadReport,
   WalletLedgerReport,
-  PaysprintLedgerReport,
 } from '@/screens/reports';
 
 const Stack = createStackNavigator();
@@ -78,7 +77,6 @@ const REPORT_SCREENS: [string, React.ComponentType<any>][] = [
   ['PanReport', PanReport],
   ['ItrReport', ItrReport],
   ['LeadReport', LeadReport],
-  ['PaysprintLedgerReport', PaysprintLedgerReport],
 ];
 
 // Route names must match `route` in SERVICE_ITEMS / REPORT_ITEMS (src/constants).

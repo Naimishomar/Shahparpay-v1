@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node src/utils/aepsTwoFactor.test.mjs && node src/controllers/onboardCallback.test.mjs && node src/models/otp.test.mjs",
+    "test": "node src/utils/aepsTwoFactor.test.mjs && node src/controllers/onboardCallback.test.mjs && node src/models/otp.test.mjs && node src/controllers/walletLedger.test.mjs",
     "start": "nodemon ./src/index.js",
     "format": "prettier --write \"src/**/*.js\"",
     "format:check": "prettier --check \"src/**/*.js\""

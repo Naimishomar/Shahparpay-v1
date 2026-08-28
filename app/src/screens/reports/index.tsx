@@ -213,33 +213,3 @@ export const WalletLedgerReport: React.FC = () => (
     emptyTitle="No ledger entries"
   />
 );
-
-export const PaysprintLedgerReport: React.FC = () => (
-  <TransactionReport
-    fetcher={async (range) => {
-      const res = await api.getPaysprintCreditLedger(range);
-      return res.data ?? res.ledger ?? [];
-    }}
-    searchFields={(i) => [i?.SNO, i?.NARRATION, i?.TXNTYPE, i?.remarks].filter(Boolean).join(' ')}
-    amountOf={ledgerAmount}
-    summary={ledgerSummary}
-    statuses={LEDGER_STATUSES}
-    // The upstream ledger carries no status column — credit/debit is the only
-    // per-row state, and StatusPill colours both.
-    statusOf={(i) => i?.TYPE}
-    titleOf={(i) => i?.NARRATION || i?.TXNTYPE || 'Ledger entry'}
-    subtitleOf={(i) => [i?.TXNTYPE, i?.remarks].filter(Boolean).join(' · ')}
-    dateOf={(i) => i?.DATE}
-    details={[
-      { label: 'Reference', value: (i: any) => i?.SNO || '—' },
-      { label: 'Direction', value: (i: any) => (i?.TYPE ? String(i.TYPE).toUpperCase() : '—') },
-      { label: 'Opening', value: (i: any) => (i?.OPENING != null ? money(i.OPENING) : '—') },
-      { label: 'Closing', value: (i: any) => (i?.CLOSING != null ? money(i.CLOSING) : '—') },
-      { label: 'Commission', value: (i: any) => (i?.COMMISSION ? money(i.COMMISSION) : '—') },
-      { label: 'Remarks', value: (i: any) => i?.remarks || '—' },
-      { label: 'Date', value: (i: any) => shortDate(i?.DATE) },
-    ]}
-    emptyIcon="swap-horizontal"
-    emptyTitle="No upstream ledger entries"
-  />
-);

@@ -58,7 +58,6 @@ assert.strictEqual(cacheTtlFor('/api/wallet/balance-history'), 0, 'prefix must n
 const NEVER = [
   endpoints.history, // wallet + recharge history
   endpoints.ledger,
-  endpoints.creditLedger,
   endpoints.status, // settlement / recharge status polling
   endpoints.accountStatus,
   endpoints.onboardingPlan,

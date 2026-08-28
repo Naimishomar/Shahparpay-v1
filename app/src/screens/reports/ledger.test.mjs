@@ -1,18 +1,14 @@
 // Run: node src/screens/reports/ledger.test.mjs
-// Both ledger endpoints answer with PaySprint's uppercase column names, not the
-// camelCase transaction shape every other report uses. Reading the wrong keys
-// fails silently — no crash, no empty state, just ₹0.00 rows with an UNKNOWN
-// pill — so this ties the screen's accessors to the backend that feeds them.
+// The wallet ledger answers with uppercase column names, not the camelCase
+// transaction shape every other report uses. Reading the wrong keys fails
+// silently — no crash, no empty state, just ₹0.00 rows with an UNKNOWN pill —
+// so this ties the screen's accessors to the backend that feeds them.
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 
 const reports = readFileSync(new URL('./index.tsx', import.meta.url), 'utf8');
 const walletLedger = readFileSync(
   new URL('../../../../backend/src/controllers/walletLedger.controller.js', import.meta.url),
-  'utf8'
-);
-const paysprintLedger = readFileSync(
-  new URL('../../../../backend/src/controllers/paysprintLedger.controller.js', import.meta.url),
   'utf8'
 );
 
@@ -32,22 +28,10 @@ for (const key of ['UTR', 'WALLET', 'AMOUNT', 'TYPE', 'NARRATION', 'TXNTYPE', 'D
   );
 }
 assert.ok(/remarks: tx\.status/.test(walletLedger), 'wallet ledger status still rides on `remarks`');
-for (const key of ['SNO', 'AMOUNT', 'TYPE', 'NARRATION', 'TXNTYPE', 'DATE']) {
-  assert.ok(
-    new RegExp(`\\b${key}:`).test(paysprintLedger),
-    `paysprintLedger.controller no longer returns ${key}`
-  );
-}
-
 // --- and the screens read exactly those ----------------------------------
 const wallet = componentSource('WalletLedgerReport');
 for (const key of ['UTR', 'WALLET', 'TYPE', 'NARRATION', 'DATE', 'remarks']) {
   assert.ok(wallet.includes(`?.${key}`), `WalletLedgerReport must read i?.${key}`);
-}
-
-const paysprint = componentSource('PaysprintLedgerReport');
-for (const key of ['SNO', 'TYPE', 'NARRATION', 'DATE']) {
-  assert.ok(paysprint.includes(`?.${key}`), `PaysprintLedgerReport must read i?.${key}`);
 }
 
 // --- the shared money helpers, exercised for real ------------------------
@@ -101,10 +85,7 @@ assert.strictEqual(ledgerSummary([{ TYPE: 'debit', AMOUNT: 100 }])[0].tone, 'err
 assert.strictEqual(ledgerSummary([])[0].value, 'INR0.00');
 
 // The camelCase keys that were silently returning undefined must not return.
-for (const [name, source] of [
-  ['WalletLedgerReport', wallet],
-  ['PaysprintLedgerReport', paysprint],
-]) {
+for (const [name, source] of [['WalletLedgerReport', wallet]]) {
   for (const stale of [
     '?.transactionId',
     '?.narration',
@@ -119,11 +100,8 @@ for (const [name, source] of [
   }
 }
 
-// Both ledgers must use the shared signed-amount and summary helpers.
-for (const [name, source] of [
-  ['WalletLedgerReport', wallet],
-  ['PaysprintLedgerReport', paysprint],
-]) {
+// The ledger must use the shared signed-amount and summary helpers.
+for (const [name, source] of [['WalletLedgerReport', wallet]]) {
   assert.ok(source.includes('amountOf={ledgerAmount}'), `${name} must sign debits negative`);
   assert.ok(source.includes('summary={ledgerSummary}'), `${name} needs the ledger money tiles`);
   assert.ok(source.includes('statuses={LEDGER_STATUSES}'), `${name} filters by CREDIT/DEBIT`);
