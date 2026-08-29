@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
@@ -8,6 +9,12 @@ import { connectDB } from './config/db.js';
 const app = express();
 dotenv.config({ quiet: true });
 const PORT = process.env.PORT || 5000;
+
+// Report payloads are mostly repeated keys and status strings: the 780-row
+// AEPS report measures 477 KB raw and 46 KB gzipped. Retailers are on mobile
+// data, so this is the difference between a multi-second wait and an instant
+// one — on every endpoint, not just reports.
+app.use(compression());
 
 app.use(
   cors({
