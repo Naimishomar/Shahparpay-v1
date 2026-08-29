@@ -192,10 +192,10 @@ export const TransactionReport: React.FC<Props> = ({
             action={{ label: 'Retry', onPress: report.reload }}
           />
         )}
-        {/* Four across rather than 2x2: the four numbers are one summary and
-            read as a row, and stacking them pushed the first result off the
-            fold on a small phone. */}
-        <Grid columns={4}>
+        {/* Two across, not four. Every tile here carries a full money string
+            (money() renders ₹1,23,456.78, not an abbreviated ₹1.2L), and four
+            to a row left each one shrinking to fit at a different size. */}
+        <Grid columns={2}>
           {tiles.map((tile) => (
             <Tile key={tile.label} label={tile.label} value={tile.value} tone={tile.tone} />
           ))}
