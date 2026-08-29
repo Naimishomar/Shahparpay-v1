@@ -24,6 +24,16 @@ interface DashboardData {
   recentSales: any[];
 }
 
+/** Only the metrics a retailer acts on. The rest live in Reports. */
+const METRICS: { key: keyof DashboardStats; label: string; icon: string }[] = [
+  { key: 'AEPS_WITHDRAWAL', label: 'AEPS', icon: 'fingerprint' },
+  { key: 'DMT', label: 'Money transfer', icon: 'bank-transfer' },
+  { key: 'RECHARGE', label: 'Recharge', icon: 'cellphone' },
+  { key: 'BILL_PAYMENT', label: 'Bill payments', icon: 'receipt' },
+  { key: 'AEPS_SETTLEMENT', label: 'Payouts', icon: 'cash-fast' },
+  { key: 'WALLET_TOPUP', label: 'UPI collected', icon: 'qrcode' },
+];
+
 /** How far the balance card rides up into the brand band. Deep enough that the
  *  ink reads as a ground behind the card rather than a line above it. */
 const BALANCE_OVERLAP = 52;
@@ -39,6 +49,7 @@ export const DashboardScreen: React.FC = () => {
   // Separate from the dashboard call: the balance is the number a retailer
   // opens the app to read, so it must not wait on the slower stats query.
   const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
+  const stats = dashboard.data?.stats;
   const sales = dashboard.data?.recentSales ?? [];
 
   const refresh = () => {
@@ -155,6 +166,56 @@ export const DashboardScreen: React.FC = () => {
 
       <Card>
         <CardHeader>
+          <CardTitle icon="chart-line">Earnings</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Text style={styles.earningsLabel}>Total earnings</Text>
+          <Text style={styles.earningsValue} numberOfLines={1} adjustsFontSizeToFit>
+            {money(stats?.TotalCommission)}
+          </Text>
+          <View style={styles.earningsMeta}>
+            <MetaItem label="Customers" value={String(stats?.TotalCustomers ?? 0)} />
+            <View style={styles.metaDivider} />
+            <MetaItem label="Volume" value={money(stats?.TotalTransactionsAmount)} />
+          </View>
+        </CardContent>
+      </Card>
+
+      <SectionTitle
+        action={
+          <Pressable
+            onPress={() => navigation.navigate('Reports')}
+            hitSlop={10}
+            accessibilityRole="button"
+          >
+            <Text style={styles.link}>All reports</Text>
+          </Pressable>
+        }
+      >
+        This month
+      </SectionTitle>
+      <Grid columns={2}>
+        {METRICS.map((metric) => (
+          <View key={metric.key} style={styles.metric}>
+            <View style={styles.metricTop}>
+              <MaterialCommunityIcons
+                name={metric.icon as any}
+                size={16}
+                color={colors.mutedForeground}
+              />
+              <Text style={styles.metricLabel} numberOfLines={1}>
+                {metric.label}
+              </Text>
+            </View>
+            <Text style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit>
+              {money(stats?.[metric.key])}
+            </Text>
+          </View>
+        ))}
+      </Grid>
+
+      <Card>
+        <CardHeader>
           <CardTitle icon="history">Recent activity</CardTitle>
         </CardHeader>
         <CardContent>
@@ -199,6 +260,15 @@ export const DashboardScreen: React.FC = () => {
   );
 };
 
+const MetaItem: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <View style={styles.metaItem}>
+    <Text style={styles.metaLabel}>{label}</Text>
+    <Text style={styles.metaValue} numberOfLines={1}>
+      {value}
+    </Text>
+  </View>
+);
+
 const styles = themed((c) => ({
   // Continues the app header's band in the same ink, so the two read as one
   // block. `band` is deliberately not `accent`: accent inverts to near-white
@@ -222,6 +292,49 @@ const styles = themed((c) => ({
   identity: { flex: 1, minWidth: 0, gap: 1 },
   identityName: { fontSize: t.body, fontWeight: '700', color: c.bandForeground },
   identityCode: { fontSize: t.micro, color: c.bandForeground, opacity: 0.75 },
+
+  earningsLabel: { fontSize: t.caption, fontWeight: '600', color: c.mutedForeground },
+  earningsValue: {
+    fontSize: t.h1,
+    fontWeight: '800',
+    color: c.foreground,
+    marginTop: 2,
+    fontVariant: ['tabular-nums'],
+  },
+  earningsMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.lg,
+    marginTop: space.lg,
+    paddingTop: space.md,
+    borderTopWidth: 1,
+    borderTopColor: c.border,
+  },
+  metaItem: { flex: 1, minWidth: 0, gap: 1 },
+  metaDivider: { width: 1, height: 26, backgroundColor: c.border },
+  metaLabel: { fontSize: t.micro, color: c.mutedForeground },
+  metaValue: {
+    fontSize: t.body,
+    fontWeight: '700',
+    color: c.foreground,
+    fontVariant: ['tabular-nums'],
+  },
+  metric: {
+    padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: c.card,
+    borderWidth: 1,
+    borderColor: c.border,
+    gap: 6,
+  },
+  metricTop: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  metricLabel: { flex: 1, fontSize: t.micro, fontWeight: '600', color: c.mutedForeground },
+  metricValue: {
+    fontSize: t.title,
+    fontWeight: '700',
+    color: c.foreground,
+    fontVariant: ['tabular-nums'],
+  },
 
   balRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.md },
   balMain: { flex: 1, minWidth: 0, gap: 1 },
