@@ -37,8 +37,22 @@ export const Card: React.FC<CardProps> = ({
 
 export const CardHeader: React.FC<{
   children: React.ReactNode;
+  /**
+   * Trailing control shown on the title's own line — the same slot SectionTitle
+   * offers. Without it the header is a plain column, so a title and a link
+   * passed as siblings stacked on top of each other.
+   */
+  action?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
-}> = ({ children, style }) => <View style={[styles.header, style]}>{children}</View>;
+}> = ({ children, action, style }) =>
+  action ? (
+    <View style={[styles.header, styles.headerRow, style]}>
+      <View style={styles.headerMain}>{children}</View>
+      {action}
+    </View>
+  ) : (
+    <View style={[styles.header, style]}>{children}</View>
+  );
 
 export const CardTitle: React.FC<{
   children: React.ReactNode;
@@ -100,6 +114,8 @@ const styles = themed((c, isDark) => ({
   // Opacity only: scaling a card shifts everything below it.
   pressed: { opacity: 0.75 },
   header: { paddingBottom: space.lg },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  headerMain: { flex: 1, minWidth: 0 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   title: { flex: 1, fontSize: t.bodyLg, fontWeight: '700', color: c.cardForeground, letterSpacing: -0.2 },
   description: { fontSize: t.caption, color: c.mutedForeground, marginTop: 3, lineHeight: 17 },

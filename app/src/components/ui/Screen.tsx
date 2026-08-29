@@ -80,9 +80,15 @@ export const Screen: React.FC<ScreenProps> = ({
           styles.body,
           { gap },
           // marginTop, not a reduced paddingTop: React Native clamps negative
-          // padding to zero, so the card never rode up onto the band.
+          // padding to zero. And no paddingTop at all — with `padding` still
+          // applied, a 16pt top padding ate most of a 28pt pull-up and the card
+          // barely touched the band. The band's own bottom padding is the gap.
           header
-            ? { padding, paddingBottom: padding * 2, marginTop: -headerOverlap }
+            ? {
+                paddingHorizontal: padding,
+                paddingBottom: padding * 2,
+                marginTop: -headerOverlap,
+              }
             : null,
         ]}
       >

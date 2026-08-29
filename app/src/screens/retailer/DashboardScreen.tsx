@@ -113,15 +113,18 @@ export const DashboardScreen: React.FC = () => {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader
+          action={
+            <Pressable
+              onPress={() => navigation.navigate('Services')}
+              hitSlop={10}
+              accessibilityRole="button"
+            >
+              <Text style={styles.link}>All services</Text>
+            </Pressable>
+          }
+        >
           <CardTitle icon="apps">Quick actions</CardTitle>
-          <Pressable
-            onPress={() => navigation.navigate('Services')}
-            hitSlop={10}
-            accessibilityRole="button"
-          >
-            <Text style={styles.link}>All services</Text>
-          </Pressable>
         </CardHeader>
         <CardContent>
           <Grid columns={4}>
