@@ -108,7 +108,7 @@ export const DashboardScreen: React.FC = () => {
             style={({ pressed }) => [styles.balBtn, styles.balBtnGhost, pressed && styles.pressed]}
             accessibilityRole="button"
           >
-            <Text style={styles.balBtnGhostText}>Settle</Text>
+            <Text style={styles.balBtnGhostText}>Withdraw</Text>
           </Pressable>
         </View>
       </Card>
