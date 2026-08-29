@@ -2244,10 +2244,20 @@ export const activateMerchant = async (req, res) => {
       'Content-Type': 'application/json',
     };
 
+    // validateStatus: PaySprint answers some rejections with a 4xx that still
+    // carries the real reason in the body. Without this, axios throws and the
+    // caller sees a generic 500 instead of "PAN Verification Fail" etc.
     const response = await axios.post(
       `${baseUrl}/service/onboard/onboard/activate_merchant`,
       payload,
-      { headers }
+      { headers, validateStatus: () => true }
+    );
+
+    // Logged without aadhaar/dob/piddata: when PaySprint declines on their own
+    // KYC checks, response_code is the only thing their support can act on.
+    console.log(
+      `[Activate Merchant] ${merchantcode} pipe=${pipeNorm} HTTP ${response.status}`,
+      JSON.stringify(response.data, null, 2)
     );
 
     if (response.data && response.data.status === true && response.data.response_code == '1') {

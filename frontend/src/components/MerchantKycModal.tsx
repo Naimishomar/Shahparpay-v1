@@ -68,9 +68,9 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
                     setEkycId(result.data.data.otpreqid || result.data.data.ekyc_id);
                     setStateresp(result.data.data.stateresp || 'unknown');
                     setStep(2);
-                    toast.error("OTP sent successfully to your registered Aadhaar mobile number.");
+                    toast.success("OTP sent successfully to your registered Aadhaar mobile number.");
                 } else if (result.data?.response_code === 2) {
-                    toast.error("KYC already completed! You can proceed with transactions.");
+                    toast.success("KYC already completed! You can proceed with transactions.");
                     onClose();
                 } else {
                     toast.error("Failed to send OTP: " + (result.data?.message || result.message));
@@ -153,7 +153,7 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
             result = await response.json();
             
             if (result.success && result.data?.response_code == "1") {
-                toast.error("Merchant eKYC Completed Successfully! You can now perform transactions.");
+                toast.success("Merchant eKYC Completed Successfully! You can now perform transactions.");
                 onClose();
             } else {
                 toast.error("KYC Verification Failed: " + (result.data?.message || result.message));
