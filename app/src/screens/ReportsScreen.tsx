@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, radius, space, type as t, TOUCH } from '../theme/colors';
 import { Screen, SectionTitle } from '@/components/ui/Screen';
 import { REPORT_ITEMS, ReportEntry } from '@/constants';

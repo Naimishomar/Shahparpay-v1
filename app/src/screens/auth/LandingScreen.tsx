@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, Image, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '@/context/ThemeContext';
 import { Button } from '@/components/ui/Button';
 import { useResponsive } from '@/hooks/useResponsive';

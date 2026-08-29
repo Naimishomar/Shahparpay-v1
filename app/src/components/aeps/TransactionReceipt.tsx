@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Share } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { Button } from '@/components/ui/Button';
 import { Sheet } from '@/components/ui/Sheet';

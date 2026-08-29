@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, View, Text, Pressable, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, motion, radius, space, type as t, TOUCH } from '../../theme/colors';
 import { TabEntry } from '@/constants';
 

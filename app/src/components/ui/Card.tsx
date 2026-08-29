@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleProp, ViewStyle, TextStyle } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, lift, radius, space, type as t } from '../../theme/colors';
 
 interface CardProps {

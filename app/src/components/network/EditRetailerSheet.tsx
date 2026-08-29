@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { Button } from '@/components/ui/Button';
 import { Input, SelectField } from '@/components/ui/Input';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Image, Pressable, Alert } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, radius, space, type as t, TOUCH } from '../../theme/colors';
 import { pickImage, type PickedFile } from '@/services/imagePicker';
 

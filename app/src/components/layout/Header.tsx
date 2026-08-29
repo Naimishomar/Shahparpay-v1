@@ -8,7 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/services/api';
