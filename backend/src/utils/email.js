@@ -1,14 +1,28 @@
 import nodemailer from 'nodemailer';
 
-export const sendEmailOTP = async (toEmail, toName, otp) => {
-  try {
-    const transporter = nodemailer.createTransport({
+// Built once, not per send. Creating the transport inside sendEmailOTP meant a
+// fresh DNS + TCP + TLS + SMTP AUTH handshake to Gmail on every login, which is
+// why POST /api/auth/login measured ~2.7s. `pool` keeps the authenticated
+// connection open so later sends reuse it.
+let transporter;
+const getTransporter = () => {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
       service: 'gmail',
+      pool: true,
+      maxConnections: 3,
       auth: {
         user: process.env.ETHEREAL_USERNAME,
         pass: process.env.ETHEREAL_PASSWORD,
       },
     });
+  }
+  return transporter;
+};
+
+export const sendEmailOTP = async (toEmail, toName, otp) => {
+  try {
+    const transporter = getTransporter();
 
     const mailOptions = {
       from: `"${process.env.EMAIL_SENDER_NAME || 'ShahparPay'}" <${process.env.ETHEREAL_USERNAME}>`,
