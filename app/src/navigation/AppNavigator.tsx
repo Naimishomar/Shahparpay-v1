@@ -1,5 +1,5 @@
 import React from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -119,6 +119,11 @@ const buildNavigator = (screens: [string, React.ComponentType<any>][], backgroun
     screenOptions={{
       headerShown: false,
       gestureEnabled: true,
+      // Android's stack default is ScaleFromCenterAndroid, which zooms each
+      // screen out of the middle of the display. A horizontal slide keeps
+      // spatial continuity — forward moves left, back moves right — and reads
+      // as navigation rather than as a modal popping open.
+      ...TransitionPresets.SlideFromRightIOS,
       // flex/overflow: on web @react-navigation/stack otherwise lets the card
       // grow past the viewport and hands scrolling to document.body, which
       // Expo's reset has set to overflow:hidden. No-op on native.

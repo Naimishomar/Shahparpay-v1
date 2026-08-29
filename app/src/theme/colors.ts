@@ -94,7 +94,10 @@ export const palettes = {
     accent: brand.chalk,
     accentForeground: '#0A0A0B',
 
-    band: '#16161A',
+    // Above surfaceAlt: dark mode separates by lightening, and the band is the
+    // topmost chrome. At #16161A it was the same tone as `card`, leaving the
+    // header indistinguishable from the cards scrolling under it.
+    band: '#2A2A31',
     bandForeground: brand.chalk,
 
     secondary: '#212126',
