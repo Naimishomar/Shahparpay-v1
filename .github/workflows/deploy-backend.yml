@@ -1,0 +1,38 @@
+name: Deploy backend to EC2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+# A second push while a deploy is running would race two `docker compose up`
+# calls against the same container name. Queue them instead.
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.EC2_APP_DIR }}"
+            git fetch origin main
+            # backend/.env is gitignored, so it is untracked and survives this.
+            git reset --hard origin/main
+            cd backend
+            docker compose up -d --build
+            # Old image layers pile up on a small EC2 root volume until deploys
+            # start failing on "no space left on device".
+            docker image prune -f
