@@ -22,6 +22,17 @@ interface ScreenProps {
   onRetry?: () => void;
   children: React.ReactNode;
   contentStyle?: StyleProp<ViewStyle>;
+  /**
+   * Full-bleed block rendered above the padded content — the brand-coloured
+   * band the Dashboard's balance card sits on. It ignores the screen gutters
+   * on purpose; anything inside it supplies its own padding.
+   */
+  header?: React.ReactNode;
+  /**
+   * Pixels the first child pulls up into `header`, so a card can overlap the
+   * band it sits on. Ignored when `header` is absent.
+   */
+  headerOverlap?: number;
 }
 
 /**
@@ -36,6 +47,8 @@ export const Screen: React.FC<ScreenProps> = ({
   onRetry,
   children,
   contentStyle,
+  header,
+  headerOverlap = 0,
 }) => {
   const { padding, gap } = useResponsive();
 
@@ -47,7 +60,7 @@ export const Screen: React.FC<ScreenProps> = ({
       keyboardDismissMode="on-drag"
       contentContainerStyle={[
         styles.content,
-        { padding, paddingBottom: padding * 2, gap },
+        header ? null : { padding, paddingBottom: padding * 2, gap },
         contentStyle,
       ]}
       refreshControl={
@@ -61,8 +74,19 @@ export const Screen: React.FC<ScreenProps> = ({
         ) : undefined
       }
     >
-      {!!error && <Banner tone="error" message={error} action={onRetry && { label: 'Retry', onPress: onRetry }} />}
-      {loading ? <LoadingBlock /> : children}
+      {header}
+      <View
+        style={[
+          styles.body,
+          { gap },
+          header
+            ? { padding, paddingTop: padding - headerOverlap, paddingBottom: padding * 2 }
+            : null,
+        ]}
+      >
+        {!!error && <Banner tone="error" message={error} action={onRetry && { label: 'Retry', onPress: onRetry }} />}
+        {loading ? <LoadingBlock /> : children}
+      </View>
     </ScrollView>
   );
 };
@@ -395,6 +419,7 @@ export const dateTime = (value?: string | Date | null) =>
 const styles = themed((c, isDark) => ({
   scrollView: { flex: 1, backgroundColor: c.background },
   content: { flexGrow: 1 },
+  body: { flexGrow: 1 },
   loading: { gap: space.md },
   loadingLabel: { fontSize: t.small, color: c.mutedForeground },
   skeletonCard: {

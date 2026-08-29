@@ -747,7 +747,17 @@ export const AepsScreen: React.FC = () => {
             disabled={!pidData || !!captureBlocker}
             onPress={submit.run}
           >
-            {spec.amount ? `${spec.label} · ${money(amountValue)}` : spec.label}
+            {/* A dead grey button with the action's own name on it tells the
+                retailer nothing. When the form is blocked, the label is the
+                reason — the blocker text itself when there is one, otherwise
+                the missing fingerprint. */}
+            {captureBlocker
+              ? captureBlocker
+              : !pidData
+                ? 'Capture fingerprint to continue'
+                : spec.amount
+                  ? `${spec.label} · ${money(amountValue)}`
+                  : spec.label}
           </Button>
         </CardContent>
       </Card>

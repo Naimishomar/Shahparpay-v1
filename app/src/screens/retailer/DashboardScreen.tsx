@@ -24,6 +24,9 @@ interface DashboardData {
   recentSales: any[];
 }
 
+/** How far the balance card rides up into the brand band. */
+const BALANCE_OVERLAP = 28;
+
 /** Only the metrics a retailer acts on. The rest live in Reports. */
 const METRICS: { key: keyof DashboardStats; label: string; icon: string }[] = [
   { key: 'AEPS_WITHDRAWAL', label: 'AEPS', icon: 'fingerprint' },
@@ -42,33 +45,94 @@ export const DashboardScreen: React.FC = () => {
     async () => (await api.getRetailerDashboard()).data,
     []
   );
+  // Separate from the dashboard call: the balance is the number a retailer
+  // opens the app to read, so it must not wait on the slower stats query.
+  const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
   const stats = dashboard.data?.stats;
   const sales = dashboard.data?.recentSales ?? [];
+
+  const refresh = () => {
+    dashboard.refresh();
+    balances.refresh();
+  };
+
+  const initials = (user?.name || 'R')
+    .split(' ')
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('');
 
   return (
     <Screen
       loading={dashboard.loading}
       refreshing={dashboard.refreshing}
-      onRefresh={dashboard.refresh}
+      onRefresh={refresh}
       error={dashboard.error}
       onRetry={dashboard.reload}
+      headerOverlap={BALANCE_OVERLAP}
+      header={
+        <View style={styles.band}>
+          <View style={styles.bandTop}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
+            <View style={styles.identity}>
+              <Text style={styles.identityName} numberOfLines={1}>
+                {user?.name || 'Retailer'}
+              </Text>
+              {!!user?.retailerId && (
+                <Text style={styles.identityCode} numberOfLines={1}>
+                  {user.retailerId}
+                </Text>
+              )}
+            </View>
+            <Pressable
+              onPress={() => navigation.navigate('Account')}
+              style={({ pressed }) => [styles.bandIcon, pressed && styles.pressed]}
+              accessibilityRole="button"
+              accessibilityLabel="Account"
+              hitSlop={8}
+            >
+              <MaterialCommunityIcons
+                name="account-circle-outline"
+                size={20}
+                color={colors.accentForeground}
+              />
+            </Pressable>
+          </View>
+        </View>
+      }
     >
-      <View style={styles.greeting}>
-        <Text style={styles.greetingLabel}>Welcome back</Text>
-        <Text style={styles.greetingName} numberOfLines={1}>
-          {user?.name || 'Retailer'}
-        </Text>
-      </View>
-
-      <Card variant="accent" padding={space.lg}>
-        <Text style={styles.earningsLabel}>Total earnings</Text>
-        <Text style={styles.earningsValue} numberOfLines={1} adjustsFontSizeToFit>
-          {money(stats?.TotalCommission)}
-        </Text>
-        <View style={styles.earningsMeta}>
-          <MetaItem label="Customers" value={String(stats?.TotalCustomers ?? 0)} />
-          <View style={styles.metaDivider} />
-          <MetaItem label="Volume" value={money(stats?.TotalTransactionsAmount)} />
+      <Card padding={space.lg}>
+        <View style={styles.balRow}>
+          <View style={styles.balMain}>
+            <Text style={styles.balLabel}>Main wallet</Text>
+            <Text style={styles.balValue} numberOfLines={1} adjustsFontSizeToFit>
+              {money(balances.data?.mainBalance)}
+            </Text>
+          </View>
+          <View style={styles.balAside}>
+            <Text style={styles.balLabel}>AEPS</Text>
+            <Text style={styles.balAsideValue} numberOfLines={1}>
+              {money(balances.data?.aepsBalance)}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.balActions}>
+          <Pressable
+            onPress={() => navigation.navigate('FundRequest')}
+            style={({ pressed }) => [styles.balBtn, styles.balBtnPrimary, pressed && styles.pressed]}
+            accessibilityRole="button"
+          >
+            <Text style={styles.balBtnPrimaryText}>Add money</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => navigation.navigate('AepsSettlement')}
+            style={({ pressed }) => [styles.balBtn, styles.balBtnGhost, pressed && styles.pressed]}
+            accessibilityRole="button"
+          >
+            <Text style={styles.balBtnGhostText}>Settle</Text>
+          </Pressable>
         </View>
       </Card>
 
@@ -171,40 +235,66 @@ export const DashboardScreen: React.FC = () => {
   );
 };
 
-const MetaItem: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <View style={styles.metaItem}>
-    <Text style={styles.metaLabel}>{label}</Text>
-    <Text style={styles.metaValue} numberOfLines={1}>
-      {value}
-    </Text>
-  </View>
-);
-
 const styles = themed((c) => ({
-  greeting: { gap: 2 },
-  greetingLabel: { fontSize: t.small, color: c.mutedForeground },
-  greetingName: { fontSize: t.h2, fontWeight: '700', color: c.foreground },
-  earningsLabel: { fontSize: t.caption, fontWeight: '600', color: c.accentForeground, opacity: 0.85 },
-  earningsValue: {
+  // The brand band. `accent` is near-black in light mode and near-white in
+  // dark, so `accentForeground` is the only safe colour for anything on it.
+  band: {
+    backgroundColor: c.accent,
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.lg + BALANCE_OVERLAP,
+  },
+  bandTop: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  avatar: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(127,127,127,0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: { fontSize: t.small, fontWeight: '700', color: c.accentForeground },
+  identity: { flex: 1, minWidth: 0, gap: 1 },
+  identityName: { fontSize: t.body, fontWeight: '700', color: c.accentForeground },
+  identityCode: { fontSize: t.micro, color: c.accentForeground, opacity: 0.75 },
+  bandIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(127,127,127,0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  balRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.md },
+  balMain: { flex: 1, minWidth: 0, gap: 1 },
+  balAside: { alignItems: 'flex-end', gap: 1 },
+  balLabel: { fontSize: t.micro, fontWeight: '600', color: c.mutedForeground },
+  balValue: {
     fontSize: t.h1,
     fontWeight: '800',
-    color: c.accentForeground,
-    marginTop: 2,
+    color: c.foreground,
     fontVariant: ['tabular-nums'],
   },
-  earningsMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.lg,
-    marginTop: space.lg,
-    paddingTop: space.md,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.12)',
+  balAsideValue: {
+    fontSize: t.body,
+    fontWeight: '700',
+    color: c.foreground,
+    fontVariant: ['tabular-nums'],
   },
-  metaItem: { flex: 1, minWidth: 0, gap: 1 },
-  metaDivider: { width: 1, height: 26, backgroundColor: 'rgba(0,0,0,0.12)' },
-  metaLabel: { fontSize: t.micro, color: c.accentForeground, opacity: 0.75 },
-  metaValue: { fontSize: t.body, fontWeight: '700', color: c.accentForeground },
+  balActions: { flexDirection: 'row', gap: space.sm, marginTop: space.lg },
+  balBtn: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  balBtnPrimary: { backgroundColor: c.accent },
+  balBtnPrimaryText: { fontSize: t.small, fontWeight: '700', color: c.accentForeground },
+  balBtnGhost: { backgroundColor: c.card, borderWidth: 1, borderColor: c.borderStrong },
+  balBtnGhostText: { fontSize: t.small, fontWeight: '700', color: c.foreground },
+
   quick: {
     minHeight: 78,
     alignItems: 'center',
