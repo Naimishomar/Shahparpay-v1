@@ -29,6 +29,11 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO"
       ],
       "versionCode": 1
@@ -80,6 +85,12 @@
         "projectId": "a389186d-6781-493e-b47b-fb4d23c76cb0"
       }
     },
-    "owner": "naimishomar"
+    "owner": "naimishomar",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/a389186d-6781-493e-b47b-fb4d23c76cb0"
+    }
   }
 }
