@@ -211,7 +211,21 @@ export const postAepsTransactionWithGeoRecovery = async ({
       { headers, validateStatus: () => true }
     );
 
-    console.log(`[${logLabel} Response]`, JSON.stringify(response.data, null, 2));
+    console.log(
+      `[${logLabel} Response] HTTP ${response.status}`,
+      JSON.stringify(response.data, null, 2)
+    );
+    // PaySprint answers some rejections (IP not whitelisted, WAF block, gateway
+    // timeout) with an empty body, which used to surface as a bare `""` and hid
+    // the status code. Turn it into a real error object instead.
+    if (response.data === '' || response.data == null) {
+      return {
+        status: false,
+        response_code: 0,
+        message: `PaySprint returned an empty response (HTTP ${response.status})`,
+        http_status: response.status,
+      };
+    }
     return response.data;
   };
 
