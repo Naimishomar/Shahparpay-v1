@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, radius, space, type as t } from '../theme/colors';
+import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { SERVICE_ITEMS, MenuEntry } from '@/constants';
 
@@ -28,7 +29,7 @@ export const ServicesScreen: React.FC = () => {
         return (
           <View key={group} style={styles.group}>
             <Text style={styles.groupLabel}>{group.toUpperCase()}</Text>
-            <View style={styles.card}>
+            <Card padding={0} style={styles.card}>
               {items.map((item, index) => (
                 <ServiceRow
                   key={item.route}
@@ -37,7 +38,7 @@ export const ServicesScreen: React.FC = () => {
                   onPress={() => navigation.navigate(item.route)}
                 />
               ))}
-            </View>
+            </Card>
           </View>
         );
       })}
@@ -80,18 +81,13 @@ const styles = themed((c) => ({
   groupLabel: {
     fontSize: t.micro,
     fontWeight: '700',
-    letterSpacing: 1.1,
+    letterSpacing: 1.3,
     color: c.mutedForeground,
-    paddingHorizontal: 2,
+    paddingHorizontal: space.xs,
+    paddingBottom: 2,
   },
-  card: {
-    borderRadius: radius.lg,
-    backgroundColor: c.card,
-    borderWidth: 1,
-    borderColor: c.border,
-    paddingHorizontal: space.md,
-    overflow: 'hidden',
-  },
+  // Card supplies the surface and its lift; this only sets the row gutter.
+  card: { paddingHorizontal: space.md, overflow: 'hidden' },
   row: {
     // 56 keeps the row clear of the 44pt minimum even before the icon's own
     // padding, so the whole width is a comfortable target.
@@ -100,7 +96,7 @@ const styles = themed((c) => ({
     alignItems: 'center',
     gap: space.md,
     paddingVertical: space.sm,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: c.border,
   },
   rowLast: { borderBottomWidth: 0 },

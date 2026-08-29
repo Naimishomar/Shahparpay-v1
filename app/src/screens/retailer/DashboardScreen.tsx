@@ -24,8 +24,9 @@ interface DashboardData {
   recentSales: any[];
 }
 
-/** How far the balance card rides up into the brand band. */
-const BALANCE_OVERLAP = 28;
+/** How far the balance card rides up into the brand band. Deep enough that the
+ *  ink reads as a ground behind the card rather than a line above it. */
+const BALANCE_OVERLAP = 52;
 
 export const DashboardScreen: React.FC = () => {
   const { user } = useAuth();

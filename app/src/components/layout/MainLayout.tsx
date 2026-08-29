@@ -72,16 +72,21 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   // AppNavigator swaps to the auth stack when the token goes away.
   if (!token) return null;
 
+  // Home is the only screen that continues the header in its own ink; anywhere
+  // else a black bar pinned above a white page just reads as a slab.
+  const onBand = route.name === 'Dashboard';
+
   return (
     <View style={styles.container}>
-      {/* The header is the brand band now: near-black in light, an elevated
-          dark surface in dark. Light status-bar content reads on both. */}
+      {/* Only Home wears the band, so only Home needs light status-bar content
+          and an ink status-bar ground. */}
       <StatusBar
-        barStyle="light-content"
-        backgroundColor={colors.band}
+        barStyle={onBand ? 'light-content' : resolvedTheme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={onBand ? colors.band : colors.background}
       />
 
       <Header
+        onBand={onBand}
         topInset={insets.top}
         title={named.title}
         subtitle={named.subtitle}

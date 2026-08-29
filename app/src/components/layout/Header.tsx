@@ -21,6 +21,12 @@ interface HeaderProps {
   onAccount?: () => void;
   /** Safe-area top inset, applied as the header's own padding. */
   topInset?: number;
+  /**
+   * Render on the brand band. Only Home does: its screen opens with a band of
+   * the same ink, so the two read as one block. Everywhere else the band was a
+   * black slab pinned above a white page, which is why this is opt-in.
+   */
+  onBand?: boolean;
 }
 
 const money = (value?: number) =>
@@ -40,6 +46,7 @@ export const Header: React.FC<HeaderProps> = ({
   subtitle,
   onAccount,
   topInset = 0,
+  onBand = false,
 }) => {
   const { user, token } = useAuth();
   const [balances, setBalances] = useState<WalletBalances>({
@@ -83,7 +90,7 @@ export const Header: React.FC<HeaderProps> = ({
   // it: two stacked paddings pushed the title a visible step further down than
   // the safe area actually requires.
   return (
-    <View style={[styles.header, { paddingTop: topInset }]}>
+    <View style={[styles.header, onBand ? styles.headerBand : styles.headerPlain, { paddingTop: topInset }]}>
       <View style={styles.row}>
         {/* Balance peek, reachable from every screen so checking a wallet never
             means navigating back to Home. */}
@@ -96,15 +103,19 @@ export const Header: React.FC<HeaderProps> = ({
           accessibilityState={{ expanded: !!anchor }}
           hitSlop={8}
         >
-          <MaterialCommunityIcons name="menu" size={22} color={colors.bandForeground} />
+          <MaterialCommunityIcons
+            name="menu"
+            size={22}
+            color={onBand ? colors.bandForeground : colors.foreground}
+          />
         </Pressable>
 
         <View style={styles.titleBlock}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={[styles.title, onBand && styles.titleOnBand]} numberOfLines={1}>
             {title || 'Shahparpay'}
           </Text>
           {!!subtitle && (
-            <Text style={styles.subtitle} numberOfLines={1}>
+            <Text style={[styles.subtitle, onBand && styles.subtitleOnBand]} numberOfLines={1}>
               {subtitle}
             </Text>
           )}
@@ -113,7 +124,7 @@ export const Header: React.FC<HeaderProps> = ({
         <Pressable
           onPress={onAccount}
           disabled={!onAccount}
-          style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.avatar, onBand && styles.avatarOnBand, pressed && styles.pressed]}
           accessibilityRole="button"
           accessibilityLabel={user?.name ? `Account — ${user.name}` : 'Account'}
           hitSlop={8}
@@ -121,7 +132,9 @@ export const Header: React.FC<HeaderProps> = ({
           {user?.profilePicture ? (
             <Image source={{ uri: user.profilePicture }} style={styles.avatarImage} />
           ) : (
-            <Text style={styles.avatarInitial}>{user?.name?.charAt(0).toUpperCase() || 'U'}</Text>
+            <Text style={[styles.avatarInitial, onBand && styles.avatarInitialOnBand]}>
+              {user?.name?.charAt(0).toUpperCase() || 'U'}
+            </Text>
           )}
         </Pressable>
       </View>
@@ -184,15 +197,20 @@ export const Header: React.FC<HeaderProps> = ({
 };
 
 const styles = themed((c) => ({
-  // The brand band. It runs edge to edge and carries no bottom border: on the
-  // Dashboard the screen's own band continues it in the same ink, and a rule
-  // between them would draw a seam through what should read as one block.
   header: {
-    backgroundColor: c.band,
     paddingHorizontal: space.md,
     paddingBottom: space.sm,
     zIndex: 50,
   },
+  /** Default chrome: the page's own ground with a hairline under it. */
+  headerPlain: {
+    backgroundColor: c.background,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  /** Home only. No bottom border — the screen's band continues this ink, and a
+   *  rule between them would draw a seam through one continuous block. */
+  headerBand: { backgroundColor: c.band },
   row: {
     // 44 rather than 48: the controls inside are 40pt with hitSlop, so the tap
     // targets still clear the minimum while the bar sits tighter to the top.
@@ -202,8 +220,10 @@ const styles = themed((c) => ({
     gap: space.xs,
   },
   titleBlock: { flex: 1, minWidth: 0, paddingLeft: space.xs },
-  title: { fontSize: t.bodyLg, fontWeight: '700', color: c.bandForeground },
-  subtitle: { fontSize: t.caption, color: c.bandForeground, opacity: 0.75, marginTop: 1 },
+  title: { fontSize: t.bodyLg, fontWeight: '700', color: c.foreground },
+  titleOnBand: { color: c.bandForeground },
+  subtitle: { fontSize: t.caption, color: c.mutedForeground, marginTop: 1 },
+  subtitleOnBand: { color: c.bandForeground, opacity: 0.75 },
   iconButton: {
     width: 40,
     height: 40,
@@ -218,11 +238,15 @@ const styles = themed((c) => ({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(127,127,127,0.28)',
+    backgroundColor: c.accentSubtle,
+    borderWidth: 1,
+    borderColor: c.accent,
     overflow: 'hidden',
   },
   avatarImage: { width: 36, height: 36 },
-  avatarInitial: { fontSize: t.small, fontWeight: '700', color: c.bandForeground },
+  avatarInitial: { fontSize: t.small, fontWeight: '700', color: c.accent },
+  avatarOnBand: { backgroundColor: 'rgba(127,127,127,0.28)', borderColor: 'transparent' },
+  avatarInitialOnBand: { color: c.bandForeground },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: c.overlay },
   popover: {
     position: 'absolute',
