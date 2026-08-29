@@ -1,0 +1,1039 @@
+<title>ShahparPay Retailer Directions</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --ground: #F4F5F7;
+    --panel: #FFFFFF;
+    --ink: #14161A;
+    --ink-soft: #52565E;
+    --muted: #7B818B;
+    --rule: #E3E5EA;
+    --rule-soft: #EDEFF2;
+    --chip: #ECEEF1;
+
+    --a-brand: #5F259F;
+    --a-brand-deep: #4A1C7D;
+    --a-tint: #F2ECF9;
+    --a-on: #FFFFFF;
+
+    --b-brand: #002970;
+    --b-brand-deep: #001B4D;
+    --b-cyan: #00BAF2;
+    --b-tint: #E7F6FD;
+    --b-on: #FFFFFF;
+
+    --good: #067A54;
+    --good-tint: #E4F4EE;
+    --bad: #C42B2B;
+    --bad-tint: #FBEAEA;
+    --warn: #8A5A00;
+    --warn-tint: #FDF1DC;
+
+    --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+    --shadow: 0 1px 2px rgba(16, 18, 22, .06), 0 12px 32px rgba(16, 18, 22, .10);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101114;
+      --panel: #191B1F;
+      --ink: #F2F3F5;
+      --ink-soft: #B8BDC6;
+      --muted: #8A9099;
+      --rule: #2B2E34;
+      --rule-soft: #232227;
+      --chip: #24262B;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 16px 40px rgba(0, 0, 0, .45);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #101114;
+    --panel: #191B1F;
+    --ink: #F2F3F5;
+    --ink-soft: #B8BDC6;
+    --muted: #8A9099;
+    --rule: #2B2E34;
+    --rule-soft: #232227;
+    --chip: #24262B;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 16px 40px rgba(0, 0, 0, .45);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 56px 24px 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 64px;
+  }
+
+  /* ---------- page head ---------- */
+  .lede { display: flex; flex-direction: column; gap: 14px; max-width: 62ch; }
+  .kicker {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  h1 {
+    font-size: clamp(30px, 4.4vw, 42px);
+    line-height: 1.12;
+    letter-spacing: -.022em;
+    margin: 0;
+    text-wrap: balance;
+    font-weight: 700;
+  }
+  .lede p { margin: 0; color: var(--ink-soft); font-size: 16.5px; }
+
+  .note {
+    border-left: 2px solid var(--rule);
+    padding: 2px 0 2px 16px;
+    color: var(--ink-soft);
+    font-size: 14.5px;
+    max-width: 68ch;
+  }
+  .note strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- direction block ---------- */
+  .dir { display: flex; flex-direction: column; gap: 26px; }
+  .dir-head { display: flex; flex-direction: column; gap: 8px; }
+  .dir-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .swatch-dot { width: 11px; height: 11px; border-radius: 3px; }
+  .dir h2 {
+    margin: 0;
+    font-size: 25px;
+    letter-spacing: -.017em;
+    font-weight: 650;
+  }
+  .dir-head p { margin: 0; color: var(--ink-soft); max-width: 68ch; }
+
+  .rail {
+    display: flex;
+    gap: 22px;
+    overflow-x: auto;
+    padding: 6px 4px 20px;
+    scroll-snap-type: x proximity;
+  }
+  .rail::-webkit-scrollbar { height: 8px; }
+  .rail::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 99px; }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 11px; scroll-snap-align: start; }
+  figcaption {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-left: 2px;
+  }
+
+  /* ---------- device ---------- */
+  .device {
+    width: 268px;
+    height: 566px;
+    flex: none;
+    border-radius: 30px;
+    background: #fff;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--rule);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    font-size: 13px;
+    color: #14161A;
+  }
+  .status {
+    height: 26px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    font-size: 10.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .status .dots { display: flex; gap: 3px; align-items: center; }
+  .status .dots i { width: 4px; height: 4px; border-radius: 99px; background: currentColor; opacity: .85; display: block; }
+  .status .bat { width: 17px; height: 9px; border: 1px solid currentColor; border-radius: 2px; position: relative; opacity: .85; }
+  .status .bat::after { content: ""; position: absolute; inset: 1.5px; right: 5px; background: currentColor; border-radius: 1px; }
+
+  .screen { flex: 1; overflow: hidden; display: flex; flex-direction: column; background: #F5F6F8; }
+  .scroll { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding: 12px 13px 8px; }
+
+  /* header block */
+  .hdr { padding: 4px 16px 20px; flex: none; }
+  .hdr-top { display: flex; align-items: center; gap: 10px; }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 99px; flex: none;
+    display: grid; place-items: center;
+    font-weight: 700; font-size: 12px;
+    background: rgba(255,255,255,.22); color: #fff;
+  }
+  .hdr-id { flex: 1; min-width: 0; line-height: 1.25; }
+  .hdr-id b { display: block; font-size: 12.5px; font-weight: 600; color: #fff; }
+  .hdr-id span { font-size: 10.5px; color: rgba(255,255,255,.72); font-family: var(--mono); }
+  .icon-btn {
+    width: 30px; height: 30px; border-radius: 99px; flex: none;
+    display: grid; place-items: center;
+    background: rgba(255,255,255,.16); color: #fff; position: relative;
+  }
+  .icon-btn .badge {
+    position: absolute; top: 3px; right: 3px;
+    width: 7px; height: 7px; border-radius: 99px;
+    background: #FF5B5B; border: 1.5px solid currentColor;
+  }
+
+  /* balance */
+  .bal { margin-top: 16px; display: flex; align-items: flex-end; gap: 14px; }
+  .bal-main { flex: 1; }
+  .bal-label {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
+    text-transform: uppercase; color: rgba(255,255,255,.7);
+  }
+  .bal-amt {
+    font-size: 27px; font-weight: 700; color: #fff;
+    letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.15;
+  }
+  .bal-amt small { font-size: 15px; font-weight: 600; opacity: .8; }
+  .bal-sub {
+    display: flex; flex-direction: column; align-items: flex-end;
+    font-variant-numeric: tabular-nums; line-height: 1.3;
+  }
+  .bal-sub .l { font-family: var(--mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.65); }
+  .bal-sub .v { font-size: 14px; font-weight: 600; color: #fff; }
+
+  /* cards */
+  .card {
+    background: #fff; border-radius: 14px; padding: 13px;
+    box-shadow: 0 1px 2px rgba(16,18,22,.05);
+    display: flex; flex-direction: column; gap: 11px;
+  }
+  .card-title {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; font-weight: 650; letter-spacing: -.005em;
+  }
+  .card-title a { font-size: 10.5px; font-weight: 600; text-decoration: none; }
+
+  /* quick action grid */
+  .qgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 6px; }
+  .q { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+  .q-ico { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; }
+  .q span { font-size: 9.5px; line-height: 1.25; color: #3A3E45; font-weight: 500; }
+
+  /* service group */
+  .grp-label {
+    font-family: var(--mono); font-size: 9px; letter-spacing: .13em;
+    text-transform: uppercase; color: #8A9099; padding: 2px 2px 0;
+  }
+  .srow { display: flex; align-items: center; gap: 11px; padding: 9px 0; }
+  .srow + .srow { border-top: 1px solid #F0F1F4; }
+  .s-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex: none; }
+  .s-txt { flex: 1; min-width: 0; line-height: 1.3; }
+  .s-txt b { display: block; font-size: 12px; font-weight: 600; }
+  .s-txt span { font-size: 10px; color: #7B818B; }
+  .chev { color: #B9BEC6; flex: none; }
+
+  /* txn row */
+  .txn { display: flex; align-items: center; gap: 10px; padding: 9px 0; }
+  .txn + .txn { border-top: 1px solid #F0F1F4; }
+  .t-ico { width: 32px; height: 32px; border-radius: 99px; display: grid; place-items: center; flex: none; }
+  .t-txt { flex: 1; min-width: 0; line-height: 1.3; }
+  .t-txt b { display: block; font-size: 11.5px; font-weight: 600; }
+  .t-txt span { font-size: 9.5px; color: #7B818B; font-family: var(--mono); }
+  .t-amt { text-align: right; line-height: 1.3; flex: none; }
+  .t-amt b { display: block; font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .pill {
+    display: inline-block; font-size: 8.5px; font-weight: 650; padding: 1.5px 6px;
+    border-radius: 99px; letter-spacing: .04em; text-transform: uppercase;
+  }
+  .pill.ok { background: var(--good-tint); color: var(--good); }
+  .pill.no { background: var(--bad-tint); color: var(--bad); }
+  .pill.pend { background: var(--warn-tint); color: var(--warn); }
+
+  /* summary tiles */
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .tile { background: #fff; border-radius: 10px; padding: 8px 7px; line-height: 1.25; }
+  .tile .l { font-family: var(--mono); font-size: 8px; letter-spacing: .1em; text-transform: uppercase; color: #8A9099; }
+  .tile .v { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+
+  /* form bits */
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 10px; font-weight: 600; color: #52565E; }
+  .input {
+    height: 38px; border-radius: 10px; border: 1px solid #E1E3E8; background: #fff;
+    display: flex; align-items: center; padding: 0 11px; font-size: 12.5px;
+    font-variant-numeric: tabular-nums; justify-content: space-between;
+  }
+  .input.filled { font-weight: 600; }
+  .input .ph { color: #A6ABB4; font-weight: 400; }
+  .btn {
+    height: 42px; border-radius: 11px; display: grid; place-items: center;
+    font-size: 13px; font-weight: 650; letter-spacing: -.005em;
+  }
+  .btn.ghost { background: #fff; border: 1px solid #E1E3E8; }
+  .btn.off { background: #E8EAEE; color: #A6ABB4; }
+  .capture {
+    border: 1.5px dashed #CFD4DC; border-radius: 12px; background: #fff;
+    padding: 13px; display: flex; align-items: center; gap: 11px;
+  }
+  .capture .t { flex: 1; line-height: 1.3; }
+  .capture .t b { display: block; font-size: 11.5px; font-weight: 600; }
+  .capture .t span { font-size: 9.5px; color: #7B818B; }
+
+  /* filter chips */
+  .chips { display: flex; gap: 6px; }
+  .chp {
+    font-size: 10px; font-weight: 600; padding: 5px 10px; border-radius: 99px;
+    background: #fff; border: 1px solid #E1E3E8; color: #52565E; white-space: nowrap;
+  }
+
+  /* search */
+  .search {
+    height: 34px; border-radius: 10px; background: #fff; border: 1px solid #E1E3E8;
+    display: flex; align-items: center; gap: 8px; padding: 0 11px;
+    font-size: 11.5px; color: #A6ABB4;
+  }
+
+  /* bottom nav */
+  .nav {
+    flex: none; height: 58px; background: #fff; border-top: 1px solid #EBEDF0;
+    display: grid; grid-template-columns: repeat(5, 1fr); padding-bottom: 4px;
+  }
+  .nav > div {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; color: #9AA0A8; font-size: 8.5px; font-weight: 600;
+  }
+  .nav .on { position: relative; }
+
+  /* screen title bar */
+  .titlebar {
+    flex: none; padding: 10px 15px 12px; display: flex; align-items: center; gap: 10px;
+    color: #fff;
+  }
+  .titlebar b { font-size: 15px; font-weight: 650; letter-spacing: -.01em; flex: 1; }
+
+  /* ---------- spec strip ---------- */
+  .spec {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    padding: 18px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 26px 44px;
+  }
+  .spec-col { display: flex; flex-direction: column; gap: 9px; min-width: 150px; }
+  .spec-h {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .tok { display: flex; align-items: center; gap: 9px; font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft); }
+  .tok i { width: 15px; height: 15px; border-radius: 4px; flex: none; border: 1px solid rgba(128,128,128,.22); }
+  .spec-col p { margin: 0; font-size: 13px; color: var(--ink-soft); max-width: 34ch; }
+
+  /* ---------- decisions ---------- */
+  .decide { display: flex; flex-direction: column; gap: 18px; }
+  .decide h2 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -.015em; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); font-weight: 500;
+  }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .tbl-wrap { overflow-x: auto; }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 40px 16px 72px; gap: 48px; }
+  }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="i-finger"><path d="M12 4c-3.3 0-6 2.7-6 6v3c0 2-.4 3.9-1.2 5.6M9 20.6c.6-1.5 1-3.2 1-4.9v-5.6a2 2 0 1 1 4 0v5.6c0 1.3-.2 2.6-.5 3.8M18 18.6c.4-1.8.6-3.7.6-5.6v-3A6.6 6.6 0 0 0 15 4.1"/></g>
+    <g id="i-transfer"><path d="M4 8h13m0 0-3-3m3 3-3 3M20 16H7m0 0 3-3m-3 3 3 3"/></g>
+    <g id="i-phone"><rect x="7" y="3" width="10" height="18" rx="2.4"/><path d="M11 18.4h2"/></g>
+    <g id="i-receipt"><path d="M6 3.6h12v17l-2.4-1.5-2.4 1.5-2.4-1.5-2.4 1.5L6 20.6z"/><path d="M9.4 8.6h5.2M9.4 12.4h5.2"/></g>
+    <g id="i-qr"><rect x="4" y="4" width="6" height="6" rx="1.2"/><rect x="14" y="4" width="6" height="6" rx="1.2"/><rect x="4" y="14" width="6" height="6" rx="1.2"/><path d="M14 14h2.5v2.5M20 20h-2.5v-2.5M20 14v.01M14 20v.01"/></g>
+    <g id="i-wallet"><path d="M4 8.4A2.4 2.4 0 0 1 6.4 6H18a2 2 0 0 1 2 2v9a2.4 2.4 0 0 1-2.4 2.4H6.4A2.4 2.4 0 0 1 4 17z"/><path d="M4 8.4V7a1.6 1.6 0 0 1 1.6-1.6h9.6"/><path d="M16.4 12.4h3.2v3h-3.2z"/></g>
+    <g id="i-cash"><rect x="3" y="6.6" width="18" height="10.8" rx="2"/><circle cx="12" cy="12" r="2.4"/></g>
+    <g id="i-card"><rect x="3" y="5.4" width="18" height="13.2" rx="2.2"/><path d="M3 9.6h18M6.6 14.4h3.6"/></g>
+    <g id="i-file"><path d="M6.6 3.6h7.2L18 7.8v12.6H6.6z"/><path d="M13.4 3.8v4.2H18M9.6 13h5M9.6 16.4h5"/></g>
+    <g id="i-bank"><path d="M4 10h16M5.6 10v7.4M10 10v7.4M14 10v7.4M18.4 10v7.4M3 20.4h18M12 3.6 20 8H4z"/></g>
+    <g id="i-home"><path d="M4 10.4 12 4l8 6.4V19a1.4 1.4 0 0 1-1.4 1.4H5.4A1.4 1.4 0 0 1 4 19z"/></g>
+    <g id="i-apps"><rect x="4" y="4" width="6.4" height="6.4" rx="1.6"/><rect x="13.6" y="4" width="6.4" height="6.4" rx="1.6"/><rect x="4" y="13.6" width="6.4" height="6.4" rx="1.6"/><rect x="13.6" y="13.6" width="6.4" height="6.4" rx="1.6"/></g>
+    <g id="i-chart"><rect x="3.6" y="3.6" width="16.8" height="16.8" rx="2.4"/><path d="M8 15.6v-3M12 15.6V8.8M16 15.6v-4.6"/></g>
+    <g id="i-bell"><path d="M6.6 10a5.4 5.4 0 0 1 10.8 0c0 4 1.6 5.6 1.6 5.6H5s1.6-1.6 1.6-5.6"/><path d="M10.2 18.6a2 2 0 0 0 3.6 0"/></g>
+    <g id="i-chev"><path d="m9.6 6 6 6-6 6"/></g>
+    <g id="i-search"><circle cx="10.8" cy="10.8" r="6"/><path d="m15.4 15.4 4 4"/></g>
+    <g id="i-filter"><path d="M4 6h16M7 12h10M10 18h4"/></g>
+    <g id="i-shield"><path d="M12 3.6 19 6.4v5.4c0 4.4-3 7.6-7 8.6-4-1-7-4.2-7-8.6V6.4z"/><path d="m9.2 12 2 2 3.6-3.8"/></g>
+    <g id="i-plus"><path d="M12 5.6v12.8M5.6 12h12.8"/></g>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+  <header class="lede">
+    <div class="kicker">Retailer app · visual direction</div>
+    <h1>Two Routes to a Payments App</h1>
+    <p>The retailer app currently runs a monochrome near-black palette. Both directions below trade that for a chromatic brand block — the structure Paytm and PhonePe share — while keeping every screen, service and destination the app already has.</p>
+  </header>
+
+  <p class="note">Same information architecture in both: the five bottom-nav destinations stay <strong>Home · AEPS · Services · Reports · Settlement</strong>, Account still lives behind the header avatar, and every service name is the one already in <code>SERVICE_ITEMS</code>. What changes is colour, surface and hierarchy — not navigation. Balances and transactions shown are the real shapes your API returns.</p>
+
+  <!-- ============ DIRECTION A ============ -->
+  <section class="dir">
+    <div class="dir-head">
+      <div class="dir-tag"><span class="swatch-dot" style="background:#5F259F"></span> Direction A</div>
+      <h2>Violet — the PhonePe lineage</h2>
+      <p>One saturated violet carries the brand. It fills the header block, tints service icons, and does nothing else — every surface below is white on warm grey. Money stays black; only status is coloured. This reads calm and reduces the chance a retailer misreads a failed transaction as a decorative accent.</p>
+    </div>
+
+    <div class="rail">
+
+      <!-- A / HOME -->
+      <figure>
+        <div class="device">
+          <div class="status" style="background:#5F259F;color:#fff">
+            <span>9:41</span>
+            <span class="dots"><i></i><i></i><i></i><span class="bat"></span></span>
+          </div>
+          <div class="screen">
+            <div class="hdr" style="background:#5F259F">
+              <div class="hdr-top">
+                <div class="avatar">NY</div>
+                <div class="hdr-id">
+                  <b>Naimish Yadav</b>
+                  <span>A2ZB1004</span>
+                </div>
+                <div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bell"/></svg><span class="badge" style="color:#5F259F"></span></div>
+              </div>
+              <div class="bal">
+                <div class="bal-main">
+                  <div class="bal-label">Main wallet</div>
+                  <div class="bal-amt"><small>₹</small>48,210<small>.75</small></div>
+                </div>
+                <div class="bal-sub">
+                  <span class="l">AEPS</span>
+                  <span class="v">₹3,514.43</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="scroll">
+              <div class="card" style="margin-top:-30px">
+                <div class="card-title"><span>Quick actions</span><a href="#" style="color:#5F259F">All services</a></div>
+                <div class="qgrid">
+                  <div class="q"><div class="q-ico" style="background:#F2ECF9;color:#5F259F"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg></div><span>AEPS</span></div>
+                  <div class="q"><div class="q-ico" style="background:#F2ECF9;color:#5F259F"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-transfer"/></svg></div><span>DMT</span></div>
+                  <div class="q"><div class="q-ico" style="background:#F2ECF9;color:#5F259F"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-phone"/></svg></div><span>Recharge</span></div>
+                  <div class="q"><div class="q-ico" style="background:#F2ECF9;color:#5F259F"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-receipt"/></svg></div><span>BBPS</span></div>
+                  <div class="q"><div class="q-ico" style="background:#F2ECF9;color:#5F259F"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-qr"/></svg></div><span>UPI</span></div>
+                  <div class="q"><div class="q-ico" style="background:#F2ECF9;color:#5F259F"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cash"/></svg></div><span>Payout</span></div>
+                  <div class="q"><div class="q-ico" style="background:#F2ECF9;color:#5F259F"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-card"/></svg></div><span>PAN</span></div>
+                  <div class="q"><div class="q-ico" style="background:#F2ECF9;color:#5F259F"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"/></svg></div><span>Fund<br>request</span></div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-title"><span>Recent activity</span><a href="#" style="color:#5F259F">View all</a></div>
+                <div>
+                  <div class="txn">
+                    <div class="t-ico" style="background:var(--good-tint);color:var(--good)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg></div>
+                    <div class="t-txt"><b>AEPS Withdrawal</b><span>SPTXN4471 · 1:52 PM</span></div>
+                    <div class="t-amt"><b>₹2,000</b><span class="pill ok">Success</span></div>
+                  </div>
+                  <div class="txn">
+                    <div class="t-ico" style="background:var(--bad-tint);color:var(--bad)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg></div>
+                    <div class="t-txt"><b>Balance Enquiry</b><span>SPTXN4470 · 1:52 PM</span></div>
+                    <div class="t-amt"><b>—</b><span class="pill no">Failed</span></div>
+                  </div>
+                  <div class="txn">
+                    <div class="t-ico" style="background:var(--good-tint);color:var(--good)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-phone"/></svg></div>
+                    <div class="t-txt"><b>Recharge · Jio</b><span>SPTXN4468 · 11:04 AM</span></div>
+                    <div class="t-amt"><b>₹239</b><span class="pill ok">Success</span></div>
+                  </div>
+                  <div class="txn">
+                    <div class="t-ico" style="background:var(--warn-tint);color:var(--warn)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-transfer"/></svg></div>
+                    <div class="t-txt"><b>DMT Transfer</b><span>SPTXN4465 · 10:12 AM</span></div>
+                    <div class="t-amt"><b>₹5,000</b><span class="pill pend">Pending</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="nav">
+              <div class="on" style="color:#5F259F"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><use href="#i-home"/></svg><span>Home</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg><span>AEPS</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-apps"/></svg><span>Services</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chart"/></svg><span>Reports</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bank"/></svg><span>Settle</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Home</figcaption>
+      </figure>
+
+      <!-- A / SERVICES -->
+      <figure>
+        <div class="device">
+          <div class="status" style="background:#5F259F;color:#fff">
+            <span>9:41</span>
+            <span class="dots"><i></i><i></i><i></i><span class="bat"></span></span>
+          </div>
+          <div class="screen">
+            <div class="titlebar" style="background:#5F259F">
+              <b>Services</b>
+              <div class="icon-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-search"/></svg></div>
+            </div>
+            <div class="scroll">
+              <div class="grp-label">Banking</div>
+              <div class="card" style="gap:0;padding:4px 13px">
+                <div class="srow"><div class="s-ico" style="background:#F2ECF9;color:#5F259F"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg></div><div class="s-txt"><b>AEPS</b><span>Aadhaar banking</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+                <div class="srow"><div class="s-ico" style="background:#F2ECF9;color:#5F259F"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-transfer"/></svg></div><div class="s-txt"><b>DMT</b><span>Money transfer</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+                <div class="srow"><div class="s-ico" style="background:#F2ECF9;color:#5F259F"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-wallet"/></svg></div><div class="s-txt"><b>Wallet Transfer</b><span>AEPS to main wallet</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+                <div class="srow"><div class="s-ico" style="background:#F2ECF9;color:#5F259F"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cash"/></svg></div><div class="s-txt"><b>Direct Payout</b><span>Pay any account</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+                <div class="srow"><div class="s-ico" style="background:#F2ECF9;color:#5F259F"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-qr"/></svg></div><div class="s-txt"><b>UPI Collect</b><span>Collect on UPI</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+              </div>
+
+              <div class="grp-label">Payments</div>
+              <div class="card" style="gap:0;padding:4px 13px">
+                <div class="srow"><div class="s-ico" style="background:#F2ECF9;color:#5F259F"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-phone"/></svg></div><div class="s-txt"><b>Recharge</b><span>Mobile &amp; DTH</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+                <div class="srow"><div class="s-ico" style="background:#F2ECF9;color:#5F259F"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-receipt"/></svg></div><div class="s-txt"><b>BBPS</b><span>Utility bills</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+                <div class="srow"><div class="s-ico" style="background:#F2ECF9;color:#5F259F"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"/></svg></div><div class="s-txt"><b>Fund Request</b><span>Top up wallet</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+              </div>
+
+              <div class="grp-label">Government</div>
+              <div class="card" style="gap:0;padding:4px 13px">
+                <div class="srow"><div class="s-ico" style="background:#F2ECF9;color:#5F259F"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-card"/></svg></div><div class="s-txt"><b>PAN Card</b><span>PSA &amp; applications</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+                <div class="srow"><div class="s-ico" style="background:#F2ECF9;color:#5F259F"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-file"/></svg></div><div class="s-txt"><b>ITR Filing</b><span>Income tax returns</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+              </div>
+            </div>
+            <div class="nav">
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-home"/></svg><span>Home</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg><span>AEPS</span></div>
+              <div class="on" style="color:#5F259F"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><use href="#i-apps"/></svg><span>Services</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chart"/></svg><span>Reports</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bank"/></svg><span>Settle</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Services</figcaption>
+      </figure>
+
+      <!-- A / AEPS -->
+      <figure>
+        <div class="device">
+          <div class="status" style="background:#5F259F;color:#fff">
+            <span>9:41</span>
+            <span class="dots"><i></i><i></i><i></i><span class="bat"></span></span>
+          </div>
+          <div class="screen">
+            <div class="titlebar" style="background:#5F259F">
+              <b>Cash Withdrawal</b>
+              <span style="font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;background:rgba(255,255,255,.18);padding:3px 8px;border-radius:99px">BANK2</span>
+            </div>
+            <div class="scroll" style="gap:11px">
+              <div class="card" style="gap:11px">
+                <div class="field">
+                  <label>Customer Aadhaar</label>
+                  <div class="input filled"><span>4353 5882 9518</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-shield"/></svg></div>
+                </div>
+                <div class="field">
+                  <label>Customer mobile</label>
+                  <div class="input filled">89027 62742</div>
+                </div>
+                <div class="field">
+                  <label>Bank</label>
+                  <div class="input filled"><span>State Bank of India</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B9BEC6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+                </div>
+                <div class="field">
+                  <label>Amount</label>
+                  <div class="input filled" style="font-size:16px;font-weight:700">₹ 2,000</div>
+                </div>
+              </div>
+
+              <div class="capture">
+                <div class="s-ico" style="background:#F2ECF9;color:#5F259F"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg></div>
+                <div class="t"><b>Capture fingerprint</b><span>Mantra MFS110 · connected</span></div>
+                <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg>
+              </div>
+
+              <div style="display:flex;gap:8px;align-items:flex-start;background:#F2ECF9;border-radius:11px;padding:10px 11px">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5F259F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px"><use href="#i-shield"/></svg>
+                <span style="font-size:10px;line-height:1.4;color:#4A1C7D">Customer consent recorded. This starts a live bank transaction.</span>
+              </div>
+
+              <div class="btn off">Capture fingerprint to continue</div>
+            </div>
+            <div class="nav">
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-home"/></svg><span>Home</span></div>
+              <div class="on" style="color:#5F259F"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg><span>AEPS</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-apps"/></svg><span>Services</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chart"/></svg><span>Reports</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bank"/></svg><span>Settle</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>AEPS withdrawal</figcaption>
+      </figure>
+
+      <!-- A / REPORTS -->
+      <figure>
+        <div class="device">
+          <div class="status" style="background:#5F259F;color:#fff">
+            <span>9:41</span>
+            <span class="dots"><i></i><i></i><i></i><span class="bat"></span></span>
+          </div>
+          <div class="screen">
+            <div class="titlebar" style="background:#5F259F">
+              <b>AEPS Report</b>
+              <div class="icon-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-filter"/></svg></div>
+            </div>
+            <div class="scroll" style="gap:9px">
+              <div class="search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-search"/></svg> Search reference or bank</div>
+              <div class="chips">
+                <span class="chp" style="background:#5F259F;border-color:#5F259F;color:#fff">30 days</span>
+                <span class="chp">Today</span>
+                <span class="chp">7 days</span>
+                <span class="chp">All</span>
+              </div>
+              <div class="tiles">
+                <div class="tile"><div class="l">Count</div><div class="v">780</div></div>
+                <div class="tile"><div class="l">Volume</div><div class="v">₹6.4L</div></div>
+                <div class="tile"><div class="l">Success</div><div class="v" style="color:var(--good)">742</div></div>
+                <div class="tile"><div class="l">Failed</div><div class="v" style="color:var(--bad)">38</div></div>
+              </div>
+              <div class="card" style="gap:0;padding:4px 13px">
+                <div class="txn">
+                  <div class="t-ico" style="background:var(--good-tint);color:var(--good)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cash"/></svg></div>
+                  <div class="t-txt"><b>Withdrawal</b><span>SPTXN4471</span></div>
+                  <div class="t-amt"><b>₹2,000</b><span class="pill ok">Success</span></div>
+                </div>
+                <div class="txn">
+                  <div class="t-ico" style="background:var(--bad-tint);color:var(--bad)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-wallet"/></svg></div>
+                  <div class="t-txt"><b>Balance Enquiry</b><span>SPTXN4470</span></div>
+                  <div class="t-amt"><b>—</b><span class="pill no">Failed</span></div>
+                </div>
+                <div class="txn">
+                  <div class="t-ico" style="background:var(--good-tint);color:var(--good)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cash"/></svg></div>
+                  <div class="t-txt"><b>Withdrawal</b><span>SPTXN4469</span></div>
+                  <div class="t-amt"><b>₹5,000</b><span class="pill ok">Success</span></div>
+                </div>
+                <div class="txn">
+                  <div class="t-ico" style="background:var(--good-tint);color:var(--good)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-receipt"/></svg></div>
+                  <div class="t-txt"><b>Mini Statement</b><span>SPTXN4466</span></div>
+                  <div class="t-amt"><b>—</b><span class="pill ok">Success</span></div>
+                </div>
+                <div class="txn">
+                  <div class="t-ico" style="background:var(--good-tint);color:var(--good)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cash"/></svg></div>
+                  <div class="t-txt"><b>Withdrawal</b><span>SPTXN4463</span></div>
+                  <div class="t-amt"><b>₹1,500</b><span class="pill ok">Success</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="nav">
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-home"/></svg><span>Home</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg><span>AEPS</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-apps"/></svg><span>Services</span></div>
+              <div class="on" style="color:#5F259F"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chart"/></svg><span>Reports</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bank"/></svg><span>Settle</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>AEPS report</figcaption>
+      </figure>
+
+    </div>
+
+    <div class="spec">
+      <div class="spec-col">
+        <div class="spec-h">Palette</div>
+        <div class="tok"><i style="background:#5F259F"></i> #5F259F brand</div>
+        <div class="tok"><i style="background:#4A1C7D"></i> #4A1C7D pressed</div>
+        <div class="tok"><i style="background:#F2ECF9"></i> #F2ECF9 tint</div>
+        <div class="tok"><i style="background:#F5F6F8"></i> #F5F6F8 ground</div>
+      </div>
+      <div class="spec-col">
+        <div class="spec-h">Status</div>
+        <div class="tok"><i style="background:#067A54"></i> #067A54 success</div>
+        <div class="tok"><i style="background:#C42B2B"></i> #C42B2B failed</div>
+        <div class="tok"><i style="background:#8A5A00"></i> #8A5A00 pending</div>
+      </div>
+      <div class="spec-col">
+        <div class="spec-h">Where it works</div>
+        <p>One hue means status colour never competes with brand colour — the thing that matters most on a money screen.</p>
+      </div>
+      <div class="spec-col">
+        <div class="spec-h">Where it strains</div>
+        <p>Violet at full saturation across a tall header can feel heavy on small budget screens in daylight.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DIRECTION B ============ -->
+  <section class="dir">
+    <div class="dir-head">
+      <div class="dir-tag"><span class="swatch-dot" style="background:#002970"></span> Direction B</div>
+      <h2>Navy &amp; cyan — the Paytm lineage</h2>
+      <p>A two-tone system: deep navy carries authority in the header, cyan carries action on buttons and the active nav state. Balance sits on a raised white card that overlaps the header, so the number a retailer checks fifty times a day is the brightest object on the screen.</p>
+    </div>
+
+    <div class="rail">
+
+      <!-- B / HOME -->
+      <figure>
+        <div class="device">
+          <div class="status" style="background:#002970;color:#fff">
+            <span>9:41</span>
+            <span class="dots"><i></i><i></i><i></i><span class="bat"></span></span>
+          </div>
+          <div class="screen">
+            <div class="hdr" style="background:#002970;padding-bottom:42px">
+              <div class="hdr-top">
+                <div class="avatar" style="background:#00BAF2;color:#002970">NY</div>
+                <div class="hdr-id">
+                  <b>Naimish Yadav</b>
+                  <span>A2ZB1004</span>
+                </div>
+                <div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bell"/></svg><span class="badge" style="color:#002970"></span></div>
+              </div>
+            </div>
+
+            <div class="scroll" style="margin-top:-36px">
+              <div class="card" style="gap:12px">
+                <div style="display:flex;align-items:flex-end;gap:12px">
+                  <div style="flex:1">
+                    <div style="font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#7B818B">Main wallet</div>
+                    <div style="font-size:25px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.15"><small style="font-size:14px;font-weight:600">₹</small>48,210<small style="font-size:14px;font-weight:600">.75</small></div>
+                  </div>
+                  <div style="text-align:right;line-height:1.3">
+                    <div style="font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:#7B818B">AEPS</div>
+                    <div style="font-size:13.5px;font-weight:650;font-variant-numeric:tabular-nums">₹3,514.43</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:7px">
+                  <div class="btn" style="flex:1;height:34px;font-size:11.5px;background:#00BAF2;color:#002970">Add money</div>
+                  <div class="btn ghost" style="flex:1;height:34px;font-size:11.5px;color:#002970;border-color:#CFE7F3">Settle</div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-title"><span>Quick actions</span><a href="#" style="color:#0068A8">All services</a></div>
+                <div class="qgrid">
+                  <div class="q"><div class="q-ico" style="background:#E7F6FD;color:#002970"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg></div><span>AEPS</span></div>
+                  <div class="q"><div class="q-ico" style="background:#E7F6FD;color:#002970"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-transfer"/></svg></div><span>DMT</span></div>
+                  <div class="q"><div class="q-ico" style="background:#E7F6FD;color:#002970"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-phone"/></svg></div><span>Recharge</span></div>
+                  <div class="q"><div class="q-ico" style="background:#E7F6FD;color:#002970"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-receipt"/></svg></div><span>BBPS</span></div>
+                  <div class="q"><div class="q-ico" style="background:#E7F6FD;color:#002970"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-qr"/></svg></div><span>UPI</span></div>
+                  <div class="q"><div class="q-ico" style="background:#E7F6FD;color:#002970"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cash"/></svg></div><span>Payout</span></div>
+                  <div class="q"><div class="q-ico" style="background:#E7F6FD;color:#002970"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-card"/></svg></div><span>PAN</span></div>
+                  <div class="q"><div class="q-ico" style="background:#E7F6FD;color:#002970"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"/></svg></div><span>Fund<br>request</span></div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-title"><span>Recent activity</span><a href="#" style="color:#0068A8">View all</a></div>
+                <div>
+                  <div class="txn">
+                    <div class="t-ico" style="background:var(--good-tint);color:var(--good)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg></div>
+                    <div class="t-txt"><b>AEPS Withdrawal</b><span>SPTXN4471 · 1:52 PM</span></div>
+                    <div class="t-amt"><b>₹2,000</b><span class="pill ok">Success</span></div>
+                  </div>
+                  <div class="txn">
+                    <div class="t-ico" style="background:var(--bad-tint);color:var(--bad)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg></div>
+                    <div class="t-txt"><b>Balance Enquiry</b><span>SPTXN4470 · 1:52 PM</span></div>
+                    <div class="t-amt"><b>—</b><span class="pill no">Failed</span></div>
+                  </div>
+                  <div class="txn">
+                    <div class="t-ico" style="background:var(--good-tint);color:var(--good)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-phone"/></svg></div>
+                    <div class="t-txt"><b>Recharge · Jio</b><span>SPTXN4468 · 11:04 AM</span></div>
+                    <div class="t-amt"><b>₹239</b><span class="pill ok">Success</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="nav">
+              <div class="on" style="color:#002970"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><use href="#i-home"/></svg><span>Home</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg><span>AEPS</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-apps"/></svg><span>Services</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chart"/></svg><span>Reports</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bank"/></svg><span>Settle</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Home</figcaption>
+      </figure>
+
+      <!-- B / SERVICES -->
+      <figure>
+        <div class="device">
+          <div class="status" style="background:#002970;color:#fff">
+            <span>9:41</span>
+            <span class="dots"><i></i><i></i><i></i><span class="bat"></span></span>
+          </div>
+          <div class="screen">
+            <div class="titlebar" style="background:#002970">
+              <b>Services</b>
+              <div class="icon-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-search"/></svg></div>
+            </div>
+            <div class="scroll">
+              <div class="grp-label">Banking</div>
+              <div class="card" style="gap:0;padding:4px 13px">
+                <div class="srow"><div class="s-ico" style="background:#E7F6FD;color:#002970"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg></div><div class="s-txt"><b>AEPS</b><span>Aadhaar banking</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+                <div class="srow"><div class="s-ico" style="background:#E7F6FD;color:#002970"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-transfer"/></svg></div><div class="s-txt"><b>DMT</b><span>Money transfer</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+                <div class="srow"><div class="s-ico" style="background:#E7F6FD;color:#002970"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-wallet"/></svg></div><div class="s-txt"><b>Wallet Transfer</b><span>AEPS to main wallet</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+                <div class="srow"><div class="s-ico" style="background:#E7F6FD;color:#002970"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cash"/></svg></div><div class="s-txt"><b>Direct Payout</b><span>Pay any account</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+                <div class="srow"><div class="s-ico" style="background:#E7F6FD;color:#002970"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-qr"/></svg></div><div class="s-txt"><b>UPI Collect</b><span>Collect on UPI</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+              </div>
+
+              <div class="grp-label">Payments</div>
+              <div class="card" style="gap:0;padding:4px 13px">
+                <div class="srow"><div class="s-ico" style="background:#E7F6FD;color:#002970"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-phone"/></svg></div><div class="s-txt"><b>Recharge</b><span>Mobile &amp; DTH</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+                <div class="srow"><div class="s-ico" style="background:#E7F6FD;color:#002970"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-receipt"/></svg></div><div class="s-txt"><b>BBPS</b><span>Utility bills</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+                <div class="srow"><div class="s-ico" style="background:#E7F6FD;color:#002970"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"/></svg></div><div class="s-txt"><b>Fund Request</b><span>Top up wallet</span></div><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+              </div>
+
+              <div class="grp-label">Account</div>
+              <div class="card" style="gap:0;padding:4px 13px">
+                <div class="srow"><div class="s-ico" style="background:#E7F6FD;color:#002970"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-shield"/></svg></div><div class="s-txt"><b>KYC Status</b><span>Verification</span></div><span class="pill ok">Done</span></div>
+                <div class="srow"><div class="s-ico" style="background:#E7F6FD;color:#002970"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bank"/></svg></div><div class="s-txt"><b>Pipe Status</b><span>Bank connectivity</span></div><span class="pill pend">1 of 5</span></div>
+              </div>
+            </div>
+            <div class="nav">
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-home"/></svg><span>Home</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg><span>AEPS</span></div>
+              <div class="on" style="color:#002970"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><use href="#i-apps"/></svg><span>Services</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chart"/></svg><span>Reports</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bank"/></svg><span>Settle</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Services</figcaption>
+      </figure>
+
+      <!-- B / AEPS -->
+      <figure>
+        <div class="device">
+          <div class="status" style="background:#002970;color:#fff">
+            <span>9:41</span>
+            <span class="dots"><i></i><i></i><i></i><span class="bat"></span></span>
+          </div>
+          <div class="screen">
+            <div class="titlebar" style="background:#002970">
+              <b>Cash Withdrawal</b>
+              <span style="font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;background:#00BAF2;color:#002970;padding:3px 8px;border-radius:99px;font-weight:600">BANK2</span>
+            </div>
+            <div class="scroll" style="gap:11px">
+              <div class="card" style="gap:11px">
+                <div class="field">
+                  <label>Customer Aadhaar</label>
+                  <div class="input filled"><span>4353 5882 9518</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-shield"/></svg></div>
+                </div>
+                <div class="field">
+                  <label>Customer mobile</label>
+                  <div class="input filled">89027 62742</div>
+                </div>
+                <div class="field">
+                  <label>Bank</label>
+                  <div class="input filled"><span>State Bank of India</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B9BEC6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg></div>
+                </div>
+                <div class="field">
+                  <label>Amount</label>
+                  <div class="input filled" style="font-size:16px;font-weight:700;border-color:#00BAF2">₹ 2,000</div>
+                </div>
+              </div>
+
+              <div class="capture" style="border-color:#00BAF2;background:#F7FCFE">
+                <div class="s-ico" style="background:#00BAF2;color:#002970"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg></div>
+                <div class="t"><b>Capture fingerprint</b><span>Mantra MFS110 · connected</span></div>
+                <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chev"/></svg>
+              </div>
+
+              <div style="display:flex;gap:8px;align-items:flex-start;background:#E7F6FD;border-radius:11px;padding:10px 11px">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#002970" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px"><use href="#i-shield"/></svg>
+                <span style="font-size:10px;line-height:1.4;color:#00224F">Customer consent recorded. This starts a live bank transaction.</span>
+              </div>
+
+              <div class="btn off">Capture fingerprint to continue</div>
+            </div>
+            <div class="nav">
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-home"/></svg><span>Home</span></div>
+              <div class="on" style="color:#002970"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg><span>AEPS</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-apps"/></svg><span>Services</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chart"/></svg><span>Reports</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bank"/></svg><span>Settle</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>AEPS withdrawal</figcaption>
+      </figure>
+
+      <!-- B / REPORTS -->
+      <figure>
+        <div class="device">
+          <div class="status" style="background:#002970;color:#fff">
+            <span>9:41</span>
+            <span class="dots"><i></i><i></i><i></i><span class="bat"></span></span>
+          </div>
+          <div class="screen">
+            <div class="titlebar" style="background:#002970">
+              <b>AEPS Report</b>
+              <div class="icon-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-filter"/></svg></div>
+            </div>
+            <div class="scroll" style="gap:9px">
+              <div class="search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-search"/></svg> Search reference or bank</div>
+              <div class="chips">
+                <span class="chp" style="background:#002970;border-color:#002970;color:#fff">30 days</span>
+                <span class="chp">Today</span>
+                <span class="chp">7 days</span>
+                <span class="chp">All</span>
+              </div>
+              <div class="tiles">
+                <div class="tile"><div class="l">Count</div><div class="v">780</div></div>
+                <div class="tile"><div class="l">Volume</div><div class="v">₹6.4L</div></div>
+                <div class="tile"><div class="l">Success</div><div class="v" style="color:var(--good)">742</div></div>
+                <div class="tile"><div class="l">Failed</div><div class="v" style="color:var(--bad)">38</div></div>
+              </div>
+              <div class="card" style="gap:0;padding:4px 13px">
+                <div class="txn">
+                  <div class="t-ico" style="background:var(--good-tint);color:var(--good)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cash"/></svg></div>
+                  <div class="t-txt"><b>Withdrawal</b><span>SPTXN4471</span></div>
+                  <div class="t-amt"><b>₹2,000</b><span class="pill ok">Success</span></div>
+                </div>
+                <div class="txn">
+                  <div class="t-ico" style="background:var(--bad-tint);color:var(--bad)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-wallet"/></svg></div>
+                  <div class="t-txt"><b>Balance Enquiry</b><span>SPTXN4470</span></div>
+                  <div class="t-amt"><b>—</b><span class="pill no">Failed</span></div>
+                </div>
+                <div class="txn">
+                  <div class="t-ico" style="background:var(--good-tint);color:var(--good)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cash"/></svg></div>
+                  <div class="t-txt"><b>Withdrawal</b><span>SPTXN4469</span></div>
+                  <div class="t-amt"><b>₹5,000</b><span class="pill ok">Success</span></div>
+                </div>
+                <div class="txn">
+                  <div class="t-ico" style="background:var(--good-tint);color:var(--good)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-receipt"/></svg></div>
+                  <div class="t-txt"><b>Mini Statement</b><span>SPTXN4466</span></div>
+                  <div class="t-amt"><b>—</b><span class="pill ok">Success</span></div>
+                </div>
+                <div class="txn">
+                  <div class="t-ico" style="background:var(--good-tint);color:var(--good)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cash"/></svg></div>
+                  <div class="t-txt"><b>Withdrawal</b><span>SPTXN4463</span></div>
+                  <div class="t-amt"><b>₹1,500</b><span class="pill ok">Success</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="nav">
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-home"/></svg><span>Home</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-finger"/></svg><span>AEPS</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-apps"/></svg><span>Services</span></div>
+              <div class="on" style="color:#002970"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chart"/></svg><span>Reports</span></div>
+              <div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bank"/></svg><span>Settle</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>AEPS report</figcaption>
+      </figure>
+
+    </div>
+
+    <div class="spec">
+      <div class="spec-col">
+        <div class="spec-h">Palette</div>
+        <div class="tok"><i style="background:#002970"></i> #002970 brand</div>
+        <div class="tok"><i style="background:#00BAF2"></i> #00BAF2 action</div>
+        <div class="tok"><i style="background:#E7F6FD"></i> #E7F6FD tint</div>
+        <div class="tok"><i style="background:#F5F6F8"></i> #F5F6F8 ground</div>
+      </div>
+      <div class="spec-col">
+        <div class="spec-h">Status</div>
+        <div class="tok"><i style="background:#067A54"></i> #067A54 success</div>
+        <div class="tok"><i style="background:#C42B2B"></i> #C42B2B failed</div>
+        <div class="tok"><i style="background:#8A5A00"></i> #8A5A00 pending</div>
+      </div>
+      <div class="spec-col">
+        <div class="spec-h">Where it works</div>
+        <p>Cyan gives you a distinct action colour, so “Add money” never looks like a heading. The overlapping balance card is the strongest hierarchy of the two.</p>
+      </div>
+      <div class="spec-col">
+        <div class="spec-h">Where it strains</div>
+        <p>Cyan on white fails contrast for text — it can only ever be a background with navy text on it, never a text colour.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DECISIONS ============ -->
+  <section class="decide">
+    <h2>What both directions fix</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Change</th><th>Today</th><th>Proposed</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Balance</td>
+            <td>A row among other rows</td>
+            <td>Owns the header block or an overlapping card</td>
+            <td>It is the single most-checked number in the app</td>
+          </tr>
+          <tr>
+            <td>Status</td>
+            <td>Colour on text</td>
+            <td>Filled pill, colour + word</td>
+            <td>Colour alone fails colour-blind retailers and daylight glare</td>
+          </tr>
+          <tr>
+            <td>Amounts</td>
+            <td>Proportional figures</td>
+            <td><code>tabular-nums</code> everywhere</td>
+            <td>Columns of money stop jittering between rows</td>
+          </tr>
+          <tr>
+            <td>Blocked actions</td>
+            <td>Greyed button, no reason</td>
+            <td>Button states the blocker</td>
+            <td>“Capture fingerprint to continue” beats a dead grey button</td>
+          </tr>
+          <tr>
+            <td>Report summary</td>
+            <td>Below the list</td>
+            <td>Four tiles above the list</td>
+            <td>Summary before detail is how a scanned screen should read</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top:6px">Both directions hold the constraints the app already respects: five bottom-nav destinations with icon <em>and</em> label, 44pt minimum touch targets, 4.5:1 body-text contrast, and an 8px spacing rhythm. Nothing here requires a navigation change or a new screen — it is a token swap plus a re-layout of Home and Reports.</p>
+  </section>
+
+</div>
