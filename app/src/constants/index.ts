@@ -131,7 +131,7 @@ export const RETAILER_TABS: TabEntry[] = [
   { key: 'aeps', name: 'AEPS', route: 'AEPS', icon: 'fingerprint', iconActive: 'fingerprint' },
   { key: 'services', name: 'Services', route: 'Services', icon: 'apps', iconActive: 'apps' },
   { key: 'reports', name: 'Reports', route: 'Reports', icon: 'chart-box-outline', iconActive: 'chart-box' },
-  { key: 'settlement', name: 'Settlement', route: 'AepsSettlement', icon: 'bank-outline', iconActive: 'bank' },
+  { key: 'settlement', name: 'Withdraw', route: 'AepsSettlement', icon: 'bank-outline', iconActive: 'bank' },
 ];
 
 export const ADMIN_TABS: TabEntry[] = [

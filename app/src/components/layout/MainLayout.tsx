@@ -24,7 +24,7 @@ const TITLES: Record<string, { title: string; subtitle?: string }> = {
   Dashboard: { title: 'Home' },
   Services: { title: 'Services', subtitle: 'Everything you can sell' },
   Reports: { title: 'Reports', subtitle: 'Transaction history' },
-  AepsSettlement: { title: 'Settlement', subtitle: 'AEPS wallet to your bank' },
+  AepsSettlement: { title: 'Withdraw', subtitle: 'AEPS wallet to your bank' },
   AdminPortal: { title: 'Overview' },
   DistributorPortal: { title: 'Overview' },
 };
