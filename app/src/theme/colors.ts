@@ -42,6 +42,12 @@ export const palettes = {
     accent: brand.ink,
     accentForeground: '#FFFFFF',
 
+    // The app header band. Separate from `accent` because accent inverts to
+    // near-white in dark mode — correct for a button, glare as a full-width
+    // band. In dark the band is an elevated surface instead of an inversion.
+    band: brand.ink,
+    bandForeground: '#FFFFFF',
+
     secondary: '#F0F0F2',
     secondaryForeground: '#0A0A0B',
     muted: '#F0F0F2',
@@ -87,6 +93,9 @@ export const palettes = {
     primaryForeground: '#0A0A0B',
     accent: brand.chalk,
     accentForeground: '#0A0A0B',
+
+    band: '#16161A',
+    bandForeground: brand.chalk,
 
     secondary: '#212126',
     secondaryForeground: '#FAFAFA',

@@ -96,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({
           accessibilityState={{ expanded: !!anchor }}
           hitSlop={8}
         >
-          <MaterialCommunityIcons name="menu" size={22} color={colors.foreground} />
+          <MaterialCommunityIcons name="menu" size={22} color={colors.bandForeground} />
         </Pressable>
 
         <View style={styles.titleBlock}>
@@ -184,10 +184,11 @@ export const Header: React.FC<HeaderProps> = ({
 };
 
 const styles = themed((c) => ({
+  // The brand band. It runs edge to edge and carries no bottom border: on the
+  // Dashboard the screen's own band continues it in the same ink, and a rule
+  // between them would draw a seam through what should read as one block.
   header: {
-    backgroundColor: c.background,
-    borderBottomWidth: 1,
-    borderBottomColor: c.border,
+    backgroundColor: c.band,
     paddingHorizontal: space.md,
     paddingBottom: space.sm,
     zIndex: 50,
@@ -201,8 +202,8 @@ const styles = themed((c) => ({
     gap: space.xs,
   },
   titleBlock: { flex: 1, minWidth: 0, paddingLeft: space.xs },
-  title: { fontSize: t.bodyLg, fontWeight: '700', color: c.foreground },
-  subtitle: { fontSize: t.caption, color: c.mutedForeground, marginTop: 1 },
+  title: { fontSize: t.bodyLg, fontWeight: '700', color: c.bandForeground },
+  subtitle: { fontSize: t.caption, color: c.bandForeground, opacity: 0.75, marginTop: 1 },
   iconButton: {
     width: 40,
     height: 40,
@@ -217,13 +218,11 @@ const styles = themed((c) => ({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: c.accentSubtle,
-    borderWidth: 1,
-    borderColor: c.accent,
+    backgroundColor: 'rgba(127,127,127,0.28)',
     overflow: 'hidden',
   },
   avatarImage: { width: 36, height: 36 },
-  avatarInitial: { fontSize: t.small, fontWeight: '700', color: c.accent },
+  avatarInitial: { fontSize: t.small, fontWeight: '700', color: c.bandForeground },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: c.overlay },
   popover: {
     position: 'absolute',

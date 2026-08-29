@@ -74,9 +74,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   return (
     <View style={styles.container}>
+      {/* The header is the brand band now: near-black in light, an elevated
+          dark surface in dark. Light status-bar content reads on both. */}
       <StatusBar
-        barStyle={resolvedTheme === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor={colors.background}
+        barStyle="light-content"
+        backgroundColor={colors.band}
       />
 
       <Header

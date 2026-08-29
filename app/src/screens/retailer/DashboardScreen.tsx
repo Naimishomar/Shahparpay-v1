@@ -86,19 +86,6 @@ export const DashboardScreen: React.FC = () => {
                 </Text>
               )}
             </View>
-            <Pressable
-              onPress={() => navigation.navigate('Account')}
-              style={({ pressed }) => [styles.bandIcon, pressed && styles.pressed]}
-              accessibilityRole="button"
-              accessibilityLabel="Account"
-              hitSlop={8}
-            >
-              <MaterialCommunityIcons
-                name="account-circle-outline"
-                size={20}
-                color={colors.accentForeground}
-              />
-            </Pressable>
           </View>
         </View>
       }
@@ -236,12 +223,13 @@ export const DashboardScreen: React.FC = () => {
 };
 
 const styles = themed((c) => ({
-  // The brand band. `accent` is near-black in light mode and near-white in
-  // dark, so `accentForeground` is the only safe colour for anything on it.
+  // Continues the app header's band in the same ink, so the two read as one
+  // block. `band` is deliberately not `accent`: accent inverts to near-white
+  // in dark mode, which is right for a button and glare for a full-width band.
   band: {
-    backgroundColor: c.accent,
+    backgroundColor: c.band,
     paddingHorizontal: space.lg,
-    paddingTop: space.lg,
+    paddingTop: space.md,
     paddingBottom: space.lg + BALANCE_OVERLAP,
   },
   bandTop: { flexDirection: 'row', alignItems: 'center', gap: space.md },
@@ -253,18 +241,10 @@ const styles = themed((c) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontSize: t.small, fontWeight: '700', color: c.accentForeground },
+  avatarText: { fontSize: t.small, fontWeight: '700', color: c.bandForeground },
   identity: { flex: 1, minWidth: 0, gap: 1 },
-  identityName: { fontSize: t.body, fontWeight: '700', color: c.accentForeground },
-  identityCode: { fontSize: t.micro, color: c.accentForeground, opacity: 0.75 },
-  bandIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.pill,
-    backgroundColor: 'rgba(127,127,127,0.28)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  identityName: { fontSize: t.body, fontWeight: '700', color: c.bandForeground },
+  identityCode: { fontSize: t.micro, color: c.bandForeground, opacity: 0.75 },
 
   balRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.md },
   balMain: { flex: 1, minWidth: 0, gap: 1 },
@@ -291,7 +271,7 @@ const styles = themed((c) => ({
     justifyContent: 'center',
   },
   balBtnPrimary: { backgroundColor: c.accent },
-  balBtnPrimaryText: { fontSize: t.small, fontWeight: '700', color: c.accentForeground },
+  balBtnPrimaryText: { fontSize: t.small, fontWeight: '700', color: c.bandForeground },
   balBtnGhost: { backgroundColor: c.card, borderWidth: 1, borderColor: c.borderStrong },
   balBtnGhostText: { fontSize: t.small, fontWeight: '700', color: c.foreground },
 

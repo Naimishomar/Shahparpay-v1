@@ -3,12 +3,17 @@ import { View, Text, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, radius, space, type as t } from '../theme/colors';
-import { Screen, SectionTitle, Grid } from '@/components/ui/Screen';
+import { Screen, SectionTitle } from '@/components/ui/Screen';
 import { SERVICE_ITEMS, MenuEntry } from '@/constants';
 
 /**
  * Second-level hub. The old drawer listed 17 flat items; grouping them here by
  * what the retailer is trying to do keeps the bottom bar at five destinations.
+ *
+ * Rows rather than a tile grid: a row fits the name and its hint on one line
+ * each at full size, where a 2-up tile had to clamp both to two lines and
+ * still truncated "Wallet Transfer" and "Lead Generation". Rows also give the
+ * whole width as the tap target instead of a half-width square.
  */
 const GROUPS = ['Banking', 'Payments', 'Government', 'Account'];
 
@@ -23,15 +28,16 @@ export const ServicesScreen: React.FC = () => {
         return (
           <View key={group} style={styles.group}>
             <SectionTitle>{group}</SectionTitle>
-            <Grid>
-              {items.map((item) => (
-                <ServiceTile
+            <View style={styles.card}>
+              {items.map((item, index) => (
+                <ServiceRow
                   key={item.route}
                   item={item}
+                  last={index === items.length - 1}
                   onPress={() => navigation.navigate(item.route)}
                 />
               ))}
-            </Grid>
+            </View>
           </View>
         );
       })}
@@ -39,50 +45,68 @@ export const ServicesScreen: React.FC = () => {
   );
 };
 
-const ServiceTile: React.FC<{ item: MenuEntry; onPress: () => void }> = ({ item, onPress }) => (
+const ServiceRow: React.FC<{ item: MenuEntry; last: boolean; onPress: () => void }> = ({
+  item,
+  last,
+  onPress,
+}) => (
   <Pressable
     onPress={onPress}
-    style={({ pressed }) => [styles.tile, pressed && styles.tilePressed]}
+    style={({ pressed }) => [styles.row, last && styles.rowLast, pressed && styles.rowPressed]}
     accessibilityRole="button"
     accessibilityLabel={item.hint ? `${item.name}. ${item.hint}` : item.name}
   >
-    <View style={styles.tileIcon}>
-      <MaterialCommunityIcons name={item.icon as any} size={22} color={colors.accent} />
+    <View style={styles.rowIcon}>
+      <MaterialCommunityIcons name={item.icon as any} size={20} color={colors.accent} />
     </View>
-    <Text style={styles.tileName} numberOfLines={2}>
-      {item.name}
-    </Text>
-    {!!item.hint && (
-      <Text style={styles.tileHint} numberOfLines={2}>
-        {item.hint}
+    <View style={styles.rowText}>
+      <Text style={styles.rowName} numberOfLines={1}>
+        {item.name}
       </Text>
-    )}
+      {!!item.hint && (
+        <Text style={styles.rowHint} numberOfLines={1}>
+          {item.hint}
+        </Text>
+      )}
+    </View>
+    <MaterialCommunityIcons name="chevron-right" size={20} color={colors.borderStrong} />
   </Pressable>
 );
 
 const styles = themed((c) => ({
   group: { gap: space.md },
-  tile: {
-    minHeight: 118,
-    padding: space.md,
+  card: {
     borderRadius: radius.lg,
     backgroundColor: c.card,
     borderWidth: 1,
     borderColor: c.border,
-    gap: 6,
+    paddingHorizontal: space.md,
+    overflow: 'hidden',
   },
-  tilePressed: { opacity: 0.75 },
-  tileIcon: {
-    width: 40,
-    height: 40,
+  row: {
+    // 56 keeps the row clear of the 44pt minimum even before the icon's own
+    // padding, so the whole width is a comfortable target.
+    minHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    paddingVertical: space.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  rowLast: { borderBottomWidth: 0 },
+  rowPressed: { backgroundColor: c.accentSubtle },
+  rowIcon: {
+    width: 36,
+    height: 36,
     borderRadius: radius.md,
     backgroundColor: c.accentSubtle,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
   },
-  tileName: { fontSize: t.small, fontWeight: '700', color: c.foreground },
-  tileHint: { fontSize: t.micro, color: c.mutedForeground, lineHeight: 15 },
+  rowText: { flex: 1, minWidth: 0, gap: 1 },
+  rowName: { fontSize: t.small, fontWeight: '700', color: c.foreground },
+  rowHint: { fontSize: t.micro, color: c.mutedForeground },
 }));
 
 export default ServicesScreen;
