@@ -192,14 +192,39 @@ export const TransactionReport: React.FC<Props> = ({
             action={{ label: 'Retry', onPress: report.reload }}
           />
         )}
-        <Grid columns={2}>
+        {/* Four across rather than 2x2: the four numbers are one summary and
+            read as a row, and stacking them pushed the first result off the
+            fold on a small phone. */}
+        <Grid columns={4}>
           {tiles.map((tile) => (
             <Tile key={tile.label} label={tile.label} value={tile.value} tone={tile.tone} />
           ))}
         </Grid>
+        {/* Range is the filter people actually change, so it sits in the open;
+            status stays in the sheet with the rest. */}
+        <View style={styles.rangeRow}>
+          {RANGES.map((option) => {
+            const active = option.key === range;
+            return (
+              <Pressable
+                key={option.key}
+                onPress={() => setRange(option.key)}
+                style={[styles.rangeChip, active && styles.rangeChipOn]}
+                hitSlop={{ top: 7, bottom: 7, left: 2, right: 2 }}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={option.label}
+              >
+                <Text style={[styles.rangeChipText, active && styles.rangeChipTextOn]}>
+                  {option.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
     ),
-    [gap, report.error, report.reload, tiles]
+    [gap, report.error, report.reload, tiles, range]
   );
 
   const hasFilters = !!query || activeFilters > 0;
@@ -460,6 +485,21 @@ const Tile: React.FC<{ label: string; value: string; tone?: SummaryTile['tone'] 
 
 const styles = themed((c) => ({
   container: { flex: 1, backgroundColor: c.background },
+  rangeRow: { flexDirection: 'row', gap: space.xs, flexWrap: 'wrap' },
+  rangeChip: {
+    // 34 visually, with hitSlop below taking the real target past 48dp. A
+    // full-height 48pt chip reads as a button row and crowds the summary.
+    minHeight: 34,
+    justifyContent: 'center',
+    paddingHorizontal: space.md,
+    borderRadius: radius.pill,
+    backgroundColor: c.card,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  rangeChipOn: { backgroundColor: c.accent, borderColor: c.accent },
+  rangeChipText: { fontSize: t.micro, fontWeight: '700', color: c.mutedForeground },
+  rangeChipTextOn: { color: c.accentForeground },
   filters: {
     flexDirection: 'row',
     alignItems: 'center',

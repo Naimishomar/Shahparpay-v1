@@ -525,6 +525,14 @@ export const AepsScreen: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle icon="account-outline">Customer details</CardTitle>
+          {/* With one active pipe the selector above is hidden, so nothing said
+              which bank rail the transaction ran on — the first thing you need
+              when one fails. */}
+          {activePipes.length === 1 && (
+            <View style={styles.pipeChip}>
+              <Text style={styles.pipeChipText}>{activePipes[0].toUpperCase()}</Text>
+            </View>
+          )}
         </CardHeader>
         <CardContent style={styles.form}>
           <Input
@@ -826,6 +834,18 @@ export const AepsScreen: React.FC = () => {
 };
 
 const styles = themed((c) => ({
+  pipeChip: {
+    paddingHorizontal: space.sm,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    backgroundColor: c.secondary,
+  },
+  pipeChipText: {
+    fontSize: t.micro,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    color: c.mutedForeground,
+  },
   gateRow: { flexDirection: 'row', gap: space.sm },
   flex: { flex: 1 },
   serviceCard: {

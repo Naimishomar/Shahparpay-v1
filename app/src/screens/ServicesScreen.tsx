@@ -3,7 +3,7 @@ import { View, Text, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, radius, space, type as t } from '../theme/colors';
-import { Screen, SectionTitle } from '@/components/ui/Screen';
+import { Screen } from '@/components/ui/Screen';
 import { SERVICE_ITEMS, MenuEntry } from '@/constants';
 
 /**
@@ -27,7 +27,7 @@ export const ServicesScreen: React.FC = () => {
         if (!items.length) return null;
         return (
           <View key={group} style={styles.group}>
-            <SectionTitle>{group}</SectionTitle>
+            <Text style={styles.groupLabel}>{group.toUpperCase()}</Text>
             <View style={styles.card}>
               {items.map((item, index) => (
                 <ServiceRow
@@ -74,7 +74,16 @@ const ServiceRow: React.FC<{ item: MenuEntry; last: boolean; onPress: () => void
 );
 
 const styles = themed((c) => ({
-  group: { gap: space.md },
+  group: { gap: space.sm },
+  // Set apart from a SectionTitle: this labels a group of rows rather than
+  // titling a section, so it stays quiet and lets the row names lead.
+  groupLabel: {
+    fontSize: t.micro,
+    fontWeight: '700',
+    letterSpacing: 1.1,
+    color: c.mutedForeground,
+    paddingHorizontal: 2,
+  },
   card: {
     borderRadius: radius.lg,
     backgroundColor: c.card,

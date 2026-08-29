@@ -27,16 +27,6 @@ interface DashboardData {
 /** How far the balance card rides up into the brand band. */
 const BALANCE_OVERLAP = 28;
 
-/** Only the metrics a retailer acts on. The rest live in Reports. */
-const METRICS: { key: keyof DashboardStats; label: string; icon: string }[] = [
-  { key: 'AEPS_WITHDRAWAL', label: 'AEPS', icon: 'fingerprint' },
-  { key: 'DMT', label: 'Money transfer', icon: 'bank-transfer' },
-  { key: 'RECHARGE', label: 'Recharge', icon: 'cellphone' },
-  { key: 'BILL_PAYMENT', label: 'Bill payments', icon: 'receipt' },
-  { key: 'AEPS_SETTLEMENT', label: 'Payouts', icon: 'cash-fast' },
-  { key: 'WALLET_TOPUP', label: 'UPI collected', icon: 'qrcode' },
-];
-
 export const DashboardScreen: React.FC = () => {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
@@ -48,7 +38,6 @@ export const DashboardScreen: React.FC = () => {
   // Separate from the dashboard call: the balance is the number a retailer
   // opens the app to read, so it must not wait on the slower stats query.
   const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
-  const stats = dashboard.data?.stats;
   const sales = dashboard.data?.recentSales ?? [];
 
   const refresh = () => {
@@ -123,58 +112,42 @@ export const DashboardScreen: React.FC = () => {
         </View>
       </Card>
 
-      <SectionTitle>Quick actions</SectionTitle>
-      <Grid columns={4}>
-        {QUICK_ACTIONS.map((action) => (
+      <Card>
+        <CardHeader>
+          <CardTitle icon="apps">Quick actions</CardTitle>
           <Pressable
-            key={action.route}
-            onPress={() => navigation.navigate(action.route)}
-            style={({ pressed }) => [styles.quick, pressed && styles.pressed]}
-            accessibilityRole="button"
-            accessibilityLabel={action.name}
-          >
-            <View style={styles.quickIcon}>
-              <MaterialCommunityIcons name={action.icon as any} size={21} color={colors.accent} />
-            </View>
-            <Text style={styles.quickLabel} numberOfLines={1}>
-              {action.name}
-            </Text>
-          </Pressable>
-        ))}
-      </Grid>
-
-      <SectionTitle
-        action={
-          <Pressable
-            onPress={() => navigation.navigate('Reports')}
+            onPress={() => navigation.navigate('Services')}
             hitSlop={10}
             accessibilityRole="button"
           >
-            <Text style={styles.link}>All reports</Text>
+            <Text style={styles.link}>All services</Text>
           </Pressable>
-        }
-      >
-        This month
-      </SectionTitle>
-      <Grid columns={2}>
-        {METRICS.map((metric) => (
-          <View key={metric.key} style={styles.metric}>
-            <View style={styles.metricTop}>
-              <MaterialCommunityIcons
-                name={metric.icon as any}
-                size={16}
-                color={colors.mutedForeground}
-              />
-              <Text style={styles.metricLabel} numberOfLines={1}>
-                {metric.label}
-              </Text>
-            </View>
-            <Text style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit>
-              {money(stats?.[metric.key])}
-            </Text>
-          </View>
-        ))}
-      </Grid>
+        </CardHeader>
+        <CardContent>
+          <Grid columns={4}>
+            {QUICK_ACTIONS.map((action) => (
+              <Pressable
+                key={action.route}
+                onPress={() => navigation.navigate(action.route)}
+                style={({ pressed }) => [styles.quick, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel={action.name}
+              >
+                <View style={styles.quickIcon}>
+                  <MaterialCommunityIcons
+                    name={action.icon as any}
+                    size={21}
+                    color={colors.accent}
+                  />
+                </View>
+                <Text style={styles.quickLabel} numberOfLines={2}>
+                  {action.name}
+                </Text>
+              </Pressable>
+            ))}
+          </Grid>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -276,44 +249,25 @@ const styles = themed((c) => ({
   balBtnGhostText: { fontSize: t.small, fontWeight: '700', color: c.foreground },
 
   quick: {
-    minHeight: 78,
+    minHeight: 74,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     gap: 6,
-    paddingVertical: space.md,
-    paddingHorizontal: 4,
+    paddingVertical: space.xs,
+    paddingHorizontal: 2,
     borderRadius: radius.md,
-    backgroundColor: c.card,
-    borderWidth: 1,
-    borderColor: c.border,
   },
   pressed: { opacity: 0.75 },
   quickIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.pill,
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
     backgroundColor: c.accentSubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  quickLabel: { fontSize: t.micro, fontWeight: '600', color: c.foreground },
+  quickLabel: { fontSize: t.micro, fontWeight: '600', color: c.foreground, textAlign: 'center', lineHeight: 13 },
   link: { fontSize: t.small, fontWeight: '700', color: c.accent },
-  metric: {
-    padding: space.md,
-    borderRadius: radius.md,
-    backgroundColor: c.card,
-    borderWidth: 1,
-    borderColor: c.border,
-    gap: 6,
-  },
-  metricTop: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  metricLabel: { flex: 1, fontSize: t.micro, fontWeight: '600', color: c.mutedForeground },
-  metricValue: {
-    fontSize: t.title,
-    fontWeight: '700',
-    color: c.foreground,
-    fontVariant: ['tabular-nums'],
-  },
   sale: {
     flexDirection: 'row',
     alignItems: 'center',
