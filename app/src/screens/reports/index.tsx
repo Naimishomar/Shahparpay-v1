@@ -176,6 +176,9 @@ const ledgerSummary = (rows: any[]) => {
 /** Ledger rows carry a direction, not a transaction status. */
 const LEDGER_STATUSES = ['ALL', 'CREDIT', 'DEBIT'] as const;
 
+/** Rows the gateway rejected — the ones whose REASON is worth surfacing. */
+const ledgerFailed = (i: any) => /FAIL|REJECT/i.test(String(i?.remarks ?? ''));
+
 /**
  * Both ledger endpoints answer with PaySprint's uppercase column names
  * (UTR/WALLET/AMOUNT/TYPE/NARRATION/remarks/DATE), not the camelCase
@@ -186,7 +189,9 @@ export const WalletLedgerReport: React.FC = () => (
   <TransactionReport
     fetcher={async (range) => (await api.getWalletLedger(range)).data ?? []}
     searchFields={(i) =>
-      [i?.UTR, i?.TXNTYPE, i?.WALLET, i?.NARRATION, i?.remarks].filter(Boolean).join(' ')
+      [i?.UTR, i?.TXNTYPE, i?.WALLET, i?.NARRATION, i?.remarks, i?.REASON]
+        .filter(Boolean)
+        .join(' ')
     }
     // Signed: a ledger that renders debits as positive does not add up.
     amountOf={ledgerAmount}
@@ -197,12 +202,17 @@ export const WalletLedgerReport: React.FC = () => (
     statusOf={(i) => i?.TYPE}
     dateOf={(i) => i?.DATE}
     titleOf={(i) => i?.NARRATION || i?.TXNTYPE || 'Ledger entry'}
-    subtitleOf={(i) => [i?.WALLET, i?.TXNTYPE].filter(Boolean).join(' · ')}
+    // A failed row without its reason is a mystery debit; show it on the card
+    // so the retailer does not have to open every red entry to find out why.
+    subtitleOf={(i) =>
+      [i?.WALLET, i?.TXNTYPE, ledgerFailed(i) ? i?.REASON : ''].filter(Boolean).join(' · ')
+    }
     details={[
       { label: 'Reference', value: (i: any) => i?.UTR || '—' },
       { label: 'Wallet', value: (i: any) => i?.WALLET || '—' },
       { label: 'Direction', value: (i: any) => (i?.TYPE ? String(i.TYPE).toUpperCase() : '—') },
       { label: 'Transaction status', value: (i: any) => i?.remarks || '—' },
+      { label: 'Reason', value: (i: any) => i?.REASON || '—' },
       { label: 'Opening', value: (i: any) => (i?.OPENING != null ? money(i.OPENING) : '—') },
       { label: 'Closing', value: (i: any) => (i?.CLOSING != null ? money(i.CLOSING) : '—') },
       { label: 'Commission', value: (i: any) => (i?.COMMISSION ? money(i.COMMISSION) : '—') },

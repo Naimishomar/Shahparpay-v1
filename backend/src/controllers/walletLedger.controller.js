@@ -338,6 +338,10 @@ export const getWalletLedger = async (req, res) => {
         TYPE: type,
         NARRATION: getNarration(tx),
         remarks: tx.status || '',
+        // Why a row failed. Gateways write the message under either key
+        // (resolveTransaction/reconciliation use apiMessage, the AEPS and PAN
+        // flows use gatewayMessage); the synthesized auto-refund rows carry note.
+        REASON: tx.metadata?.apiMessage || tx.metadata?.gatewayMessage || tx.metadata?.note || '',
         TXNTYPE: txntype,
         DATE: tx.createdAt ? new Date(tx.createdAt).toISOString() : '',
       };

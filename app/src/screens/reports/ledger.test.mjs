@@ -28,9 +28,14 @@ for (const key of ['UTR', 'WALLET', 'AMOUNT', 'TYPE', 'NARRATION', 'TXNTYPE', 'D
   );
 }
 assert.ok(/remarks: tx\.status/.test(walletLedger), 'wallet ledger status still rides on `remarks`');
+// A failed row must carry WHY it failed; the gateways write it under either key.
+assert.ok(
+  /REASON: tx\.metadata\?\.apiMessage \|\| tx\.metadata\?\.gatewayMessage/.test(walletLedger),
+  'wallet ledger must emit REASON from apiMessage/gatewayMessage'
+);
 // --- and the screens read exactly those ----------------------------------
 const wallet = componentSource('WalletLedgerReport');
-for (const key of ['UTR', 'WALLET', 'TYPE', 'NARRATION', 'DATE', 'remarks']) {
+for (const key of ['UTR', 'WALLET', 'TYPE', 'NARRATION', 'DATE', 'remarks', 'REASON']) {
   assert.ok(wallet.includes(`?.${key}`), `WalletLedgerReport must read i?.${key}`);
 }
 
@@ -106,6 +111,20 @@ for (const [name, source] of [['WalletLedgerReport', wallet]]) {
   assert.ok(source.includes('summary={ledgerSummary}'), `${name} needs the ledger money tiles`);
   assert.ok(source.includes('statuses={LEDGER_STATUSES}'), `${name} filters by CREDIT/DEBIT`);
 }
+
+// The reason rides on the card for failed rows only — a successful row would
+// otherwise repeat its gateway message ("Settlement successful") as a subtitle.
+const ledgerFailed = new Function(
+  `return ${/const ledgerFailed = (\(i: any\) => .*);/.exec(reports)[1].replace('(i: any)', '(i)')};`
+)();
+assert.strictEqual(ledgerFailed({ remarks: 'FAILED' }), true);
+assert.strictEqual(ledgerFailed({ remarks: 'REJECTED' }), true);
+assert.strictEqual(ledgerFailed({ remarks: 'SUCCESS' }), false);
+assert.strictEqual(ledgerFailed({}), false, 'a row with no status is not a failure');
+assert.ok(
+  wallet.includes('ledgerFailed(i) ? i?.REASON'),
+  'WalletLedgerReport must show the reason on failed cards'
+);
 
 // StatusPill has to colour a ledger direction, not fall through to UNKNOWN.
 const screen = readFileSync(new URL('../../components/ui/Screen.tsx', import.meta.url), 'utf8');
