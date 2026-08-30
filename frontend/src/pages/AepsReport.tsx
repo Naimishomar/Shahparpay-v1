@@ -20,6 +20,28 @@ const getCrDr = (type: string) => {
     return 'CR'; // Default fallback
 };
 
+/**
+ * Why the gateway ended the transaction the way it did. AEPS writes it to
+ * metadata.gatewayMessage; resolveTransaction and the reconciliation worker
+ * write metadata.apiMessage.
+ */
+const reasonOf = (tx: any) =>
+    tx?.metadata?.gatewayMessage || tx?.metadata?.apiMessage || tx?.metadata?.note || "";
+
+const isFailed = (tx: any) => /FAIL|REJECT/i.test(tx?.status || "");
+
+/** Only the last four digits may be displayed back at an AePS outlet. */
+const maskAadhaar = (v: any) => {
+    const digits = String(v ?? "").replace(/\D/g, "");
+    return digits.length >= 4 ? `XXXX XXXX ${digits.slice(-4)}` : "";
+};
+
+/** The customer's bank balance after the transaction, as the gateway reported it. */
+const bankBalanceOf = (tx: any) => {
+    const balance = Number(tx?.metadata?.bankBalance);
+    return Number.isFinite(balance) ? balance : null;
+};
+
 const AepsReport = () => {
     const [transactions, setTransactions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -51,7 +73,8 @@ const AepsReport = () => {
         return transactions.filter(tx => 
             tx.transactionId?.toLowerCase().includes(searchTerm.toLowerCase()) || 
             tx.metadata?.mobile?.includes(searchTerm) ||
-            tx.metadata?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+            tx.metadata?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            reasonOf(tx).toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [transactions, searchTerm]);
 
@@ -63,7 +86,7 @@ const AepsReport = () => {
     }, [filteredTransactions, currentPage]);
 
     const handleDownloadCSV = () => {
-        const headers = ["S.No.", "Transaction ID", "Date", "Customer", "Mobile", "Credit", "Debit", "Status"];
+        const headers = ["S.No.", "Transaction ID", "Date", "Customer", "Aadhaar", "Mobile", "Credit", "Debit", "Bank Balance", "Status", "Reason"];
         const csvRows = [headers.join(",")];
         
         filteredTransactions.forEach((tx, idx) => {
@@ -73,10 +96,13 @@ const AepsReport = () => {
                 tx.transactionId || tx._id || "N/A",
                 new Date(tx.createdAt).toLocaleString(),
                 tx.metadata?.name || tx.metadata?.customerName || "N/A",
+                maskAadhaar(tx.metadata?.aadhaar || tx.metadata?.aadhar) || "N/A",
                 tx.metadata?.mobile || "N/A",
                 isCr ? tx.amount || 0 : 0,
                 !isCr ? tx.amount || 0 : 0,
-                tx.status || "UNKNOWN"
+                bankBalanceOf(tx) ?? "N/A",
+                tx.status || "UNKNOWN",
+                reasonOf(tx) || "N/A"
             ];
             const escapedRow = row.map(v => `"${String(v).replace(/"/g, '""')}"`);
             csvRows.push(escapedRow.join(","));
@@ -96,7 +122,7 @@ const AepsReport = () => {
         const doc = new jsPDF();
         doc.text("AEPS Reports", 14, 15);
         
-        const tableColumn = ["S.No.", "ID", "Date", "Customer", "Credit", "Debit", "Status"];
+        const tableColumn = ["S.No.", "ID", "Date", "Customer", "Aadhaar", "Credit", "Debit", "Bank Bal.", "Status", "Reason"];
         const tableRows: any[] = [];
 
         filteredTransactions.forEach((tx, idx) => {
@@ -106,9 +132,12 @@ const AepsReport = () => {
                 tx.transactionId || tx._id || "N/A",
                 new Date(tx.createdAt).toLocaleDateString(),
                 tx.metadata?.name || tx.metadata?.customerName || "N/A",
+                maskAadhaar(tx.metadata?.aadhaar || tx.metadata?.aadhar) || "-",
                 isCr ? tx.amount || 0 : "-",
                 !isCr ? tx.amount || 0 : "-",
-                tx.status || "UNKNOWN"
+                bankBalanceOf(tx) ?? "-",
+                tx.status || "UNKNOWN",
+                reasonOf(tx) || "-"
             ];
             tableRows.push(txData);
         });
@@ -180,13 +209,14 @@ const AepsReport = () => {
                                     <TableHead className="font-semibold text-foreground px-4 py-3 min-w-[120px]">Bank / Mobile</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 text-right">Credit (₹)</TableHead>
                                     <TableHead className="font-semibold text-foreground px-4 py-3 text-right">Debit (₹)</TableHead>
-                                    <TableHead className="font-semibold text-foreground px-4 py-3 text-center">Status</TableHead>
+                                    <TableHead className="font-semibold text-foreground px-4 py-3 text-right min-w-[110px]">Bank Balance (₹)</TableHead>
+                                    <TableHead className="font-semibold text-foreground px-4 py-3 text-center min-w-[180px]">Status</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="h-64 text-center">
+                                        <TableCell colSpan={8} className="h-64 text-center">
                                             <div className="flex flex-col items-center justify-center text-muted-foreground gap-2">
                                                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
                                                 <span>Loading transactions...</span>
@@ -195,7 +225,7 @@ const AepsReport = () => {
                                     </TableRow>
                                 ) : paginatedTransactions.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="h-64 text-center text-muted-foreground">
+                                        <TableCell colSpan={8} className="h-64 text-center text-muted-foreground">
                                             No transactions found.
                                         </TableCell>
                                     </TableRow>
@@ -216,6 +246,7 @@ const AepsReport = () => {
                                                 </TableCell>
                                                 <TableCell className="px-4 py-2">
                                                     <span className="text-sm font-medium text-foreground truncate max-w-[140px] block">{tx.metadata?.name || tx.metadata?.customerName || "N/A"}</span>
+                                                    <span className="text-[11px] font-mono text-muted-foreground">{maskAadhaar(tx.metadata?.aadhaar || tx.metadata?.aadhar) || "-"}</span>
                                                 </TableCell>
                                                 <TableCell className="px-4 py-2">
                                                     <div className="flex flex-col">
@@ -229,6 +260,9 @@ const AepsReport = () => {
                                                 <TableCell className="text-sm font-bold text-rose-500 text-right px-4 py-2">
                                                     {!isCr ? `₹ ${tx.amount || 0}` : "-"}
                                                 </TableCell>
+                                                <TableCell className="text-sm font-medium text-foreground/80 text-right px-4 py-2">
+                                                    {bankBalanceOf(tx) != null ? `₹ ${bankBalanceOf(tx)}` : "-"}
+                                                </TableCell>
                                                 <TableCell className="px-4 py-2 text-center">
                                                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                                                         tx.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' : 
@@ -237,6 +271,9 @@ const AepsReport = () => {
                                                     }`}>
                                                         {tx.status || "UNKNOWN"}
                                                     </span>
+                                                    {isFailed(tx) && reasonOf(tx) && (
+                                                        <span className="text-[11px] text-rose-500 block mt-1 line-clamp-2">{reasonOf(tx)}</span>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         );

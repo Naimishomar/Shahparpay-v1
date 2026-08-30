@@ -22,6 +22,12 @@ const getCrDr = (tx: any) => {
     return 'CR'; // Default fallback
 };
 
+/** Why the gateway ended the transaction the way it did. */
+const reasonOf = (tx: any) =>
+    tx?.metadata?.gatewayMessage || tx?.metadata?.apiMessage || tx?.metadata?.message || tx?.metadata?.note || "";
+
+const isFailed = (tx: any) => /FAIL|REJECT/i.test(tx?.status || "");
+
 const LedgerReport = () => {
     const { user } = useAuth();
     const [transactions, setTransactions] = useState<any[]>([]);
@@ -282,6 +288,9 @@ const LedgerReport = () => {
                                                     }`}>
                                                         {tx.status || "UNKNOWN"}
                                                     </span>
+                                                    {isFailed(tx) && reasonOf(tx) && (
+                                                        <span className="text-[11px] text-rose-500 block mt-1 line-clamp-2">{reasonOf(tx)}</span>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         );
@@ -414,20 +423,26 @@ const LedgerReport = () => {
                                         <p className="text-sm font-medium text-foreground">{selectedTransaction.metadata.rrn}</p>
                                     </div>
                                 )}
-                                {selectedTransaction.metadata?.aadhar && (
+                                {(selectedTransaction.metadata?.aadhaar || selectedTransaction.metadata?.aadhar) && (
                                     <div className="space-y-1">
                                         <p className="text-[10px] text-muted-foreground font-semibold uppercase">Aadhaar (Last 4)</p>
-                                        <p className="text-sm font-medium text-foreground">**** {selectedTransaction.metadata.aadhar.slice(-4)}</p>
+                                        <p className="text-sm font-medium text-foreground">**** {String(selectedTransaction.metadata.aadhaar || selectedTransaction.metadata.aadhar).slice(-4)}</p>
+                                    </div>
+                                )}
+                                {selectedTransaction.metadata?.bankBalance != null && (
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] text-muted-foreground font-semibold uppercase">Bank Balance After</p>
+                                        <p className="text-sm font-medium text-foreground">₹ {selectedTransaction.metadata.bankBalance}</p>
                                     </div>
                                 )}
                             </div>
 
                             {/* PaySprint / Gateway Message */}
-                            {(selectedTransaction.metadata?.gatewayMessage || selectedTransaction.metadata?.apiMessage || selectedTransaction.metadata?.message) && (
+                            {reasonOf(selectedTransaction) && (
                                 <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
                                     <p className="text-[10px] text-muted-foreground font-semibold uppercase mb-1">Message</p>
                                     <p className="text-sm font-medium text-foreground">
-                                        {selectedTransaction.metadata?.gatewayMessage || selectedTransaction.metadata?.apiMessage || selectedTransaction.metadata?.message}
+                                        {reasonOf(selectedTransaction)}
                                     </p>
                                 </div>
                             )}

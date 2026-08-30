@@ -26,7 +26,14 @@ interface LedgerRow {
     NARRATION: string;
     TXNTYPE: string;
     DATE: string;
+    /** Transaction status: a ledger row's TYPE is its direction, not its outcome. */
+    remarks?: string;
+    /** Why the gateway rejected it, when it did. */
+    REASON?: string;
 }
+
+/** Rows the gateway rejected — the ones whose REASON is worth showing. */
+const isFailed = (r: LedgerRow) => /FAIL|REJECT/i.test(r.remarks || '');
 
 const getTxnTypeColor = (type: string) => {
     const map: Record<string, string> = {
@@ -121,6 +128,7 @@ const WalletLedger = () => {
             const matchesSearch = !term ||
                 r.UTR.toLowerCase().includes(term) ||
                 r.NARRATION.toLowerCase().includes(term) ||
+                (r.REASON || '').toLowerCase().includes(term) ||
                 r.TXNTYPE.toLowerCase().includes(term);
             const matchesTxn = txnTypeFilter === 'ALL' || r.TXNTYPE === txnTypeFilter;
             const matchesType = typeFilter === 'ALL' || r.TYPE === typeFilter;
@@ -145,10 +153,10 @@ const WalletLedger = () => {
     }, [filteredRows]);
 
     const handleDownloadCSV = () => {
-        const headers = ["UTR", "WALLET", "OPENING", "AMOUNT", "COMMISSION", "TDS", "GST", "CLOSING", "TYPE", "NARRATION", "TXNTYPE", "DATE"];
+        const headers = ["UTR", "WALLET", "OPENING", "AMOUNT", "COMMISSION", "TDS", "GST", "CLOSING", "TYPE", "NARRATION", "TXNTYPE", "STATUS", "REASON", "DATE"];
         const csvRows = [headers.join(",")];
         filteredRows.forEach(r => {
-            const row = [r.UTR, r.WALLET, fmt(r.OPENING), fmt(r.AMOUNT), fmt(r.COMMISSION), fmt(r.TDS), fmt(r.GST), fmt(r.CLOSING), r.TYPE, r.NARRATION, r.TXNTYPE, r.DATE];
+            const row = [r.UTR, r.WALLET, fmt(r.OPENING), fmt(r.AMOUNT), fmt(r.COMMISSION), fmt(r.TDS), fmt(r.GST), fmt(r.CLOSING), r.TYPE, r.NARRATION, r.TXNTYPE, r.remarks || "", r.REASON || "", r.DATE];
             csvRows.push(row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
         });
         const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
@@ -164,11 +172,11 @@ const WalletLedger = () => {
     const handleDownloadPDF = () => {
         const doc = new jsPDF({ orientation: 'landscape' });
         doc.text("Wallet Ledger", 14, 15);
-        const tableColumn = ["UTR", "WALLET", "OPENING", "AMOUNT", "COMMISSION", "TDS", "GST", "CLOSING", "TYPE", "NARRATION", "TXNTYPE", "DATE"];
+        const tableColumn = ["UTR", "WALLET", "OPENING", "AMOUNT", "COMMISSION", "TDS", "GST", "CLOSING", "TYPE", "NARRATION", "TXNTYPE", "STATUS", "REASON", "DATE"];
         const tableRows: (string | number)[][] = [];
         filteredRows.forEach(r => {
             tableRows.push([
-                r.UTR, r.WALLET, fmt(r.OPENING), fmt(r.AMOUNT), fmt(r.COMMISSION), fmt(r.TDS), fmt(r.GST), fmt(r.CLOSING), r.TYPE, r.NARRATION, r.TXNTYPE, r.DATE
+                r.UTR, r.WALLET, fmt(r.OPENING), fmt(r.AMOUNT), fmt(r.COMMISSION), fmt(r.TDS), fmt(r.GST), fmt(r.CLOSING), r.TYPE, r.NARRATION, r.TXNTYPE, r.remarks || "-", r.REASON || "-", r.DATE
             ]);
         });
         autoTable(doc, {
@@ -342,6 +350,9 @@ const WalletLedger = () => {
                                                 </TableCell>
                                                 <TableCell className="px-4 py-2">
                                                     <span className="text-xs text-foreground/80 block line-clamp-2 max-w-[220px]">{r.NARRATION || "-"}</span>
+                                                    {isFailed(r) && r.REASON && (
+                                                        <span className="text-[11px] text-rose-500 block line-clamp-2 max-w-[220px]">{r.REASON}</span>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell className="px-4 py-2">
                                                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${getTxnTypeColor(r.TXNTYPE)}`}>
