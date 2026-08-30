@@ -4,7 +4,7 @@ import { money, shortDate } from '@/components/ui/Screen';
 import api from '@/services/api';
 
 const txnSearch = (i: any) =>
-  [i?.transactionId, i?.type, i?.status, i?.metadata?.caNumber, i?.metadata?.benename, i?.userId?.name]
+  [i?.transactionId, i?.type, i?.status, i?.metadata?.caNumber, i?.metadata?.benename, i?.userId?.name, txnReason(i)]
     .filter(Boolean)
     .join(' ');
 
@@ -12,20 +12,53 @@ const txnSearch = (i: any) =>
 const byType = (type: string) => async (range: { startDate?: string; endDate?: string }) =>
   (await api.getRecentTransactions({ type, limit: 1000, ...range })).data ?? [];
 
+/**
+ * Why a transaction ended the way it did. The AEPS and PAN flows write the
+ * gateway message to `metadata.gatewayMessage`; resolveTransaction and the
+ * reconciliation worker write `metadata.apiMessage`. The old accessor read
+ * `apiResponse.message`, which no transaction document has — so a failed AEPS
+ * row showed nothing but FAILED and the retailer had to ask support why.
+ */
+const txnReason = (i: any) =>
+  i?.metadata?.gatewayMessage || i?.metadata?.apiMessage || i?.metadata?.note || '';
+
+/** Rows the gateway rejected — the ones whose reason is worth surfacing. */
+const txnFailed = (i: any) => /FAIL|REJECT/i.test(String(i?.status ?? ''));
+
 const txnDetails = [
   { label: 'Reference', value: (i: any) => i?.transactionId ?? '—' },
   { label: 'Type', value: (i: any) => String(i?.type ?? '—').replace(/_/g, ' ') },
   { label: 'Consumer', value: (i: any) => i?.metadata?.caNumber ?? i?.metadata?.mobile ?? '—' },
-  { label: 'Remark', value: (i: any) => i?.metadata?.note ?? i?.apiResponse?.message ?? '—' },
+  { label: 'Reason', value: (i: any) => txnReason(i) || '—' },
 ];
+
+/**
+ * Aadhaar is shown masked to the last four digits — the same form the receipt
+ * and the ledger narration use, and the only form an AePS outlet is allowed to
+ * display back.
+ */
+const maskAadhaar = (v: any) => {
+  const digits = String(v ?? '').replace(/\D/g, '');
+  return digits.length >= 4 ? `XXXX XXXX ${digits.slice(-4)}` : '—';
+};
 
 export const AepsReport: React.FC = () => (
   <TransactionReport
     fetcher={byType('AEPS')}
     searchFields={txnSearch}
     titleOf={(i) => String(i?.type ?? 'AEPS').replace(/_/g, ' ')}
-    subtitleOf={(i) => i?.transactionId ?? ''}
-    details={txnDetails}
+    subtitleOf={(i) => (txnFailed(i) && txnReason(i)) || i?.transactionId || ''}
+    details={[
+      ...txnDetails,
+      { label: 'Customer', value: (i: any) => i?.metadata?.name || '—' },
+      { label: 'Aadhaar', value: (i: any) => maskAadhaar(i?.metadata?.aadhaar) },
+      { label: 'Bank', value: (i: any) => i?.metadata?.bankName || '—' },
+      {
+        label: 'Bank balance after',
+        value: (i: any) =>
+          i?.metadata?.bankBalance != null ? money(Number(i.metadata.bankBalance)) : '—',
+      },
+    ]}
     emptyIcon="fingerprint"
     emptyTitle="No AEPS transactions"
   />
@@ -124,7 +157,7 @@ export const PayoutReport: React.FC = () => (
       { label: 'Account', value: (i: any) => i?.metadata?.accountNumber ?? '—' },
       { label: 'IFSC', value: (i: any) => i?.metadata?.ifscCode ?? '—' },
       { label: 'Mode', value: (i: any) => i?.metadata?.mode ?? '—' },
-      { label: 'UTR', value: (i: any) => i?.metadata?.utr ?? i?.apiResponse?.utr ?? '—' },
+      { label: 'UTR', value: (i: any) => i?.metadata?.utr ?? '—' },
     ]}
     emptyIcon="cash-fast"
     emptyTitle="No payouts yet"

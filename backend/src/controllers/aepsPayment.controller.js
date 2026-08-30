@@ -83,6 +83,28 @@ export const getVerifiedPipe = async (merchantcode, mobile) => {
   return 'bank2';
 };
 
+/**
+ * The customer's remaining bank balance after the transaction. Which key it
+ * arrives under depends on the pipe, so all of them are tried (same list the
+ * app's receipt screen reads). Persisted on the transaction because the
+ * gateway response is seen once and the retailer needs it in the report later.
+ */
+const readBankBalance = (d) =>
+  d?.balanceamount ?? d?.balanceAmount ?? d?.balance ??
+  d?.data?.balanceamount ?? d?.data?.balanceAmount ?? d?.data?.balance;
+
+/**
+ * Stores the bank balance on the transaction. Must run BEFORE the apply*Success
+ * helpers, which re-read the document from the database and would drop an
+ * in-memory metadata change.
+ */
+const saveBankBalance = async (txn, responseData) => {
+  const balance = Number(readBankBalance(responseData));
+  if (!Number.isFinite(balance)) return;
+  txn.metadata = { ...txn.metadata, bankBalance: balance };
+  await txn.save();
+};
+
 export const balanceEnquiry = async (req, res) => {
   try {
     const { mobileNumber, aadhaarNumber, bankIIN, pidData, latitude, longitude, pipe } = req.body;
@@ -517,6 +539,7 @@ export const cashWithdrawal = async (req, res) => {
 
     // 3a. Gateway confirmed SUCCESS — atomically credit wallets & finalize.
     if (gatewayOk) {
+      await saveBankBalance(newTxn, responseData);
       const credited = await applyAepsWithdrawalSuccess({
         transactionId: newTxn._id,
         userId: req.user.id,
@@ -570,6 +593,7 @@ export const cashWithdrawal = async (req, res) => {
       }
 
       if (reconciled.status === 'SUCCESS') {
+        await saveBankBalance(newTxn, reconciled.data || responseData);
         const credited = await applyAepsWithdrawalSuccess({
           transactionId: newTxn._id,
           userId: req.user.id,
@@ -1029,6 +1053,7 @@ export const cashDeposit = async (req, res) => {
 
     // 4. Success
     if (gatewayOk) {
+      await saveBankBalance(newTxn, responseData);
       const credited = await applyAepsDepositSuccess({
         transactionId: newTxn._id,
         userId: req.user.id,

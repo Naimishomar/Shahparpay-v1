@@ -126,6 +126,56 @@ assert.ok(
   'WalletLedgerReport must show the reason on failed cards'
 );
 
+// --- the transaction reports read the reason the gateways actually write ---
+// `apiResponse.message` was the old accessor and no transaction document has
+// that field, so a failed AEPS withdrawal showed FAILED and nothing else.
+const aepsController = readFileSync(
+  new URL('../../../../backend/src/controllers/aepsPayment.controller.js', import.meta.url),
+  'utf8'
+);
+assert.ok(/gatewayMessage:/.test(aepsController), 'AEPS failures still record gatewayMessage');
+const txnReason = new Function(
+  `return ${/const txnReason = (\(i: any\) =>[\s\S]*?);\n/.exec(reports)[1].replace('(i: any)', '(i)')};`
+)();
+assert.strictEqual(
+  txnReason({ metadata: { gatewayMessage: 'Insufficient balance' } }),
+  'Insufficient balance'
+);
+assert.strictEqual(txnReason({ metadata: { apiMessage: 'Bank timeout' } }), 'Bank timeout');
+assert.strictEqual(txnReason({ metadata: {} }), '', 'no message is empty, never undefined');
+assert.strictEqual(txnReason(undefined), '', 'a missing row must not throw');
+assert.ok(!reports.includes('apiResponse?.message'), 'the stale apiResponse accessor is gone');
+assert.ok(
+  /{ label: 'Reason', value: \(i: any\) => txnReason\(i\)/.test(reports),
+  'the shared transaction details must carry the reason'
+);
+
+// --- AEPS detail sheet: who, which Aadhaar, what the bank had left ---------
+// The bank balance is only in the gateway response, seen once at the counter,
+// so the controller has to persist it or the report can never show it.
+assert.ok(
+  /metadata = \{ \.\.\.txn\.metadata, bankBalance: balance \}/.test(aepsController),
+  'AEPS success must persist bankBalance on the transaction'
+);
+assert.ok(
+  /await saveBankBalance\(newTxn, responseData\);\n\s+const credited = await applyAeps/.test(
+    aepsController
+  ),
+  'bankBalance must be saved BEFORE apply*Success re-reads the document'
+);
+const maskAadhaar = new Function(
+  `return ${/const maskAadhaar = (\(v: any\) => \{[\s\S]*?\n\};)/.exec(reports)[1].replace('(v: any)', '(v)').replace(/;$/, '')};`
+)();
+assert.strictEqual(maskAadhaar('123456789012'), 'XXXX XXXX 9012', 'only the last 4 are shown');
+assert.strictEqual(maskAadhaar('1234 5678 9012'), 'XXXX XXXX 9012', 'spaces are not digits');
+assert.strictEqual(maskAadhaar(undefined), '—');
+assert.strictEqual(maskAadhaar('12'), '—', 'too short to mask is shown as nothing');
+const aeps = componentSource('AepsReport');
+for (const label of ['Customer', 'Aadhaar', 'Bank balance after']) {
+  assert.ok(aeps.includes(`label: '${label}'`), `AepsReport must show ${label}`);
+}
+assert.ok(!aeps.includes('metadata?.aadhaar }'), 'the AEPS report must never print a raw Aadhaar');
+
 // StatusPill has to colour a ledger direction, not fall through to UNKNOWN.
 const screen = readFileSync(new URL('../../components/ui/Screen.tsx', import.meta.url), 'utf8');
 assert.ok(/CREDIT: \{ tone: 'success'/.test(screen), 'CREDIT needs a StatusPill mapping');
