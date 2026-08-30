@@ -20,7 +20,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/icon.png",
+        "foregroundImage": "./src/assets/icon-adaptive.png",
         "backgroundColor": "#FAFAFA"
       },
       "package": "com.shahparpay.app",
