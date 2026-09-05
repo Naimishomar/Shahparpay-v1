@@ -311,6 +311,16 @@ export const RechargeScreen: React.FC = () => {
               </Button>
             )}
           </View>
+          {/* A greyed-out button with no reason attached is unreportable: a
+              retailer cannot tell it apart from a broken one, and neither can
+              support. Name whichever requirement is still missing. */}
+          {type === 'prepaid' && (!operator || number.trim().length < 10) && (
+            <Text style={styles.hint}>
+              {!operator
+                ? 'Select an operator to browse plans.'
+                : `Enter all 10 digits to browse plans (${number.trim().length}/10 entered).`}
+            </Text>
+          )}
           {!!plans.error && <ErrorBanner message={plans.error} />}
           {!!dthInfo.error && <ErrorBanner message={dthInfo.error} />}
 
@@ -450,6 +460,7 @@ const styles = themed((c) => ({
   pickerItemPressed: { backgroundColor: c.surfaceAlt },
   pickerText: { fontSize: t.small, color: c.foreground },
   pickerEmpty: { fontSize: t.caption, color: c.mutedForeground, padding: space.md },
+  hint: { fontSize: t.caption, color: c.mutedForeground },
   infoBox: { padding: space.md, borderRadius: radius.md, backgroundColor: c.secondary },
   plan: {
     flexDirection: 'row',
