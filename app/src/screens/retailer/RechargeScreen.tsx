@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -14,6 +14,7 @@ import {
   Segmented,
   StatusPill,
   SuccessBanner,
+  Toast,
   money,
   shortDate,
 } from '@/components/ui/Screen';
@@ -127,6 +128,20 @@ export const RechargeScreen: React.FC = () => {
 
   const [dthDetails, setDthDetails] = useState<any>(null);
 
+  /**
+   * A rejected recharge is news, not a state the retailer is stuck in, so it
+   * shows as a toast and clears itself. The error is drained out of the action
+   * as it is shown, otherwise it would re-fire the toast on the next render.
+   */
+  const [toast, setToast] = useState('');
+  const failures = [recharge, plans, dthInfo, checkStatus];
+  useEffect(() => {
+    const failed = failures.find((a) => a.error);
+    if (!failed) return;
+    setToast(failed.error as string);
+    failed.setError(null);
+  }, [recharge.error, plans.error, dthInfo.error, checkStatus.error]);
+
   const minLength = type === 'dth' || type === 'datacard' ? 6 : 10;
   const available = balances.data?.mainBalance ?? 0;
   const overBalance = Number(amount) > available;
@@ -166,6 +181,7 @@ export const RechargeScreen: React.FC = () => {
 
   return (
     <Screen
+      overlay={<Toast message={toast} onHide={() => setToast('')} />}
       refreshing={history.refreshing}
       onRefresh={() => {
         history.refresh();
@@ -321,8 +337,6 @@ export const RechargeScreen: React.FC = () => {
                 : `Enter all 10 digits to browse plans (${number.trim().length}/10 entered).`}
             </Text>
           )}
-          {!!plans.error && <ErrorBanner message={plans.error} />}
-          {!!dthInfo.error && <ErrorBanner message={dthInfo.error} />}
 
           {!!dthDetails && (
             <View style={styles.infoBox}>
@@ -358,7 +372,6 @@ export const RechargeScreen: React.FC = () => {
             rightIconLabel={showPin ? 'Hide PIN' : 'Show PIN'}
           />
 
-          {!!recharge.error && <ErrorBanner message={recharge.error} />}
           {!!notice && <SuccessBanner message={notice} />}
           <Button
             onPress={onRecharge}
@@ -405,7 +418,6 @@ export const RechargeScreen: React.FC = () => {
           <CardTitle icon="history">Recharge history</CardTitle>
         </CardHeader>
         <CardContent>
-          {!!checkStatus.error && <ErrorBanner message={checkStatus.error} />}
           {history.loading ? null : history.data?.length ? (
             history.data.slice(0, 20).map((txn: any) => (
               <View key={txn._id || txn.transactionId} style={styles.item}>

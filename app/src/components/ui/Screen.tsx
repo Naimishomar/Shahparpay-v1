@@ -33,6 +33,11 @@ interface ScreenProps {
    * band it sits on. Ignored when `header` is absent.
    */
   headerOverlap?: number;
+  /**
+   * Pinned above the scroll, not inside it — a Toast placed in the content
+   * would be positioned against the scrolled page and slide away with it.
+   */
+  overlay?: React.ReactNode;
 }
 
 /**
@@ -49,10 +54,11 @@ export const Screen: React.FC<ScreenProps> = ({
   contentStyle,
   header,
   headerOverlap = 0,
+  overlay,
 }) => {
   const { padding, gap } = useResponsive();
 
-  return (
+  const scroll = (
     <ScrollView
       style={styles.scrollView}
       showsVerticalScrollIndicator={false}
@@ -96,6 +102,15 @@ export const Screen: React.FC<ScreenProps> = ({
         {loading ? <LoadingBlock /> : children}
       </View>
     </ScrollView>
+  );
+
+  // Only pay for the extra wrapper when something actually needs to float.
+  if (!overlay) return scroll;
+  return (
+    <View style={styles.scrollView}>
+      {scroll}
+      {overlay}
+    </View>
   );
 };
 
@@ -204,6 +219,62 @@ export const ErrorBanner: React.FC<{ message: string; onRetry?: () => void }> = 
 export const SuccessBanner: React.FC<{ message: string }> = ({ message }) => (
   <Banner tone="success" message={message} />
 );
+
+/**
+ * Transient feedback for something that just happened — a rejected recharge, a
+ * lookup that failed. A banner is for a state the retailer is still in; an
+ * action that already finished is news, and pinning it above the form leaves
+ * stale red text to scroll past on the next attempt.
+ *
+ * Hand-rolled because React Native's only built-in toast is ToastAndroid, which
+ * does nothing on iOS, and this is too small to justify a dependency. Mounted
+ * from a screen rather than a provider: it needs no state beyond its message.
+ */
+export const Toast: React.FC<{
+  message: string;
+  tone?: Tone;
+  duration?: number;
+  onHide: () => void;
+}> = ({ message, tone = 'error', duration = 4000, onHide }) => {
+  const opacity = useRef(new Animated.Value(0)).current;
+  // Held in a ref so the timer is not restarted by a re-render, and so the
+  // dismissal always calls the handler this toast was mounted with.
+  const hide = useRef(onHide);
+  hide.current = onHide;
+
+  useEffect(() => {
+    if (!message) return;
+    opacity.setValue(0);
+    Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }).start();
+
+    const timer = setTimeout(() => {
+      Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: true }).start(
+        ({ finished }) => finished && hide.current()
+      );
+    }, duration);
+    return () => clearTimeout(timer);
+  }, [message, duration, opacity]);
+
+  if (!message) return null;
+
+  const spec = TONES[tone];
+  return (
+    <Animated.View
+      style={[styles.toast, { opacity, backgroundColor: colors[spec.bg] as string }]}
+      pointerEvents="box-none"
+      accessibilityLiveRegion="assertive"
+      accessibilityRole="alert"
+    >
+      <MaterialCommunityIcons name={spec.icon as any} size={18} color={colors[spec.fg] as string} />
+      <Text style={[styles.toastText, { color: colors[spec.fg] as string }]}>{message}</Text>
+      {/* A toast that vanishes on its own still has to be dismissable: a long
+          message can outlast its own timer for someone reading slowly. */}
+      <Pressable onPress={() => hide.current()} hitSlop={10} accessibilityRole="button" accessibilityLabel="Dismiss">
+        <MaterialCommunityIcons name="close" size={16} color={colors[spec.fg] as string} />
+      </Pressable>
+    </Animated.View>
+  );
+};
 
 export const EmptyState: React.FC<{
   icon?: string;
@@ -473,6 +544,25 @@ const styles = themed((c, isDark) => ({
   },
   bannerText: { flex: 1, fontSize: t.small, lineHeight: 19 },
   bannerAction: { fontSize: t.small, fontWeight: '700', minWidth: 44, textAlign: 'right' },
+  // Floats clear of the form and above the tab bar, so it never covers the
+  // field the retailer is about to correct.
+  toast: {
+    position: 'absolute',
+    left: space.md,
+    right: space.md,
+    bottom: space.xxl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    padding: space.md,
+    borderRadius: radius.md,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  toastText: { flex: 1, fontSize: t.small, lineHeight: 19 },
   emptyState: { alignItems: 'center', paddingVertical: space.xxxl, gap: space.sm },
   emptyIcon: {
     width: 60,
