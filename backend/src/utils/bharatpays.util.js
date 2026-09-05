@@ -3,11 +3,18 @@ import axios from 'axios';
 /**
  * BharatPays recharge API.
  *
- * The PSA endpoints in pan.controller.js talk to api.bharatpays.in; the recharge
- * endpoints live on the main host under /api_user. Both take every parameter on
- * the query string and repeat the token as a bearer header.
+ * Everything lives on api.bharatpays.in under /api, the same host and prefix the
+ * PSA endpoints in pan.controller.js already use. The published documentation
+ * says https://bharatpays.in/api_user/... instead; that host answers every
+ * request with "Invalid Api Token." no matter which token is sent, so the docs
+ * are simply wrong. Verified against the live API: /api/recharge_get,
+ * /api/recharge_get/status_check and /api/balance_get all resolve there.
+ *
+ * Every parameter goes on the query string, with the token repeated as a bearer
+ * header. Calls are only accepted from an IP registered in the BharatPays API
+ * settings panel — from anywhere else the reply is "Invalid Ip Address - <ip>".
  */
-const getBase = () => process.env.BHARATPAYS_RECHARGE_BASE_URL || 'https://bharatpays.in';
+const getBase = () => process.env.BHARATPAYS_RECHARGE_BASE_URL || 'https://api.bharatpays.in';
 
 export const bharatPaysGet = async (path, params = {}) => {
   const token = process.env.BHARATPAYS_TOKEN;
@@ -163,7 +170,7 @@ export const normaliseStatus = (status) => {
  */
 export const fetchBharatPaysStatus = async (orderId) => {
   try {
-    const data = await bharatPaysGet('/api_user/recharge_get/status_check', {
+    const data = await bharatPaysGet('/api/recharge_get/status_check', {
       order_id: orderId,
     });
     if (Number(data?.success) !== 1) return { finalStatus: 'PROCESSING', data };

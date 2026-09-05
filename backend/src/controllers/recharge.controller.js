@@ -347,7 +347,7 @@ export const doRecharge = async (req, res) => {
     let status;
 
     if (viaBharatPays) {
-      providerResponse = await bharatPaysGet('/api_user/recharge_get', {
+      providerResponse = await bharatPaysGet('/api/recharge_get', {
         opr_code: Number(operator),
         mobile: caNumber,
         amount: Math.round(totalAmount),
@@ -538,7 +538,7 @@ export const getHistory = async (req, res) => {
 
 export const checkBalance = async (req, res) => {
   try {
-    const data = await bharatPaysGet('/api_user/balance_get');
+    const data = await bharatPaysGet('/api/balance_get');
     if (Number(data?.success) !== 1) {
       return res
         .status(502)

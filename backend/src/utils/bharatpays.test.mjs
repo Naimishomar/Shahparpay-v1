@@ -103,6 +103,31 @@ assert.equal(paysprintPlanOperator(undefined), null);
 // Codes with no Paysprint counterpart (Big TV, Zing) must not borrow another's.
 assert.equal(paysprintPlanOperator(9), null);
 
+// --- the host and paths the docs get wrong --------------------------------
+
+// BharatPays' published docs put recharge on bharatpays.in/api_user/..., which
+// answers "Invalid Api Token." for every token. The live API is on
+// api.bharatpays.in/api/..., verified by probe. Getting this wrong fails every
+// recharge, so pin both the default host and the absence of the documented one.
+const util = readFileSync(new URL('./bharatpays.util.js', import.meta.url), 'utf8');
+const controller = readFileSync(
+  new URL('../controllers/recharge.controller.js', import.meta.url),
+  'utf8'
+);
+assert.ok(
+  /'https:\/\/api\.bharatpays\.in'/.test(util),
+  'default base URL must be api.bharatpays.in'
+);
+for (const [name, src] of [['util', util], ['controller', controller]]) {
+  const calls = [...src.matchAll(/bharatPaysGet\(\s*'([^']+)'/g)].map((m) => m[1]);
+  for (const path of calls) {
+    assert.ok(
+      path.startsWith('/api/'),
+      `${name} calls ${path} — the documented /api_user prefix is not the live one`
+    );
+  }
+}
+
 // --- the reconciliation cron asks before it refunds ------------------------
 
 // Without this branch a PENDING recharge falls through to the worker's default,
