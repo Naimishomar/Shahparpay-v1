@@ -26,6 +26,7 @@ import { ProfileScreen } from '@/screens/retailer/ProfileScreen';
 import { KycStatusScreen } from '@/screens/retailer/KycStatusScreen';
 import { AdminPortalScreen } from '@/screens/admin/AdminPortalScreen';
 import { DistributorPortalScreen } from '@/screens/distributor/DistributorPortalScreen';
+import { RetailersScreen } from '@/screens/distributor/RetailersScreen';
 import { ServicesScreen } from '@/screens/ServicesScreen';
 import { ReportsScreen } from '@/screens/ReportsScreen';
 import {
@@ -110,6 +111,7 @@ const ADMIN_SCREENS: [string, React.ComponentType<any>][] = [
 
 const DISTRIBUTOR_SCREENS: [string, React.ComponentType<any>][] = [
   ['DistributorPortal', DistributorPortalScreen],
+  ['DistributorRetailers', RetailersScreen],
   ['Profile', ProfileScreen],
   ...REPORT_SCREENS,
 ];

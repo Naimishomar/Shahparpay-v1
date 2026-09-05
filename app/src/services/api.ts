@@ -362,7 +362,7 @@ class ApiService {
     return this.post(API_ENDPOINTS.auth.verifyEmailOtp, { email, otp });
   }
 
-  async getPaysprintOnboardUrl(merchantId: string, isNew: boolean, pipe: string, callbackUrl: string) {
+  async getPaysprintOnboardUrl(merchantId: string, isNew: boolean, pipe?: string, callbackUrl?: string) {
     return this.post(API_ENDPOINTS.auth.paysprintOnboardUrl, { merchantId, isNew, pipe, callbackUrl });
   }
 

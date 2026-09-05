@@ -141,6 +141,7 @@ export const ADMIN_TABS: TabEntry[] = [
 
 export const DISTRIBUTOR_TABS: TabEntry[] = [
   { key: 'home', name: 'Overview', route: 'DistributorPortal', icon: 'view-dashboard-outline', iconActive: 'view-dashboard' },
+  { key: 'retailers', name: 'Retailers', route: 'DistributorRetailers', icon: 'store-outline', iconActive: 'store' },
   { key: 'reports', name: 'Reports', route: 'Reports', icon: 'chart-box-outline', iconActive: 'chart-box' },
 ];
 
@@ -185,6 +186,20 @@ export const REPORT_ITEMS: ReportEntry[] = [
   { name: 'PAN Report', route: 'PanReport', icon: 'card-account-details-outline', hint: 'PAN applications' },
   { name: 'ITR Report', route: 'ItrReport', icon: 'file-document-outline', hint: 'Filings and charges' },
   { name: 'Lead Report', route: 'LeadReport', icon: 'account-plus-outline', hint: 'Referred customers' },
+];
+
+/**
+ * The transaction buckets `/api/dashboard/retailer` reports on, in the order
+ * they are drawn everywhere (donut arcs, stacked bar, metric grid) so a colour
+ * always means the same service.
+ */
+export const SERVICE_METRICS: { key: string; label: string; icon: string }[] = [
+  { key: 'AEPS_WITHDRAWAL', label: 'AEPS', icon: 'fingerprint' },
+  { key: 'DMT', label: 'Money transfer', icon: 'bank-transfer' },
+  { key: 'RECHARGE', label: 'Recharge', icon: 'cellphone' },
+  { key: 'BILL_PAYMENT', label: 'Bill payments', icon: 'receipt' },
+  { key: 'AEPS_SETTLEMENT', label: 'Payouts', icon: 'cash-fast' },
+  { key: 'WALLET_TOPUP', label: 'UPI collected', icon: 'qrcode' },
 ];
 
 /** Home screen shortcuts. */

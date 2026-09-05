@@ -27,6 +27,7 @@ const TITLES: Record<string, { title: string; subtitle?: string }> = {
   AepsSettlement: { title: 'Withdraw', subtitle: 'AEPS wallet to your bank' },
   AdminPortal: { title: 'Overview' },
   DistributorPortal: { title: 'Overview' },
+  DistributorRetailers: { title: 'Retailers', subtitle: 'Your network' },
 };
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
@@ -72,31 +73,37 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   // AppNavigator swaps to the auth stack when the token goes away.
   if (!token) return null;
 
-  // Home is the only screen that continues the header in its own ink; anywhere
-  // else a black bar pinned above a white page just reads as a slab.
-  const onBand = route.name === 'Dashboard';
+  // Only the portal screen still opens on a brand band and continues the
+  // header in its own ink; anywhere else a black bar pinned above a white page
+  // just reads as a slab.
+  const onBand = route.name === 'DistributorPortal';
+
+  // Home owns its own top row (avatar, identity, actions), so the app header
+  // would only stack a second, redundant bar above it. The safe-area inset
+  // moves onto the content instead.
+  const bare = route.name === 'Dashboard';
 
   return (
     <View style={styles.container}>
-      {/* Only Home wears the band, so only Home needs light status-bar content
-          and an ink status-bar ground. */}
+      {/* The band screen needs light status-bar content over its own ink;
+          everywhere else the page ground and the theme decide. */}
       <StatusBar
-        barStyle={onBand ? 'light-content' : resolvedTheme === 'dark' ? 'light-content' : 'dark-content'}
+        barStyle={onBand || resolvedTheme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={onBand ? colors.band : colors.background}
       />
 
-      <Header
+      {!bare && <Header
         onBand={onBand}
         topInset={insets.top}
         title={named.title}
         subtitle={named.subtitle}
         onAccount={route.name === 'Profile' ? undefined : () => navigation.navigate('Profile')}
-      />
+      />}
 
       {/* minHeight 0: on react-native-web a flex child defaults to
           min-height:auto and grows past the viewport instead of letting the
           inner ScrollView scroll. No-op on native. */}
-      <View style={styles.content}>{children}</View>
+      <View style={[styles.content, bare && { paddingTop: insets.top }]}>{children}</View>
 
       <BottomTabBar
         tabs={tabs}

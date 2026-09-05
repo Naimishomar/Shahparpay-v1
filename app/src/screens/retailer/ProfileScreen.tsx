@@ -58,6 +58,9 @@ export const ProfileScreen: React.FC = () => {
 
   const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
   const isRetailer = user?.role === 'retailer';
+  const isAdmin = user?.role === 'admin';
+  // Read-only here — the portal's Settings tab is where it is changed.
+  const settings = useAsync<any>(async () => (await api.getGlobalSettings()).data, [], isAdmin);
   const merchant = useAsync<any>(
     async () => (await api.getAepsMerchantStatus({ merchantcode: user?.retailerId || user?.code })).data,
     [user?.retailerId],
@@ -148,6 +151,7 @@ export const ProfileScreen: React.FC = () => {
       onRefresh={() => {
         balances.refresh();
         if (isRetailer) merchant.refresh();
+        if (isAdmin) settings.refresh();
       }}
       error={balances.error}
       onRetry={balances.reload}
@@ -203,12 +207,23 @@ export const ProfileScreen: React.FC = () => {
           read here, and a wide row lets it sit at the end of the line where
           the eye lands, instead of shrinking to fit half a screen. */}
       <View style={styles.walletStack}>
-        {user?.role === 'admin' ? (
-          <Tile
-            icon="shield-account"
-            label="Admin wallet"
-            value={money(balances.data?.adminBalance)}
-          />
+        {isAdmin ? (
+          <>
+            <Tile
+              icon="shield-account"
+              label="Admin wallet"
+              value={money(balances.data?.adminBalance)}
+            />
+            <Tile
+              icon="percent-outline"
+              label="AEPS commission"
+              value={
+                settings.data?.aepsCommission == null
+                  ? '—'
+                  : `${Number(settings.data.aepsCommission)}%`
+              }
+            />
+          </>
         ) : (
           <>
             <Tile

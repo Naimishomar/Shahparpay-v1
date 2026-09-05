@@ -58,7 +58,7 @@ const ServiceRow: React.FC<{ item: MenuEntry; last: boolean; onPress: () => void
     accessibilityLabel={item.hint ? `${item.name}. ${item.hint}` : item.name}
   >
     <View style={styles.rowIcon}>
-      <MaterialCommunityIcons name={item.icon as any} size={20} color={colors.accent} />
+      <MaterialCommunityIcons name={item.icon as any} size={20} color={colors.foreground} />
     </View>
     <View style={styles.rowText}>
       <Text style={styles.rowName} numberOfLines={1}>
@@ -70,7 +70,7 @@ const ServiceRow: React.FC<{ item: MenuEntry; last: boolean; onPress: () => void
         </Text>
       )}
     </View>
-    <MaterialCommunityIcons name="chevron-right" size={20} color={colors.borderStrong} />
+    <MaterialCommunityIcons name="chevron-right" size={20} color={colors.mutedForeground} />
   </Pressable>
 );
 
@@ -101,11 +101,12 @@ const styles = themed((c) => ({
   },
   rowLast: { borderBottomWidth: 0 },
   rowPressed: { backgroundColor: c.accentSubtle },
+  // Circular and neutral, the same chip Home and Reports use for a service.
   rowIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    backgroundColor: c.accentSubtle,
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: c.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
