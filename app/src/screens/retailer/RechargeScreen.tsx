@@ -27,6 +27,34 @@ const TYPES = [
   { key: 'datacard', label: 'Data card' },
 ];
 
+// Plans are priced per telecom circle, so browsing without one returns the wrong
+// tariffs. The backend falls back to Delhi NCR, which is only right for Delhi.
+const CIRCLES = [
+  'Andhra Pradesh',
+  'Assam',
+  'Bihar Jharkhand',
+  'Chennai',
+  'Delhi NCR',
+  'Gujarat',
+  'Haryana',
+  'Himachal Pradesh',
+  'Jammu Kashmir',
+  'Karnataka',
+  'Kerala',
+  'Kolkata',
+  'Madhya Pradesh Chhattisgarh',
+  'Maharashtra Goa',
+  'Mumbai',
+  'North East',
+  'Orissa',
+  'Punjab',
+  'Rajasthan',
+  'Tamil Nadu',
+  'UP East',
+  'UP West',
+  'West Bengal',
+];
+
 interface Operator {
   id: string | number;
   name: string;
@@ -38,15 +66,20 @@ export const RechargeScreen: React.FC = () => {
   const [operator, setOperator] = useState<Operator | null>(null);
   const [showOperators, setShowOperators] = useState(false);
   const [operatorQuery, setOperatorQuery] = useState('');
+  const [circle, setCircle] = useState('Delhi NCR');
+  const [showCircles, setShowCircles] = useState(false);
+  const [planList, setPlanList] = useState<any[]>([]);
   const [number, setNumber] = useState('');
   const [amount, setAmount] = useState('');
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
   const [notice, setNotice] = useState('');
 
-  // Re-fetches whenever the tab changes; the previous operator no longer applies.
+  // Re-fetches whenever the tab changes; the previous operator no longer applies,
+  // and neither do the plans that were fetched for it.
   const operators = useAsync<Operator[]>(async () => {
     setOperator(null);
+    setPlanList([]);
     return (await api.getRechargeOperators(type)).data ?? [];
   }, [type]);
 
@@ -64,6 +97,7 @@ export const RechargeScreen: React.FC = () => {
       mobileNumber: number.trim(),
       operator: String(operator?.id),
       operatorName: operator?.name,
+      circle,
     });
     if (!res.success) throw new Error(res.message);
     return res.data;
@@ -91,7 +125,6 @@ export const RechargeScreen: React.FC = () => {
     return res;
   });
 
-  const [planList, setPlanList] = useState<any[]>([]);
   const [dthDetails, setDthDetails] = useState<any>(null);
 
   const minLength = type === 'dth' || type === 'datacard' ? 6 : 10;
@@ -183,6 +216,8 @@ export const RechargeScreen: React.FC = () => {
                         setOperator(op);
                         setShowOperators(false);
                         setOperatorQuery('');
+                        // Plans on screen belong to the operator being replaced.
+                        setPlanList([]);
                       }}
                       style={({ pressed }) => [styles.pickerItem, pressed && styles.pickerItemPressed]}
                       accessibilityRole="button"
@@ -208,6 +243,45 @@ export const RechargeScreen: React.FC = () => {
             leftIcon={type === 'dth' ? 'television' : 'phone-outline'}
             autoComplete={type === 'dth' ? undefined : 'tel'}
           />
+
+          {type === 'prepaid' && (
+            <>
+              <SelectField
+                label="Circle"
+                value={circle}
+                open={showCircles}
+                onPress={() => setShowCircles(!showCircles)}
+              />
+              {showCircles && (
+                <View style={styles.picker}>
+                  <ScrollView
+                    style={styles.pickerList}
+                    nestedScrollEnabled
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    {CIRCLES.map((c) => (
+                      <Pressable
+                        key={c}
+                        onPress={() => {
+                          setCircle(c);
+                          setShowCircles(false);
+                          // Plans already on screen were priced for the old circle.
+                          setPlanList([]);
+                        }}
+                        style={({ pressed }) => [
+                          styles.pickerItem,
+                          pressed && styles.pickerItemPressed,
+                        ]}
+                        accessibilityRole="button"
+                      >
+                        <Text style={styles.pickerText}>{c}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </>
+          )}
 
           <View style={styles.toolbar}>
             {type === 'prepaid' && (
