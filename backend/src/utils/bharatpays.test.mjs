@@ -14,6 +14,7 @@ import {
   BHARATPAYS_TYPES,
   BHARATPAYS_CATEGORY,
   cleanProviderMessage,
+  isOperatorForType,
 } from './bharatpays.util.js';
 
 // --- status normalisation -------------------------------------------------
@@ -103,6 +104,41 @@ assert.equal(paysprintPlanOperator(99999), null);
 assert.equal(paysprintPlanOperator(undefined), null);
 // Codes with no Paysprint counterpart (Big TV, Zing) must not borrow another's.
 assert.equal(paysprintPlanOperator(9), null);
+
+// --- an operator code cannot pay the wrong kind of biller ------------------
+
+// BharatPays takes every category on one endpoint and pays whoever the code
+// names, so a code from another category is not an error there — it is a
+// different biller being paid with a retailer's money.
+
+// Code 11 is Sun Direct DTH here, but was Airtel prepaid in the Paysprint list
+// this integration replaced: exactly what a client with a cached list sends.
+assert.equal(isOperatorForType(11, 'dth'), true);
+assert.equal(isOperatorForType(11, 'prepaid'), false, 'a DTH code must not pass as a prepaid recharge');
+
+// Live BharatPays codes we deliberately do not offer (4 is a gas connection,
+// 22 an EMI account) must not be payable through any of our services.
+for (const type of BHARATPAYS_TYPES) {
+  for (const foreign of [4, 22, 35, 200, 265]) {
+    assert.equal(isOperatorForType(foreign, type), false, `code ${foreign} must not pass as ${type}`);
+  }
+}
+
+// Everything we do offer has to pass for its own service, or the guard would
+// block real recharges.
+const typeOfCategory = Object.fromEntries(
+  Object.entries(BHARATPAYS_CATEGORY).map(([type, category]) => [category, type])
+);
+for (const op of BHARATPAYS_OPERATORS) {
+  assert.equal(isOperatorForType(op.id, typeOfCategory[op.category]), true, `${op.name} must be payable`);
+  assert.equal(isOperatorForType(String(op.id), typeOfCategory[op.category]), true, 'ids arrive as strings from JSON');
+}
+
+// Junk in, refusal out — never a pass.
+for (const junk of [undefined, null, '', 'abc', -1, 0]) {
+  assert.equal(isOperatorForType(junk, 'prepaid'), false, `${junk} must not pass`);
+}
+assert.equal(isOperatorForType(366, 'electricity'), false, 'a Paysprint-rail type has no BharatPays category');
 
 // --- provider messages reach the retailer as plain text -------------------
 

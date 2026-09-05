@@ -10,6 +10,7 @@ import {
   BHARATPAYS_TYPES,
   BHARATPAYS_CATEGORY,
   cleanProviderMessage,
+  isOperatorForType,
 } from '../utils/bharatpays.util.js';
 import { lockFundsForTransaction, resolveTransaction } from '../utils/wallet.util.js';
 import Transaction from '../models/transaction.model.js';
@@ -337,6 +338,18 @@ export const doRecharge = async (req, res) => {
     // The id has to suit whichever provider will receive it, so it cannot be
     // built before the rail is known.
     const viaBharatPays = usesBharatPays(type);
+
+    // BharatPays decides who gets paid from the operator code alone, and accepts
+    // codes from every category on the same endpoint. A client holding a stale
+    // operator list would not fail here, it would pay the wrong biller, so
+    // refuse a code this service does not offer before any money moves.
+    if (viaBharatPays && !isOperatorForType(operator, type)) {
+      console.error(`Rejected operator ${operator} for type ${type}: not in this category.`);
+      return res.status(400).json({
+        success: false,
+        message: 'That operator is not available for this service. Pull to refresh the operator list and try again.',
+      });
+    }
     const referenceId = makeReferenceId(viaBharatPays);
     if (viaBharatPays && totalAmount < 10) {
       return res

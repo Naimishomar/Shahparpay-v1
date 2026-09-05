@@ -154,6 +154,26 @@ export const BHARATPAYS_OPERATORS = [
 ];
 
 /**
+ * Is this operator code one we offer for this service?
+ *
+ * BharatPays accepts all 366 codes on one endpoint, and the code alone decides
+ * who gets paid — nothing in the request says "this is a mobile recharge". So a
+ * client sending a stale or wrong code does not fail, it pays the wrong biller:
+ * code 11 is Sun Direct DTH but was Airtel prepaid in the Paysprint list this
+ * integration replaced, and code 4 is a gas connection. A client holding a
+ * cached pre-migration list would spend a retailer's money on either.
+ *
+ * So the code must be one this service actually offers, checked before the
+ * wallet is touched.
+ */
+export const isOperatorForType = (operatorCode, type) => {
+  const category = BHARATPAYS_CATEGORY[String(type || '').toLowerCase()];
+  if (!category) return false;
+  const operator = BHARATPAYS_OPERATORS.find((op) => op.id === Number(operatorCode));
+  return !!operator && operator.category === category;
+};
+
+/**
  * Plan browsing and DTH info have no BharatPays equivalent, so those two lookups
  * still go to Paysprint. This turns the BharatPays code the UI now sends back
  * into the operator name Paysprint expects.
