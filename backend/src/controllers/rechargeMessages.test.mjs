@@ -4,7 +4,25 @@
 // two known refusals both read like a fault in our app rather than a provider
 // being briefly unavailable.
 import assert from 'node:assert';
-import { hlrMessage } from './recharge.controller.js';
+import { hlrMessage, makeReferenceId } from './recharge.controller.js';
+
+// --- reference ids -------------------------------------------------------
+
+// BharatPays refuses anything but digits: "The Reference Id field must contain
+// only numbers". A prefixed id fails the recharge outright.
+for (let i = 0; i < 200; i++) {
+  const id = makeReferenceId(true);
+  assert.match(id, /^\d+$/, `BharatPays reference id must be digits only, got ${id}`);
+  // pan.controller.js records BharatPays' limit as 20 characters.
+  assert.ok(id.length <= 20, `reference id ${id} is longer than BharatPays allows`);
+}
+
+// Paysprint keeps the readable prefix, so existing records stay recognisable.
+assert.match(makeReferenceId(false), /^PAY\d+$/);
+
+// transactionId is unique, so same-millisecond recharges must not collide.
+const batch = new Set(Array.from({ length: 5000 }, () => makeReferenceId(true)));
+assert.ok(batch.size > 4900, `reference ids collide too often: ${batch.size}/5000 distinct`);
 
 const plans = (raw) => hlrMessage(raw, 'The plan list');
 

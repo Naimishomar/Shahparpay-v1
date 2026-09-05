@@ -13,6 +13,7 @@ import {
   BHARATPAYS_OPERATORS,
   BHARATPAYS_TYPES,
   BHARATPAYS_CATEGORY,
+  cleanProviderMessage,
 } from './bharatpays.util.js';
 
 // --- status normalisation -------------------------------------------------
@@ -102,6 +103,19 @@ assert.equal(paysprintPlanOperator(99999), null);
 assert.equal(paysprintPlanOperator(undefined), null);
 // Codes with no Paysprint counterpart (Big TV, Zing) must not borrow another's.
 assert.equal(paysprintPlanOperator(9), null);
+
+// --- provider messages reach the retailer as plain text -------------------
+
+// BharatPays answers validation failures in HTML, and the message is shown as a
+// toast, so the markup has to come off before it leaves the backend.
+assert.equal(
+  cleanProviderMessage('<p> The Reference Id field must contain only numbers </p>'),
+  'The Reference Id field must contain only numbers'
+);
+assert.equal(cleanProviderMessage('Recharge successful'), 'Recharge successful');
+assert.equal(cleanProviderMessage('<br/><b>Invalid</b>&nbsp;operator'), 'Invalid &nbsp;operator');
+// A missing message must not surface as "null" or "undefined" on screen.
+for (const empty of [undefined, null, '']) assert.equal(cleanProviderMessage(empty), '');
 
 // --- the host and paths the docs get wrong --------------------------------
 

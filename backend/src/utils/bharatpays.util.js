@@ -30,6 +30,18 @@ export const bharatPaysGet = async (path, params = {}) => {
 };
 
 /**
+ * BharatPays returns validation failures as HTML — "<p> The Reference Id field
+ * must contain only numbers </p>" — and that string reaches the retailer as a
+ * toast, tags and all. Strip the markup and collapse the padding it leaves.
+ */
+export const cleanProviderMessage = (raw) => {
+  return String(raw ?? '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+/**
  * Types BharatPays can actually recharge. Everything else stays on Paysprint
  * BBPS, which is the only rail that can fetch a bill before debiting. FASTag and
  * Google Play qualify because they are top-ups with no bill to show.

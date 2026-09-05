@@ -9,6 +9,7 @@ import {
   BHARATPAYS_OPERATORS,
   BHARATPAYS_TYPES,
   BHARATPAYS_CATEGORY,
+  cleanProviderMessage,
 } from '../utils/bharatpays.util.js';
 import { lockFundsForTransaction, resolveTransaction } from '../utils/wallet.util.js';
 import Transaction from '../models/transaction.model.js';
@@ -67,6 +68,21 @@ export const hlrMessage = (raw, fallback) => {
 const isBBPS = (type) => !['prepaid', 'postpaid', 'dth', 'datacard'].includes(
   String(type || '').toLowerCase()
 );
+
+/**
+ * BharatPays rejects any reference id that is not purely numeric — "The
+ * Reference Id field must contain only numbers" — whatever its documentation
+ * says about alphanumeric ids. pan.controller.js already carries the same
+ * constraint for PSA. Paysprint keeps the readable PAY prefix it has always had,
+ * so existing bill-payment records stay recognisable.
+ *
+ * Millisecond plus six random digits: transactionId is unique, so two recharges
+ * landing in the same millisecond must not also draw the same suffix.
+ */
+export const makeReferenceId = (viaBharatPays) => {
+  const suffix = String(Math.floor(Math.random() * 1e6)).padStart(6, '0');
+  return viaBharatPays ? `${Date.now()}${suffix}` : `PAY${Date.now()}${suffix}`;
+};
 
 export const getOperators = async (req, res) => {
   try {
@@ -309,7 +325,6 @@ export const doRecharge = async (req, res) => {
     // a caller must not be able to spend someone else's balance.
     const userId = req.user.id;
 
-    const referenceId = `PAY${Date.now()}${Math.floor(Math.random() * 1000)}`;
     const caNumber = mobileNumber || dthNumber || number;
     const totalAmount = Number(amount);
 
@@ -319,7 +334,10 @@ export const doRecharge = async (req, res) => {
         .json({ success: false, message: 'Number, operator and amount are required.' });
     }
 
+    // The id has to suit whichever provider will receive it, so it cannot be
+    // built before the rail is known.
     const viaBharatPays = usesBharatPays(type);
+    const referenceId = makeReferenceId(viaBharatPays);
     if (viaBharatPays && totalAmount < 10) {
       return res
         .status(400)
@@ -422,7 +440,9 @@ export const doRecharge = async (req, res) => {
       );
     }
 
-    const message = providerResponse?.message || '';
+    // BharatPays wraps validation failures in HTML; nothing downstream should
+    // have to know that, least of all the retailer reading the toast.
+    const message = cleanProviderMessage(providerResponse?.message);
 
     if (status === 'PENDING') {
       // Left PROCESSING on purpose: the callback or the reconciliation cron
