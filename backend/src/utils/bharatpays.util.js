@@ -22,8 +22,27 @@ export const bharatPaysGet = async (path, params = {}) => {
   return response.data;
 };
 
-/** Types BharatPays can actually recharge. Everything else stays on Paysprint BBPS. */
-export const BHARATPAYS_TYPES = new Set(['prepaid', 'postpaid', 'dth']);
+/**
+ * Types BharatPays can actually recharge. Everything else stays on Paysprint
+ * BBPS, which is the only rail that can fetch a bill before debiting. FASTag and
+ * Google Play qualify because they are top-ups with no bill to show.
+ */
+export const BHARATPAYS_TYPES = new Set([
+  'prepaid',
+  'postpaid',
+  'dth',
+  'fastag',
+  'googleplay',
+]);
+
+/** The `type` a screen sends, to the category on the operator table above. */
+export const BHARATPAYS_CATEGORY = {
+  prepaid: 'Prepaid',
+  postpaid: 'Postpaid',
+  dth: 'DTH',
+  fastag: 'Fastag',
+  googleplay: 'GooglePlay',
+};
 
 /**
  * BharatPays publishes its operator codes as a static table, not an API, so the
@@ -58,6 +77,7 @@ export const BHARATPAYS_OPERATORS = [
   { id: 188, name: 'Jio Postpaid', category: 'Postpaid' },
   { id: 355, name: 'Jio Postpaid 2', category: 'Postpaid' },
   { id: 356, name: 'Reliance Jio Postpaid', category: 'Postpaid' },
+  { id: 357, name: 'Reliance Postpaid (CDMA)', category: 'Postpaid' },
   { id: 354, name: 'BSNL Cellone', category: 'Postpaid' },
   { id: 142, name: 'BSNL Mobile', category: 'Postpaid' },
   { id: 358, name: 'Tikona Infinet', category: 'Postpaid' },
@@ -73,6 +93,45 @@ export const BHARATPAYS_OPERATORS = [
   { id: 186, name: 'Sun Direct Official', category: 'DTH', plan: 'Sundirect' },
   { id: 9, name: 'Big TV', category: 'DTH' },
   { id: 371, name: 'Zing TV DTH', category: 'DTH' },
+
+  // FASTag and Google Play are top-ups, not bills: there is no bill to fetch
+  // before paying, which is the only reason the other BBPS categories stayed on
+  // Paysprint. Where BharatPays publishes two codes for one bank they are
+  // separate lanes, so both are kept and the display name carries the code.
+  { id: 370, name: 'Airtel Payments Bank FASTag', category: 'Fastag' },
+  { id: 174, name: 'Axis Bank FASTag', category: 'Fastag' },
+  { id: 283, name: 'Axis Bank FASTag (283)', category: 'Fastag' },
+  { id: 181, name: 'Bank of Baroda FASTag', category: 'Fastag' },
+  { id: 284, name: 'Bank of Baroda FASTag (284)', category: 'Fastag' },
+  { id: 180, name: 'Equitas FASTag', category: 'Fastag' },
+  { id: 285, name: 'Equitas FASTag (285)', category: 'Fastag' },
+  { id: 183, name: 'Federal Bank FASTag', category: 'Fastag' },
+  { id: 286, name: 'Federal Bank FASTag (286)', category: 'Fastag' },
+  { id: 176, name: 'HDFC Bank FASTag', category: 'Fastag' },
+  { id: 287, name: 'HDFC Bank FASTag (287)', category: 'Fastag' },
+  { id: 178, name: 'ICICI Bank FASTag', category: 'Fastag' },
+  { id: 289, name: 'IDBI Bank FASTag', category: 'Fastag' },
+  { id: 177, name: 'IDFC FIRST Bank FASTag', category: 'Fastag' },
+  { id: 290, name: 'IDFC FIRST Bank FASTag (290)', category: 'Fastag' },
+  { id: 179, name: 'Indian Highways Management (IHMCL) FASTag', category: 'Fastag' },
+  { id: 291, name: 'IHMCL IndusInd FASTag', category: 'Fastag' },
+  { id: 292, name: 'IndusInd Bank FASTag', category: 'Fastag' },
+  { id: 293, name: 'Indian Overseas Bank FASTag', category: 'Fastag' },
+  { id: 294, name: 'Jammu and Kashmir Bank FASTag', category: 'Fastag' },
+  { id: 295, name: 'Karnataka Bank FASTag', category: 'Fastag' },
+  { id: 173, name: 'Kotak Mahindra Bank FASTag', category: 'Fastag' },
+  { id: 175, name: 'Kotak Mahindra Bank FASTag (175)', category: 'Fastag' },
+  { id: 369, name: 'Kotak Mahindra Bank FASTag (369)', category: 'Fastag' },
+  { id: 182, name: 'Paul Merchants FASTag', category: 'Fastag' },
+  { id: 297, name: 'Paul Merchants FASTag (297)', category: 'Fastag' },
+  { id: 172, name: 'Paytm Payments Bank FASTag', category: 'Fastag' },
+  { id: 300, name: 'State Bank of India FASTag', category: 'Fastag' },
+  { id: 301, name: 'Transaction Analyst FASTag', category: 'Fastag' },
+  { id: 302, name: 'Transcorp International FASTag', category: 'Fastag' },
+  { id: 303, name: 'UCO Bank FASTag', category: 'Fastag' },
+
+  { id: 171, name: 'Google Play', category: 'GooglePlay' },
+  { id: 364, name: 'Google Play (364)', category: 'GooglePlay' },
 ];
 
 /**

@@ -19,7 +19,7 @@ import {
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
 
-// Keys match the `type` the backend maps to a Paysprint biller category.
+// Keys match the `type` the backend maps to a biller category.
 const CATEGORIES = [
   { key: 'electricity', label: 'Electricity' },
   { key: 'gas', label: 'Gas' },
@@ -29,8 +29,17 @@ const CATEGORIES = [
   { key: 'insurance', label: 'Insurance' },
   { key: 'loan', label: 'Loan' },
   { key: 'fastag', label: 'FASTag' },
+  { key: 'googleplay', label: 'Google Play' },
   { key: 'cable', label: 'Cable TV' },
 ];
+
+/**
+ * FASTag and Google Play are top-ups paid through BharatPays, not bills paid
+ * through Paysprint. There is nothing to fetch before paying, and their operator
+ * codes mean nothing to Paysprint's biller registry, so the fetch step is hidden
+ * rather than left to fail. Keep in step with BHARATPAYS_TYPES on the backend.
+ */
+const TOP_UP_ONLY = new Set(['fastag', 'googleplay']);
 
 interface Biller {
   id: string | number;
@@ -70,6 +79,7 @@ export const BbpsScreen: React.FC = () => {
     const res = await api.fetchBill({
       caNumber: caNumber.trim(),
       operator: String(biller?.id),
+      type: category,
       ad1: ad1.trim() || undefined,
       ad2: ad2.trim() || undefined,
       ad3: ad3.trim() || undefined,
@@ -197,30 +207,48 @@ export const BbpsScreen: React.FC = () => {
             </View>
           )}
 
+          {/* A top-up is not identified by a consumer number: FASTag goes by
+              vehicle registration, Google Play by the mobile number. */}
           <Input
-            label="Consumer number"
+            label={
+              category === 'fastag'
+                ? 'Vehicle number'
+                : category === 'googleplay'
+                  ? 'Mobile number'
+                  : 'Consumer number'
+            }
             required
             value={caNumber}
             onChangeText={setCaNumber}
             autoCapitalize="characters"
-            placeholder="As printed on your bill"
-            leftIcon="identifier"
+            placeholder={
+              category === 'fastag'
+                ? 'e.g. MH12AB1234'
+                : category === 'googleplay'
+                  ? '10-digit mobile number'
+                  : 'As printed on your bill'
+            }
+            leftIcon={category === 'fastag' ? 'car' : 'identifier'}
           />
           {!!biller?.ad1_name && <Input label={biller.ad1_name} value={ad1} onChangeText={setAd1} />}
           {!!biller?.ad2_name && <Input label={biller.ad2_name} value={ad2} onChangeText={setAd2} />}
           {!!biller?.ad3_name && <Input label={biller.ad3_name} value={ad3} onChangeText={setAd3} />}
 
-          <Button
-            variant="outline"
-            icon="file-search-outline"
-            onPress={onFetchBill}
-            loading={fetchBill.pending}
-            disabled={!biller || caNumber.trim().length < 4}
-            fullWidth
-          >
-            Fetch bill
-          </Button>
-          {!!fetchBill.error && <ErrorBanner message={fetchBill.error} />}
+          {!TOP_UP_ONLY.has(category) && (
+            <>
+              <Button
+                variant="outline"
+                icon="file-search-outline"
+                onPress={onFetchBill}
+                loading={fetchBill.pending}
+                disabled={!biller || caNumber.trim().length < 4}
+                fullWidth
+              >
+                Fetch bill
+              </Button>
+              {!!fetchBill.error && <ErrorBanner message={fetchBill.error} />}
+            </>
+          )}
 
           {!!bill && (
             <View style={styles.infoBox}>

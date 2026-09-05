@@ -8,6 +8,7 @@ import {
   paysprintPlanOperator,
   BHARATPAYS_OPERATORS,
   BHARATPAYS_TYPES,
+  BHARATPAYS_CATEGORY,
 } from '../utils/bharatpays.util.js';
 import { lockFundsForTransaction, resolveTransaction } from '../utils/wallet.util.js';
 import Transaction from '../models/transaction.model.js';
@@ -53,9 +54,7 @@ export const getOperators = async (req, res) => {
     const { type } = req.params; // e.g. 'prepaid', 'dth', 'electricity'
 
     if (usesBharatPays(type)) {
-      const category = { prepaid: 'Prepaid', postpaid: 'Postpaid', dth: 'DTH' }[
-        type.toLowerCase()
-      ];
+      const category = BHARATPAYS_CATEGORY[type.toLowerCase()];
       const data = BHARATPAYS_OPERATORS.filter((op) => op.category === category).map((op) => ({
         id: op.id,
         name: op.name,
@@ -231,11 +230,22 @@ export const fetchDthInfo = async (req, res) => {
 
 export const fetchBill = async (req, res) => {
   try {
-    const { caNumber, operator, ad1, ad2, ad3 } = req.body;
+    const { caNumber, operator, type, ad1, ad2, ad3 } = req.body;
     if (!caNumber || !operator) {
       return res
         .status(400)
         .json({ success: false, message: 'CA number (Consumer Number) and operator are required' });
+    }
+
+    // These categories are paid through BharatPays, whose operator codes mean
+    // nothing to Paysprint's biller registry. Asking Paysprint to fetch a bill
+    // for BharatPays code 172 would look up an unrelated biller, so refuse
+    // rather than show the retailer someone else's bill.
+    if (usesBharatPays(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'This service is a top-up — there is no bill to fetch. Enter the amount directly.',
+      });
     }
 
     const url = `${getPaysprintBase()}/service/bill-payment/bill/fetchbill`;

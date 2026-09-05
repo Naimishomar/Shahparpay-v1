@@ -12,6 +12,7 @@ import {
   paysprintPlanOperator,
   BHARATPAYS_OPERATORS,
   BHARATPAYS_TYPES,
+  BHARATPAYS_CATEGORY,
 } from './bharatpays.util.js';
 
 // --- status normalisation -------------------------------------------------
@@ -73,12 +74,22 @@ assert.ok(
   'operator codes go on the query string as integers'
 );
 
+// Every type the controller will route to BharatPays must name a category that
+// actually has operators, or the picker opens empty with no way to recharge.
 for (const type of BHARATPAYS_TYPES) {
-  const category = { prepaid: 'Prepaid', postpaid: 'Postpaid', dth: 'DTH' }[type];
+  const category = BHARATPAYS_CATEGORY[type];
+  assert.ok(category, `${type} has no category mapping`);
   assert.ok(
     BHARATPAYS_OPERATORS.some((op) => op.category === category),
     `${type} would render an empty operator list`
   );
+}
+
+// Every category on the table has to be reachable from some type, otherwise the
+// operators are dead rows no screen can ever show.
+const reachable = new Set(Object.values(BHARATPAYS_CATEGORY));
+for (const op of BHARATPAYS_OPERATORS) {
+  assert.ok(reachable.has(op.category), `category ${op.category} is unreachable from any type`);
 }
 
 // Plan and DTH-info lookups still run on Paysprint, so every code carrying a

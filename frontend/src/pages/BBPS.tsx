@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Zap, Flame, Shield, CreditCard, Droplet, Smartphone, XCircle, ReceiptText } from "lucide-react";
+import { Zap, Flame, Shield, CreditCard, Droplet, Smartphone, XCircle, ReceiptText, Car, Play } from "lucide-react";
 import axios from "axios";
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -9,13 +9,23 @@ import { toast } from "sonner";
 
 const bbpsServices = [
     { id: "electricity", name: "Ebill", icon: Zap, color: "text-yellow-500", border: "border-yellow-500/20" },
+    { id: "fastag", name: "FASTag", icon: Car, color: "text-emerald-500", border: "border-emerald-500/20" },
     { id: "gas", name: "Gas", icon: Flame, color: "text-orange-500", border: "border-orange-500/20" },
+    { id: "googleplay", name: "Play", icon: Play, color: "text-green-500", border: "border-green-500/20" },
     { id: "insurance", name: "Ins", icon: Shield, color: "text-red-400", border: "border-red-400/20" },
     { id: "loan", name: "Loan", icon: CreditCard, color: "text-blue-500", border: "border-blue-500/20" },
     { id: "lpg", name: "Lpg", icon: Flame, color: "text-red-500", border: "border-red-500/20" },
     { id: "postpaid", name: "Postpaid", icon: Smartphone, color: "text-primary", border: "border-primary/20" },
     { id: "water", name: "Water", icon: Droplet, color: "text-cyan-400", border: "border-cyan-400/20" },
 ];
+
+/**
+ * Paid through BharatPays as top-ups rather than through Paysprint as bills:
+ * there is nothing to fetch before paying, and their operator codes mean nothing
+ * to Paysprint's biller registry. Postpaid is on the same rail, so its bill
+ * fetch has to go too. Keep in step with BHARATPAYS_TYPES on the backend.
+ */
+const TOP_UP_ONLY = new Set(["fastag", "googleplay", "postpaid"]);
 
 const BBPS = () => {
     const [selectedService, setSelectedService] = useState<any>(null);
@@ -76,6 +86,7 @@ const BBPS = () => {
             const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/fetch-bill`, {
                 operator: operatorId,
                 caNumber: consumerNumber,
+                type: selectedService?.id,
                 ad1: ad1 || undefined,
                 ad2: ad2 || undefined,
                 ad3: ad3 || undefined
@@ -257,12 +268,16 @@ const BBPS = () => {
 
                                 <div className="space-y-1.5 mt-4">
                                     <label className="text-sm font-medium text-foreground">
-                                        {operators.find((op: any) => op.id.toString() === operatorId.toString())?.displayname || "Consumer / Account Number"}
+                                        {selectedService?.id === "fastag"
+                                            ? "Vehicle Number"
+                                            : selectedService?.id === "googleplay"
+                                                ? "Mobile Number"
+                                                : operators.find((op: any) => op.id.toString() === operatorId.toString())?.displayname || "Consumer / Account Number"}
                                     </label>
                                     <input 
                                         type="text"
                                         className="w-full bg-background border border-border rounded-xl p-3.5 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                                        placeholder="Enter number"
+                                        placeholder={selectedService?.id === "fastag" ? "e.g. MH12AB1234" : "Enter number"}
                                         value={consumerNumber}
                                         onChange={(e) => setConsumerNumber(e.target.value)}
                                         readOnly={!!fetchedBill}
@@ -317,7 +332,7 @@ const BBPS = () => {
                                     </div>
                                 )}
 
-                                {!fetchedBill ? (
+                                {!fetchedBill && !TOP_UP_ONLY.has(selectedService?.id) ? (
                                     <button 
                                         onClick={handleFetchBill}
                                         disabled={fetchingBill}
@@ -334,11 +349,11 @@ const BBPS = () => {
                                     </button>
                                 ) : (
                                     <>
-                                        <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 space-y-2 mb-4">
+                                        {fetchedBill && <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 space-y-2 mb-4">
                                             <p className="text-sm text-foreground/80"><strong>Customer Name:</strong> {fetchedBill.name || fetchedBill.CustomerName || fetchedBill.userName || 'N/A'}</p>
                                             <p className="text-sm text-foreground/80"><strong>Due Date:</strong> {fetchedBill.duedate || fetchedBill.DueDate || fetchedBill.dueDate || 'N/A'}</p>
                                             <p className="text-sm text-foreground/80"><strong>Amount Due:</strong> ₹{fetchedBill.amount || fetchedBill.Amount || fetchedBill.billAmount || amount}</p>
-                                        </div>
+                                        </div>}
 
                                         <div className="space-y-1.5">
                                             <label className="text-sm font-medium text-foreground">Amount (₹)</label>
@@ -350,7 +365,7 @@ const BBPS = () => {
                                                     placeholder="0.00"
                                                     value={amount}
                                                     onChange={(e) => setAmount(e.target.value)}
-                                                    readOnly={!!(fetchedBill.amount || fetchedBill.Amount || fetchedBill.billAmount)}
+                                                    readOnly={!!(fetchedBill?.amount || fetchedBill?.Amount || fetchedBill?.billAmount)}
                                                 />
                                             </div>
                                         </div>
@@ -378,16 +393,16 @@ const BBPS = () => {
                                                     Processing...
                                                 </div>
                                             ) : (
-                                                "Pay Bill Securely"
+                                                TOP_UP_ONLY.has(selectedService?.id) ? "Pay Securely" : "Pay Bill Securely"
                                             )}
                                         </button>
                                         
-                                        <button 
+                                        {!!fetchedBill && <button 
                                             onClick={() => setFetchedBill(null)}
                                             className="w-full bg-transparent hover:bg-muted text-muted-foreground font-medium py-2 rounded-xl transition-all mt-2 text-sm"
                                         >
                                             Fetch Different Bill
-                                        </button>
+                                        </button>}
                                     </>
                                 )}
                             </div>
