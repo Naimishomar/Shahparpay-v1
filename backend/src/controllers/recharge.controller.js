@@ -31,6 +31,19 @@ const getPaysprintBase = () =>
  */
 const usesBharatPays = (type) => BHARATPAYS_TYPES.has(String(type || '').toLowerCase());
 
+/**
+ * Plans and DTH info both come from Paysprint's HLR API, a separately enabled
+ * add-on. When it is off, Paysprint answers "Hlr Api service is disabled." —
+ * a provider internal that tells a retailer nothing. What they need to know is
+ * that the lookup is unavailable and the amount can still be typed by hand.
+ */
+const hlrMessage = (raw, fallback) => {
+  if (/hlr api service is disabled/i.test(raw || '')) {
+    return `${fallback} is unavailable right now. You can still enter the amount manually.`;
+  }
+  return raw;
+};
+
 const isBBPS = (type) => !['prepaid', 'postpaid', 'dth', 'datacard'].includes(
   String(type || '').toLowerCase()
 );
@@ -147,8 +160,13 @@ export const browsePlans = async (req, res) => {
 
       return res.status(200).json({ success: true, data: groupedPlans });
     } else {
-      const errorMsg = planResponse.data?.message || 'No plans found';
-      return res.status(400).json({ success: false, message: errorMsg, data: null });
+      const raw = planResponse.data?.message;
+      console.error('Browse Plans rejected by Paysprint:', raw);
+      return res.status(400).json({
+        success: false,
+        message: hlrMessage(raw, 'The plan list') || 'No plans found',
+        data: null,
+      });
     }
   } catch (error) {
     console.error('Browse Plans Error:', error?.response?.data || error?.message);
@@ -198,9 +216,12 @@ export const fetchDthInfo = async (req, res) => {
       };
       return res.status(200).json({ success: true, data: mappedInfo });
     } else {
-      return res
-        .status(400)
-        .json({ success: false, message: response.data?.message || 'DTH info not found' });
+      const raw = response.data?.message;
+      console.error('DTH info rejected by Paysprint:', raw);
+      return res.status(400).json({
+        success: false,
+        message: hlrMessage(raw, 'Customer details') || 'DTH info not found',
+      });
     }
   } catch (error) {
     console.error('DTH Info Error:', error?.response?.data || error?.message);
