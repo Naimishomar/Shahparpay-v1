@@ -26,6 +26,15 @@ const getPaysprintBase = () =>
   process.env.PAYSPRINT_BASE_URL || 'https://sit.paysprint.in/service-api/api/v1';
 
 /**
+ * Paysprint answers an operational refusal — add-on disabled, nightly
+ * maintenance window, bad operator — with a non-2xx status and a message that
+ * explains it. Left to axios that throws, the message is lost in a catch and the
+ * retailer gets a generic 500, so every call reads the body instead.
+ */
+const paysprintPost = (url, payload) =>
+  axios.post(url, payload, { headers: getPaysprintHeaders(), validateStatus: () => true });
+
+/**
  * Mobile and DTH recharges run on BharatPays. Bill payments (electricity, gas,
  * fastag, ...) stay on Paysprint: BharatPays exposes no bill-fetch endpoint, so
  * a BBPS payment there could not show the customer a bill before debiting.
@@ -33,15 +42,25 @@ const getPaysprintBase = () =>
 const usesBharatPays = (type) => BHARATPAYS_TYPES.has(String(type || '').toLowerCase());
 
 /**
- * Plans and DTH info both come from Paysprint's HLR API, a separately enabled
- * add-on. When it is off, Paysprint answers "Hlr Api service is disabled." —
- * a provider internal that tells a retailer nothing. What they need to know is
- * that the lookup is unavailable and the amount can still be typed by hand.
+ * Plans and DTH info both come from Paysprint's HLR API, which refuses in its
+ * own operational wording: the add-on switched off, or its nightly maintenance
+ * window. Neither tells a retailer anything useful. What they need to know is
+ * that the lookup is down and the amount can still be typed by hand — a
+ * recharge itself runs on BharatPays and is unaffected either way.
  */
-const hlrMessage = (raw, fallback) => {
-  if (/hlr api service is disabled/i.test(raw || '')) {
+export const hlrMessage = (raw, fallback) => {
+  const text = String(raw || '');
+
+  if (/hlr api service is disabled/i.test(text)) {
     return `${fallback} is unavailable right now. You can still enter the amount manually.`;
   }
+
+  // "Service is down between 23:00 Hours to 05:30 Hours."
+  const window = text.match(/service is down between\s*(.+?)\.?\s*$/i);
+  if (window) {
+    return `${fallback} is unavailable between ${window[1]}. You can still enter the amount manually.`;
+  }
+
   return raw;
 };
 
@@ -68,7 +87,7 @@ export const getOperators = async (req, res) => {
     const url = `${getPaysprintBase()}${basePath}/getoperator`;
 
     const payload = isBBPS(type) ? { mode: 'online' } : {};
-    const response = await axios.post(url, payload, { headers: getPaysprintHeaders() });
+    const response = await paysprintPost(url, payload);
 
     if (response.data && response.data.status) {
       const allOperators = response.data.data || [];
@@ -140,7 +159,7 @@ export const browsePlans = async (req, res) => {
       op: opName,
     };
 
-    const planResponse = await axios.post(planUrl, payload, { headers: getPaysprintHeaders() });
+    const planResponse = await paysprintPost(planUrl, payload);
 
     if (planResponse.data && planResponse.data.status && planResponse.data.info) {
       const info = planResponse.data.info;
@@ -196,7 +215,7 @@ export const fetchDthInfo = async (req, res) => {
       RAW_BODY: JSON.stringify({ op: opName, canumber: dthNumber }),
     };
 
-    const response = await axios.post(url, payload, { headers: getPaysprintHeaders() });
+    const response = await paysprintPost(url, payload);
 
     if (
       response.data &&
@@ -258,7 +277,7 @@ export const fetchBill = async (req, res) => {
     if (ad2) payload.ad2 = ad2;
     if (ad3) payload.ad3 = ad3;
 
-    const response = await axios.post(url, payload, { headers: getPaysprintHeaders() });
+    const response = await paysprintPost(url, payload);
 
     if (response.data && response.data.status) {
       return res.status(200).json({
@@ -393,10 +412,7 @@ export const doRecharge = async (req, res) => {
       const url = bill
         ? `${getPaysprintBase()}/service/bill-payment/bill/paybill`
         : `${getPaysprintBase()}/service/recharge/recharge/dorecharge`;
-      const response = await axios.post(url, payload, {
-        headers: getPaysprintHeaders(),
-        validateStatus: () => true,
-      });
+      const response = await paysprintPost(url, payload);
       providerResponse = response.data;
       status = providerResponse?.status ? 'SUCCESS' : 'FAILED';
 
