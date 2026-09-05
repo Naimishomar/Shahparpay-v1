@@ -196,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({
   );
 };
 
-const styles = themed((c) => ({
+const styles = themed((c, isDark) => ({
   header: {
     paddingHorizontal: space.md,
     paddingBottom: space.sm,
@@ -240,11 +240,12 @@ const styles = themed((c) => ({
     justifyContent: 'center',
     backgroundColor: c.accentSubtle,
     borderWidth: 1,
-    borderColor: c.accent,
+    // No ring on the black ground — the chip's own fill is the shape.
+    borderColor: isDark ? 'transparent' : c.accent,
     overflow: 'hidden',
   },
   avatarImage: { width: 36, height: 36 },
-  avatarInitial: { fontSize: t.small, fontWeight: '700', color: c.accent },
+  avatarInitial: { fontSize: t.small, fontWeight: '700', color: c.foreground },
   avatarOnBand: { backgroundColor: 'rgba(127,127,127,0.28)', borderColor: 'transparent' },
   avatarInitialOnBand: { color: c.bandForeground },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: c.overlay },

@@ -71,21 +71,23 @@ export const palettes = {
     overlay: 'rgba(10, 10, 11, 0.55)',
     skeleton: '#E6E6EA',
 
+    chart: ['#6C4DF6', '#F0605E', '#F5C33B', '#2FB86B', '#3B82F6', '#E879F9'],
+
     tabBar: '#FFFFFF',
     tabBarActive: brand.ink,
     tabBarInactive: '#8A8A94',
   },
   dark: {
-    // Dark mode separates by lightening the surface, never by shadow — a
-    // shadow is invisible on a dark ground.
-    background: '#08080A',
-    foreground: '#FAFAFA',
-    card: '#141417',
-    cardForeground: '#FAFAFA',
-    surface: '#1B1B1F',
-    surfaceAlt: '#242429',
-    popover: '#161619',
-    popoverForeground: '#FAFAFA',
+    // Reference-dark: a true black ground so the cards are the only lit
+    // surfaces on the page. Separation is by fill, never by border or shadow.
+    background: '#000000',
+    foreground: '#FFFFFF',
+    card: '#141416',
+    cardForeground: '#FFFFFF',
+    surface: '#1C1C1F',
+    surfaceAlt: '#26262A',
+    popover: '#161618',
+    popoverForeground: '#FFFFFF',
 
     // The brand inverts: near-white now carries primary actions, because
     // near-black on near-black would be invisible.
@@ -94,18 +96,17 @@ export const palettes = {
     accent: brand.chalk,
     accentForeground: '#0A0A0B',
 
-    // Above surfaceAlt: dark mode separates by lightening, and the band is the
-    // topmost chrome. At #16161A it was the same tone as `card`, leaving the
-    // header indistinguishable from the cards scrolling under it.
-    band: '#2A2A31',
+    // Flush with the page: the home screen opens straight into black, so the
+    // chrome must not draw a lighter slab across the top.
+    band: '#000000',
     bandForeground: brand.chalk,
 
-    secondary: '#212126',
-    secondaryForeground: '#FAFAFA',
-    muted: '#212126',
-    // 8.2:1 on #08080A — normal text needs 4.5:1 in dark mode too.
-    mutedForeground: '#A1A1AC',
-    accentSubtle: 'rgba(250, 250, 250, 0.10)',
+    secondary: '#1E1E21',
+    secondaryForeground: '#FFFFFF',
+    muted: '#1E1E21',
+    // 6.2:1 on #000 — normal text needs 4.5:1 in dark mode too.
+    mutedForeground: '#8E8E96',
+    accentSubtle: 'rgba(255, 255, 255, 0.08)',
 
     success: '#34D399',
     successSubtle: 'rgba(52, 211, 153, 0.16)',
@@ -116,16 +117,24 @@ export const palettes = {
     info: '#60A5FA',
     infoSubtle: 'rgba(96, 165, 250, 0.16)',
 
-    border: '#2A2A31',
-    borderStrong: '#3B3B44',
-    input: '#2A2A31',
+    // Barely above the card fill: on the black ground a surface separates by
+    // its own fill, so this is only ever a hairline divider *inside* a card,
+    // never an outline around one.
+    border: '#1E1E22',
+    borderStrong: '#33333A',
+    input: '#232326',
     ring: brand.chalk,
     overlay: 'rgba(0, 0, 0, 0.72)',
     skeleton: '#1F1F24',
 
-    tabBar: '#101013',
+    // Category hues for donuts, bars and row avatars. Same set in both themes:
+    // they encode a service, not a mode, so a colour must not shift meaning
+    // when the theme flips.
+    chart: ['#6C4DF6', '#F0605E', '#F5C33B', '#2FB86B', '#3B82F6', '#E879F9'],
+
+    tabBar: '#000000',
     tabBarActive: brand.chalk,
-    tabBarInactive: '#8A8A94',
+    tabBarInactive: '#6E6E78',
   },
 };
 
@@ -207,10 +216,10 @@ export const type = {
 };
 
 export const radius = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
+  sm: 10,
+  md: 14,
+  lg: 20,
+  xl: 28,
   pill: 999,
 };
 

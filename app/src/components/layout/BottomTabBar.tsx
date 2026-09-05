@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, View, Text, Pressable, Platform } from 'react-native';
+import { Animated, View, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { colors, themed, motion, radius, space, type as t, TOUCH } from '../../theme/colors';
+import { colors, themed, motion, radius, space, TOUCH } from '../../theme/colors';
 import { TabEntry } from '@/constants';
 
 interface Props {
@@ -16,16 +16,17 @@ interface Props {
  * @react-navigation/bottom-tabs: the app already owns its stack, and this is
  * the only place the pattern is used.
  *
- * Every item carries an icon *and* a label (icon-only nav hurts
- * discoverability), reports its selected state to screen readers, and gets a
- * full-height 48dp target.
+ * Icon-only by design: the selected destination is carried by a filled
+ * rounded-square behind the glyph. Every item still ships an
+ * accessibilityLabel and a selected state, so nothing is lost to a screen
+ * reader — only the visible caption goes.
  */
 export const BottomTabBar: React.FC<Props> = ({ tabs, activeRoute, onNavigate }) => {
   const insets = useSafeAreaInsets();
 
   return (
     <View
-      style={[styles.bar, { paddingBottom: Math.max(insets.bottom, space.sm) }]}
+      style={[styles.bar, { paddingBottom: Math.max(insets.bottom, space.md) }]}
       accessibilityRole="tablist"
     >
       {tabs.map((tab) => (
@@ -41,8 +42,8 @@ export const BottomTabBar: React.FC<Props> = ({ tabs, activeRoute, onNavigate })
 };
 
 /**
- * One tab. The active pill grows into place instead of snapping, which is what
- * makes the bar feel like a physical control rather than a set of links.
+ * One tab. The active square grows into place instead of snapping, which is
+ * what makes the bar feel like a physical control rather than a set of links.
  */
 const TabItem: React.FC<{ tab: TabEntry; active: boolean; onPress: () => void }> = ({
   tab,
@@ -76,81 +77,58 @@ const TabItem: React.FC<{ tab: TabEntry; active: boolean; onPress: () => void }>
             {
               opacity: progress,
               transform: [
-                { scaleX: progress.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) },
+                { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }) },
               ],
             },
           ]}
         />
         <MaterialCommunityIcons
           name={(active ? tab.iconActive : tab.icon) as any}
-          size={22}
+          size={23}
           color={active ? colors.tabBarActive : colors.tabBarInactive}
         />
       </View>
-      <Text
-        style={[styles.label, active && styles.labelActive]}
-        numberOfLines={1}
-        // The label repeats the tab name already announced by the row.
-        accessibilityElementsHidden
-        importantForAccessibility="no"
-      >
-        {tab.name}
-      </Text>
     </Pressable>
   );
 };
 
-const styles = themed((c) => ({
+const styles = themed((c, isDark) => ({
   bar: {
     flexDirection: 'row',
     alignItems: 'stretch',
     backgroundColor: c.tabBar,
-    borderTopWidth: 1,
+    // Dark separates by fill, not by a rule: the bar is already flush black
+    // and a hairline above it would read as a seam across the page.
+    borderTopWidth: isDark ? 0 : 1,
     borderTopColor: c.border,
-    paddingTop: space.sm,
-    paddingHorizontal: space.xs,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-      },
-      android: { elevation: 12 },
-    }),
+    paddingTop: space.md,
+    paddingHorizontal: space.sm,
   },
   item: {
     flex: 1,
     minHeight: TOUCH,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
     paddingHorizontal: 2,
   },
-  // Opacity only: a transform here would shift the neighbouring labels.
+  // Opacity only: a transform here would shift the neighbouring items.
   itemPressed: { opacity: 0.6 },
   iconWrap: {
-    minWidth: 44,
-    height: 28,
+    width: 48,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Sits behind the glyph so the pill can animate without moving the icon.
+  // Sits behind the glyph so the square can animate without moving the icon.
   iconPill: {
     position: 'absolute',
     left: 0,
     right: 0,
     top: 0,
     bottom: 0,
-    borderRadius: radius.pill,
-    backgroundColor: c.accentSubtle,
+    borderRadius: radius.md,
+    backgroundColor: isDark ? c.surfaceAlt : c.accentSubtle,
   },
-  label: {
-    fontSize: t.micro,
-    fontWeight: '600',
-    color: c.tabBarInactive,
-  },
-  labelActive: { color: c.tabBarActive, fontWeight: '700' },
 }));
 
 export default BottomTabBar;

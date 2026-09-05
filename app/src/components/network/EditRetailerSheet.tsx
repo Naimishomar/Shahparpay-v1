@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { View, Text, Pressable, ScrollView, Linking } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { Button } from '@/components/ui/Button';
 import { Input, SelectField } from '@/components/ui/Input';
 import { Sheet } from '@/components/ui/Sheet';
-import { Banner, Row, StatusPill, SuccessBanner, money } from '@/components/ui/Screen';
+import { Banner, Row, StatusPill, SuccessBanner, money, shortDate } from '@/components/ui/Screen';
 import { useAction } from '@/hooks/useAsync';
 import { INDIAN_STATES } from '@/constants';
 import api from '@/services/api';
@@ -23,6 +23,12 @@ const SERVICE_PACKAGES = [
 ] as const;
 
 const PACKAGES = ['Standard', 'Premium'];
+
+const DOCUMENTS = [
+  { key: 'aadhaarPicture', label: 'Aadhaar photo' },
+  { key: 'panPicture', label: 'PAN photo' },
+  { key: 'profilePicture', label: 'Profile photo' },
+] as const;
 
 /**
  * Retailer detail + edit, opened from the distributor portal's list. Only the
@@ -252,10 +258,38 @@ export const EditRetailerSheet: React.FC<{
             <Row label="Aadhaar" value={retailer.aadhaarNumber || '—'} mono />
             <Row label="PAN" value={retailer.panNumber || '—'} mono />
             <Row
+              label="GST"
+              value={retailer.hasGst ? retailer.gstNumber || 'Registered' : 'Not registered'}
+              mono={!!retailer.hasGst}
+            />
+            <Row
               label="Merchant eKYC"
               value={<StatusPill status={retailer.isMerchantKycComplete ? 'COMPLETED' : 'PENDING'} />}
-              last
             />
+            <Row label="Joined" value={shortDate(retailer.createdAt)} last />
+          </View>
+
+          <View style={styles.details}>
+            {DOCUMENTS.map((doc, index) => (
+              <Row
+                key={doc.key}
+                label={doc.label}
+                value={
+                  retailer[doc.key] ? (
+                    <Pressable
+                      onPress={() => Linking.openURL(retailer[doc.key])}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.docLink}>View</Text>
+                    </Pressable>
+                  ) : (
+                    'Not uploaded'
+                  )
+                }
+                last={index === DOCUMENTS.length - 1}
+              />
+            ))}
           </View>
 
           <View style={styles.details}>
@@ -283,6 +317,7 @@ export const EditRetailerSheet: React.FC<{
 const styles = themed((c) => ({
   footerRow: { flexDirection: 'row', gap: space.sm },
   flex: { flex: 1 },
+  docLink: { fontSize: t.small, fontWeight: '700', color: c.accent },
   details: {
     paddingHorizontal: space.lg,
     borderRadius: radius.md,

@@ -198,10 +198,15 @@ const Recharge = () => {
                 const opName = selectedOp ? selectedOp.name : "Unknown";
                 const resData = response.data.data || {};
 
+                // BharatPays accepts a recharge before the operator confirms it, so a
+                // successful response is not the same as a successful recharge — the
+                // receipt must not claim SUCCESS while it is still pending.
                 setReceiptData({
-                    transactionId: resData.ackno || resData.refid || 'TXN' + Date.now(),
-                    status: resData.status === false || resData.response_code === 0 ? 'FAILED' : 'SUCCESS',
-                    operatorRef: resData.operatorid || resData.operator_ref || 'N/A',
+                    transactionId: resData.transactionId || resData.ackno || resData.refid || 'TXN' + Date.now(),
+                    status: response.data.pending || String(resData.status).toUpperCase() === 'PENDING'
+                        ? 'PENDING'
+                        : resData.status === false || resData.response_code === 0 ? 'FAILED' : 'SUCCESS',
+                    operatorRef: resData.opr_txn_id || resData.operatorid || resData.operator_ref || 'N/A',
                     date: new Date().toISOString(),
                     amount: type === 'prepaid' ? prepaidAmount : dthAmount,
                     number: type === 'prepaid' ? mobileNumber : dthNumber,

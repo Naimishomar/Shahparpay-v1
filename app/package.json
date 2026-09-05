@@ -7,7 +7,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "check": "node scripts/check-routes.js && node src/hooks/useResponsive.test.mjs && node src/services/rdService.test.mjs && node src/screens/retailer/AepsScreen.test.mjs && node src/theme/fonts.test.mjs && node src/services/api.test.mjs && node src/services/cache.test.mjs && node src/screens/reports/ledger.test.mjs && node src/components/ui/Screen.test.mjs && node src/screens/auth/LoginScreen.test.mjs && tsc --noEmit"
+    "check": "node scripts/check-routes.js && node src/hooks/useResponsive.test.mjs && node src/services/rdService.test.mjs && node src/screens/retailer/AepsScreen.test.mjs && node src/screens/retailer/DashboardScreen.test.mjs && node src/theme/fonts.test.mjs && node src/services/api.test.mjs && node src/services/cache.test.mjs && node src/screens/reports/ledger.test.mjs && node src/components/ui/Screen.test.mjs && node src/screens/auth/LoginScreen.test.mjs && tsc --noEmit"
   },
   "dependencies": {
     "@expo-google-fonts/ibm-plex-sans": "^0.4.1",

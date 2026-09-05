@@ -353,23 +353,37 @@ export const Segmented = <T extends string>({
       <Pressable
         key={option.key}
         onPress={() => onChange(option.key)}
-        style={({ pressed }) => [styles.chip, active && styles.chipActive, pressed && { opacity: 0.7 }]}
+        style={({ pressed }) => [
+          styles.chip,
+          // Non-scrolling: the options share one track and split it evenly,
+          // so the control reads as a switch rather than a row of filters.
+          !scroll && styles.chipFlush,
+          active && (scroll ? styles.chipActive : styles.chipFlushActive),
+          pressed && { opacity: 0.7 },
+        ]}
         accessibilityRole="tab"
         accessibilityState={{ selected: active }}
         accessibilityLabel={option.label}
       >
-        <Text style={[styles.chipText, active && styles.chipTextActive]} numberOfLines={1}>
+        <Text
+          style={[styles.chipText, active && (scroll ? styles.chipTextActive : styles.chipTextFlushActive)]}
+          numberOfLines={1}
+        >
           {option.label}
         </Text>
       </Pressable>
     );
   });
 
-  if (!scroll) return <View style={styles.chipRow}>{body}</View>;
+  if (!scroll) return <View style={styles.chipGroup}>{body}</View>;
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      // flexGrow: 0 — react-native-web's ScrollView base style grows, so on a
+      // short page (a tab whose body is only a couple of tiles) the strip ate
+      // the leftover height and every chip stretched with it.
+      style={styles.chipScroll}
       contentContainerStyle={styles.chipRow}
       keyboardShouldPersistTaps="handled"
     >
@@ -404,6 +418,14 @@ export const money = (value: any) => {
   const grouped = rest ? `${rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',')},${last3}` : last3;
   return `₹${n < 0 ? '-' : ''}${grouped}.${frac}`;
 };
+
+/**
+ * Local YYYY-MM-DD for the API's date filters. Not `toISOString().slice(0,10)`:
+ * that converts to UTC first, so local midnight in IST lands on the previous
+ * day and a "this month" query starts in the month before.
+ */
+export const isoDate = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 export const shortDate = (value?: string | Date | null) =>
   value
@@ -515,7 +537,8 @@ const styles = themed((c, isDark) => ({
     marginTop: space.xs,
   },
   sectionTitleText: { fontSize: t.title, fontWeight: '700', color: c.foreground, letterSpacing: -0.3 },
-  chipRow: { flexDirection: 'row', gap: space.sm, paddingRight: space.xs },
+  chipScroll: { flexGrow: 0, flexShrink: 0 },
+  chipRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingRight: space.xs },
   chip: {
     minHeight: 38,
     justifyContent: 'center',
@@ -526,6 +549,17 @@ const styles = themed((c, isDark) => ({
     backgroundColor: c.card,
   },
   chipActive: { backgroundColor: c.primary, borderColor: c.primary, ...lift('sm', isDark) },
+  chipGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    padding: space.xs,
+    borderRadius: radius.pill,
+    backgroundColor: c.card,
+  },
+  chipFlush: { flex: 1, minWidth: 0, alignItems: 'center', borderWidth: 0, backgroundColor: 'transparent' },
+  chipFlushActive: { backgroundColor: c.surfaceAlt },
+  chipTextFlushActive: { color: c.foreground, fontWeight: '700' },
   chipText: { fontSize: t.caption, fontWeight: '600', color: c.foreground },
   chipTextActive: { color: c.primaryForeground },
 }));

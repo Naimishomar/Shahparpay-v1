@@ -11,6 +11,7 @@ import {
 import axios from 'axios';
 import crypto from 'crypto';
 import { generatePaySprintToken } from '../utils/paysprint.util.js';
+import { fetchBharatPaysStatus } from '../utils/bharatpays.util.js';
 
 /**
  * PaySprint header generator helper
@@ -272,6 +273,11 @@ export const startReconciliationWorker = () => {
 
         if (txn.type === 'DIRECT_PAYOUT') {
           finalStatus = await verifyPayoutStatus(txn);
+        } else if (txn.type === 'RECHARGE' && txn.metadata?.orderId) {
+          // A BharatPays recharge can sit PENDING well past five minutes. Falling
+          // through to the default below would refund the retailer for a recharge
+          // the operator still goes on to deliver, so ask the provider instead.
+          finalStatus = (await fetchBharatPaysStatus(txn.metadata.orderId)).finalStatus;
         } else {
           // For local-only transactions or unimplemented API checks, default to failed to prevent money lock forever.
           // Ideally, every type should have a verification function.

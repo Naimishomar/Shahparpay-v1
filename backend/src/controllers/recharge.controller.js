@@ -1,6 +1,17 @@
 import axios from 'axios';
+import bcrypt from 'bcrypt';
 import { generatePaySprintToken } from '../utils/paysprint.util.js';
+import {
+  bharatPaysGet,
+  fetchBharatPaysStatus,
+  normaliseStatus,
+  paysprintPlanOperator,
+  BHARATPAYS_OPERATORS,
+  BHARATPAYS_TYPES,
+} from '../utils/bharatpays.util.js';
+import { lockFundsForTransaction, resolveTransaction } from '../utils/wallet.util.js';
 import Transaction from '../models/transaction.model.js';
+import AepsWallet from '../models/aepsWallet.model.js';
 
 const getPaysprintHeaders = () => {
   return {
@@ -13,30 +24,38 @@ const getPaysprintHeaders = () => {
 const getPaysprintBase = () =>
   process.env.PAYSPRINT_BASE_URL || 'https://sit.paysprint.in/service-api/api/v1';
 
-const PAYSPRINT_OP_MAP = {
-  11: 'Airtel',
-  18: 'Jio',
-  22: 'Vodafone',
-  13: 'BSNL',
-  4: 'Idea',
-  35: 'MTNL',
-  // DTH Exact Strings for DTH INFO API
-  12: 'Airteldth',
-  14: 'Dishtv',
-  27: 'Sundirect',
-  8: 'TataSky',
-  10: 'Videocon',
-};
+/**
+ * Mobile and DTH recharges run on BharatPays. Bill payments (electricity, gas,
+ * fastag, ...) stay on Paysprint: BharatPays exposes no bill-fetch endpoint, so
+ * a BBPS payment there could not show the customer a bill before debiting.
+ */
+const usesBharatPays = (type) => BHARATPAYS_TYPES.has(String(type || '').toLowerCase());
+
+const isBBPS = (type) => !['prepaid', 'postpaid', 'dth', 'datacard'].includes(
+  String(type || '').toLowerCase()
+);
 
 export const getOperators = async (req, res) => {
   try {
-    const { type } = req.params; // e.g. 'prepaid', 'dth'
+    const { type } = req.params; // e.g. 'prepaid', 'dth', 'electricity'
 
-    const isBBPS = !['prepaid', 'dth'].includes(type.toLowerCase());
-    const basePath = isBBPS ? '/service/bill-payment/bill' : '/service/recharge/recharge';
+    if (usesBharatPays(type)) {
+      const category = { prepaid: 'Prepaid', postpaid: 'Postpaid', dth: 'DTH' }[
+        type.toLowerCase()
+      ];
+      const data = BHARATPAYS_OPERATORS.filter((op) => op.category === category).map((op) => ({
+        id: op.id,
+        name: op.name,
+        displayname: op.name,
+        category: op.category,
+      }));
+      return res.status(200).json({ success: true, data });
+    }
+
+    const basePath = isBBPS(type) ? '/service/bill-payment/bill' : '/service/recharge/recharge';
     const url = `${getPaysprintBase()}${basePath}/getoperator`;
 
-    const payload = isBBPS ? { mode: 'online' } : {};
+    const payload = isBBPS(type) ? { mode: 'online' } : {};
     const response = await axios.post(url, payload, { headers: getPaysprintHeaders() });
 
     if (response.data && response.data.status) {
@@ -94,7 +113,14 @@ export const browsePlans = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Mobile number is required' });
     }
 
-    const opName = PAYSPRINT_OP_MAP[operator] || 'Airtel';
+    // BharatPays has no plan API, so plans still come from Paysprint. The UI now
+    // sends a BharatPays operator code, which has to be named back to Paysprint's.
+    const opName = paysprintPlanOperator(operator);
+    if (!opName) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Plans are not available for this operator' });
+    }
 
     const planUrl = `${getPaysprintBase()}/service/recharge/hlrapi/browseplan`;
     const payload = {
@@ -103,10 +129,6 @@ export const browsePlans = async (req, res) => {
     };
 
     const planResponse = await axios.post(planUrl, payload, { headers: getPaysprintHeaders() });
-
-    console.log('--- PAYSPRINT BROWSEPLAN RESPONSE ---');
-    console.log('Payload sent:', payload);
-    console.log('Response data:', planResponse.data);
 
     if (planResponse.data && planResponse.data.status && planResponse.data.info) {
       const info = planResponse.data.info;
@@ -143,16 +165,18 @@ export const fetchDthInfo = async (req, res) => {
         .json({ success: false, message: 'DTH number and operator are required' });
     }
 
-    const opName = PAYSPRINT_OP_MAP[operator] || 'Airteldth';
+    // Same as plans: BharatPays has no DTH-info endpoint, so this stays Paysprint.
+    const opName = paysprintPlanOperator(operator);
+    if (!opName) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Customer info is not available for this operator' });
+    }
+
     const url = `${getPaysprintBase()}/service/recharge/hlrapi/dthinfo`;
 
-    const rawBodyPayload = {
-      op: opName,
-      canumber: dthNumber,
-    };
-
     const payload = {
-      RAW_BODY: JSON.stringify(rawBodyPayload),
+      RAW_BODY: JSON.stringify({ op: opName, canumber: dthNumber }),
     };
 
     const response = await axios.post(url, payload, { headers: getPaysprintHeaders() });
@@ -237,19 +261,25 @@ export const doRecharge = async (req, res) => {
 
     const referenceId = `PAY${Date.now()}${Math.floor(Math.random() * 1000)}`;
     const caNumber = mobileNumber || dthNumber || number;
+    const totalAmount = Number(amount);
 
-    if (!caNumber || !operator || !amount) {
+    if (!caNumber || !operator || !totalAmount) {
       return res
         .status(400)
         .json({ success: false, message: 'Number, operator and amount are required.' });
+    }
+
+    const viaBharatPays = usesBharatPays(type);
+    if (viaBharatPays && totalAmount < 10) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Minimum recharge amount is ₹10.' });
     }
 
     // Verify PIN
     if (!pin) {
       return res.status(400).json({ success: false, message: 'Transaction PIN is required.' });
     }
-    const bcrypt = (await import('bcrypt')).default;
-    const AepsWallet = (await import('../models/aepsWallet.model.js')).default;
     const aepsWallet = await AepsWallet.findOne({ userId });
     if (!aepsWallet || !aepsWallet.pin) {
       return res.status(400).json({ success: false, message: 'Please set your wallet PIN first.' });
@@ -259,20 +289,20 @@ export const doRecharge = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Incorrect PIN' });
     }
 
-    // Deduct balance atomically (Creates PENDING transaction)
-    const { updateWalletAtomically } = await import('../utils/wallet.util.js');
-    const totalAmount = Number(amount);
+    // Lock the funds as PROCESSING. A recharge can come back PENDING, and a
+    // PENDING recharge must neither be refunded nor marked successful yet, so
+    // the money stays held until the provider gives a final answer.
     try {
-      await updateWalletAtomically(userId, 'MAIN', -totalAmount, {
+      await lockFundsForTransaction(userId, 'MAIN', -totalAmount, {
         transactionId: referenceId,
-        userId: userId,
+        userId,
         type: 'RECHARGE',
         amount: totalAmount,
-        status: 'PENDING',
         metadata: {
           caNumber,
           operator,
           mode: type,
+          provider: viaBharatPays ? 'BHARATPAYS' : 'PAYSPRINT',
         },
       });
     } catch (walletError) {
@@ -282,76 +312,99 @@ export const doRecharge = async (req, res) => {
       });
     }
 
-    const payload = {
-      operator: Number(operator),
-      canumber: caNumber,
-      amount: totalAmount,
-      referenceid: referenceId,
-    };
+    let providerResponse;
+    let status;
 
-    const isBBPS = !['prepaid', 'dth'].includes(type?.toLowerCase() || '');
-    if (isBBPS) {
-      payload.latitude = '27.2046';
-      payload.longitude = '77.4977';
-      payload.mode = 'online';
-    }
-    if (ad1) payload.ad1 = ad1;
-    if (ad2) payload.ad2 = ad2;
-    if (ad3) payload.ad3 = ad3;
+    if (viaBharatPays) {
+      providerResponse = await bharatPaysGet('/api_user/recharge_get', {
+        opr_code: Number(operator),
+        mobile: caNumber,
+        amount: Math.round(totalAmount),
+        reference_id: referenceId,
+      });
 
-    const basePath = isBBPS ? '/service/bill-payment/bill' : '/service/recharge/recharge';
-    const endpoint = isBBPS ? 'paybill' : 'dorecharge';
-    const url = `${getPaysprintBase()}${basePath}/${endpoint}`;
-    console.log(`--- PAYSPRINT ${endpoint.toUpperCase()} REQUEST PAYLOAD ---`, payload);
+      status =
+        Number(providerResponse?.success) === 1
+          ? normaliseStatus(providerResponse?.data?.status)
+          : 'FAILED';
 
-    let response;
-    let status = 'FAILED';
-    try {
-      response = await axios.post(url, payload, {
+      // The order id is what status checks and the callback key off, so it has
+      // to be persisted before the transaction is resolved either way.
+      await Transaction.findOneAndUpdate(
+        { transactionId: referenceId },
+        {
+          $set: {
+            'metadata.orderId': providerResponse?.data?.order_id || null,
+            'metadata.operatorTxnId': providerResponse?.data?.opr_txn_id || null,
+            'metadata.apiResponse': providerResponse,
+          },
+        }
+      );
+    } else {
+      // Data cards are still a plain recharge, not a bill payment, so the
+      // endpoint is chosen the same way it always was.
+      const bill = isBBPS(type);
+      const payload = {
+        operator: Number(operator),
+        canumber: caNumber,
+        amount: totalAmount,
+        referenceid: referenceId,
+      };
+      if (bill) {
+        payload.latitude = '27.2046';
+        payload.longitude = '77.4977';
+        payload.mode = 'online';
+      }
+      if (ad1) payload.ad1 = ad1;
+      if (ad2) payload.ad2 = ad2;
+      if (ad3) payload.ad3 = ad3;
+
+      const url = bill
+        ? `${getPaysprintBase()}/service/bill-payment/bill/paybill`
+        : `${getPaysprintBase()}/service/recharge/recharge/dorecharge`;
+      const response = await axios.post(url, payload, {
         headers: getPaysprintHeaders(),
         validateStatus: () => true,
       });
-      status = response.data && response.data.status ? 'SUCCESS' : 'FAILED';
-    } catch (apiError) {
-      console.error('Recharge API request failed:', apiError?.response?.data || apiError.message);
-      response = { data: apiError?.response?.data || { message: apiError.message } };
+      providerResponse = response.data;
+      status = providerResponse?.status ? 'SUCCESS' : 'FAILED';
+
+      await Transaction.findOneAndUpdate(
+        { transactionId: referenceId },
+        { $set: { 'metadata.apiResponse': providerResponse } }
+      );
     }
 
-    if (status === 'FAILED') {
-      await updateWalletAtomically(userId, 'MAIN', totalAmount, {
-        transactionId: `REF-${referenceId}`,
-        userId: userId,
-        type: 'RECHARGE',
-        amount: totalAmount,
-        status: 'SUCCESS',
-        metadata: { note: 'Refund for failed recharge', originalTxn: referenceId },
+    const message = providerResponse?.message || '';
+
+    if (status === 'PENDING') {
+      // Left PROCESSING on purpose: the callback or the reconciliation cron
+      // settles it once BharatPays knows the outcome.
+      return res.status(200).json({
+        success: true,
+        pending: true,
+        message: message || 'Recharge submitted and is being processed.',
+        data: { ...providerResponse?.data, transactionId: referenceId },
       });
     }
 
-    // Update the original Transaction status
-    const Transaction = (await import('../models/transaction.model.js')).default;
-    await Transaction.findOneAndUpdate(
-      { transactionId: referenceId },
-      {
-        status,
-        apiResponse: response.data,
-      }
-    );
+    // resolveTransaction refunds the locked funds when the status is FAILED, and
+    // is a no-op if this transaction was already settled by the callback.
+    await resolveTransaction(referenceId, status, message, 'MAIN');
 
     if (status === 'SUCCESS') {
       return res.status(200).json({
         success: true,
-        message: response.data?.message || 'Recharge successful',
-        data: response.data,
-      });
-    } else {
-      console.log('PAYSPRINT DORECHARGE FAILED RESPONSE:', response.data);
-      return res.status(400).json({
-        success: false,
-        message: response.data?.message || 'Recharge failed',
-        data: response.data,
+        message: message || 'Recharge successful',
+        data: { ...providerResponse?.data, transactionId: referenceId },
       });
     }
+
+    return res.status(400).json({
+      success: false,
+      message: message || 'Recharge failed',
+      data: providerResponse,
+    });
   } catch (error) {
     console.error('Do Recharge Error:', error?.response?.data || error?.message || error);
     return res.status(500).json({
@@ -364,25 +417,87 @@ export const doRecharge = async (req, res) => {
 
 export const checkStatus = async (req, res) => {
   try {
-    const { referenceId } = req.body;
+    // Scoped to the caller: a retailer must not be able to read someone else's
+    // transaction by guessing a reference id.
+    const txn = await Transaction.findOne({
+      transactionId: req.params.transid,
+      userId: req.user.id,
+    });
+    if (!txn) {
+      return res.status(404).json({ success: false, message: 'Transaction not found' });
+    }
 
-    const url = `${getPaysprintBase()}/service/recharge/recharge/status`;
-    const payload = {
-      referenceid: referenceId,
-    };
+    const orderId = txn.metadata?.orderId;
+    if (!orderId) {
+      return res.status(200).json({ success: true, data: { status: txn.status } });
+    }
 
-    const response = await axios.post(url, payload, { headers: getPaysprintHeaders() });
+    const { finalStatus, data } = await fetchBharatPaysStatus(orderId);
+    if (finalStatus !== 'PROCESSING') {
+      await resolveTransaction(txn.transactionId, finalStatus, data?.message || '', 'MAIN');
+    }
 
-    return res.status(200).json({ success: true, data: response.data });
+    return res.status(200).json({
+      success: true,
+      data: { ...(data?.data || {}), status: finalStatus === 'PROCESSING' ? 'PENDING' : finalStatus },
+    });
   } catch (error) {
     console.error('Check Status Error:', error?.response?.data || error?.message);
     return res.status(500).json({ success: false, message: 'Failed to check status' });
   }
 };
 
+/**
+ * BharatPays callback. Fires only when a recharge settles as SUCCESS or FAILED.
+ * Unauthenticated by design (the provider posts it), so the shared secret in the
+ * Authorization header is the only thing standing between a stranger and the
+ * ability to mark recharges settled — reject anything that does not match.
+ */
+export const bharatPaysCallback = async (req, res) => {
+  try {
+    const expected = process.env.BHARATPAYS_TOKEN;
+    const supplied = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+    if (!expected || supplied !== expected) {
+      return res.status(401).json({ success: false, message: 'Unauthorized callback' });
+    }
+
+    const referenceId = req.body?.data?.reference_id;
+    if (!referenceId) {
+      return res.status(400).json({ success: false, message: 'reference_id missing' });
+    }
+
+    const status = normaliseStatus(req.body?.data?.status);
+    if (status === 'PENDING') {
+      // Nothing to settle yet; acknowledge so the provider stops retrying.
+      return res.status(200).json({ success: true, message: 'Acknowledged' });
+    }
+
+    await Transaction.findOneAndUpdate(
+      { transactionId: referenceId },
+      {
+        $set: {
+          'metadata.operatorTxnId': req.body?.data?.opr_txn_id || null,
+          'metadata.callback': req.body,
+        },
+      }
+    );
+
+    // No-op when the recharge was already settled by the API response or the cron.
+    await resolveTransaction(referenceId, status, req.body?.message || '', 'MAIN');
+
+    return res.status(200).json({ success: true, message: 'Acknowledged' });
+  } catch (error) {
+    console.error('BharatPays Callback Error:', error?.message || error);
+    return res.status(500).json({ success: false, message: 'Callback handling failed' });
+  }
+};
+
 export const getHistory = async (req, res) => {
   try {
-    const history = await Transaction.find().sort({ createdAt: -1 });
+    // Scoped to the caller: this used to return every user's transactions.
+    const history = await Transaction.find({ userId: req.user.id, type: 'RECHARGE' })
+      .sort({ createdAt: -1 })
+      .limit(100);
     return res.status(200).json({ success: true, data: history });
   } catch (error) {
     console.error('Get History Error:', error);
@@ -392,12 +507,20 @@ export const getHistory = async (req, res) => {
 
 export const checkBalance = async (req, res) => {
   try {
-    // TODO: Implement PaySprint Balance API if required by frontend
-    return res
-      .status(200)
-      .json({ success: true, balance: 'NA', message: 'PaySprint Wallet Balance' });
+    const data = await bharatPaysGet('/api_user/balance_get');
+    if (Number(data?.success) !== 1) {
+      return res
+        .status(502)
+        .json({ success: false, message: data?.message || 'Failed to fetch provider balance' });
+    }
+    return res.status(200).json({
+      success: true,
+      balance: data.data?.wallet_balance ?? 'NA',
+      data: data.data,
+      message: 'BharatPays wallet balance',
+    });
   } catch (error) {
-    console.error('Check Balance Error:', error);
+    console.error('Check Balance Error:', error?.message || error);
     return res.status(500).json({ success: false, message: 'Failed to check balance' });
   }
 };

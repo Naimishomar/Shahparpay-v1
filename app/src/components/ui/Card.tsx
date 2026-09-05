@@ -89,7 +89,9 @@ const styles = themed((c, isDark) => ({
   default: {
     backgroundColor: c.card,
     borderWidth: 1,
-    borderColor: c.border,
+    // On the black ground the card's own fill is the separation; an outline on
+    // top of it just draws a grey box around every block.
+    borderColor: isDark ? 'transparent' : c.border,
     ...lift('sm', isDark),
   },
   /** Lifted off the page — summary tiles, anything that invites a tap. */
