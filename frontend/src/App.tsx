@@ -11,6 +11,7 @@ import Recharge from "./pages/Recharge"
 import WalletTransfer from "./pages/WalletTransfer"
 import BBPS from "./pages/BBPS"
 import UPI_Payments from "./pages/UPI_Payments"
+import Collect from "./pages/Collect"
 import FundRequest from "./pages/FundRequest"
 import BiometricSupport from "./pages/BiometricSupport"
 import LedgerReport from "./pages/LedgerReport"
@@ -77,6 +78,7 @@ function App() {
         <Route path="/wallet-transfer" element={<WalletTransfer/>}/>
         <Route path="/bbps" element={<BBPS/>}/>
         <Route path="/upi-payments" element={<UPI_Payments/>}/>
+        <Route path="/payments/collect" element={<Collect/>}/>
         <Route path="/lead-generation" element={<LeadGeneration/>}/>
         <Route path="/pan" element={<PanCard/>}/>
         <Route path="/itr" element={<ITR/>}/>

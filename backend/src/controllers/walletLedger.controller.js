@@ -15,6 +15,15 @@ const CREDIT_AMOUNT_ONLY = new Set([
   'AEPS_DEPOSIT_REFUND',
   'FUND_REQUEST',
   'REFUND',
+  // A customer paid the retailer through the payment gateway; the whole amount
+  // lands in MAIN once the payment verifies (see collect.controller.js).
+  'PG_COLLECTION',
+  // Also an inflow, and it was missing here: the customer pays the retailer over
+  // a UPI QR and finalizeUpiCashout credits MAIN with the full amount. Falling
+  // through to the default debit made the ledger subtract money the wallet had
+  // just received, so a retailer's reconstructed balance drifted by twice the
+  // value of every UPI collection.
+  'UPI_CASHOUT',
 ]);
 
 const MONEY_MOVING_STATUSES = ['SUCCESS', 'REFUNDED', 'APPROVED'];
@@ -54,6 +63,8 @@ const TXNTYPE_LABELS = {
   FUND_REQUEST: 'Fund Request',
   FUND_TRANSFER: 'Fund Transfer',
   STD_PAN_CARD: 'PAN Card',
+  PG_COLLECTION: 'Payment Collected',
+  UPI_CASHOUT: 'UPI Collection',
 };
 
 const toNumber = (v) => {
@@ -147,7 +158,12 @@ const getCommissionSplit = (tx) => {
   if (tx.type === 'AEPS_DEPOSIT') {
     return { gross, tds: 0, net: gross };
   }
-  const tds = round2(gross * 0.02);
+  // The rate is configurable, so a row booked at a different one must report the
+  // TDS it actually had. Rows from before the field existed fall back to 2%.
+  const storedTds = tx.commissions?.retailerTds;
+  const tds = round2(
+    storedTds === undefined || storedTds === null ? gross * 0.02 : toNumber(storedTds)
+  );
   const net = round2(gross - tds);
   return { gross, tds, net };
 };

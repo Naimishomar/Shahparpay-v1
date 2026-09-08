@@ -55,6 +55,8 @@ const CACHE_TTL: Record<string, number> = {
   // Reference data: PaySprint caches the bank list server-side for 24h.
   [API_ENDPOINTS.aeps.banks]: 60 * MINUTE,
   [API_ENDPOINTS.recharge.operators]: 60 * MINUTE,
+  [API_ENDPOINTS.recharge.circles]: 60 * MINUTE,
+  [API_ENDPOINTS.recharge.billCategories]: 60 * MINUTE,
   // Onboarding state changes only through flows that mutate and thus flush.
   [API_ENDPOINTS.aeps.merchantStatus]: 2 * MINUTE,
   [API_ENDPOINTS.aeps.pipesVerify]: 5 * MINUTE,
@@ -64,6 +66,7 @@ const CACHE_TTL: Record<string, number> = {
   [API_ENDPOINTS.wallet.balance]: 20_000,
   [API_ENDPOINTS.dashboard.retailer]: MINUTE,
   [API_ENDPOINTS.dashboard.recentTransactions]: 30_000,
+  [API_ENDPOINTS.dashboard.commissionByDay]: 30_000,
   [API_ENDPOINTS.settlement.savedBanks]: 5 * MINUTE,
   [API_ENDPOINTS.distributor.retailers]: MINUTE,
   [API_ENDPOINTS.distributor.stats]: MINUTE,
@@ -376,6 +379,12 @@ class ApiService {
     return this.get(API_ENDPOINTS.dashboard.retailer, params);
   }
 
+  /** Commission per IST day, net of TDS. Aggregated server-side so it is never
+   *  truncated by the row limit on the recent-transactions list. */
+  async getCommissionByDay(days = 7) {
+    return this.get(API_ENDPOINTS.dashboard.commissionByDay, { days });
+  }
+
   async updateProfile(data: Record<string, any>) {
     return this.put(API_ENDPOINTS.auth.updateProfile, data);
   }
@@ -537,56 +546,48 @@ class ApiService {
   }
 
   // ----------------------------------------------------------------- DMT
-  async getDmtBanks() {
-    return this.post(API_ENDPOINTS.dmt.banks);
-  }
-
-  async queryDmtRemitter(mobile: string) {
-    return this.post(API_ENDPOINTS.dmt.remitterQuery, { mobile });
-  }
-
-  async dmtRemitterEkyc(data: {
-    mobile: string;
-    aadhaar_number: string;
-    pidData: any;
-    lat?: string;
-    long?: string;
-  }) {
-    return this.post(API_ENDPOINTS.dmt.remitterEkyc, data);
-  }
-
-  async registerDmtRemitter(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.dmt.remitterRegister, data);
-  }
-
   async fetchDmtBeneficiaries(mobile: string) {
     return this.post(API_ENDPOINTS.dmt.beneficiaryFetch, { mobile });
   }
 
   async addDmtBeneficiary(data: {
     mobile: string;
-    bankid: string | number;
     benename: string;
     beneaccount: string;
     ifsc: string;
-    pincode: string;
   }) {
     return this.post(API_ENDPOINTS.dmt.beneficiaryAdd, data);
   }
 
-  async deleteDmtBeneficiary(data: { mobile: string; beneid: string }) {
+  // A beneficiary is not payable until the OTP sent to the sender's mobile has
+  // activated it, so these two are part of adding one, not an extra feature.
+  async sendDmtBeneficiaryOtp(beneficiary_id: string) {
+    return this.post(API_ENDPOINTS.dmt.beneficiaryOtp, { beneficiary_id });
+  }
+
+  async verifyDmtBeneficiary(data: { beneficiary_id: string; otp: string }) {
+    return this.post(API_ENDPOINTS.dmt.beneficiaryVerify, data);
+  }
+
+  async deleteDmtBeneficiary(data: { beneficiary_id: string; otp: string }) {
     return this.post(API_ENDPOINTS.dmt.beneficiaryDelete, data);
   }
 
   async transferDmt(data: {
     mobile: string;
-    beneid: string;
+    beneficiary_id: string;
     amount: number;
-    beneaccount: string;
-    ifsc: string;
+    transfer_mode: string;
+    beneaccount?: string;
+    ifsc?: string;
     pin: string;
   }) {
     return this.post(API_ENDPOINTS.dmt.transfer, data);
+  }
+
+  /** Where a pending transfer ended up, asked of the provider's payout listing. */
+  async getDmtTransferStatus(transactionId: string) {
+    return this.get(`${API_ENDPOINTS.dmt.status}/${transactionId}`);
   }
 
   async getDmtHistory() {
@@ -598,27 +599,24 @@ class ApiService {
     return this.get(`${API_ENDPOINTS.recharge.operators}/${type}`);
   }
 
-  async browseRechargePlans(data: {
-    mobileNumber: string;
-    operator: string;
-    operatorName?: string;
-    circle?: string;
-  }) {
+  async getRechargeCircles() {
+    return this.get(API_ENDPOINTS.recharge.circles);
+  }
+
+  async getBillCategories() {
+    return this.get(API_ENDPOINTS.recharge.billCategories);
+  }
+
+  // The provider derives the operator and circle from the number itself.
+  async browseRechargePlans(data: { mobileNumber: string }) {
     return this.post(API_ENDPOINTS.recharge.browsePlan, data);
   }
 
-  async getDthInfo(data: { dthNumber: string; operator: string; operatorName?: string }) {
+  async getDthInfo(data: { dthNumber: string; operator: string }) {
     return this.post(API_ENDPOINTS.recharge.dthInfo, data);
   }
 
-  async fetchBill(data: {
-    caNumber: string;
-    operator: string;
-    type?: string;
-    ad1?: string;
-    ad2?: string;
-    ad3?: string;
-  }) {
+  async fetchBill(data: { caNumber: string; operator: string; type?: string }) {
     return this.post(API_ENDPOINTS.recharge.fetchBill, data);
   }
 
@@ -632,6 +630,32 @@ class ApiService {
 
   async getRechargeStatus(transid: string) {
     return this.get(`${API_ENDPOINTS.recharge.status}/${transid}`);
+  }
+
+  // ------------------------------------------------- Collect (PG + UPI QR)
+  async createCollectionOrder(data: {
+    name: string;
+    mobile: string;
+    email?: string;
+    amount: number;
+  }) {
+    return this.post(API_ENDPOINTS.collect.order, data);
+  }
+
+  async verifyCollectionOrder(transactionId: string) {
+    return this.post(API_ENDPOINTS.collect.verify, { transactionId });
+  }
+
+  async generateCollectionQr(data: {
+    name: string;
+    account_number: string;
+    account_ifsc: string;
+  }) {
+    return this.post(API_ENDPOINTS.collect.qr, data);
+  }
+
+  async getCollectionHistory() {
+    return this.get(API_ENDPOINTS.collect.history);
   }
 
   // ----------------------------------------------------------------- UPI

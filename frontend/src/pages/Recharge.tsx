@@ -16,6 +16,7 @@ const Recharge = () => {
     // Data State
     const [prepaidOperators, setPrepaidOperators] = useState<any[]>([]);
     const [dthOperators, setDthOperators] = useState<any[]>([]);
+    const [circles, setCircles] = useState<any[]>([]);
     const [plans, setPlans] = useState<any[]>([]);
     const [showPlansModal, setShowPlansModal] = useState(false);
     const [planSearch, setPlanSearch] = useState("");
@@ -26,7 +27,9 @@ const Recharge = () => {
     // Form State (Prepaid)
     const [mobileNumber, setMobileNumber] = useState("");
     const [prepaidOperator, setPrepaidOperator] = useState("");
-    const [circle, setCircle] = useState("Delhi NCR");
+    // A prepaid recharge is routed by circle as well as operator, and the circle
+    // is a provider code — not a name — so it has to come from the provider.
+    const [circle, setCircle] = useState("");
     const [prepaidAmount, setPrepaidAmount] = useState("");
     const [prepaidPin, setPrepaidPin] = useState("");
 
@@ -41,6 +44,7 @@ const Recharge = () => {
     useEffect(() => {
         fetchOperators('prepaid');
         fetchOperators('dth');
+        fetchCircles();
         fetchHistory();
     }, []);
 
@@ -54,6 +58,16 @@ const Recharge = () => {
             }
         } catch (error) {
             console.error(`Failed to fetch ${type} operators`, error);
+        }
+    };
+
+    const fetchCircles = async () => {
+        try {
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/circles`);
+            const data = await res.json();
+            if (data.success) setCircles(data.data);
+        } catch (error) {
+            console.error("Failed to fetch circles", error);
         }
     };
 
@@ -76,15 +90,10 @@ const Recharge = () => {
         }
         setLoading(true);
         try {
-            // Find the selected operator name
-            const selectedOp = prepaidOperators.find((op: any) => op.id.toString() === prepaidOperator.toString());
-            const operatorName = selectedOp ? selectedOp.name : "";
-
-            const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/browse-plan`, { 
-                mobileNumber, 
-                operator: prepaidOperator,
-                operatorName: operatorName,
-                circle: circle
+            // The provider derives the operator and circle from the number itself,
+            // so the number is all it is sent.
+            const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/browse-plan`, {
+                mobileNumber
             });
             if (response.data && response.data.success) {
                 // response.data.data contains the plans object with categories like TOPUP, 3G/4G, etc.
@@ -140,21 +149,9 @@ const Recharge = () => {
         }
         setLoading(true);
         try {
-            const selectedOp = dthOperators.find((op: any) => op.id.toString() === dthOperator.toString());
-            let operatorName = selectedOp ? selectedOp.name : "";
-            
-            // Map UI names to PaySprint required DTH keys
-            const opNameLower = operatorName.toLowerCase();
-            if (opNameLower.includes("airtel")) operatorName = "Airteldth";
-            else if (opNameLower.includes("tata")) operatorName = "TataSky";
-            else if (opNameLower.includes("videocon")) operatorName = "Videocon";
-            else if (opNameLower.includes("sun")) operatorName = "Sundirect";
-            else if (opNameLower.includes("dish")) operatorName = "Dishtv";
-
-            const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/dth-info`, { 
-                dthNumber, 
-                operator: dthOperator,
-                operatorName: operatorName
+            const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/dth-info`, {
+                dthNumber,
+                operator: dthOperator
             });
             if (response.data && response.data.success) {
                 // If it's an array with 1 item, extract the first item
@@ -178,7 +175,11 @@ const Recharge = () => {
                 toast.error("Please fill all fields.");
                 return;
             }
-            payload = { ...payload, number: mobileNumber, operator: prepaidOperator, amount: prepaidAmount, pin: prepaidPin };
+            if (!circle) {
+                toast.error("Please select the customer circle.");
+                return;
+            }
+            payload = { ...payload, number: mobileNumber, operator: prepaidOperator, circle, amount: prepaidAmount, pin: prepaidPin };
         } else {
             if (!dthNumber || !dthOperator || !dthAmount || !dthPin) {
                 toast.error("Please fill all fields.");
@@ -198,7 +199,7 @@ const Recharge = () => {
                 const opName = selectedOp ? selectedOp.name : "Unknown";
                 const resData = response.data.data || {};
 
-                // BharatPays accepts a recharge before the operator confirms it, so a
+                // The provider accepts a recharge before the operator confirms it, so a
                 // successful response is not the same as a successful recharge — the
                 // receipt must not claim SUCCESS while it is still pending.
                 setReceiptData({
@@ -330,13 +331,9 @@ const Recharge = () => {
                                             onChange={e => setCircle(e.target.value)}
                                             className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
                                         >
-                                            {[
-                                                "Andhra Pradesh", "Assam", "Bihar Jharkhand", "Chennai", "Delhi NCR", "Gujarat", "Haryana", 
-                                                "Himachal Pradesh", "Jammu Kashmir", "Karnataka", "Kerala", "Kolkata", "Madhya Pradesh Chhattisgarh", 
-                                                "Maharashtra Goa", "Mumbai", "North East", "Orissa", "Punjab", "Rajasthan", "Tamil Nadu", 
-                                                "UP East", "UP West", "West Bengal"
-                                            ].map(c => (
-                                                <option key={c} value={c}>{c}</option>
+                                            <option value="">Select Circle</option>
+                                            {circles.map((c: any) => (
+                                                <option key={c.id} value={c.id}>{c.name}</option>
                                             ))}
                                         </select>
                                     </div>

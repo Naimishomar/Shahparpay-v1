@@ -47,6 +47,28 @@ export const getAepsDepositCommission = (amount) => {
 };
 
 /**
+ * What the retailer actually earned on a transaction.
+ *
+ * `commissions.retailerEarned` is the GROSS commission; the wallet is credited
+ * net of 2% TDS (applyAepsWithdrawalSuccess). Showing the gross figure as
+ * earnings overstates every AEPS withdrawal by that 2%, so anything that
+ * reports earnings has to net it off — the same rule the wallet ledger applies.
+ *
+ * The stored TDS is preferred over recomputing it: the rate is configurable
+ * (AEPS_COMMISSION_TDS_RATE), so a row booked at a different rate must report
+ * what was actually deducted. Rows from before that field existed fall back to
+ * 2%. Cash-deposit commission carries no TDS at all.
+ */
+export const retailerNetCommission = (txn) => {
+  const gross = Number(txn?.commissions?.retailerEarned) || 0;
+  if (!gross) return 0;
+  if (txn?.type === 'AEPS_DEPOSIT') return formatAmount(gross);
+  const stored = txn?.commissions?.retailerTds;
+  const tds = stored === undefined || stored === null ? gross * 0.02 : Number(stored) || 0;
+  return formatAmount(gross - tds);
+};
+
+/**
  * PHASE 1: PRE-FLIGHT LOCK
  * Atomically deducts funds and creates a PROCESSING transaction.
  * Safe from double-spend since it checks balance atomically.

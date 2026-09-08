@@ -25,35 +25,6 @@ const TYPES = [
   { key: 'prepaid', label: 'Prepaid' },
   { key: 'postpaid', label: 'Postpaid' },
   { key: 'dth', label: 'DTH' },
-  { key: 'datacard', label: 'Data card' },
-];
-
-// Plans are priced per telecom circle, so browsing without one returns the wrong
-// tariffs. The backend falls back to Delhi NCR, which is only right for Delhi.
-const CIRCLES = [
-  'Andhra Pradesh',
-  'Assam',
-  'Bihar Jharkhand',
-  'Chennai',
-  'Delhi NCR',
-  'Gujarat',
-  'Haryana',
-  'Himachal Pradesh',
-  'Jammu Kashmir',
-  'Karnataka',
-  'Kerala',
-  'Kolkata',
-  'Madhya Pradesh Chhattisgarh',
-  'Maharashtra Goa',
-  'Mumbai',
-  'North East',
-  'Orissa',
-  'Punjab',
-  'Rajasthan',
-  'Tamil Nadu',
-  'UP East',
-  'UP West',
-  'West Bengal',
 ];
 
 interface Operator {
@@ -62,12 +33,19 @@ interface Operator {
   displayname?: string;
 }
 
+interface Circle {
+  id: string;
+  name: string;
+}
+
 export const RechargeScreen: React.FC = () => {
   const [type, setType] = useState('prepaid');
   const [operator, setOperator] = useState<Operator | null>(null);
   const [showOperators, setShowOperators] = useState(false);
   const [operatorQuery, setOperatorQuery] = useState('');
-  const [circle, setCircle] = useState('Delhi NCR');
+  // A prepaid recharge is routed by circle as well as operator, and the circle is
+  // a provider code rather than a name, so the list has to come from the provider.
+  const [circle, setCircle] = useState<Circle | null>(null);
   const [showCircles, setShowCircles] = useState(false);
   const [planList, setPlanList] = useState<any[]>([]);
   const [number, setNumber] = useState('');
@@ -84,6 +62,8 @@ export const RechargeScreen: React.FC = () => {
     return (await api.getRechargeOperators(type)).data ?? [];
   }, [type]);
 
+  const circles = useAsync<Circle[]>(async () => (await api.getRechargeCircles()).data ?? [], []);
+
   const history = useAsync<any[]>(async () => (await api.getRechargeHistory()).data ?? [], []);
 
   const checkStatus = useAction(async (transactionId: string) => {
@@ -94,12 +74,7 @@ export const RechargeScreen: React.FC = () => {
   const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
 
   const plans = useAction(async () => {
-    const res = await api.browseRechargePlans({
-      mobileNumber: number.trim(),
-      operator: String(operator?.id),
-      operatorName: operator?.name,
-      circle,
-    });
+    const res = await api.browseRechargePlans({ mobileNumber: number.trim() });
     if (!res.success) throw new Error(res.message);
     return res.data;
   });
@@ -108,7 +83,6 @@ export const RechargeScreen: React.FC = () => {
     const res = await api.getDthInfo({
       dthNumber: number.trim(),
       operator: String(operator?.id),
-      operatorName: operator?.name,
     });
     if (!res.success) throw new Error(res.message);
     return Array.isArray(res.data) ? res.data[0] : res.data;
@@ -118,6 +92,7 @@ export const RechargeScreen: React.FC = () => {
     const res = await api.doRecharge({
       [type === 'dth' ? 'dthNumber' : 'mobileNumber']: number.trim(),
       operator: operator?.id,
+      circle: circle?.id,
       amount: Number(amount),
       pin,
       type,
@@ -142,11 +117,18 @@ export const RechargeScreen: React.FC = () => {
     failed.setError(null);
   }, [recharge.error, plans.error, dthInfo.error, checkStatus.error]);
 
-  const minLength = type === 'dth' || type === 'datacard' ? 6 : 10;
+  const minLength = type === 'dth' ? 6 : 10;
   const available = balances.data?.mainBalance ?? 0;
   const overBalance = Number(amount) > available;
   const valid =
-    !!operator && number.trim().length >= minLength && Number(amount) > 0 && !overBalance && pin.length === 4;
+    !!operator &&
+    // Without a circle a prepaid recharge is routed to the wrong lane, so it is
+    // as required as the operator itself.
+    (type !== 'prepaid' || !!circle) &&
+    number.trim().length >= minLength &&
+    Number(amount) > 0 &&
+    !overBalance &&
+    pin.length === 4;
 
   const filteredOperators = useMemo(
     () =>
@@ -264,7 +246,7 @@ export const RechargeScreen: React.FC = () => {
             <>
               <SelectField
                 label="Circle"
-                value={circle}
+                value={circle?.name ?? 'Select circle'}
                 open={showCircles}
                 onPress={() => setShowCircles(!showCircles)}
               />
@@ -275,14 +257,12 @@ export const RechargeScreen: React.FC = () => {
                     nestedScrollEnabled
                     keyboardShouldPersistTaps="handled"
                   >
-                    {CIRCLES.map((c) => (
+                    {(circles.data ?? []).map((c) => (
                       <Pressable
-                        key={c}
+                        key={c.id}
                         onPress={() => {
                           setCircle(c);
                           setShowCircles(false);
-                          // Plans already on screen were priced for the old circle.
-                          setPlanList([]);
                         }}
                         style={({ pressed }) => [
                           styles.pickerItem,
@@ -290,7 +270,7 @@ export const RechargeScreen: React.FC = () => {
                         ]}
                         accessibilityRole="button"
                       >
-                        <Text style={styles.pickerText}>{c}</Text>
+                        <Text style={styles.pickerText}>{c.name}</Text>
                       </Pressable>
                     ))}
                   </ScrollView>

@@ -155,6 +155,7 @@ export const SERVICE_ITEMS: MenuEntry[] = [
 
   { name: 'Recharge', route: 'Recharge', icon: 'cellphone', hint: 'Mobile & DTH', group: 'Payments' },
   { name: 'BBPS', route: 'BBPS', icon: 'receipt', hint: 'Utility bills', group: 'Payments' },
+  { name: 'Collect Payments', route: 'Collect', icon: 'qrcode-scan', hint: 'Payment link & UPI QR', group: 'Payments' },
   { name: 'Fund Request', route: 'FundRequest', icon: 'hand-coin-outline', hint: 'Top up wallet', group: 'Payments' },
 
   { name: 'PAN Card', route: 'PAN', icon: 'card-account-details-outline', hint: 'PSA & applications', group: 'Government' },
@@ -181,7 +182,7 @@ export const REPORT_ITEMS: ReportEntry[] = [
   { name: 'AEPS Report', route: 'AepsReport', icon: 'fingerprint', hint: 'Withdrawals and enquiries', type: 'AEPS' },
   { name: 'DMT Report', route: 'DmtReport', icon: 'bank-transfer', hint: 'Money transfers', type: 'DMT' },
   { name: 'Payout Report', route: 'PayoutReport', icon: 'cash-fast', hint: 'Settlements and payouts' },
-  { name: 'Recharge Report', route: 'RechargeReport', icon: 'cellphone', hint: 'Recharges and bills', type: 'RECHARGE' },
+  { name: 'Recharge Report', route: 'RechargeReport', icon: 'cellphone', hint: 'Recharges and bills', type: 'RECHARGE,BILL_PAYMENT' },
   { name: 'UPI Report', route: 'UpiReport', icon: 'qrcode', hint: 'UPI collections', type: 'WALLET_TOPUP' },
   { name: 'PAN Report', route: 'PanReport', icon: 'card-account-details-outline', hint: 'PAN applications' },
   { name: 'ITR Report', route: 'ItrReport', icon: 'file-document-outline', hint: 'Filings and charges' },
@@ -240,6 +241,7 @@ export const API_ENDPOINTS = {
   dashboard: {
     retailer: '/api/dashboard/retailer',
     recentTransactions: '/api/dashboard/recent-transactions',
+    commissionByDay: '/api/dashboard/commission-by-day',
   },
   aeps: {
     merchantStatus: '/api/aeps/merchant-status',
@@ -273,25 +275,31 @@ export const API_ENDPOINTS = {
     uploadDocument: '/api/settlement/upload-document',
   },
   dmt: {
-    banks: '/api/dmt/banks',
-    remitterQuery: '/api/dmt/remitter/query',
-    remitterEkyc: '/api/dmt/remitter/ekyc',
-    remitterRegister: '/api/dmt/remitter/register',
     beneficiaryFetch: '/api/dmt/beneficiary/fetch',
     beneficiaryAdd: '/api/dmt/beneficiary/add',
+    beneficiaryOtp: '/api/dmt/beneficiary/otp',
+    beneficiaryVerify: '/api/dmt/beneficiary/verify',
     beneficiaryDelete: '/api/dmt/beneficiary/delete',
     transfer: '/api/dmt/transfer',
+    status: '/api/dmt/status', // append /:transactionId
     history: '/api/dmt/history',
   },
   recharge: {
     operators: '/api/recharge/operators', // append /:type
+    circles: '/api/recharge/circles',
+    billCategories: '/api/recharge/bill-categories',
     browsePlan: '/api/recharge/browse-plan',
     dthInfo: '/api/recharge/dth-info',
     fetchBill: '/api/recharge/fetch-bill',
     doRecharge: '/api/recharge/do-recharge',
     history: '/api/recharge/history',
-    balance: '/api/recharge/balance',
     status: '/api/recharge/status', // append /:transid
+  },
+  collect: {
+    order: '/api/collect/order',
+    verify: '/api/collect/verify',
+    qr: '/api/collect/qr',
+    history: '/api/collect/history',
   },
   upi: {
     merchantStatus: '/api/upi/cashout/merchant-status',

@@ -1,5 +1,16 @@
 import Transaction from '../models/transaction.model.js';
 import mongoose from 'mongoose';
+import { retailerNetCommission } from '../utils/wallet.util.js';
+
+/**
+ * Retailers are in India, and "today's earnings" has to mean their today. The
+ * server may well run in UTC, where a 9pm IST sale falls on tomorrow and the
+ * day a retailer is reading reads short.
+ */
+const IST = 'Asia/Kolkata';
+
+/** A refund reverses a sale whose commission was already counted. */
+const REFUND_PREFIX = /^REF(UND)?-/;
 
 export const getRetailerStats = async (req, res) => {
   try {
@@ -61,13 +72,15 @@ export const getRetailerStats = async (req, res) => {
     const graphData = new Array(12).fill(0);
 
     transactions.forEach((txn) => {
-      const isRefund = txn.transactionId && /^REF(UND)?-/.test(String(txn.transactionId));
+      const isRefund = txn.transactionId && REFUND_PREFIX.test(String(txn.transactionId));
       if (txn.status === 'SUCCESS' && !isRefund) {
         if (stats[txn.type] !== undefined) {
           stats[txn.type] += txn.amount;
         }
 
-        stats.TotalCommission += txn.commissions?.retailerEarned || 0;
+        // Net of TDS: retailerEarned is the gross figure, and the wallet is
+        // credited net, so reporting the gross overstates what was earned.
+        stats.TotalCommission += retailerNetCommission(txn);
         totalTransactionsAmount += txn.amount;
 
         // Group graph data
@@ -127,6 +140,7 @@ export const getRetailerStats = async (req, res) => {
       }
     });
 
+    stats.TotalCommission = Math.round(stats.TotalCommission * 100) / 100;
     stats.TotalCustomers = uniqueCustomers.size;
     stats.TotalTransactionsAmount = totalTransactionsAmount;
     stats.graphData = graphData;
@@ -144,6 +158,84 @@ export const getRetailerStats = async (req, res) => {
   }
 };
 
+/**
+ * Commission earned per day, for the home screen's day strip.
+ *
+ * Deliberately not derived from the recent-transactions list: that call is
+ * capped at a row limit and sorted newest first, so a busy retailer's earlier
+ * days silently read zero once the cap is hit. This aggregates every matching
+ * row in the window instead, so the figure cannot be truncated.
+ *
+ * Days are IST days and the amounts are net of TDS, which is what actually
+ * reached the wallet.
+ */
+export const getCommissionByDay = async (req, res) => {
+  try {
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 7, 1), 90);
+
+    // One extra day of slack: the window is cut on the server's clock but
+    // grouped by IST day, and the caller picks the keys it wants.
+    const start = new Date();
+    start.setDate(start.getDate() - days);
+    start.setHours(0, 0, 0, 0);
+
+    const match = {
+      status: 'SUCCESS',
+      createdAt: { $gte: start },
+      transactionId: { $not: REFUND_PREFIX },
+    };
+    if (req.user.role !== 'admin') {
+      match.userId = new mongoose.Types.ObjectId(String(req.user.id));
+    }
+
+    const rows = await Transaction.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: IST } },
+          gross: { $sum: { $ifNull: ['$commissions.retailerEarned', 0] } },
+          // The same netting rule as retailerNetCommission: prefer the TDS that
+          // was actually stored, fall back to 2% for rows predating the field,
+          // and never deduct any from cash-deposit commission.
+          tds: {
+            $sum: {
+              $let: {
+                vars: { gross: { $ifNull: ['$commissions.retailerEarned', 0] } },
+                in: {
+                  $cond: [
+                    { $eq: ['$type', 'AEPS_DEPOSIT'] },
+                    0,
+                    {
+                      $ifNull: [
+                        '$commissions.retailerTds',
+                        { $multiply: ['$$gross', 0.02] },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const byDay = {};
+    for (const row of rows) {
+      byDay[row._id] = {
+        commission: Math.round((row.gross - row.tds) * 100) / 100,
+        count: row.count,
+      };
+    }
+
+    return res.status(200).json({ success: true, data: byDay });
+  } catch (error) {
+    console.error('Commission by day error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
 export const getRecentTransactions = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -156,7 +248,18 @@ export const getRecentTransactions = async (req, res) => {
     }
 
     if (type) {
-      query.type = { $regex: new RegExp('^' + type) };
+      // A report can ask for more than one type: recharges and bill payments are
+      // one screen. Prefixes are kept (AEPS still matches AEPS_WITHDRAWAL), and
+      // each one is escaped — `type` is a query parameter, not something we
+      // control, and it is being compiled into a regular expression.
+      const prefixes = String(type)
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      if (prefixes.length) {
+        query.type = { $regex: new RegExp(`^(${prefixes.join('|')})`) };
+      }
     }
 
     if (startDate && endDate) {

@@ -57,6 +57,9 @@ const EXPECTED = {
   FUND_REQUEST: ['main', +1],
   DIRECT_PAYOUT_REFUND: ['main', +1],
   AEPS_DEPOSIT_REFUND: ['main', +1],
+  // Inflows: the customer paid the retailer, over the gateway or a UPI QR.
+  PG_COLLECTION: ['main', +1],
+  UPI_CASHOUT: ['main', +1],
   FUND_TRANSFER: ['main', -1],
   RECHARGE: ['main', -1],
   BILL_PAYMENT: ['main', -1],
@@ -69,7 +72,7 @@ const EXPECTED = {
   PAN_SERVICE: ['main', -1],
   ITR: ['main', -1],
   GST_REGISTRATION: ['main', -1],
-  UPI_CASHOUT: ['main', -1],
+
   DAILY_AUTH_CHARGE: ['main', -1],
   MERCHANT_ONBOARDING_CHARGE: ['main', -1],
 };

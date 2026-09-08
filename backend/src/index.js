@@ -99,6 +99,7 @@ import panRouter from './routes/pan.route.js';
 import panEsevaRouter from './routes/panEseva.route.js';
 import itrRouter from './routes/itr.route.js';
 import upiRouter from './routes/upi.route.js';
+import collectRouter from './routes/collect.route.js';
 import { checkAgentWallet } from './controllers/itr.controller.js';
 import { startReconciliationWorker } from './workers/reconciliation.worker.js';
 
@@ -117,6 +118,7 @@ app.use('/api/pan', panRouter);
 app.use('/api/pan', panEsevaRouter);
 app.use('/api/itr', itrRouter);
 app.use('/api/upi', upiRouter);
+app.use('/api/collect', collectRouter);
 
 // eSevaTech may call /api/check-agent-wallet at root level by convention
 app.all('/api/check-agent-wallet', checkAgentWallet);

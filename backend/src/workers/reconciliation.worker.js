@@ -11,7 +11,7 @@ import {
 import axios from 'axios';
 import crypto from 'crypto';
 import { generatePaySprintToken } from '../utils/paysprint.util.js';
-import { fetchBharatPaysStatus } from '../utils/bharatpays.util.js';
+import { fetchRechargeStatus } from '../utils/icchhamati.util.js';
 
 /**
  * PaySprint header generator helper
@@ -251,6 +251,11 @@ export const startReconciliationWorker = () => {
           'AEPS_SETTLEMENT',
           'UPI_CASHOUT',
         ];
+
+        // Money that has left our wallet on an outward rail with no status
+        // endpoint behind it. Auto-failing one of these refunds a retailer for a
+        // transfer that may already have landed, so they are never resolved here.
+        const NO_RECONCILER_TYPES = ['DMT', 'PG_COLLECTION'];
         if (AEPS_TYPES.includes(txn.type)) {
           try {
             if (txn.type === 'AEPS_WITHDRAWAL') {
@@ -273,11 +278,21 @@ export const startReconciliationWorker = () => {
 
         if (txn.type === 'DIRECT_PAYOUT') {
           finalStatus = await verifyPayoutStatus(txn);
-        } else if (txn.type === 'RECHARGE' && txn.metadata?.orderId) {
-          // A BharatPays recharge can sit PENDING well past five minutes. Falling
-          // through to the default below would refund the retailer for a recharge
-          // the operator still goes on to deliver, so ask the provider instead.
-          finalStatus = (await fetchBharatPaysStatus(txn.metadata.orderId)).finalStatus;
+        } else if (txn.type === 'RECHARGE' || txn.type === 'BILL_PAYMENT') {
+          // A recharge can sit pending well past five minutes. Falling through to
+          // the default below would refund the retailer for a recharge the
+          // operator still goes on to deliver, so ask the provider instead.
+          finalStatus = (await fetchRechargeStatus(txn.transactionId, txn.metadata?.mode))
+            .finalStatus;
+        } else if (NO_RECONCILER_TYPES.includes(txn.type)) {
+          // The provider publishes no status endpoint for these, and the default
+          // below would auto-FAIL them — refunding a retailer for a transfer that
+          // has already reached the beneficiary, or for a payment the customer
+          // made. They stay PROCESSING until they are settled by hand.
+          console.log(
+            `CRON: Skipping ${txn.transactionId} (${txn.type}) — no reconciler wired yet.`
+          );
+          continue;
         } else {
           // For local-only transactions or unimplemented API checks, default to failed to prevent money lock forever.
           // Ideally, every type should have a verification function.

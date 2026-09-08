@@ -2,53 +2,218 @@ import axios from 'axios';
 import bcrypt from 'bcrypt';
 import { generatePaySprintToken } from '../utils/paysprint.util.js';
 import {
-  bharatPaysGet,
-  fetchBharatPaysStatus,
+  icchhamatiGet,
+  icchhamatiPost,
+  isOk,
   normaliseStatus,
-  paysprintPlanOperator,
-  BHARATPAYS_OPERATORS,
-  BHARATPAYS_TYPES,
-  BHARATPAYS_CATEGORY,
-  cleanProviderMessage,
-  isOperatorForType,
-} from '../utils/bharatpays.util.js';
+  providerMessage,
+  fetchRechargeStatus,
+  makeReferenceId,
+  rechargeTypeCode,
+  isBillType,
+  OPERATOR_CATEGORY,
+  BILLER_CATEGORY,
+} from '../utils/icchhamati.util.js';
 import { lockFundsForTransaction, resolveTransaction } from '../utils/wallet.util.js';
 import Transaction from '../models/transaction.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
 
-const getPaysprintHeaders = () => {
-  return {
-    Token: generatePaySprintToken(),
-    Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-    'Content-Type': 'application/json',
-  };
+/**
+ * Recharge and bill payment, both on Icchhamati.
+ *
+ * Prepaid and DTH are recharges (`type` 1 and 2) and go to /mobile-recharge.
+ * Everything else — postpaid, electricity, gas, water, broadband, FASTag — is a
+ * bill (`type` 3) and goes to /bill-payment, which is the only path that can
+ * fetch a bill before the wallet is debited.
+ */
+
+/**
+ * The operator list a category is drawn from.
+ *
+ * Prepaid, postpaid and DTH have their own operator registry. Every other
+ * service is a BBPS biller and comes out of the biller registry instead, keyed
+ * by the biller category name.
+ */
+const operatorSource = (type) => {
+  const key = String(type || '').toLowerCase();
+  if (OPERATOR_CATEGORY[key]) return { kind: 'operator', category: OPERATOR_CATEGORY[key] };
+  // BILLER_CATEGORY only names the categories our own screens hardcode. Anything
+  // else is passed through as-is, so a category taken straight off
+  // /bill-categories works without this map having to know about it first.
+  return { kind: 'biller', category: BILLER_CATEGORY[key] || String(type || '').trim() || null };
 };
 
-const getPaysprintBase = () =>
-  process.env.PAYSPRINT_BASE_URL || 'https://sit.paysprint.in/service-api/api/v1';
-
 /**
- * Paysprint answers an operational refusal — add-on disabled, nightly
- * maintenance window, bad operator — with a non-2xx status and a message that
- * explains it. Left to axios that throws, the message is lost in a catch and the
- * retailer gets a generic 500, so every call reads the body instead.
+ * Both registries into the one shape the recharge and BBPS screens already
+ * read. `id` carries the provider's operator/biller code, which is what every
+ * later call — fetch bill, pay — sends back to identify the biller.
  */
-const paysprintPost = (url, payload) =>
-  axios.post(url, payload, { headers: getPaysprintHeaders(), validateStatus: () => true });
+const toOperator = (row, type) => ({
+  id: String(row.code ?? row.id ?? ''),
+  name: row.name,
+  displayname: row.name,
+  category: row.category || null,
+  icon: row.biller_icon || row.icon || null,
+  // Whether there is a bill to fetch before paying, which is what the screens
+  // use to decide whether to offer "Fetch Bill". It follows the service, not the
+  // registry the row came from: postpaid mobile is listed with the operators but
+  // is billed like any other utility.
+  viewbill: isBillType(type) ? 'true' : 'false',
+  // The biller's own label for the consumer identifier ("Consumer Number",
+  // "CA Number", "Number"), so the field is named the way the biller names it.
+  label: row.label || null,
+});
+
+export const getOperators = async (req, res) => {
+  try {
+    const { type } = req.params; // 'prepaid', 'dth', 'electricity', ...
+    const { kind, category } = operatorSource(type);
+
+    if (!category) {
+      return res
+        .status(400)
+        .json({ success: false, message: `No operators are available for "${type}".` });
+    }
+
+    const data =
+      kind === 'operator'
+        ? await icchhamatiPost('/api/v2/getOperator', { category })
+        : await icchhamatiPost('/api/v2/billers-by-category', { category });
+
+    if (!isOk(data)) {
+      return res.status(502).json({
+        success: false,
+        message: providerMessage(data, 'The operator list is unavailable right now.'),
+      });
+    }
+
+    const rows = data.operators || data.billers || data.data || [];
+    return res.status(200).json({
+      success: true,
+      data: rows.filter((row) => row.is_active !== false).map((row) => toOperator(row, type)),
+    });
+  } catch (error) {
+    console.error('Fetch Operators Error:', error?.response?.data || error?.message);
+    return res.status(500).json({ success: false, message: 'Failed to fetch operators' });
+  }
+};
 
 /**
- * Mobile and DTH recharges run on BharatPays. Bill payments (electricity, gas,
- * fastag, ...) stay on Paysprint: BharatPays exposes no bill-fetch endpoint, so
- * a BBPS payment there could not show the customer a bill before debiting.
+ * Telecom circles. A prepaid recharge needs one; DTH and bills do not.
  */
-const usesBharatPays = (type) => BHARATPAYS_TYPES.has(String(type || '').toLowerCase());
+export const getCircles = async (req, res) => {
+  try {
+    const data = await icchhamatiGet('/api/v2/getCircles');
+    if (!isOk(data)) {
+      return res.status(502).json({
+        success: false,
+        message: providerMessage(data, 'The circle list is unavailable right now.'),
+      });
+    }
+    const circles = (data.circles || data.data || []).map((row) => ({
+      id: String(row.code ?? row.id ?? ''),
+      name: row.name,
+    }));
+    return res.status(200).json({ success: true, data: circles });
+  } catch (error) {
+    console.error('Fetch Circles Error:', error?.response?.data || error?.message);
+    return res.status(500).json({ success: false, message: 'Failed to fetch circles' });
+  }
+};
 
 /**
- * Plans and DTH info both come from Paysprint's HLR API, which refuses in its
- * own operational wording: the add-on switched off, or its nightly maintenance
- * window. Neither tells a retailer anything useful. What they need to know is
- * that the lookup is down and the amount can still be typed by hand — a
- * recharge itself runs on BharatPays and is unaffected either way.
+ * BBPS bill categories, as the provider publishes them. The BBPS screen keeps
+ * its own tile list, so this is here for a client that would rather render
+ * whatever the provider currently offers than a hardcoded set.
+ */
+export const getBillCategories = async (req, res) => {
+  try {
+    const data = await icchhamatiGet('/api/v2/bill-categories');
+    if (!isOk(data)) {
+      return res.status(502).json({
+        success: false,
+        message: providerMessage(data, 'Bill categories are unavailable right now.'),
+      });
+    }
+    return res.status(200).json({ success: true, data: data.categories || data.data || [] });
+  } catch (error) {
+    console.error('Fetch Bill Categories Error:', error?.response?.data || error?.message);
+    return res.status(500).json({ success: false, message: 'Failed to fetch bill categories' });
+  }
+};
+
+/**
+ * Prepaid plans for a number. The provider derives the operator and circle from
+ * the number itself, so nothing else is sent.
+ *
+ * Plans come back either as a flat array or as an object keyed by plan category
+ * ("TOPUP", "3G/4G", ...). The screens render the grouped form, so a flat list
+ * is put under one heading rather than handled as a second shape everywhere.
+ */
+export const browsePlans = async (req, res) => {
+  try {
+    const { mobileNumber } = req.body;
+    if (!mobileNumber) {
+      return res.status(400).json({ success: false, message: 'Mobile number is required' });
+    }
+
+    const data = await icchhamatiPost('/api/v2/mobile-plan', { number: mobileNumber });
+    if (!isOk(data)) {
+      return res.status(400).json({
+        success: false,
+        message: providerMessage(
+          data,
+          'The plan list is unavailable right now. You can still enter the amount manually.'
+        ),
+        data: null,
+      });
+    }
+
+    const raw = data.data?.plan ?? data.plans ?? data.data ?? {};
+    const normalise = (plan) => ({
+      rs: plan.rs ?? plan.amount ?? plan.price ?? 0,
+      desc: plan.desc ?? plan.description ?? plan.details ?? '',
+      validity: plan.validity ?? 'NA',
+    });
+
+    const grouped = Array.isArray(raw)
+      ? { Plans: raw.map(normalise) }
+      : Object.fromEntries(
+          Object.entries(raw)
+            .filter(([, plans]) => Array.isArray(plans))
+            .map(([category, plans]) => [category, plans.map(normalise)])
+        );
+
+    return res.status(200).json({ success: true, data: grouped });
+  } catch (error) {
+    console.error('Browse Plans Error:', error?.response?.data || error?.message);
+    return res.status(500).json({ success: false, message: 'Failed to browse plans' });
+  }
+};
+
+/**
+ * DTH customer details — subscriber name, balance, next recharge date.
+ *
+ * Icchhamati publishes no endpoint for this: neither their documentation nor
+ * their own retailer portal has one, and their DTH screen simply asks for the
+ * amount. Paysprint's HLR API does have it, and Paysprint is still a live
+ * integration here (AEPS runs on it), so this one lookup stays there. It is a
+ * read: no money moves, and nothing about the recharge itself depends on it.
+ */
+const PAYSPRINT_DTH_OPERATOR = {
+  ATDTH: 'Airteldth',
+  DISHTV: 'Dishtv',
+  SUNDTH: 'Sundirect',
+  TATASKY: 'TataSky',
+  VDDTH: 'Videocon',
+};
+
+/**
+ * Paysprint refuses an HLR lookup in its own operational wording, and whatever
+ * it says reaches a retailer's screen verbatim. Both known refusals read like a
+ * fault in our app rather than a provider being briefly unavailable, and
+ * neither tells a retailer the one thing that helps: the amount can still be
+ * typed by hand, because the recharge itself does not run on this API.
  */
 export const hlrMessage = (raw, fallback) => {
   const text = String(raw || '');
@@ -66,149 +231,6 @@ export const hlrMessage = (raw, fallback) => {
   return raw;
 };
 
-const isBBPS = (type) => !['prepaid', 'postpaid', 'dth', 'datacard'].includes(
-  String(type || '').toLowerCase()
-);
-
-/**
- * BharatPays rejects any reference id that is not purely numeric — "The
- * Reference Id field must contain only numbers" — whatever its documentation
- * says about alphanumeric ids. pan.controller.js already carries the same
- * constraint for PSA. Paysprint keeps the readable PAY prefix it has always had,
- * so existing bill-payment records stay recognisable.
- *
- * Millisecond plus six random digits: transactionId is unique, so two recharges
- * landing in the same millisecond must not also draw the same suffix.
- */
-export const makeReferenceId = (viaBharatPays) => {
-  const suffix = String(Math.floor(Math.random() * 1e6)).padStart(6, '0');
-  return viaBharatPays ? `${Date.now()}${suffix}` : `PAY${Date.now()}${suffix}`;
-};
-
-export const getOperators = async (req, res) => {
-  try {
-    const { type } = req.params; // e.g. 'prepaid', 'dth', 'electricity'
-
-    if (usesBharatPays(type)) {
-      const category = BHARATPAYS_CATEGORY[type.toLowerCase()];
-      const data = BHARATPAYS_OPERATORS.filter((op) => op.category === category).map((op) => ({
-        id: op.id,
-        name: op.name,
-        displayname: op.name,
-        category: op.category,
-      }));
-      return res.status(200).json({ success: true, data });
-    }
-
-    const basePath = isBBPS(type) ? '/service/bill-payment/bill' : '/service/recharge/recharge';
-    const url = `${getPaysprintBase()}${basePath}/getoperator`;
-
-    const payload = isBBPS(type) ? { mode: 'online' } : {};
-    const response = await paysprintPost(url, payload);
-
-    if (response.data && response.data.status) {
-      const allOperators = response.data.data || [];
-
-      // Map frontend type to Paysprint category
-      const typeMap = {
-        prepaid: 'Prepaid',
-        postpaid: 'Postpaid',
-        dth: 'DTH',
-        electricity: 'Electricity',
-        gas: 'GAS',
-        lpg: 'LPG Gas',
-        water: 'Water',
-        broadband: 'Broadband',
-        insurance: 'Insurance',
-        loan: 'Loan Repayment',
-        fastag: 'Fastag',
-        cable: 'Cable TV',
-      };
-
-      const targetCategory = (typeMap[type.toLowerCase()] || 'Prepaid').toLowerCase();
-
-      const filteredOps = allOperators.filter(
-        (op) => op.category && op.category.toLowerCase() === targetCategory
-      );
-
-      const formattedData = filteredOps.map((op) => ({
-        id: op.id,
-        name: op.name,
-        category: op.category,
-        viewbill: op.viewbill,
-        displayname: op.displayname,
-        ad1_name: op.ad1_name || op.ad1_d_name,
-        ad2_name: op.ad2_name || op.ad2_d_name,
-        ad3_name: op.ad3_name || op.ad3_d_name,
-      }));
-
-      return res.status(200).json({ success: true, data: formattedData });
-    } else {
-      return res
-        .status(500)
-        .json({ success: false, message: 'Failed to fetch operators from Paysprint' });
-    }
-  } catch (error) {
-    console.error('Fetch Operators Error:', error?.response?.data || error?.message);
-    return res.status(500).json({ success: false, message: 'Failed to fetch operators' });
-  }
-};
-
-export const browsePlans = async (req, res) => {
-  try {
-    const { mobileNumber, operator, circle = 'Delhi NCR' } = req.body;
-    if (!mobileNumber) {
-      return res.status(400).json({ success: false, message: 'Mobile number is required' });
-    }
-
-    // BharatPays has no plan API, so plans still come from Paysprint. The UI now
-    // sends a BharatPays operator code, which has to be named back to Paysprint's.
-    const opName = paysprintPlanOperator(operator);
-    if (!opName) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Plans are not available for this operator' });
-    }
-
-    const planUrl = `${getPaysprintBase()}/service/recharge/hlrapi/browseplan`;
-    const payload = {
-      circle: circle === 1 ? 'Delhi NCR' : circle, // fallback for legacy circle=1
-      op: opName,
-    };
-
-    const planResponse = await paysprintPost(planUrl, payload);
-
-    if (planResponse.data && planResponse.data.status && planResponse.data.info) {
-      const info = planResponse.data.info;
-      const groupedPlans = {};
-
-      // info contains categories like "TOPUP", "3G/4G", "Romaing", etc.
-      for (const [category, plans] of Object.entries(info)) {
-        if (Array.isArray(plans)) {
-          groupedPlans[category] = plans.map((p) => ({
-            rs: p.rs,
-            desc: p.desc,
-            validity: p.validity,
-          }));
-        }
-      }
-
-      return res.status(200).json({ success: true, data: groupedPlans });
-    } else {
-      const raw = planResponse.data?.message;
-      console.error('Browse Plans rejected by Paysprint:', raw);
-      return res.status(400).json({
-        success: false,
-        message: hlrMessage(raw, 'The plan list') || 'No plans found',
-        data: null,
-      });
-    }
-  } catch (error) {
-    console.error('Browse Plans Error:', error?.response?.data || error?.message);
-    return res.status(500).json({ success: false, message: 'Failed to browse plans' });
-  }
-};
-
 export const fetchDthInfo = async (req, res) => {
   try {
     const { dthNumber, operator } = req.body;
@@ -218,46 +240,51 @@ export const fetchDthInfo = async (req, res) => {
         .json({ success: false, message: 'DTH number and operator are required' });
     }
 
-    // Same as plans: BharatPays has no DTH-info endpoint, so this stays Paysprint.
-    const opName = paysprintPlanOperator(operator);
+    // The UI sends an Icchhamati operator code, which means nothing to
+    // Paysprint. Asking with an unmapped code would look up an unrelated
+    // subscriber, so refuse rather than show the retailer someone else's details.
+    const opName = PAYSPRINT_DTH_OPERATOR[String(operator).toUpperCase()];
     if (!opName) {
       return res
         .status(400)
-        .json({ success: false, message: 'Customer info is not available for this operator' });
+        .json({ success: false, message: 'Customer details are not available for this operator.' });
     }
 
-    const url = `${getPaysprintBase()}/service/recharge/hlrapi/dthinfo`;
+    const baseUrl =
+      process.env.PAYSPRINT_BASE_URL || 'https://sit.paysprint.in/service-api/api/v1';
+    const response = await axios.post(
+      `${baseUrl}/service/recharge/hlrapi/dthinfo`,
+      { RAW_BODY: JSON.stringify({ op: opName, canumber: dthNumber }) },
+      {
+        headers: {
+          Token: generatePaySprintToken(),
+          Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
+          'Content-Type': 'application/json',
+        },
+        validateStatus: () => true,
+        timeout: 30000,
+      }
+    );
 
-    const payload = {
-      RAW_BODY: JSON.stringify({ op: opName, canumber: dthNumber }),
-    };
+    const info = response.data?.info?.[0];
+    if (!response.data?.status || !info) {
+      return res.status(400).json({
+        success: false,
+        message: hlrMessage(response.data?.message, 'Customer details') || 'DTH info not found',
+      });
+    }
 
-    const response = await paysprintPost(url, payload);
-
-    if (
-      response.data &&
-      response.data.status &&
-      response.data.info &&
-      response.data.info.length > 0
-    ) {
-      const info = response.data.info[0];
-      const mappedInfo = {
+    return res.status(200).json({
+      success: true,
+      data: {
         customerName: info.customerName,
         status: info.status,
         balance: info.Balance,
         nextRechargeDate: info.NextRechargeDate,
         monthlyRecharge: info.MonthlyRecharge,
         planName: info.planname,
-      };
-      return res.status(200).json({ success: true, data: mappedInfo });
-    } else {
-      const raw = response.data?.message;
-      console.error('DTH info rejected by Paysprint:', raw);
-      return res.status(400).json({
-        success: false,
-        message: hlrMessage(raw, 'Customer details') || 'DTH info not found',
-      });
-    }
+      },
+    });
   } catch (error) {
     console.error('DTH Info Error:', error?.response?.data || error?.message);
     return res.status(500).json({ success: false, message: 'Failed to fetch DTH info' });
@@ -266,49 +293,53 @@ export const fetchDthInfo = async (req, res) => {
 
 export const fetchBill = async (req, res) => {
   try {
-    const { caNumber, operator, type, ad1, ad2, ad3 } = req.body;
+    const { caNumber, operator, type } = req.body;
     if (!caNumber || !operator) {
       return res
         .status(400)
         .json({ success: false, message: 'CA number (Consumer Number) and operator are required' });
     }
 
-    // These categories are paid through BharatPays, whose operator codes mean
-    // nothing to Paysprint's biller registry. Asking Paysprint to fetch a bill
-    // for BharatPays code 172 would look up an unrelated biller, so refuse
-    // rather than show the retailer someone else's bill.
-    if (usesBharatPays(type)) {
+    // A prepaid or DTH top-up has no bill behind it, and asking the biller
+    // registry for one would look up an unrelated biller by the same code.
+    if (!isBillType(type)) {
       return res.status(400).json({
         success: false,
         message: 'This service is a top-up — there is no bill to fetch. Enter the amount directly.',
       });
     }
 
-    const url = `${getPaysprintBase()}/service/bill-payment/bill/fetchbill`;
+    // The published field docs and the published example disagree on the names
+    // (biller_code/customer_id versus billerId/customerKey). Both are sent;
+    // whichever pair the gateway reads, it gets the same values.
+    const data = await icchhamatiPost('/api/v2/fetch-bill', {
+      biller_code: String(operator),
+      customer_id: String(caNumber),
+      billerId: String(operator),
+      customerKey: String(caNumber),
+    });
 
-    const payload = {
-      operator: Number(operator),
-      canumber: caNumber,
-    };
-    if (ad1) payload.ad1 = ad1;
-    if (ad2) payload.ad2 = ad2;
-    if (ad3) payload.ad3 = ad3;
-
-    const response = await paysprintPost(url, payload);
-
-    if (response.data && response.data.status) {
-      return res.status(200).json({
-        success: true,
-        data: response.data.data,
-        message: 'Bill fetched successfully',
-      });
-    } else {
+    if (!isOk(data)) {
       return res.status(400).json({
         success: false,
-        message:
-          response.data?.message || 'Failed to fetch bill. Please verify the consumer number.',
+        message: providerMessage(
+          data,
+          'Failed to fetch bill. Please verify the consumer number.'
+        ),
       });
     }
+
+    const bill = data.billDetails || data.data || {};
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...bill,
+        amount: bill.amount ?? bill.billAmount ?? bill.due_amount ?? null,
+        customerName: bill.customerName ?? bill.customer_name ?? null,
+        dueDate: bill.dueDate ?? bill.due_date ?? null,
+      },
+      message: 'Bill fetched successfully',
+    });
   } catch (error) {
     console.error('Fetch Bill Error:', error?.response?.data || error?.message);
     return res
@@ -319,8 +350,7 @@ export const fetchBill = async (req, res) => {
 
 export const doRecharge = async (req, res) => {
   try {
-    const { mobileNumber, dthNumber, number, operator, amount, pin, type, ad1, ad2, ad3 } =
-      req.body;
+    const { mobileNumber, dthNumber, number, operator, amount, pin, type, circle } = req.body;
 
     // The wallet to debit comes from the access token, never from the body:
     // a caller must not be able to spend someone else's balance.
@@ -334,30 +364,21 @@ export const doRecharge = async (req, res) => {
         .status(400)
         .json({ success: false, message: 'Number, operator and amount are required.' });
     }
-
-    // The id has to suit whichever provider will receive it, so it cannot be
-    // built before the rail is known.
-    const viaBharatPays = usesBharatPays(type);
-
-    // BharatPays decides who gets paid from the operator code alone, and accepts
-    // codes from every category on the same endpoint. A client holding a stale
-    // operator list would not fail here, it would pay the wrong biller, so
-    // refuse a code this service does not offer before any money moves.
-    if (viaBharatPays && !isOperatorForType(operator, type)) {
-      console.error(`Rejected operator ${operator} for type ${type}: not in this category.`);
-      return res.status(400).json({
-        success: false,
-        message: 'That operator is not available for this service. Pull to refresh the operator list and try again.',
-      });
+    if (totalAmount < 10) {
+      return res.status(400).json({ success: false, message: 'Minimum recharge amount is ₹10.' });
     }
-    const referenceId = makeReferenceId(viaBharatPays);
-    if (viaBharatPays && totalAmount < 10) {
+
+    const typeCode = rechargeTypeCode(type);
+    const bill = isBillType(type);
+
+    // A prepaid recharge is routed by circle as well as operator, so a missing
+    // one would either be refused or routed to the wrong lane.
+    if (typeCode === 1 && !circle) {
       return res
         .status(400)
-        .json({ success: false, message: 'Minimum recharge amount is ₹10.' });
+        .json({ success: false, message: 'Please select the customer circle.' });
     }
 
-    // Verify PIN
     if (!pin) {
       return res.status(400).json({ success: false, message: 'Transaction PIN is required.' });
     }
@@ -370,20 +391,22 @@ export const doRecharge = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Incorrect PIN' });
     }
 
-    // Lock the funds as PROCESSING. A recharge can come back PENDING, and a
-    // PENDING recharge must neither be refunded nor marked successful yet, so
+    const referenceId = makeReferenceId('REC');
+
+    // Lock the funds as PROCESSING. A recharge can come back pending, and a
+    // pending recharge must neither be refunded nor marked successful yet, so
     // the money stays held until the provider gives a final answer.
     try {
       await lockFundsForTransaction(userId, 'MAIN', -totalAmount, {
         transactionId: referenceId,
         userId,
-        type: 'RECHARGE',
+        type: bill ? 'BILL_PAYMENT' : 'RECHARGE',
         amount: totalAmount,
         metadata: {
           caNumber,
           operator,
           mode: type,
-          provider: viaBharatPays ? 'BHARATPAYS' : 'PAYSPRINT',
+          provider: 'ICCHHAMATI',
         },
       });
     } catch (walletError) {
@@ -393,73 +416,43 @@ export const doRecharge = async (req, res) => {
       });
     }
 
-    let providerResponse;
-    let status;
+    // `circle` is the documented field name; the provider's own client sends it
+    // as `circal`. Both are sent — one of them is the one the gateway reads.
+    const payload = {
+      number: String(caNumber),
+      operator: String(operator),
+      amount: Math.round(totalAmount),
+      type: typeCode,
+      transaction_id: referenceId,
+      details: `${bill ? 'Bill payment' : 'Recharge'} for ${caNumber}`,
+      ...(typeCode === 1 ? { circle: String(circle), circal: String(circle) } : {}),
+    };
 
-    if (viaBharatPays) {
-      providerResponse = await bharatPaysGet('/api/recharge_get', {
-        opr_code: Number(operator),
-        mobile: caNumber,
-        amount: Math.round(totalAmount),
-        reference_id: referenceId,
-      });
+    const providerResponse = await icchhamatiPost(
+      bill ? '/api/v2/bill-payment' : '/api/v2/mobile-recharge',
+      payload
+    );
 
-      status =
-        Number(providerResponse?.success) === 1
-          ? normaliseStatus(providerResponse?.data?.status)
-          : 'FAILED';
+    const status = normaliseStatus(providerResponse?.status);
+    const message = providerMessage(
+      providerResponse,
+      status === 'FAILED' ? 'The provider could not complete this transaction.' : ''
+    );
 
-      // The order id is what status checks and the callback key off, so it has
-      // to be persisted before the transaction is resolved either way.
-      await Transaction.findOneAndUpdate(
-        { transactionId: referenceId },
-        {
-          $set: {
-            'metadata.orderId': providerResponse?.data?.order_id || null,
-            'metadata.operatorTxnId': providerResponse?.data?.opr_txn_id || null,
-            'metadata.apiResponse': providerResponse,
-          },
-        }
-      );
-    } else {
-      // Data cards are still a plain recharge, not a bill payment, so the
-      // endpoint is chosen the same way it always was.
-      const bill = isBBPS(type);
-      const payload = {
-        operator: Number(operator),
-        canumber: caNumber,
-        amount: totalAmount,
-        referenceid: referenceId,
-      };
-      if (bill) {
-        payload.latitude = '27.2046';
-        payload.longitude = '77.4977';
-        payload.mode = 'online';
+    await Transaction.findOneAndUpdate(
+      { transactionId: referenceId },
+      {
+        $set: {
+          'metadata.orderId': providerResponse?.data?.orderId || null,
+          'metadata.operatorTxnId': providerResponse?.data?.txnId || null,
+          'metadata.apiResponse': providerResponse,
+        },
       }
-      if (ad1) payload.ad1 = ad1;
-      if (ad2) payload.ad2 = ad2;
-      if (ad3) payload.ad3 = ad3;
-
-      const url = bill
-        ? `${getPaysprintBase()}/service/bill-payment/bill/paybill`
-        : `${getPaysprintBase()}/service/recharge/recharge/dorecharge`;
-      const response = await paysprintPost(url, payload);
-      providerResponse = response.data;
-      status = providerResponse?.status ? 'SUCCESS' : 'FAILED';
-
-      await Transaction.findOneAndUpdate(
-        { transactionId: referenceId },
-        { $set: { 'metadata.apiResponse': providerResponse } }
-      );
-    }
-
-    // BharatPays wraps validation failures in HTML; nothing downstream should
-    // have to know that, least of all the retailer reading the toast.
-    const message = cleanProviderMessage(providerResponse?.message);
+    );
 
     if (status === 'PENDING') {
-      // Left PROCESSING on purpose: the callback or the reconciliation cron
-      // settles it once BharatPays knows the outcome.
+      // Left PROCESSING on purpose: the reconciliation cron settles it once the
+      // provider knows the outcome.
       return res.status(200).json({
         success: true,
         pending: true,
@@ -468,8 +461,7 @@ export const doRecharge = async (req, res) => {
       });
     }
 
-    // resolveTransaction refunds the locked funds when the status is FAILED, and
-    // is a no-op if this transaction was already settled by the callback.
+    // resolveTransaction refunds the locked funds when the status is FAILED.
     await resolveTransaction(referenceId, status, message, 'MAIN');
 
     if (status === 'SUCCESS') {
@@ -483,7 +475,7 @@ export const doRecharge = async (req, res) => {
     return res.status(400).json({
       success: false,
       message: message || 'Recharge failed',
-      data: providerResponse,
+      data: providerResponse?.data || null,
     });
   } catch (error) {
     console.error('Do Recharge Error:', error?.response?.data || error?.message || error);
@@ -507,19 +499,21 @@ export const checkStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Transaction not found' });
     }
 
-    const orderId = txn.metadata?.orderId;
-    if (!orderId) {
+    if (txn.status !== 'PROCESSING') {
       return res.status(200).json({ success: true, data: { status: txn.status } });
     }
 
-    const { finalStatus, data } = await fetchBharatPaysStatus(orderId);
+    const { finalStatus, data } = await fetchRechargeStatus(txn.transactionId, txn.metadata?.mode);
     if (finalStatus !== 'PROCESSING') {
-      await resolveTransaction(txn.transactionId, finalStatus, data?.message || '', 'MAIN');
+      await resolveTransaction(txn.transactionId, finalStatus, providerMessage(data, ''), 'MAIN');
     }
 
     return res.status(200).json({
       success: true,
-      data: { ...(data?.data || {}), status: finalStatus === 'PROCESSING' ? 'PENDING' : finalStatus },
+      data: {
+        ...(data?.data || {}),
+        status: finalStatus === 'PROCESSING' ? 'PENDING' : finalStatus,
+      },
     });
   } catch (error) {
     console.error('Check Status Error:', error?.response?.data || error?.message);
@@ -527,80 +521,18 @@ export const checkStatus = async (req, res) => {
   }
 };
 
-/**
- * BharatPays callback. Fires only when a recharge settles as SUCCESS or FAILED.
- * Unauthenticated by design (the provider posts it), so the shared secret in the
- * Authorization header is the only thing standing between a stranger and the
- * ability to mark recharges settled — reject anything that does not match.
- */
-export const bharatPaysCallback = async (req, res) => {
-  try {
-    const expected = process.env.BHARATPAYS_TOKEN;
-    const supplied = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
-    if (!expected || supplied !== expected) {
-      return res.status(401).json({ success: false, message: 'Unauthorized callback' });
-    }
-
-    const referenceId = req.body?.data?.reference_id;
-    if (!referenceId) {
-      return res.status(400).json({ success: false, message: 'reference_id missing' });
-    }
-
-    const status = normaliseStatus(req.body?.data?.status);
-    if (status === 'PENDING') {
-      // Nothing to settle yet; acknowledge so the provider stops retrying.
-      return res.status(200).json({ success: true, message: 'Acknowledged' });
-    }
-
-    await Transaction.findOneAndUpdate(
-      { transactionId: referenceId },
-      {
-        $set: {
-          'metadata.operatorTxnId': req.body?.data?.opr_txn_id || null,
-          'metadata.callback': req.body,
-        },
-      }
-    );
-
-    // No-op when the recharge was already settled by the API response or the cron.
-    await resolveTransaction(referenceId, status, req.body?.message || '', 'MAIN');
-
-    return res.status(200).json({ success: true, message: 'Acknowledged' });
-  } catch (error) {
-    console.error('BharatPays Callback Error:', error?.message || error);
-    return res.status(500).json({ success: false, message: 'Callback handling failed' });
-  }
-};
-
 export const getHistory = async (req, res) => {
   try {
     // Scoped to the caller: this used to return every user's transactions.
-    const history = await Transaction.find({ userId: req.user.id, type: 'RECHARGE' })
+    const history = await Transaction.find({
+      userId: req.user.id,
+      type: { $in: ['RECHARGE', 'BILL_PAYMENT'] },
+    })
       .sort({ createdAt: -1 })
       .limit(100);
     return res.status(200).json({ success: true, data: history });
   } catch (error) {
     console.error('Get History Error:', error);
     return res.status(500).json({ success: false, message: 'Failed to fetch history' });
-  }
-};
-
-export const checkBalance = async (req, res) => {
-  try {
-    const data = await bharatPaysGet('/api/balance_get');
-    if (Number(data?.success) !== 1) {
-      return res
-        .status(502)
-        .json({ success: false, message: data?.message || 'Failed to fetch provider balance' });
-    }
-    return res.status(200).json({
-      success: true,
-      balance: data.data?.wallet_balance ?? 'NA',
-      data: data.data,
-      message: 'BharatPays wallet balance',
-    });
-  } catch (error) {
-    console.error('Check Balance Error:', error?.message || error);
-    return res.status(500).json({ success: false, message: 'Failed to check balance' });
   }
 };

@@ -82,7 +82,7 @@ export const DmtReport: React.FC = () => (
 
 export const RechargeReport: React.FC = () => (
   <TransactionReport
-    fetcher={byType('RECHARGE')}
+    fetcher={byType('RECHARGE,BILL_PAYMENT')}
     searchFields={txnSearch}
     titleOf={(i) => i?.metadata?.caNumber ?? 'Recharge'}
     subtitleOf={(i) => i?.metadata?.mode ?? i?.transactionId ?? ''}

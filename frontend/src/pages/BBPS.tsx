@@ -1,33 +1,38 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Zap, Flame, Shield, CreditCard, Droplet, Smartphone, XCircle, ReceiptText, Car, Play } from "lucide-react";
+import { Zap, Flame, Shield, CreditCard, Droplet, Smartphone, XCircle, ReceiptText, Car, Wifi, Tv, Building2 } from "lucide-react";
 import axios from "axios";
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
 import { toast } from "sonner";
 
-const bbpsServices = [
-    { id: "electricity", name: "Ebill", icon: Zap, color: "text-yellow-500", border: "border-yellow-500/20" },
-    { id: "fastag", name: "FASTag", icon: Car, color: "text-emerald-500", border: "border-emerald-500/20" },
-    { id: "gas", name: "Gas", icon: Flame, color: "text-orange-500", border: "border-orange-500/20" },
-    { id: "googleplay", name: "Play", icon: Play, color: "text-green-500", border: "border-green-500/20" },
-    { id: "insurance", name: "Ins", icon: Shield, color: "text-red-400", border: "border-red-400/20" },
-    { id: "loan", name: "Loan", icon: CreditCard, color: "text-blue-500", border: "border-blue-500/20" },
-    { id: "lpg", name: "Lpg", icon: Flame, color: "text-red-500", border: "border-red-500/20" },
-    { id: "postpaid", name: "Postpaid", icon: Smartphone, color: "text-primary", border: "border-primary/20" },
-    { id: "water", name: "Water", icon: Droplet, color: "text-cyan-400", border: "border-cyan-400/20" },
+/**
+ * The tiles are whatever the provider currently bills for, not a list of our
+ * own: a category we invent has no biller registry behind it, and a category
+ * they add would be invisible until someone edited this file. Only the look is
+ * decided here, matched on the category name with a plain fallback.
+ */
+const CATEGORY_STYLE: { match: RegExp; icon: any; color: string; border: string }[] = [
+    { match: /electric/i, icon: Zap, color: "text-yellow-500", border: "border-yellow-500/20" },
+    { match: /fastag/i, icon: Car, color: "text-emerald-500", border: "border-emerald-500/20" },
+    { match: /lpg/i, icon: Flame, color: "text-red-500", border: "border-red-500/20" },
+    { match: /gas/i, icon: Flame, color: "text-orange-500", border: "border-orange-500/20" },
+    { match: /water/i, icon: Droplet, color: "text-cyan-400", border: "border-cyan-400/20" },
+    { match: /insur/i, icon: Shield, color: "text-red-400", border: "border-red-400/20" },
+    { match: /loan|emi|credit/i, icon: CreditCard, color: "text-blue-500", border: "border-blue-500/20" },
+    { match: /broadband|internet|wifi/i, icon: Wifi, color: "text-sky-400", border: "border-sky-400/20" },
+    { match: /dth|cable|tv/i, icon: Tv, color: "text-violet-400", border: "border-violet-400/20" },
+    { match: /postpaid|mobile|landline/i, icon: Smartphone, color: "text-primary", border: "border-primary/20" },
+    { match: /municipal|tax|housing/i, icon: Building2, color: "text-amber-500", border: "border-amber-500/20" },
 ];
 
-/**
- * Paid through BharatPays as top-ups rather than through Paysprint as bills:
- * there is nothing to fetch before paying, and their operator codes mean nothing
- * to Paysprint's biller registry. Postpaid is on the same rail, so its bill
- * fetch has to go too. Keep in step with BHARATPAYS_TYPES on the backend.
- */
-const TOP_UP_ONLY = new Set(["fastag", "googleplay", "postpaid"]);
+const styleFor = (name: string) =>
+    CATEGORY_STYLE.find((s) => s.match.test(name)) ||
+    { icon: ReceiptText, color: "text-muted-foreground", border: "border-border" };
 
 const BBPS = () => {
+    const [bbpsServices, setBbpsServices] = useState<any[]>([]);
     const [selectedService, setSelectedService] = useState<any>(null);
     const [operators, setOperators] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -37,10 +42,6 @@ const BBPS = () => {
     const [amount, setAmount] = useState("");
     const [pin, setPin] = useState("");
     
-    const [ad1, setAd1] = useState("");
-    const [ad2, setAd2] = useState("");
-    const [ad3, setAd3] = useState("");
-
     const [fetchedBill, setFetchedBill] = useState<any>(null);
     const [fetchingBill, setFetchingBill] = useState(false);
 
@@ -48,6 +49,35 @@ const BBPS = () => {
 
     const [showReceiptModal, setShowReceiptModal] = useState(false);
     const [receiptData, setReceiptData] = useState<any>(null);
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/bill-categories`);
+                if (!res.data.success) return;
+                const fromProvider = (res.data.data || []).map((cat: any) => {
+                    // The category name is what the biller registry is keyed by, so it
+                    // is also the id every later call sends back.
+                    const id = cat.category || cat.name || cat.code;
+                    return { id, name: cat.name || id, ...styleFor(String(id)) };
+                });
+                // Postpaid mobile is billed like any other utility but is listed
+                // with the telecom operators rather than the bill categories, so
+                // it would otherwise have no tile anywhere.
+                setBbpsServices([
+                    { id: "postpaid", name: "Postpaid", ...styleFor("postpaid") },
+                    ...fromProvider,
+                ]);
+            } catch (error) {
+                console.error("Failed to fetch bill categories", error);
+            }
+        };
+        fetchCategories();
+    }, []);
+
+    const selectedOperator = operators.find(
+        (op: any) => op.id.toString() === operatorId.toString()
+    );
 
     const fetchOperators = async (type: string) => {
         try {
@@ -68,9 +98,6 @@ const BBPS = () => {
         setConsumerNumber("");
         setAmount("");
         setPin("");
-        setAd1("");
-        setAd2("");
-        setAd3("");
         setFetchedBill(null);
         fetchOperators(service.id);
     };
@@ -86,10 +113,7 @@ const BBPS = () => {
             const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/fetch-bill`, {
                 operator: operatorId,
                 caNumber: consumerNumber,
-                type: selectedService?.id,
-                ad1: ad1 || undefined,
-                ad2: ad2 || undefined,
-                ad3: ad3 || undefined
+                type: selectedService?.id
             });
 
             if (response.data.success) {
@@ -122,11 +146,7 @@ const BBPS = () => {
                 number: consumerNumber,
                 operator: operatorId,
                 amount: amount,
-                pin: pin,
-                circle: 1,
-                ad1: ad1 || undefined,
-                ad2: ad2 || undefined,
-                ad3: ad3 || undefined
+                pin: pin
             });
 
             if (response.data.success) {
@@ -268,71 +288,19 @@ const BBPS = () => {
 
                                 <div className="space-y-1.5 mt-4">
                                     <label className="text-sm font-medium text-foreground">
-                                        {selectedService?.id === "fastag"
-                                            ? "Vehicle Number"
-                                            : selectedService?.id === "googleplay"
-                                                ? "Mobile Number"
-                                                : operators.find((op: any) => op.id.toString() === operatorId.toString())?.displayname || "Consumer / Account Number"}
+                                        {selectedOperator?.label || "Consumer / Account Number"}
                                     </label>
                                     <input 
                                         type="text"
                                         className="w-full bg-background border border-border rounded-xl p-3.5 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                                        placeholder={selectedService?.id === "fastag" ? "e.g. MH12AB1234" : "Enter number"}
+                                        placeholder={selectedOperator?.label ? `Enter ${selectedOperator.label}` : "Enter number"}
                                         value={consumerNumber}
                                         onChange={(e) => setConsumerNumber(e.target.value)}
                                         readOnly={!!fetchedBill}
                                     />
                                 </div>
 
-                                {operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad1_name && (
-                                    <div className="space-y-1.5 mt-4">
-                                        <label className="text-sm font-medium text-foreground">
-                                            {operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad1_name}
-                                        </label>
-                                        <input 
-                                            type="text"
-                                            className="w-full bg-background border border-border rounded-xl p-3.5 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                                            placeholder={`Enter ${operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad1_name}`}
-                                            value={ad1}
-                                            onChange={(e) => setAd1(e.target.value)}
-                                            readOnly={!!fetchedBill}
-                                        />
-                                    </div>
-                                )}
-
-                                {operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad2_name && (
-                                    <div className="space-y-1.5 mt-4">
-                                        <label className="text-sm font-medium text-foreground">
-                                            {operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad2_name}
-                                        </label>
-                                        <input 
-                                            type="text"
-                                            className="w-full bg-background border border-border rounded-xl p-3.5 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                                            placeholder={`Enter ${operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad2_name}`}
-                                            value={ad2}
-                                            onChange={(e) => setAd2(e.target.value)}
-                                            readOnly={!!fetchedBill}
-                                        />
-                                    </div>
-                                )}
-
-                                {operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad3_name && (
-                                    <div className="space-y-1.5 mt-4">
-                                        <label className="text-sm font-medium text-foreground">
-                                            {operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad3_name}
-                                        </label>
-                                        <input 
-                                            type="text"
-                                            className="w-full bg-background border border-border rounded-xl p-3.5 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                                            placeholder={`Enter ${operators.find((op: any) => op.id.toString() === operatorId.toString())?.ad3_name}`}
-                                            value={ad3}
-                                            onChange={(e) => setAd3(e.target.value)}
-                                            readOnly={!!fetchedBill}
-                                        />
-                                    </div>
-                                )}
-
-                                {!fetchedBill && !TOP_UP_ONLY.has(selectedService?.id) ? (
+                                {!fetchedBill && selectedOperator?.viewbill === "true" ? (
                                     <button 
                                         onClick={handleFetchBill}
                                         disabled={fetchingBill}
@@ -393,7 +361,7 @@ const BBPS = () => {
                                                     Processing...
                                                 </div>
                                             ) : (
-                                                TOP_UP_ONLY.has(selectedService?.id) ? "Pay Securely" : "Pay Bill Securely"
+                                                selectedOperator?.viewbill === "true" ? "Pay Bill Securely" : "Pay Securely"
                                             )}
                                         </button>
                                         

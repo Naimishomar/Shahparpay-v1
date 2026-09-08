@@ -132,6 +132,15 @@ const retailerSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // The virtual account behind this retailer's collection QR. Standing, not
+    // per-payment, so it is kept rather than regenerated on every visit.
+    collectionQr: {
+      virtualAccountId: { type: String, default: null },
+      upiHandle: { type: String, default: null },
+      accountNumber: { type: String, default: null },
+      ifsc: { type: String, default: null },
+      generatedAt: { type: Date, default: null },
+    },
   },
   { timestamps: true }
 );

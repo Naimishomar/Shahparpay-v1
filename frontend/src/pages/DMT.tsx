@@ -1,254 +1,170 @@
-import { useState, useEffect } from 'react';
-import { Search, UserPlus, Send, Plus, CreditCard, Lock, CheckCircle2, X, Trash, Fingerprint, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { Search, UserPlus, Send, Plus, CreditCard, Lock, CheckCircle2, X, Trash, ShieldCheck, Clock } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
-import { captureBiometric, DEVICE_LABELS } from '../utils/rdService';
-import type { DeviceBrand } from '../utils/rdService';
 
+/**
+ * Domestic money transfer.
+ *
+ * There is no remitter to register on this rail: a beneficiary carries the
+ * sender's mobile number itself and is activated by an OTP sent to that number.
+ * Only a verified beneficiary can be paid, so the OTP step is part of adding
+ * one rather than a separate screen.
+ */
 const DMT = () => {
     const { token } = useAuth();
-    const [selectedDevice, setSelectedDevice] = useState<DeviceBrand>('mantra');
-    
-    // States
+
     const [mobile, setMobile] = useState('');
-    const [remitter, setRemitter] = useState<any>(null);
+    // The sender the list below belongs to. Set once the mobile is searched, so
+    // typing a new number does not silently repoint an open transfer.
+    const [sender, setSender] = useState('');
     const [beneficiaries, setBeneficiaries] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
-    
-    // Registration States
-    const [showEkycModal, setShowEkycModal] = useState(false);
-    const [aadhaar, setAadhaar] = useState('');
-    const [ekycPidData, setEkycPidData] = useState('');
-    const [ekycId, setEkycId] = useState('');
-    
-    const [showRegister, setShowRegister] = useState(false);
-    const [regData, setRegData] = useState({ firstName: '', lastName: '', pincode: '' });
-    const [otp, setOtp] = useState('');
-    const [stateResp, setStateResp] = useState('');
 
-    // Beneficiary States
-    const [beneData, setBeneData] = useState({ bankid: '', benename: '', beneaccount: '', ifsc: '', pincode: '' });
-    const [banks, setBanks] = useState<any[]>([]);
-    
-    const [successTxn, setSuccessTxn] = useState<any>(null);
+    const [showAddBene, setShowAddBene] = useState(false);
+    const [beneData, setBeneData] = useState({ benename: '', beneaccount: '', confirmAccount: '', ifsc: '' });
+
+    // The beneficiary an OTP is currently being collected for, and what that OTP
+    // is meant to do — activating a new one, or authorising a deletion.
+    const [otpFor, setOtpFor] = useState<{ bene: any; action: 'verify' | 'delete' } | null>(null);
+    const [otp, setOtp] = useState('');
+
     const [transferBene, setTransferBene] = useState<any>(null);
     const [amount, setAmount] = useState('');
+    const [transferMode, setTransferMode] = useState('IMPS');
     const [pin, setPin] = useState('');
-    const [showAddBene, setShowAddBene] = useState(false);
+    const [successTxn, setSuccessTxn] = useState<any>(null);
 
-    const getHeaders = () => ({ headers: { 'Authorization': `Bearer ${token}` } });
+    const api = `${import.meta.env.VITE_BACKEND_URL}/api/dmt`;
+    const getHeaders = () => ({ headers: { Authorization: `Bearer ${token}` } });
 
-    // 1. Search Remitter
-    const handleSearch = async () => {
-        if (!mobile || mobile.length < 10) return toast.error("Enter valid 10-digit mobile number");
-        setLoading(true);
-        try {
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/dmt/remitter/query`, { mobile }, getHeaders());
-            const paysprintData = res.data.data;
-
-            if (res.data.success && paysprintData?.status) {
-                setRemitter(paysprintData.data);
-                toast.success("Remitter found");
-                fetchBeneficiaries(mobile);
-            } else if (paysprintData && (paysprintData.response_code == 0 || paysprintData.response_code === "0")) {
-                toast.info("Remitter not found. Aadhaar E-KYC is mandated by RBI.");
-                setShowEkycModal(true);
-            } else {
-                toast.error(paysprintData?.message || "Failed to query remitter");
-            }
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || "Failed to query remitter");
-        }
-        setLoading(false);
-    };
-
-    // 1.5. Remitter E-KYC
-    const handleCaptureAndEkyc = async () => {
-        if (aadhaar.length !== 12) return toast.error("Enter valid 12-digit Aadhaar");
-        setLoading(true);
-        try {
-            // WADH is intentionally NOT sent for the DMT remitter E-KYC capture — including it
-            // causes "WADH validation failed in RD(WW)" (see PaySprint docs / original working flow).
-            const { pidData: capturedData } = await captureBiometric({ device: selectedDevice });
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/dmt/remitter/ekyc`, {
-                mobile,
-                aadhaar_number: aadhaar,
-                pidData: capturedData
-            }, getHeaders());
-
-            if (res.data.success && res.data.data?.status) {
-                toast.success("E-KYC successful! OTP sent to mobile.");
-                setEkycId(res.data.data?.ekyc_id || res.data.data?.data?.ekyc_id || '');
-                setStateResp(res.data.data?.stateresp || res.data.data?.data?.stateresp || '');
-                setEkycPidData(capturedData);
-                setShowEkycModal(false);
-                setShowRegister(true);
-            } else {
-                toast.error(res.data.data?.message || "E-KYC failed");
-            }
-        } catch (error: any) {
-            const errMsg = error?.message || error?.response?.data?.message || "E-KYC failed";
-            toast.error(errMsg);
-        }
-        setLoading(false);
-    };
-
-
-    // 2. Unified Register Remitter
-    const handleRegister = async () => {
-        if (!regData.firstName || !regData.lastName || !regData.pincode || !otp) return toast.error("All fields including OTP are required");
-        setLoading(true);
-        try {
-            const payload = {
-                mobile,
-                ...regData,
-                aadhaar,
-                pidData: ekycPidData,
-                ekyc_id: ekycId,
-                otp,
-                stateresp: stateResp
-            };
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/dmt/remitter/register`, payload, getHeaders());
-            const paysprintData = res.data.data;
-
-            if (res.data.success && paysprintData?.status) {
-                toast.success("Remitter registered successfully!");
-                setShowRegister(false);
-                setRemitter({ mobile, fname: regData.firstName, lname: regData.lastName });
-                fetchBeneficiaries(mobile);
-            } else {
-                toast.error(paysprintData?.message || "Failed to register remitter");
-            }
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || "Failed to register remitter");
-        }
-        setLoading(false);
-    };
-
-
-
-    // 4. Fetch Beneficiaries
     const fetchBeneficiaries = async (mob: string) => {
         try {
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/dmt/beneficiary/fetch`, { mobile: mob }, getHeaders());
-            const paysprintData = res.data.data;
-            if (res.data.success && paysprintData?.status && paysprintData?.data) {
-                setBeneficiaries(paysprintData.data);
-            } else {
-                setBeneficiaries([]);
-            }
+            const res = await axios.post(`${api}/beneficiary/fetch`, { mobile: mob }, getHeaders());
+            setBeneficiaries(res.data.success ? res.data.data || [] : []);
+            return res.data.success;
         } catch (error: any) {
-            console.error(error);
-            toast.error(error.response?.data?.message || "Failed to fetch beneficiaries");
+            setBeneficiaries([]);
+            toast.error(error.response?.data?.message || 'Failed to fetch beneficiaries');
+            return false;
         }
     };
 
-    useEffect(() => {
-        const fetchBanks = async () => {
-            try {
-                const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/dmt/banks`, {}, getHeaders());
-                if (res.data.success && res.data.data?.data) {
-                    setBanks(res.data.data.data);
-                } else {
-                    setBanks([]);
-                    toast.error("Failed to load bank list");
-                }
-            } catch (error) {
-                console.error("Failed to fetch banks", error);
-                setBanks([]);
-                toast.error("Failed to load bank list");
-            }
-        };
-        if (token) fetchBanks();
-    }, [token]);
+    const handleSearch = async () => {
+        if (mobile.length !== 10) return toast.error('Enter valid 10-digit mobile number');
+        setLoading(true);
+        const ok = await fetchBeneficiaries(mobile);
+        if (ok) setSender(mobile);
+        setLoading(false);
+    };
 
-    // 5. Add Beneficiary
     const handleAddBeneficiary = async () => {
-        if (!beneData.bankid || !beneData.benename || !beneData.beneaccount || !beneData.ifsc || !beneData.pincode) {
-            toast.error("Please fill all beneficiary details");
-            return;
-        }
+        const { benename, beneaccount, confirmAccount, ifsc } = beneData;
+        if (!benename || !beneaccount || !ifsc) return toast.error('Please fill all beneficiary details');
+        // Caught here rather than at the bank: a typo in an account number sends
+        // the money to a real stranger, and no refund follows.
+        if (beneaccount !== confirmAccount) return toast.error('Account numbers do not match');
+        if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) return toast.error('Enter a valid IFSC code');
 
         setLoading(true);
         try {
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/dmt/beneficiary/add`, {
-                mobile,
-                ...beneData
-            }, { headers: { Authorization: `Bearer ${token}` } });
-
-            if (res.data.success && res.data.data?.status) {
-                toast.success("Beneficiary added successfully");
+            const res = await axios.post(`${api}/beneficiary/add`, { mobile: sender, benename, beneaccount, ifsc }, getHeaders());
+            if (res.data.success) {
+                toast.success(res.data.message || 'Beneficiary added');
                 setShowAddBene(false);
-                fetchBeneficiaries(mobile); // Refresh list
+                setBeneData({ benename: '', beneaccount: '', confirmAccount: '', ifsc: '' });
+                await fetchBeneficiaries(sender);
+                // A beneficiary is not payable until it is verified, so the OTP is
+                // requested straight away rather than left for the retailer to find.
+                if (res.data.data?.id) requestOtp({ ...res.data.data }, 'verify');
             } else {
-                toast.error(res.data.data?.message || res.data.message || "Failed to add beneficiary");
+                toast.error(res.data.message || 'Failed to add beneficiary');
             }
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Failed to add beneficiary");
+            toast.error(error.response?.data?.message || 'Failed to add beneficiary');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleDeleteBeneficiary = async (beneid: string) => {
-        if (!window.confirm("Are you sure you want to delete this beneficiary?")) return;
-        
+    const requestOtp = async (bene: any, action: 'verify' | 'delete') => {
+        setOtp('');
+        setOtpFor({ bene, action });
+        try {
+            const res = await axios.post(`${api}/beneficiary/otp`, { beneficiary_id: bene.id }, getHeaders());
+            if (res.data.success) toast.success(res.data.message || 'OTP sent');
+            else toast.error(res.data.message || 'Failed to send OTP');
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to send OTP');
+        }
+    };
+
+    const handleOtpSubmit = async () => {
+        if (!otpFor || otp.length !== 6) return toast.error('Enter the 6-digit OTP');
+        const { bene, action } = otpFor;
         setLoading(true);
         try {
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/dmt/beneficiary/delete`, {
-                mobile,
-                beneid
-            }, { headers: { Authorization: `Bearer ${token}` } });
-
-            if (res.data.success && res.data.data?.status) {
-                toast.success("Beneficiary deleted successfully");
-                fetchBeneficiaries(mobile); // Refresh list
+            const path = action === 'verify' ? 'beneficiary/verify' : 'beneficiary/delete';
+            const res = await axios.post(`${api}/${path}`, { beneficiary_id: bene.id, otp }, getHeaders());
+            if (res.data.success) {
+                toast.success(res.data.message || (action === 'verify' ? 'Beneficiary verified' : 'Beneficiary deleted'));
+                setOtpFor(null);
+                setOtp('');
+                await fetchBeneficiaries(sender);
             } else {
-                toast.error(res.data.data?.message || res.data.message || "Failed to delete beneficiary");
+                toast.error(res.data.message || 'That OTP was not accepted');
             }
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Failed to delete beneficiary");
+            toast.error(error.response?.data?.message || 'That OTP was not accepted');
         } finally {
             setLoading(false);
         }
     };
 
-    // 6. Transfer Fund
     const handleTransfer = async () => {
-        if (!amount || !pin) return toast.error("Enter amount and PIN");
+        if (!amount || pin.length !== 4) return toast.error('Enter amount and 4-digit PIN');
         setLoading(true);
         try {
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/dmt/transfer`, {
-                mobile,
-                beneid: transferBene.beneid,
-                beneaccount: transferBene.accno,
+            const res = await axios.post(`${api}/transfer`, {
+                mobile: sender,
+                beneficiary_id: transferBene.id,
+                beneaccount: transferBene.account,
                 ifsc: transferBene.ifsc,
                 amount: Number(amount),
-                pin
+                transfer_mode: transferMode,
+                pin,
             }, getHeaders());
 
             if (res.data.success) {
-                toast.success("Transfer successful!");
-                setSuccessTxn(res.data.transaction);
+                // A transfer is accepted before the beneficiary bank confirms it, so
+                // the receipt must not claim it landed while it is still pending.
+                setSuccessTxn({
+                    ...res.data.data,
+                    amount: Number(amount),
+                    beneficiaryName: transferBene.name,
+                    beneficiaryAccount: transferBene.account,
+                    pending: !!res.data.pending,
+                    message: res.data.message,
+                });
                 setTransferBene(null);
                 setAmount('');
                 setPin('');
                 window.dispatchEvent(new Event('wallet-updated'));
             } else {
-                toast.error(res.data.message || "Transfer failed");
+                toast.error(res.data.message || 'Transfer failed');
             }
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Transfer failed");
+            toast.error(error.response?.data?.message || 'Transfer failed');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     return (
         <div className="min-h-screen bg-background p-4 lg:p-8">
             <div className="max-w-6xl mx-auto space-y-6">
-                
-                {/* Header Section */}
+
                 <div className="flex flex-col gap-2">
                     <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
                         <Send className="w-8 h-8 text-primary" />
@@ -257,14 +173,13 @@ const DMT = () => {
                     <p className="text-muted-foreground">Instantly transfer funds to any bank account in India.</p>
                 </div>
 
-                {/* Main Content Area */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    
-                    {/* Left Column: Remitter Search */}
+
+                    {/* Left: sender */}
                     <div className="lg:col-span-1 space-y-6">
                         <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
-                            <h2 className="text-xl font-bold text-foreground mb-4">Remitter Details</h2>
-                            
+                            <h2 className="text-xl font-bold text-foreground mb-4">Sender Details</h2>
+
                             <div className="space-y-4">
                                 <div>
                                     <label className="text-sm font-medium text-foreground mb-1.5 block">Mobile Number</label>
@@ -275,14 +190,7 @@ const DMT = () => {
                                         <input
                                             type="text"
                                             value={mobile}
-                                            onChange={(e) => {
-                                                const val = e.target.value.replace(/\D/g, '');
-                                                if (val.length > 10) {
-                                                    toast.error("Mobile number cannot exceed 10 digits");
-                                                    return;
-                                                }
-                                                setMobile(val);
-                                            }}
+                                            onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
                                             placeholder="Enter 10-digit number"
                                             className="w-full pl-12 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
                                         />
@@ -294,38 +202,33 @@ const DMT = () => {
                                     className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
                                     <Search className="w-4 h-4" />
-                                    {loading ? 'Searching...' : 'Search Remitter'}
+                                    {loading ? 'Searching...' : 'Find Beneficiaries'}
                                 </button>
                             </div>
 
-                            {/* Found Remitter Info */}
-                            {remitter && !showRegister && !showEkycModal && (
+                            {sender && (
                                 <div className="mt-6 p-4 bg-primary/5 border border-primary/10 rounded-xl">
-                                    <div className="flex items-center gap-3 mb-2">
+                                    <div className="flex items-center gap-3">
                                         <div className="p-2 bg-primary/10 rounded-full">
                                             <UserPlus className="w-5 h-5 text-primary" />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-medium text-foreground">{remitter.fname} {remitter.lname}</p>
-                                            <p className="text-xs text-muted-foreground">+91 {mobile}</p>
+                                            <p className="text-sm font-medium text-foreground">Sending as +91 {sender}</p>
+                                            <p className="text-xs text-muted-foreground">{beneficiaries.length} saved beneficiar{beneficiaries.length === 1 ? 'y' : 'ies'}</p>
                                         </div>
-                                    </div>
-                                    <div className="flex justify-between items-center mt-3 pt-3 border-t border-primary/10">
-                                        <span className="text-xs text-muted-foreground">Monthly Limit</span>
-                                        <span className="text-sm font-bold text-primary dark:text-white">₹ {remitter.limit || 25000}</span>
                                     </div>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Right Column: Beneficiaries & Transfer */}
+                    {/* Right: beneficiaries */}
                     <div className="lg:col-span-2">
-                        {remitter && !showRegister && !showEkycModal ? (
+                        {sender ? (
                             <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm min-h-[400px]">
                                 <div className="flex items-center justify-between mb-6">
                                     <h2 className="text-xl font-bold text-foreground">Saved Beneficiaries</h2>
-                                    <button 
+                                    <button
                                         onClick={() => setShowAddBene(true)}
                                         className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl text-sm font-medium transition-colors"
                                     >
@@ -336,16 +239,16 @@ const DMT = () => {
 
                                 {beneficiaries.length > 0 ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {beneficiaries.map((bene, idx) => (
-                                            <div key={idx} className="p-4 rounded-xl border border-border/50 bg-background/50 hover:border-primary/30 hover:bg-primary/5 transition-all group">
+                                        {beneficiaries.map((bene) => (
+                                            <div key={bene.id} className="p-4 rounded-xl border border-border/50 bg-background/50 hover:border-primary/30 hover:bg-primary/5 transition-all group">
                                                 <div className="flex justify-between items-start mb-3">
                                                     <div>
                                                         <h3 className="font-bold text-foreground">{bene.name}</h3>
-                                                        <p className="text-xs text-muted-foreground">{bene.bankname}</p>
+                                                        <p className="text-xs text-muted-foreground">{bene.bank || 'Bank'} {bene.branch ? `· ${bene.branch}` : ''}</p>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        <button 
-                                                            onClick={(e) => { e.stopPropagation(); handleDeleteBeneficiary(bene.beneid); }}
+                                                        <button
+                                                            onClick={() => requestOtp(bene, 'delete')}
                                                             className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors"
                                                             title="Delete Beneficiary"
                                                         >
@@ -357,15 +260,26 @@ const DMT = () => {
                                                     </div>
                                                 </div>
                                                 <div className="space-y-1 mb-4">
-                                                    <p className="text-sm font-medium text-foreground">{bene.accno}</p>
+                                                    <p className="text-sm font-medium text-foreground">{bene.account}</p>
                                                     <p className="text-xs text-muted-foreground uppercase">{bene.ifsc}</p>
                                                 </div>
-                                                <button 
-                                                    onClick={() => setTransferBene(bene)}
-                                                    className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                                                >
-                                                    Transfer Now
-                                                </button>
+
+                                                {bene.verified ? (
+                                                    <button
+                                                        onClick={() => setTransferBene(bene)}
+                                                        className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+                                                    >
+                                                        Transfer Now
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => requestOtp(bene, 'verify')}
+                                                        className="w-full py-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded-lg text-sm font-medium hover:bg-amber-500/20 transition-colors flex items-center justify-center gap-2"
+                                                    >
+                                                        <ShieldCheck className="w-4 h-4" />
+                                                        Verify with OTP
+                                                    </button>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
@@ -376,7 +290,7 @@ const DMT = () => {
                                         </div>
                                         <h3 className="text-lg font-bold text-foreground mb-1">No Beneficiaries</h3>
                                         <p className="text-sm text-muted-foreground mb-4 max-w-sm">Add a bank account to start transferring money instantly.</p>
-                                        <button 
+                                        <button
                                             onClick={() => setShowAddBene(true)}
                                             className="px-6 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium"
                                         >
@@ -391,156 +305,40 @@ const DMT = () => {
                                     <Send className="w-10 h-10 text-primary opacity-80" />
                                 </div>
                                 <h2 className="text-xl font-bold text-foreground mb-2">Ready to Transfer</h2>
-                                <p className="text-muted-foreground max-w-md">Search for a remitter using their mobile number to view their saved beneficiaries and initiate a transfer.</p>
+                                <p className="text-muted-foreground max-w-md">Enter the sender's mobile number to see their saved beneficiaries and send money.</p>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* E-KYC Modal */}
-            {showEkycModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-                    <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-xl w-full max-w-md relative">
-                        <button onClick={() => setShowEkycModal(false)} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
-                            <X className="w-5 h-5" />
-                        </button>
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                                <Fingerprint className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-bold text-foreground">Remitter E-KYC</h2>
-                                <p className="text-xs text-muted-foreground">Mandatory per RBI guidelines</p>
-                            </div>
-                        </div>
-                        
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-sm font-medium text-foreground mb-1 block">Aadhaar Number</label>
-                                <input 
-                                    type="text" 
-                                    maxLength={12}
-                                    value={aadhaar} 
-                                    onChange={e => setAadhaar(e.target.value.replace(/\D/g, ''))} 
-                                    placeholder="Enter 12-digit Aadhaar"
-                                    className="w-full px-3 py-3 bg-background border border-border/50 rounded-xl text-foreground focus:ring-2 focus:ring-primary/20" 
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium text-foreground mb-1 block">Biometric Device</label>
-                                <select 
-                                    value={selectedDevice}
-                                    onChange={e => setSelectedDevice(e.target.value as DeviceBrand)}
-                                    className="w-full px-3 py-3 bg-background border border-border/50 rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
-                                >
-                                    {Object.entries(DEVICE_LABELS).map(([brand, label]) => (
-                                        <option key={brand} value={brand}>{label}</option>
-                                    ))}
-                                </select>
-                                <p className="text-xs text-muted-foreground mt-1">Select your fingerprint scanner brand. Mantra, Morpho, and Startek devices are supported.</p>
-                            </div>
-
-                            <div className="bg-muted/30 border border-border/50 rounded-xl p-4 mt-2">
-                                <p className="text-xs text-muted-foreground mb-3 text-center">Place your finger on the scanner and click capture</p>
-                                <button 
-                                    onClick={handleCaptureAndEkyc} 
-                                    disabled={loading || aadhaar.length !== 12} 
-                                    className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-medium flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
-                                >
-                                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Fingerprint className="w-5 h-5" />}
-                                    {loading ? 'Processing...' : 'Capture & Verify'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Registration Modal */}
-            {showRegister && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-                    <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-xl w-full max-w-md relative">
-                        <button onClick={() => setShowRegister(false)} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
-                            <X className="w-5 h-5" />
-                        </button>
-                        <h2 className="text-xl font-bold text-foreground mb-4">Register Remitter</h2>
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-sm text-foreground mb-1 block">First Name</label>
-                                    <input type="text" value={regData.firstName} onChange={e => setRegData({...regData, firstName: e.target.value})} className="w-full px-3 py-2 bg-background border border-border/50 rounded-lg text-foreground focus:ring-2 focus:ring-primary/20" />
-                                </div>
-                                <div>
-                                    <label className="text-sm text-foreground mb-1 block">Last Name</label>
-                                    <input type="text" value={regData.lastName} onChange={e => setRegData({...regData, lastName: e.target.value})} className="w-full px-3 py-2 bg-background border border-border/50 rounded-lg text-foreground focus:ring-2 focus:ring-primary/20" />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-sm text-foreground mb-1 block">Pincode</label>
-                                <input type="text" maxLength={6} value={regData.pincode} onChange={e => setRegData({...regData, pincode: e.target.value.replace(/\D/g, '')})} className="w-full px-3 py-2 bg-background border border-border/50 rounded-lg text-foreground focus:ring-2 focus:ring-primary/20" />
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-foreground mb-1 block">OTP Received</label>
-                                <input 
-                                    type="text" 
-                                    maxLength={6}
-                                    value={otp} 
-                                    onChange={e => setOtp(e.target.value.replace(/\D/g, ''))} 
-                                    placeholder="Enter 6-digit OTP"
-                                    className="w-full px-3 py-3 bg-background border border-border/50 rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 tracking-widest text-lg font-mono text-center" 
-                                />
-                            </div>
-                            <button onClick={handleRegister} disabled={loading || otp.length < 6} className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-medium mt-4">
-                                {loading ? 'Processing...' : 'Complete Registration'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Add Beneficiary Modal */}
+            {/* Add Beneficiary */}
             {showAddBene && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
                     <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-xl w-full max-w-md relative">
                         <button onClick={() => setShowAddBene(false)} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
                             <X className="w-5 h-5" />
                         </button>
-                        <h2 className="text-xl font-bold text-foreground mb-4">Add Beneficiary</h2>
+                        <h2 className="text-xl font-bold text-foreground mb-1">Add Beneficiary</h2>
+                        <p className="text-sm text-muted-foreground mb-4">For sender +91 {sender}</p>
                         <div className="space-y-4">
                             <div>
-                                <label className="text-sm text-foreground mb-1 block">Bank</label>
-                                <select 
-                                    value={beneData.bankid} 
-                                    onChange={e => setBeneData({...beneData, bankid: e.target.value})} 
-                                    className="w-full px-3 py-2 bg-background border border-border/50 rounded-lg text-foreground focus:ring-2 focus:ring-primary/20"
-                                >
-                                    <option value="">Select Bank</option>
-                                    {banks.map((bank: any) => (
-                                        <option key={bank.bankid} value={bank.bankid}>{bank.bankname}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
                                 <label className="text-sm text-foreground mb-1 block">Account Holder Name</label>
-                                <input type="text" value={beneData.benename} onChange={e => setBeneData({...beneData, benename: e.target.value})} className="w-full px-3 py-2 bg-background border border-border/50 rounded-lg text-foreground focus:ring-2 focus:ring-primary/20" />
+                                <input type="text" value={beneData.benename} onChange={e => setBeneData({ ...beneData, benename: e.target.value })} className="w-full px-3 py-2 bg-background border border-border/50 rounded-lg text-foreground focus:ring-2 focus:ring-primary/20" />
                             </div>
                             <div>
                                 <label className="text-sm text-foreground mb-1 block">Account Number</label>
-                                <input type="text" value={beneData.beneaccount} onChange={e => setBeneData({...beneData, beneaccount: e.target.value.replace(/\D/g, '')})} className="w-full px-3 py-2 bg-background border border-border/50 rounded-lg text-foreground focus:ring-2 focus:ring-primary/20" />
+                                <input type="text" value={beneData.beneaccount} onChange={e => setBeneData({ ...beneData, beneaccount: e.target.value.replace(/\D/g, '') })} className="w-full px-3 py-2 bg-background border border-border/50 rounded-lg text-foreground focus:ring-2 focus:ring-primary/20" />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-sm text-foreground mb-1 block">IFSC Code</label>
-                                    <input type="text" value={beneData.ifsc} onChange={e => setBeneData({...beneData, ifsc: e.target.value.toUpperCase()})} className="w-full px-3 py-2 bg-background border border-border/50 rounded-lg text-foreground focus:ring-2 focus:ring-primary/20 uppercase" />
-                                </div>
-                                <div>
-                                    <label className="text-sm text-foreground mb-1 block">Pincode</label>
-                                    <input type="text" maxLength={6} value={beneData.pincode} onChange={e => setBeneData({...beneData, pincode: e.target.value.replace(/\D/g, '')})} className="w-full px-3 py-2 bg-background border border-border/50 rounded-lg text-foreground focus:ring-2 focus:ring-primary/20" />
-                                </div>
+                            <div>
+                                <label className="text-sm text-foreground mb-1 block">Confirm Account Number</label>
+                                <input type="text" value={beneData.confirmAccount} onChange={e => setBeneData({ ...beneData, confirmAccount: e.target.value.replace(/\D/g, '') })} className="w-full px-3 py-2 bg-background border border-border/50 rounded-lg text-foreground focus:ring-2 focus:ring-primary/20" />
                             </div>
-                            <button onClick={handleAddBeneficiary} disabled={loading} className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl font-medium mt-4">
+                            <div>
+                                <label className="text-sm text-foreground mb-1 block">IFSC Code</label>
+                                <input type="text" value={beneData.ifsc} onChange={e => setBeneData({ ...beneData, ifsc: e.target.value.toUpperCase() })} className="w-full px-3 py-2 bg-background border border-border/50 rounded-lg text-foreground focus:ring-2 focus:ring-primary/20 uppercase" />
+                            </div>
+                            <button onClick={handleAddBeneficiary} disabled={loading} className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl font-medium mt-4 disabled:opacity-50">
                                 {loading ? 'Adding...' : 'Add Beneficiary'}
                             </button>
                         </div>
@@ -548,41 +346,88 @@ const DMT = () => {
                 </div>
             )}
 
-            {/* Transfer Modal */}
+            {/* OTP — activation or deletion */}
+            {otpFor && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+                    <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-xl w-full max-w-sm relative">
+                        <button onClick={() => { setOtpFor(null); setOtp(''); }} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+                            <X className="w-5 h-5" />
+                        </button>
+                        <h2 className="text-xl font-bold text-foreground mb-1">
+                            {otpFor.action === 'verify' ? 'Verify Beneficiary' : 'Confirm Deletion'}
+                        </h2>
+                        <p className="text-sm text-muted-foreground mb-6">
+                            {otpFor.action === 'verify'
+                                ? `Enter the OTP sent to +91 ${sender} to activate ${otpFor.bene.name}.`
+                                : `Enter the OTP sent to +91 ${sender} to delete ${otpFor.bene.name}.`}
+                        </p>
+                        <input
+                            type="text"
+                            maxLength={6}
+                            value={otp}
+                            onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+                            placeholder="000000"
+                            className="w-full px-4 py-3 text-center tracking-[0.5em] text-2xl font-bold bg-background border border-border/50 rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
+                        />
+                        <button onClick={handleOtpSubmit} disabled={loading || otp.length !== 6} className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-medium mt-4 disabled:opacity-50">
+                            {loading ? 'Processing...' : otpFor.action === 'verify' ? 'Verify' : 'Delete Beneficiary'}
+                        </button>
+                        <button onClick={() => requestOtp(otpFor.bene, otpFor.action)} className="w-full py-2 text-sm text-muted-foreground hover:text-foreground mt-2">
+                            Resend OTP
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Transfer */}
             {transferBene && !successTxn && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
                     <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-xl w-full max-w-md relative">
-                        <button onClick={() => {setTransferBene(null); setPin(''); setAmount('');}} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+                        <button onClick={() => { setTransferBene(null); setPin(''); setAmount(''); }} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
                             <X className="w-5 h-5" />
                         </button>
                         <h2 className="text-xl font-bold text-foreground mb-1">Send Money</h2>
-                        <p className="text-sm text-muted-foreground mb-6">To {transferBene.name} ({transferBene.accno})</p>
-                        
+                        <p className="text-sm text-muted-foreground mb-6">To {transferBene.name} ({transferBene.account})</p>
+
                         <div className="space-y-5">
                             <div>
                                 <label className="text-sm font-medium text-foreground mb-1.5 block">Amount (₹)</label>
-                                <input 
-                                    type="text" 
-                                    value={amount} 
+                                <input
+                                    type="text"
+                                    value={amount}
                                     onChange={e => setAmount(e.target.value.replace(/\D/g, ''))}
-                                    placeholder="0" 
-                                    className="w-full px-4 py-3 text-2xl font-bold bg-background border border-border/50 rounded-xl text-foreground focus:ring-2 focus:ring-primary/20" 
+                                    placeholder="0"
+                                    className="w-full px-4 py-3 text-2xl font-bold bg-background border border-border/50 rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
                             <div>
-                                <label className="text-sm font-medium text-foreground mb-1.5 block flex items-center gap-1.5">
+                                <label className="text-sm font-medium text-foreground mb-1.5 block">Transfer Mode</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {['IMPS', 'NEFT'].map(m => (
+                                        <button
+                                            key={m}
+                                            onClick={() => setTransferMode(m)}
+                                            className={`py-2.5 rounded-xl text-sm font-medium border transition-colors ${transferMode === m ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-foreground border-border/50 hover:border-primary/40'}`}
+                                        >
+                                            {m}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-foreground mb-1.5 flex items-center gap-1.5">
                                     <Lock className="w-4 h-4" /> 4-Digit Security PIN
                                 </label>
-                                <input 
-                                    type="password" 
+                                <input
+                                    type="password"
                                     maxLength={4}
-                                    value={pin} 
+                                    value={pin}
                                     onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
-                                    placeholder="••••" 
-                                    className="w-full px-4 py-3 text-center tracking-[1em] text-2xl font-bold bg-background border border-border/50 rounded-xl text-foreground focus:ring-2 focus:ring-primary/20" 
+                                    placeholder="••••"
+                                    className="w-full px-4 py-3 text-center tracking-[1em] text-2xl font-bold bg-background border border-border/50 rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
-                            
+
                             <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex justify-between items-center">
                                 <span className="text-sm text-foreground font-medium">Total Deducted</span>
                                 <span className="text-lg font-bold text-primary">₹ {amount || '0'}</span>
@@ -596,16 +441,22 @@ const DMT = () => {
                 </div>
             )}
 
-            {/* Success Receipt Modal */}
+            {/* Receipt */}
             {successTxn && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
                     <div className="bg-card border border-border/50 rounded-2xl p-8 shadow-xl w-full max-w-sm text-center">
-                        <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <CheckCircle2 className="w-8 h-8 text-green-500" />
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${successTxn.pending ? 'bg-amber-500/10' : 'bg-green-500/10'}`}>
+                            {successTxn.pending
+                                ? <Clock className="w-8 h-8 text-amber-500" />
+                                : <CheckCircle2 className="w-8 h-8 text-green-500" />}
                         </div>
-                        <h2 className="text-2xl font-bold text-foreground mb-2">Transfer Successful</h2>
-                        <p className="text-muted-foreground mb-6">Your money is on its way!</p>
-                        
+                        <h2 className="text-2xl font-bold text-foreground mb-2">
+                            {successTxn.pending ? 'Transfer Pending' : 'Transfer Successful'}
+                        </h2>
+                        <p className="text-muted-foreground mb-6">
+                            {successTxn.message || (successTxn.pending ? 'The bank has not confirmed it yet.' : 'Your money is on its way!')}
+                        </p>
+
                         <div className="bg-background rounded-xl p-4 border border-border/50 text-left space-y-3 mb-6">
                             <div className="flex justify-between">
                                 <span className="text-sm text-muted-foreground">Amount</span>
@@ -617,7 +468,7 @@ const DMT = () => {
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-sm text-muted-foreground">Ref No</span>
-                                <span className="text-sm font-medium text-foreground">{successTxn.apiReference || successTxn.transactionId}</span>
+                                <span className="text-sm font-medium text-foreground">{successTxn.rrn || successTxn.txnid || successTxn.transactionId}</span>
                             </div>
                         </div>
 

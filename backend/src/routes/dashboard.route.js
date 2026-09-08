@@ -1,5 +1,9 @@
 import express from 'express';
-import { getRetailerStats, getRecentTransactions } from '../controllers/dashboard.controller.js';
+import {
+  getRetailerStats,
+  getRecentTransactions,
+  getCommissionByDay,
+} from '../controllers/dashboard.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
@@ -13,5 +17,6 @@ const verifyRole = (role) => (req, res, next) => {
 
 router.get('/retailer', authMiddlewares, verifyRole('retailer'), getRetailerStats);
 router.get('/recent-transactions', authMiddlewares, getRecentTransactions);
+router.get('/commission-by-day', authMiddlewares, getCommissionByDay);
 
 export default router;

@@ -1,42 +1,57 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
-import { colors, themed, radius, space, type as t } from '../../theme/colors';
+import React, { useState } from 'react';
+import { View, Text, Pressable, Alert } from 'react-native';
+import { themed, radius, space, type as t } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input, SelectField } from '@/components/ui/Input';
+import { Input } from '@/components/ui/Input';
 import {
   Screen,
   Banner,
   EmptyState,
   ErrorBanner,
   Row,
+  Segmented,
   StatusPill,
   SuccessBanner,
   money,
   shortDate,
 } from '@/components/ui/Screen';
-import { RemitterRegistrationSheet } from '@/components/dmt/RemitterRegistrationSheet';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
 
 const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 
+const MODES = [
+  { key: 'IMPS', label: 'IMPS' },
+  { key: 'NEFT', label: 'NEFT' },
+];
+
 interface Beneficiary {
-  beneid: string;
-  benename: string;
-  accno: string;
+  id: string;
+  name: string;
+  account: string;
   ifsc: string;
-  bankname?: string;
+  bank?: string;
+  branch?: string;
+  verified?: boolean;
 }
 
+/**
+ * Domestic money transfer.
+ *
+ * There is no remitter to register on this rail: a beneficiary carries the
+ * sender's mobile number itself and is activated by an OTP sent to that number.
+ * Only a verified beneficiary can be paid, so the OTP is part of adding one.
+ */
 export const DmtScreen: React.FC = () => {
   const [mobile, setMobile] = useState('');
-  const [remitter, setRemitter] = useState<any>(null);
-  const [needsEkyc, setNeedsEkyc] = useState(false);
-  const [showRegister, setShowRegister] = useState(false);
+  // The sender the list below belongs to. Set only once a lookup succeeds, so
+  // editing the number cannot silently repoint an open transfer.
+  const [sender, setSender] = useState('');
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
   const [selected, setSelected] = useState<Beneficiary | null>(null);
   const [amount, setAmount] = useState('');
+  const [mode, setMode] = useState('IMPS');
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
   const [notice, setNotice] = useState('');
@@ -46,66 +61,76 @@ export const DmtScreen: React.FC = () => {
   const [beneAccount, setBeneAccount] = useState('');
   const [confirmAccount, setConfirmAccount] = useState('');
   const [beneIfsc, setBeneIfsc] = useState('');
-  const [benePincode, setBenePincode] = useState('');
-  const [bank, setBank] = useState<any>(null);
-  const [showBanks, setShowBanks] = useState(false);
-  const [bankQuery, setBankQuery] = useState('');
+
+  // The beneficiary an OTP is being collected for, and what it is meant to do.
+  const [otpFor, setOtpFor] = useState<{ bene: Beneficiary; action: 'verify' | 'delete' } | null>(
+    null
+  );
+  const [otp, setOtp] = useState('');
 
   const history = useAsync<any[]>(async () => (await api.getDmtHistory()).data ?? [], []);
   const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
-  const banks = useAsync<any[]>(async () => {
-    const res = await api.getDmtBanks();
-    return res?.data?.data ?? res?.data ?? [];
-  }, []);
+
+  const loadBeneficiaries = async (mob: string) => {
+    const res = await api.fetchDmtBeneficiaries(mob);
+    if (!res.success) throw new Error(res.message || 'Failed to fetch beneficiaries');
+    const list: Beneficiary[] = res.data ?? [];
+    setBeneficiaries(list);
+    // The selected row may have just been verified or removed, so it is refreshed
+    // from the list rather than left pointing at a stale copy.
+    setSelected((prev) => (prev ? list.find((b) => b.id === prev.id) ?? null : null));
+    return list;
+  };
 
   const lookup = useAction(async () => {
-    const res = await api.queryDmtRemitter(mobile.trim());
-    const paysprint = res?.data;
-    if (res.success && paysprint?.status) {
-      setRemitter(paysprint.data);
-      setNeedsEkyc(false);
-      const beneRes = await api.fetchDmtBeneficiaries(mobile.trim());
-      const list = beneRes?.data?.data ?? [];
-      setBeneficiaries(Array.isArray(list) ? list : []);
-      setSelected(null);
-      return res;
-    }
-    // response_code 0 means "not registered" — RBI requires Aadhaar eKYC first.
-    if (paysprint && String(paysprint.response_code) === '0') {
-      setRemitter(null);
-      setNeedsEkyc(true);
-      return res;
-    }
-    throw new Error(paysprint?.message || res.message || 'Failed to query remitter');
+    const list = await loadBeneficiaries(mobile.trim());
+    setSender(mobile.trim());
+    return list;
   });
 
   const addBene = useAction(async () => {
     const res = await api.addDmtBeneficiary({
-      mobile: mobile.trim(),
-      bankid: bank?.bankid ?? bank?.id,
+      mobile: sender,
       benename: beneName.trim(),
       beneaccount: beneAccount.trim(),
       ifsc: beneIfsc.trim().toUpperCase(),
-      pincode: benePincode.trim(),
     });
-    if (!res.success || res.data?.status === false) {
-      throw new Error(res.data?.message || res.message || 'Failed to add beneficiary');
-    }
+    if (!res.success) throw new Error(res.message || 'Failed to add beneficiary');
     return res;
   });
 
-  const removeBene = useAction(async (beneid: string) => {
-    const res = await api.deleteDmtBeneficiary({ mobile: mobile.trim(), beneid });
-    if (!res.success) throw new Error(res.data?.message || res.message);
+  const sendOtp = useAction(async (bene: Beneficiary) => {
+    const res = await api.sendDmtBeneficiaryOtp(bene.id);
+    if (!res.success) throw new Error(res.message || 'Failed to send OTP');
     return res;
+  });
+
+  const submitOtp = useAction(async () => {
+    const { bene, action } = otpFor!;
+    const res =
+      action === 'verify'
+        ? await api.verifyDmtBeneficiary({ beneficiary_id: bene.id, otp })
+        : await api.deleteDmtBeneficiary({ beneficiary_id: bene.id, otp });
+    if (!res.success) throw new Error(res.message || 'That OTP was not accepted');
+    return res;
+  });
+
+  // A payout is accepted before the beneficiary bank confirms it. The
+  // reconciliation cron settles it either way, but a retailer standing in front
+  // of a customer should not have to wait for the next run to find out.
+  const checkStatus = useAction(async (transactionId: string) => {
+    const res = await api.getDmtTransferStatus(transactionId);
+    if (!res.success) throw new Error(res.message);
+    return res.data;
   });
 
   const transfer = useAction(async () => {
     const res = await api.transferDmt({
-      mobile: mobile.trim(),
-      beneid: selected!.beneid,
+      mobile: sender,
+      beneficiary_id: selected!.id,
       amount: Number(amount),
-      beneaccount: selected!.accno,
+      transfer_mode: mode,
+      beneaccount: selected!.account,
       ifsc: selected!.ifsc,
       pin,
     });
@@ -113,63 +138,33 @@ export const DmtScreen: React.FC = () => {
     return res;
   });
 
-  const refreshBeneficiaries = async () => {
-    const beneRes = await api.fetchDmtBeneficiaries(mobile.trim());
-    const list = beneRes?.data?.data ?? [];
-    setBeneficiaries(Array.isArray(list) ? list : []);
-  };
-
   const available = balances.data?.mainBalance ?? 0;
   const overBalance = Number(amount) > available;
-  const canTransfer = !!selected && Number(amount) > 0 && !overBalance && pin.length === 4;
+  // An unverified beneficiary cannot be paid, so it cannot be transferred to.
+  const canTransfer =
+    !!selected && !!selected.verified && Number(amount) > 0 && !overBalance && pin.length === 4;
   const ifscValid = IFSC_RE.test(beneIfsc.trim().toUpperCase());
   const beneValid =
-    !!bank &&
     beneName.trim().length > 2 &&
     beneAccount.trim().length >= 6 &&
     beneAccount === confirmAccount &&
-    ifscValid &&
-    benePincode.length === 6;
+    ifscValid;
 
-  // Same story as the AEPS bank list: PaySprint returns the same bankid more
-  // than once. Collapse before filtering so the picker never shows two rows
-  // that select identically.
-  const uniqueBanks = useMemo(() => {
-    const seen = new Map<string, any>();
-    for (const bank of banks.data ?? []) {
-      const key = String(bank?.bankid ?? bank?.id ?? bank?.bankname ?? bank?.name ?? '');
-      if (key && !seen.has(key)) seen.set(key, bank);
-    }
-    return [...seen.values()];
-  }, [banks.data]);
-
-  const filteredBanks = useMemo(
-    () =>
-      uniqueBanks.filter((b: any) =>
-        String(b.bankname ?? b.name ?? '').toLowerCase().includes(bankQuery.trim().toLowerCase())
-      ),
-    [uniqueBanks, bankQuery]
-  );
-
-  const remitterName =
-    remitter?.name || [remitter?.fname, remitter?.lname].filter(Boolean).join(' ') || 'Registered remitter';
+  const startOtp = async (bene: Beneficiary, action: 'verify' | 'delete') => {
+    setOtp('');
+    setOtpFor({ bene, action });
+    await sendOtp.run(bene);
+  };
 
   const confirmRemoveBene = (b: Beneficiary) =>
-    Alert.alert('Remove beneficiary?', `${b.benename} will be removed from this remitter.`, [
-      { text: 'Keep', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
-          const res = await removeBene.run(b.beneid);
-          if (res) {
-            setNotice('Beneficiary removed.');
-            if (selected?.beneid === b.beneid) setSelected(null);
-            refreshBeneficiaries();
-          }
-        },
-      },
-    ]);
+    Alert.alert(
+      'Remove beneficiary?',
+      `${b.name} will be removed once you confirm the OTP sent to ${sender}.`,
+      [
+        { text: 'Keep', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: () => startOtp(b, 'delete') },
+      ]
+    );
 
   return (
     <Screen
@@ -189,7 +184,7 @@ export const DmtScreen: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle icon="account-search-outline">Remitter</CardTitle>
+          <CardTitle icon="account-search-outline">Sender</CardTitle>
         </CardHeader>
         <CardContent style={styles.form}>
           <Input
@@ -198,10 +193,9 @@ export const DmtScreen: React.FC = () => {
             value={mobile}
             onChangeText={(v) => {
               setMobile(v.replace(/\D/g, '').slice(0, 10));
-              setRemitter(null);
+              setSender('');
               setBeneficiaries([]);
               setSelected(null);
-              setNeedsEkyc(false);
             }}
             keyboardType="number-pad"
             placeholder="10-digit mobile number"
@@ -216,54 +210,24 @@ export const DmtScreen: React.FC = () => {
             icon="magnify"
             fullWidth
           >
-            Look up remitter
+            Find beneficiaries
           </Button>
-
-          {needsEkyc && (
-            <>
-              <Banner
-                tone="warning"
-                message="This sender is not registered yet. RBI mandates a one-time Aadhaar biometric eKYC before they can transfer money."
-              />
-              <Button
-                variant="outline"
-                icon="account-plus-outline"
-                onPress={() => setShowRegister(true)}
-                fullWidth
-              >
-                Register this sender
-              </Button>
-            </>
-          )}
-
-          {!!remitter && (
-            <View style={styles.infoBox}>
-              <Row label="Name" value={remitterName} />
-              <Row label="Mobile" value={mobile} />
-              <Row
-                label="Remaining limit"
-                value={remitter?.limit ? money(remitter.limit) : '—'}
-                mono
-                last
-              />
-            </View>
-          )}
         </CardContent>
       </Card>
 
-      {!!remitter && (
+      {!!sender && (
         <Card>
           <CardHeader>
             <CardTitle icon="account-multiple-outline">Beneficiaries</CardTitle>
           </CardHeader>
           <CardContent style={styles.form}>
-            {!!removeBene.error && <ErrorBanner message={removeBene.error} />}
+            {!!sendOtp.error && <ErrorBanner message={sendOtp.error} />}
             {beneficiaries.length ? (
               beneficiaries.map((b) => {
-                const active = selected?.beneid === b.beneid;
+                const active = selected?.id === b.id;
                 return (
                   <Pressable
-                    key={b.beneid}
+                    key={b.id}
                     onPress={() => setSelected(b)}
                     style={({ pressed }) => [
                       styles.beneRow,
@@ -272,23 +236,37 @@ export const DmtScreen: React.FC = () => {
                     ]}
                     accessibilityRole="radio"
                     accessibilityState={{ selected: active }}
-                    accessibilityLabel={`${b.benename}, account ending ${String(b.accno).slice(-4)}`}
+                    accessibilityLabel={`${b.name}, account ending ${String(b.account).slice(-4)}${
+                      b.verified ? '' : ', not verified'
+                    }`}
                   >
                     <View style={styles.beneInfo}>
                       <Text style={styles.beneName} numberOfLines={1}>
-                        {b.benename}
+                        {b.name}
                       </Text>
                       <Text style={styles.beneMeta} numberOfLines={1}>
-                        ••••{String(b.accno).slice(-4)} · {b.ifsc}
-                        {b.bankname ? ` · ${b.bankname}` : ''}
+                        ••••{String(b.account).slice(-4)} · {b.ifsc}
+                        {b.bank ? ` · ${b.bank}` : ''}
                       </Text>
+                      {!b.verified && <Text style={styles.beneUnverified}>Not verified</Text>}
                     </View>
+                    {!b.verified && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon="shield-check-outline"
+                        onPress={() => startOtp(b, 'verify')}
+                        accessibilityLabel={`Verify ${b.name}`}
+                      >
+                        Verify
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
                       icon="trash-can-outline"
                       onPress={() => confirmRemoveBene(b)}
-                      accessibilityLabel={`Remove ${b.benename}`}
+                      accessibilityLabel={`Remove ${b.name}`}
                     >
                       {''}
                     </Button>
@@ -315,44 +293,6 @@ export const DmtScreen: React.FC = () => {
 
             {showAddBene && (
               <View style={styles.form}>
-                <SelectField
-                  label="Bank"
-                  required
-                  value={bank ? bank.bankname || bank.name : ''}
-                  placeholder={banks.loading ? 'Loading banks…' : 'Select bank'}
-                  open={showBanks}
-                  onPress={() => setShowBanks(!showBanks)}
-                />
-                {showBanks && (
-                  <View style={styles.picker}>
-                    <Input
-                      placeholder="Search bank"
-                      value={bankQuery}
-                      onChangeText={setBankQuery}
-                      leftIcon="magnify"
-                      autoCapitalize="none"
-                    />
-                    <ScrollView style={styles.pickerList} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-                      {filteredBanks.slice(0, 60).map((b: any) => (
-                        <Pressable
-                          key={String(b.bankid ?? b.id ?? b.bankname ?? b.name)}
-                          onPress={() => {
-                            setBank(b);
-                            setShowBanks(false);
-                            setBankQuery('');
-                            if (b.ifsc) setBeneIfsc(String(b.ifsc));
-                          }}
-                          style={({ pressed }) => [styles.pickerItem, pressed && styles.pickerItemPressed]}
-                          accessibilityRole="button"
-                        >
-                          <Text style={styles.pickerText}>{b.bankname ?? b.name}</Text>
-                        </Pressable>
-                      ))}
-                      {!filteredBanks.length && <Text style={styles.pickerEmpty}>No matching bank</Text>}
-                    </ScrollView>
-                  </View>
-                )}
-
                 <Input
                   label="Beneficiary name"
                   required
@@ -391,28 +331,24 @@ export const DmtScreen: React.FC = () => {
                   leftIcon="bank-outline"
                   error={beneIfsc.length === 11 && !ifscValid ? 'Invalid IFSC format' : undefined}
                 />
-                <Input
-                  label="Pincode"
-                  required
-                  value={benePincode}
-                  onChangeText={(v) => setBenePincode(v.replace(/\D/g, '').slice(0, 6))}
-                  keyboardType="number-pad"
-                  leftIcon="map-marker-outline"
-                />
                 {!!addBene.error && <ErrorBanner message={addBene.error} />}
                 <Button
                   onPress={async () => {
                     const res = await addBene.run();
-                    if (res) {
-                      setNotice('Beneficiary added.');
-                      setBeneName('');
-                      setBeneAccount('');
-                      setConfirmAccount('');
-                      setBeneIfsc('');
-                      setBenePincode('');
-                      setShowAddBene(false);
-                      refreshBeneficiaries();
-                    }
+                    if (!res) return;
+                    setNotice(res.message || 'Beneficiary added.');
+                    setBeneName('');
+                    setBeneAccount('');
+                    setConfirmAccount('');
+                    setBeneIfsc('');
+                    setShowAddBene(false);
+                    const list = await loadBeneficiaries(sender);
+                    // It is not payable until it is verified, so the OTP is asked
+                    // for now rather than left for the retailer to find later.
+                    const added = res.data?.id
+                      ? list.find((b) => b.id === String(res.data.id))
+                      : undefined;
+                    if (added) startOtp(added, 'verify');
                   }}
                   loading={addBene.pending}
                   disabled={!beneValid}
@@ -427,6 +363,75 @@ export const DmtScreen: React.FC = () => {
         </Card>
       )}
 
+      {/* OTP — activation or deletion */}
+      {!!otpFor && (
+        <Card>
+          <CardHeader>
+            <CardTitle icon="shield-key-outline">
+              {otpFor.action === 'verify' ? 'Verify beneficiary' : 'Confirm removal'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent style={styles.form}>
+            <Banner
+              tone="info"
+              message={`Enter the OTP sent to ${sender} to ${
+                otpFor.action === 'verify' ? 'activate' : 'remove'
+              } ${otpFor.bene.name}.`}
+            />
+            <Input
+              label="OTP"
+              required
+              value={otp}
+              onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))}
+              keyboardType="number-pad"
+              maxLength={6}
+              placeholder="6-digit OTP"
+              leftIcon="message-text-outline"
+            />
+            {!!submitOtp.error && <ErrorBanner message={submitOtp.error} />}
+            <Button
+              onPress={async () => {
+                const res = await submitOtp.run();
+                if (!res) return;
+                setNotice(
+                  res.message ||
+                    (otpFor.action === 'verify' ? 'Beneficiary verified.' : 'Beneficiary removed.')
+                );
+                setOtpFor(null);
+                setOtp('');
+                loadBeneficiaries(sender);
+              }}
+              loading={submitOtp.pending}
+              disabled={otp.length !== 6}
+              icon="check"
+              fullWidth
+            >
+              {otpFor.action === 'verify' ? 'Verify' : 'Remove beneficiary'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onPress={() => startOtp(otpFor.bene, otpFor.action)}
+              loading={sendOtp.pending}
+              fullWidth
+            >
+              Resend OTP
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onPress={() => {
+                setOtpFor(null);
+                setOtp('');
+              }}
+              fullWidth
+            >
+              Cancel
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {!!selected && (
         <Card>
           <CardHeader>
@@ -434,10 +439,18 @@ export const DmtScreen: React.FC = () => {
           </CardHeader>
           <CardContent style={styles.form}>
             <View style={styles.infoBox}>
-              <Row label="To" value={selected.benename} />
-              <Row label="Account" value={`••••${String(selected.accno).slice(-4)}`} />
+              <Row label="To" value={selected.name} />
+              <Row label="Account" value={`••••${String(selected.account).slice(-4)}`} />
               <Row label="IFSC" value={selected.ifsc} last />
             </View>
+
+            {!selected.verified && (
+              <Banner
+                tone="warning"
+                message="This beneficiary is not verified yet. Verify it with the OTP before sending money."
+              />
+            )}
+
             <Input
               label="Amount"
               required
@@ -448,6 +461,7 @@ export const DmtScreen: React.FC = () => {
               leftIcon="currency-inr"
               error={overBalance ? 'Amount exceeds your main wallet balance' : undefined}
             />
+            <Segmented options={MODES} value={mode} onChange={setMode} />
             <Input
               label="Wallet PIN"
               required
@@ -469,7 +483,12 @@ export const DmtScreen: React.FC = () => {
                 setNotice('');
                 const res = await transfer.run();
                 if (res) {
-                  setNotice(res.message || 'Transfer submitted.');
+                  // A transfer is accepted before the beneficiary bank confirms
+                  // it, so the wording must not claim it has landed.
+                  setNotice(
+                    res.message ||
+                      (res.pending ? 'Transfer accepted and is being processed.' : 'Transfer successful.')
+                  );
                   setAmount('');
                   setPin('');
                   balances.reload();
@@ -493,6 +512,7 @@ export const DmtScreen: React.FC = () => {
           <CardTitle icon="history">Transfer history</CardTitle>
         </CardHeader>
         <CardContent>
+          {!!checkStatus.error && <ErrorBanner message={checkStatus.error} />}
           {history.loading ? null : history.data?.length ? (
             history.data.slice(0, 20).map((txn: any) => (
               <View key={txn._id || txn.transactionId} style={styles.item}>
@@ -500,9 +520,26 @@ export const DmtScreen: React.FC = () => {
                   <Text style={styles.itemAmount}>{money(txn.amount)}</Text>
                   <StatusPill status={txn.status} />
                 </View>
-                <Row label="Beneficiary" value={txn.beneName || txn.metadata?.benename} />
-                <Row label="Reference" value={txn.transactionId} />
+                <Row label="Beneficiary" value={txn.beneficiaryAccount} />
+                <Row label="Reference" value={txn.apiReference || txn.transactionId} />
                 <Row label="Date" value={shortDate(txn.createdAt)} last />
+                {(txn.status === 'PENDING' || txn.status === 'PROCESSING') && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon="refresh"
+                    loading={checkStatus.pending}
+                    onPress={async () => {
+                      const data = await checkStatus.run(txn.transactionId);
+                      if (!data) return;
+                      setNotice(`Transfer ${String(data.status).toLowerCase()}.`);
+                      history.reload();
+                      balances.reload();
+                    }}
+                  >
+                    Check status
+                  </Button>
+                )}
               </View>
             ))
           ) : (
@@ -510,16 +547,6 @@ export const DmtScreen: React.FC = () => {
           )}
         </CardContent>
       </Card>
-
-      <RemitterRegistrationSheet
-        visible={showRegister}
-        onClose={() => setShowRegister(false)}
-        mobile={mobile.trim()}
-        onRegistered={() => {
-          setNeedsEkyc(false);
-          lookup.run();
-        }}
-      />
     </Screen>
   );
 };
@@ -541,17 +568,7 @@ const styles = themed((c) => ({
   beneInfo: { flex: 1, minWidth: 0, gap: 2 },
   beneName: { fontSize: t.small, fontWeight: '700', color: c.foreground },
   beneMeta: { fontSize: t.micro, color: c.mutedForeground },
-  picker: { gap: space.sm, padding: space.sm, borderRadius: radius.md, backgroundColor: c.secondary },
-  pickerList: { maxHeight: 220 },
-  pickerItem: {
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingHorizontal: space.md,
-    borderRadius: radius.sm,
-  },
-  pickerItemPressed: { backgroundColor: c.surfaceAlt },
-  pickerText: { fontSize: t.small, color: c.foreground },
-  pickerEmpty: { fontSize: t.caption, color: c.mutedForeground, padding: space.md },
+  beneUnverified: { fontSize: t.micro, fontWeight: '700', color: c.warning },
   item: { paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
   itemTop: {
     flexDirection: 'row',

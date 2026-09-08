@@ -12,6 +12,7 @@ export { UpiPaymentsScreen } from './retailer/UpiPaymentsScreen';
 export { DmtScreen } from './retailer/DmtScreen';
 export { RechargeScreen } from './retailer/RechargeScreen';
 export { BbpsScreen } from './retailer/BbpsScreen';
+export { CollectScreen } from './retailer/CollectScreen';
 export { WalletTransferScreen } from './retailer/WalletTransferScreen';
 export { DirectPayoutScreen } from './retailer/DirectPayoutScreen';
 export { FundRequestScreen } from './retailer/FundRequestScreen';

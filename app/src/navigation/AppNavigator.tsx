@@ -17,6 +17,7 @@ import { UpiPaymentsScreen } from '@/screens/retailer/UpiPaymentsScreen';
 import { DmtScreen } from '@/screens/retailer/DmtScreen';
 import { RechargeScreen } from '@/screens/retailer/RechargeScreen';
 import { BbpsScreen } from '@/screens/retailer/BbpsScreen';
+import { CollectScreen } from '@/screens/retailer/CollectScreen';
 import { WalletTransferScreen } from '@/screens/retailer/WalletTransferScreen';
 import { DirectPayoutScreen } from '@/screens/retailer/DirectPayoutScreen';
 import { FundRequestScreen } from '@/screens/retailer/FundRequestScreen';
@@ -94,6 +95,7 @@ const RETAILER_SCREENS: [string, React.ComponentType<any>][] = [
   ['DMT', DmtScreen],
   ['Recharge', RechargeScreen],
   ['BBPS', BbpsScreen],
+  ['Collect', CollectScreen],
   ['WalletTransfer', WalletTransferScreen],
   ['DirectPayout', DirectPayoutScreen],
   ['FundRequest', FundRequestScreen],

@@ -95,6 +95,7 @@ export interface NavigationParams {
     DMT: undefined;
     Recharge: undefined;
     BBPS: undefined;
+    Collect: undefined;
     WalletTransfer: undefined;
     DirectPayout: undefined;
     FundRequest: undefined;

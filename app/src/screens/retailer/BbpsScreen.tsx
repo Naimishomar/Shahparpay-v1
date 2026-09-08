@@ -19,46 +19,34 @@ import {
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
 
-// Keys match the `type` the backend maps to a biller category.
-const CATEGORIES = [
-  { key: 'electricity', label: 'Electricity' },
-  { key: 'gas', label: 'Gas' },
-  { key: 'water', label: 'Water' },
-  { key: 'broadband', label: 'Broadband' },
-  { key: 'landline', label: 'Landline' },
-  { key: 'insurance', label: 'Insurance' },
-  { key: 'loan', label: 'Loan' },
-  { key: 'fastag', label: 'FASTag' },
-  { key: 'googleplay', label: 'Google Play' },
-  { key: 'cable', label: 'Cable TV' },
-];
-
-/**
- * FASTag and Google Play are top-ups paid through BharatPays, not bills paid
- * through Paysprint. There is nothing to fetch before paying, and their operator
- * codes mean nothing to Paysprint's biller registry, so the fetch step is hidden
- * rather than left to fail. Keep in step with BHARATPAYS_TYPES on the backend.
- */
-const TOP_UP_ONLY = new Set(['fastag', 'googleplay']);
-
 interface Biller {
   id: string | number;
   name: string;
   displayname?: string;
-  ad1_name?: string;
-  ad2_name?: string;
-  ad3_name?: string;
+  // The biller's own name for the consumer identifier — "Consumer Number",
+  // "CA Number", "Vehicle Number" — so the field is labelled the way the bill is.
+  label?: string;
+  // Whether this biller can produce a bill before it is paid. A top-up cannot.
+  viewbill?: string;
 }
 
 export const BbpsScreen: React.FC = () => {
-  const [category, setCategory] = useState('electricity');
+  // The categories are whatever the provider currently bills for: a category we
+  // invent here has no biller registry behind it, and one they add would be
+  // invisible until someone edited this file.
+  const categories = useAsync<any[]>(
+    async () =>
+      ((await api.getBillCategories()).data ?? []).map((c: any) => ({
+        key: c.category || c.name || c.code,
+        label: c.name || c.category || c.code,
+      })),
+    []
+  );
+  const [category, setCategory] = useState('');
   const [biller, setBiller] = useState<Biller | null>(null);
   const [showBillers, setShowBillers] = useState(false);
   const [billerQuery, setBillerQuery] = useState('');
   const [caNumber, setCaNumber] = useState('');
-  const [ad1, setAd1] = useState('');
-  const [ad2, setAd2] = useState('');
-  const [ad3, setAd3] = useState('');
   const [amount, setAmount] = useState('');
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
@@ -69,8 +57,14 @@ export const BbpsScreen: React.FC = () => {
     setBiller(null);
     setBill(null);
     setAmount('');
+    if (!category) return [];
     return (await api.getRechargeOperators(category)).data ?? [];
   }, [category]);
+
+  // The first category the provider lists, once they have loaded.
+  React.useEffect(() => {
+    if (!category && categories.data?.length) setCategory(categories.data[0].key);
+  }, [categories.data]);
 
   const history = useAsync<any[]>(async () => (await api.getRechargeHistory()).data ?? [], []);
   const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
@@ -80,9 +74,6 @@ export const BbpsScreen: React.FC = () => {
       caNumber: caNumber.trim(),
       operator: String(biller?.id),
       type: category,
-      ad1: ad1.trim() || undefined,
-      ad2: ad2.trim() || undefined,
-      ad3: ad3.trim() || undefined,
     });
     if (!res.success) throw new Error(res.message);
     return res.data;
@@ -95,10 +86,6 @@ export const BbpsScreen: React.FC = () => {
       amount: Number(amount),
       pin,
       type: category,
-      circle: 1,
-      ad1: ad1.trim() || undefined,
-      ad2: ad2.trim() || undefined,
-      ad3: ad3.trim() || undefined,
     });
     if (!res.success) throw new Error(res.message);
     return res;
@@ -155,7 +142,7 @@ export const BbpsScreen: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Segmented options={CATEGORIES} value={category} onChange={setCategory} />
+      <Segmented options={categories.data ?? []} value={category} onChange={setCategory} />
 
       <Card>
         <CardHeader>
@@ -207,34 +194,21 @@ export const BbpsScreen: React.FC = () => {
             </View>
           )}
 
-          {/* A top-up is not identified by a consumer number: FASTag goes by
-              vehicle registration, Google Play by the mobile number. */}
+          {/* The biller names its own identifier; a top-up like FASTag calls it a
+              vehicle number rather than a consumer number. */}
           <Input
-            label={
-              category === 'fastag'
-                ? 'Vehicle number'
-                : category === 'googleplay'
-                  ? 'Mobile number'
-                  : 'Consumer number'
-            }
+            label={biller?.label || 'Consumer number'}
             required
             value={caNumber}
             onChangeText={setCaNumber}
             autoCapitalize="characters"
-            placeholder={
-              category === 'fastag'
-                ? 'e.g. MH12AB1234'
-                : category === 'googleplay'
-                  ? '10-digit mobile number'
-                  : 'As printed on your bill'
-            }
-            leftIcon={category === 'fastag' ? 'car' : 'identifier'}
+            placeholder={biller?.label ? `Enter ${biller.label}` : 'As printed on your bill'}
+            leftIcon="identifier"
           />
-          {!!biller?.ad1_name && <Input label={biller.ad1_name} value={ad1} onChangeText={setAd1} />}
-          {!!biller?.ad2_name && <Input label={biller.ad2_name} value={ad2} onChangeText={setAd2} />}
-          {!!biller?.ad3_name && <Input label={biller.ad3_name} value={ad3} onChangeText={setAd3} />}
 
-          {!TOP_UP_ONLY.has(category) && (
+          {/* A top-up has no bill to fetch, so the step is hidden rather than
+              left to fail. */}
+          {biller?.viewbill === 'true' && (
             <>
               <Button
                 variant="outline"

@@ -1,287 +1,332 @@
-import axios from 'axios';
-import { generatePaySprintToken, encryptPayload } from '../utils/paysprint.util.js';
-import DmtTransaction from '../models/dmtTransaction.model.js';
-import MainWallet from '../models/mainWallet.model.js';
-import Transaction from '../models/transaction.model.js';
 import bcrypt from 'bcrypt';
+import {
+  icchhamatiGet,
+  icchhamatiPost,
+  icchhamatiDelete,
+  isOk,
+  normaliseStatus,
+  providerMessage,
+  makeReferenceId,
+} from '../utils/icchhamati.util.js';
+import { lockFundsForTransaction, resolveTransaction } from '../utils/wallet.util.js';
+import DmtTransaction from '../models/dmtTransaction.model.js';
+import Transaction from '../models/transaction.model.js';
+import AepsWallet from '../models/aepsWallet.model.js';
 
-const getPaySprintHeaders = () => {
-  return {
-    Token: generatePaySprintToken(),
-    Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-    'Content-Type': 'application/json',
-  };
+/**
+ * Money transfer and beneficiaries, on Icchhamati.
+ *
+ * There is no remitter to register here: a beneficiary carries the sender's
+ * mobile number itself, is created straight away, and is activated by an OTP
+ * sent to that number. Only a verified beneficiary can be paid.
+ *
+ * The provider's beneficiary list is shared by the whole merchant account, so
+ * every read is filtered to the sender mobile the retailer is working with —
+ * one retailer must not be able to page through another's beneficiaries.
+ */
+
+/** The sender's mobile is the only thing tying a beneficiary to a customer. */
+const requireMobile = (mobile) => {
+  const digits = String(mobile || '').replace(/\D/g, '');
+  return /^[6-9]\d{9}$/.test(digits) ? digits : null;
 };
 
-const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
-
-export const queryRemitter = async (req, res) => {
-  try {
-    const { mobile } = req.body;
-    if (!mobile) return res.status(400).json({ success: false, message: 'Mobile number required' });
-
-    const payload = {
-      mobile: mobile,
-      bank3_flag: 'NO',
-      bank4_flag: 'NO',
-    };
-    const response = await axios.post(
-      `${baseUrl}/service/dmt/kyc/remitter/queryremitter`,
-      payload,
-      { headers: getPaySprintHeaders() }
-    );
-
-    return res.status(200).json({ success: true, data: response.data });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error?.response?.data?.message || 'Failed to query remitter',
-      error: error?.response?.data,
-    });
-  }
-};
-
-export const remitterEkyc = async (req, res) => {
-  try {
-    const { mobile, aadhaar_number, lat, long, pidData } = req.body;
-    if (!mobile || !aadhaar_number || !pidData) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Mobile, Aadhaar, and PID Data are required' });
-    }
-
-    const encryptedData = encryptPayload(pidData);
-
-    const payload = {
-      mobile,
-      aadhaar_number,
-      lat: lat || '28.7041',
-      long: long || '77.1025',
-      is_iris: '2',
-      data: encryptedData,
-    };
-
-    const response = await axios.post(
-      `${baseUrl}/service/dmt/kyc/remitter/queryremitter/kyc`,
-      payload,
-      { headers: getPaySprintHeaders() }
-    );
-
-    // The response contains ekyc_id and stateresp, which are passed to the frontend
-    return res.status(200).json({ success: true, data: response.data });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error?.response?.data?.message || 'Failed to complete remitter e-kyc',
-      error: error?.response?.data,
-    });
-  }
-};
-
-export const registerRemitter = async (req, res) => {
-  try {
-    const { mobile, firstName, lastName, pincode, aadhaar, pidData, ekyc_id, otp, stateresp } =
-      req.body;
-
-    // Encrypt the PID data exactly as done in E-KYC
-    const { encrypt } = await import('../utils/encryption.js');
-    const encryptedData = encrypt(pidData);
-
-    const payload = {
-      mobile,
-      firstname: firstName,
-      lastname: lastName,
-      pincode,
-      aadhaar,
-      piddata: encryptedData,
-      ekyc_id,
-      otp,
-      stateresp,
-    };
-    const response = await axios.post(
-      `${baseUrl}/service/dmt/kyc/remitter/registerremitter`,
-      payload,
-      { headers: getPaySprintHeaders() }
-    );
-
-    return res.status(200).json({ success: true, data: response.data });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error?.response?.data?.message || 'Failed to register remitter',
-    });
-  }
-};
+const toBeneficiary = (row) => ({
+  id: String(row.id),
+  beneid: String(row.id), // the name the existing screens read
+  name: row.name,
+  benename: row.name,
+  mobile: row.mobile,
+  account: row.account,
+  accno: row.account,
+  ifsc: row.ifsc,
+  bank: row.bank || null,
+  bankname: row.bank || null,
+  branch: row.branch || null,
+  status: row.status || null,
+  verified: String(row.status || '').toLowerCase() === 'verified' || row.verified === true,
+});
 
 export const fetchBeneficiaries = async (req, res) => {
   try {
-    const { mobile } = req.body;
-    const payload = { mobile };
-    const response = await axios.post(
-      `${baseUrl}/service/dmt/kyc/beneficiary/registerbeneficiary/fetchbeneficiary`,
-      payload,
-      { headers: getPaySprintHeaders() }
-    );
+    const mobile = requireMobile(req.body?.mobile);
+    if (!mobile) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'A valid 10-digit sender mobile number is required' });
+    }
 
-    return res.status(200).json({ success: true, data: response.data });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error?.response?.data?.message || 'Failed to fetch beneficiaries',
-      error: error?.response?.data,
+    const data = await icchhamatiGet('/api/v2/beneficiaries', {
+      search: mobile,
+      per_page: 100,
     });
+    if (!isOk(data)) {
+      return res.status(502).json({
+        success: false,
+        message: providerMessage(data, 'Could not load beneficiaries right now.'),
+      });
+    }
+
+    // The search is the provider's own free-text filter, so it can return rows
+    // that merely mention the number. Only rows actually registered to this
+    // sender may be shown.
+    const rows = data.data?.data || data.data || [];
+    const mine = rows.filter((row) => String(row.mobile || '').replace(/\D/g, '') === mobile);
+
+    return res.status(200).json({ success: true, data: mine.map(toBeneficiary) });
+  } catch (error) {
+    console.error('Fetch Beneficiaries Error:', error?.response?.data || error?.message);
+    return res.status(500).json({ success: false, message: 'Failed to fetch beneficiaries' });
   }
 };
 
 export const addBeneficiary = async (req, res) => {
   try {
-    const { mobile, bankid, benename, beneaccount, ifsc, pincode } = req.body;
-    const payload = { mobile, bankid, benename, accno: beneaccount, ifsc, pincode };
-    const response = await axios.post(
-      `${baseUrl}/service/dmt/kyc/beneficiary/registerbeneficiary`,
-      payload,
-      { headers: getPaySprintHeaders() }
-    );
+    const { benename, name, beneaccount, accno, account, ifsc } = req.body;
+    const mobile = requireMobile(req.body?.mobile);
+    const beneName = benename || name;
+    const beneAccount = String(beneaccount || accno || account || '').trim();
 
-    return res.status(200).json({ success: true, data: response.data });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error?.response?.data?.message || 'Failed to add beneficiary',
-      error: error?.response?.data,
+    if (!mobile || !beneName || !beneAccount || !ifsc) {
+      return res.status(400).json({
+        success: false,
+        message: 'Sender mobile, beneficiary name, account number and IFSC are required',
+      });
+    }
+
+    const data = await icchhamatiPost('/api/v2/beneficiaries/create', {
+      name: beneName,
+      mobile,
+      account: beneAccount,
+      confirmAccount: beneAccount,
+      ifsc: String(ifsc).toUpperCase(),
     });
+
+    if (!isOk(data)) {
+      return res.status(400).json({
+        success: false,
+        message: providerMessage(data, 'Could not add this beneficiary.'),
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: providerMessage(data, 'Beneficiary added. Verify it with the OTP to pay it.'),
+      data: data.data ? toBeneficiary(data.data) : null,
+    });
+  } catch (error) {
+    console.error('Add Beneficiary Error:', error?.response?.data || error?.message);
+    return res.status(500).json({ success: false, message: 'Failed to add beneficiary' });
   }
 };
 
+/** Sends the activation OTP to the sender's registered mobile. */
+export const sendBeneficiaryOtp = async (req, res) => {
+  try {
+    const { beneficiary_id, beneid } = req.body;
+    const id = beneficiary_id || beneid;
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Beneficiary id is required' });
+    }
+
+    const data = await icchhamatiPost('/api/v2/beneficiaries/get-beneficiary-otp', {
+      beneficiary_id: String(id),
+    });
+
+    if (!isOk(data)) {
+      return res
+        .status(400)
+        .json({ success: false, message: providerMessage(data, 'Could not send the OTP.') });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: providerMessage(data, 'OTP sent to the registered sender mobile.'),
+    });
+  } catch (error) {
+    console.error('Beneficiary OTP Error:', error?.response?.data || error?.message);
+    return res.status(500).json({ success: false, message: 'Failed to send OTP' });
+  }
+};
+
+export const verifyBeneficiary = async (req, res) => {
+  try {
+    const { beneficiary_id, beneid, otp } = req.body;
+    const id = beneficiary_id || beneid;
+    if (!id || !otp) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Beneficiary id and OTP are required' });
+    }
+
+    const data = await icchhamatiPost('/api/v2/beneficiaries/otp-verify-beneficiary', {
+      beneficiary_id: String(id),
+      otp: String(otp),
+    });
+
+    if (!isOk(data)) {
+      return res
+        .status(400)
+        .json({ success: false, message: providerMessage(data, 'Could not verify that OTP.') });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: providerMessage(data, 'Beneficiary verified and activated.'),
+    });
+  } catch (error) {
+    console.error('Verify Beneficiary Error:', error?.response?.data || error?.message);
+    return res.status(500).json({ success: false, message: 'Failed to verify beneficiary' });
+  }
+};
+
+/** Deleting a beneficiary is OTP-protected at the provider, same as adding one. */
 export const deleteBeneficiary = async (req, res) => {
   try {
-    const { mobile, beneid } = req.body;
-    const payload = { mobile, beneid };
-    const response = await axios.post(
-      `${baseUrl}/service/dmt/kyc/beneficiary/registerbeneficiary/deletebeneficiary`,
-      payload,
-      { headers: getPaySprintHeaders() }
-    );
+    const { beneficiary_id, beneid, otp } = req.body;
+    const id = beneficiary_id || beneid;
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Beneficiary id is required' });
+    }
 
-    return res.status(200).json({ success: true, data: response.data });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error?.response?.data?.message || 'Failed to delete beneficiary',
+    const data = await icchhamatiDelete(`/api/v2/beneficiaries/${encodeURIComponent(id)}`, {
+      otp: otp ? String(otp) : undefined,
     });
+
+    if (!isOk(data)) {
+      return res
+        .status(400)
+        .json({ success: false, message: providerMessage(data, 'Could not delete beneficiary.') });
+    }
+
+    return res
+      .status(200)
+      .json({ success: true, message: providerMessage(data, 'Beneficiary deleted.') });
+  } catch (error) {
+    console.error('Delete Beneficiary Error:', error?.response?.data || error?.message);
+    return res.status(500).json({ success: false, message: 'Failed to delete beneficiary' });
   }
 };
 
 export const initiateTransfer = async (req, res) => {
   try {
     const retailerId = req.user.id;
-    const { mobile, beneid, amount, beneaccount, ifsc, pin } = req.body;
+    const { beneficiary_id, beneid, amount, pin, transfer_mode, beneaccount, ifsc } = req.body;
+    const beneficiaryId = beneficiary_id || beneid;
+    const totalAmount = Number(amount);
 
-    if (!amount || amount <= 0 || !pin) {
-      return res.status(400).json({ success: false, message: 'Valid amount and PIN are required' });
+    if (!beneficiaryId || !totalAmount || totalAmount <= 0 || !pin) {
+      return res.status(400).json({
+        success: false,
+        message: 'Beneficiary, a valid amount and the transaction PIN are required',
+      });
     }
 
-    const mainWallet = await MainWallet.findOne({ userId: retailerId });
-    if (!mainWallet || mainWallet.balance < amount) {
+    // IMPS and NEFT are the only modes the provider settles; anything else would
+    // be rejected after the wallet had already been debited.
+    const mode = String(transfer_mode || 'IMPS').toUpperCase();
+    if (mode !== 'IMPS' && mode !== 'NEFT') {
       return res
         .status(400)
-        .json({ success: false, message: 'Insufficient Main Wallet balance for DMT' });
+        .json({ success: false, message: 'Transfer mode must be IMPS or NEFT.' });
     }
 
-    // We use AepsWallet to verify PIN since PIN is stored there
-    const AepsWallet = (await import('../models/aepsWallet.model.js')).default;
     const aepsWallet = await AepsWallet.findOne({ userId: retailerId });
-
     if (!aepsWallet || !aepsWallet.pin) {
       return res.status(400).json({ success: false, message: 'Please set your wallet PIN first.' });
     }
-
     const isPinValid = await bcrypt.compare(pin.toString(), aepsWallet.pin);
     if (!isPinValid) {
       return res.status(401).json({ success: false, message: 'Incorrect PIN' });
     }
 
-    const transactionId = `DMT${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    const transactionId = makeReferenceId('DMT');
 
-    // Deduct from Main Wallet atomically (Creates PENDING transaction)
-    const { updateWalletAtomically } = await import('../utils/wallet.util.js');
-    await updateWalletAtomically(retailerId, 'MAIN', -amount, {
-      transactionId,
-      userId: retailerId,
-      type: 'DMT',
-      amount: amount,
-      status: 'PENDING',
-      metadata: { beneficiaryAccount: beneaccount },
-    });
-
-    const payload = {
-      mobile,
-      referenceid: transactionId,
-      pipe: 'bank1',
-      pincode: '110001',
-      address: 'Retailer Address',
-      dob: '01-01-1990',
-      gst_state: '07',
-      beneid,
-      txntype: 'IMPS',
-      amount: amount.toString(),
-    };
-
-    let response;
-    let status = 'FAILED';
-
+    // Lock the funds as PROCESSING. A payout is accepted before the beneficiary
+    // bank confirms it, so the money stays held until there is a final answer —
+    // refunding on "Pending" would hand back money that is on its way.
     try {
-      response = await axios.post(`${baseUrl}/service/dmt/kyc/transact/transact`, payload, {
-        headers: getPaySprintHeaders(),
-      });
-      status = response.data?.status ? 'SUCCESS' : 'FAILED';
-    } catch (apiError) {
-      console.error('DMT API request failed:', apiError?.response?.data || apiError.message);
-      response = { data: apiError?.response?.data || { message: apiError.message } };
-    }
-
-    // Refund if failed
-    if (status === 'FAILED') {
-      await updateWalletAtomically(retailerId, 'MAIN', amount, {
-        transactionId: `REF-${transactionId}`,
+      await lockFundsForTransaction(retailerId, 'MAIN', -totalAmount, {
+        transactionId,
         userId: retailerId,
         type: 'DMT',
-        amount: amount,
-        status: 'SUCCESS',
-        metadata: { note: 'Refund for failed DMT transaction', originalTxn: transactionId },
+        amount: totalAmount,
+        metadata: {
+          beneficiaryId: String(beneficiaryId),
+          beneficiaryAccount: beneaccount || null,
+          transferMode: mode,
+          provider: 'ICCHHAMATI',
+        },
+      });
+    } catch (walletError) {
+      return res.status(400).json({
+        success: false,
+        message: walletError.message || 'Insufficient Main Wallet balance for this transfer.',
       });
     }
 
-    // Update the original Transaction status
+    const data = await icchhamatiPost('/api/v2/beneficiaries/beneficiary-payout', {
+      beneficiary_id: String(beneficiaryId),
+      amount: Math.round(totalAmount),
+      transfer_mode: mode,
+      transaction_id: transactionId,
+      details: `Money transfer ${transactionId}`,
+    });
+
+    // The envelope says whether the payout was accepted; the transaction's own
+    // status says whether it has settled. A payout accepted but not yet settled
+    // is PENDING, not SUCCESS.
+    const status = isOk(data) ? normaliseStatus(data?.data?.status ?? '2') : 'FAILED';
+    const message = providerMessage(
+      data,
+      status === 'FAILED' ? 'The transfer was not accepted.' : ''
+    );
+
     await Transaction.findOneAndUpdate(
       { transactionId },
       {
-        status,
-        'metadata.apiMessage': response.data?.message,
+        $set: {
+          'metadata.providerTxnId': data?.data?.txnid || null,
+          'metadata.rrn': data?.data?.rrn || null,
+          'metadata.apiResponse': data,
+        },
       }
     );
 
-    // Log DMT specific Transaction
-    const dmtTxn = await DmtTransaction.create({
+    await DmtTransaction.create({
       transactionId,
       retailerId,
-      remitterMobile: mobile,
-      beneficiaryAccount: beneaccount,
-      beneficiaryIfsc: ifsc,
-      amount,
-      status,
-      apiReference: response.data?.ackno || null,
-      apiResponse: response.data,
+      remitterMobile: String(req.body?.mobile || ''),
+      beneficiaryAccount: String(data?.data?.account_no || beneaccount || 'NA'),
+      beneficiaryIfsc: String(ifsc || 'NA'),
+      amount: totalAmount,
+      status: status === 'SUCCESS' ? 'SUCCESS' : status === 'FAILED' ? 'FAILED' : 'PENDING',
+      apiReference: data?.data?.txnid || data?.data?.rrn || null,
+      apiResponse: data,
     });
 
-    return res.status(200).json({
+    if (status === 'PENDING') {
+      // ponytail: the provider publishes no payout status endpoint, so a pending
+      // transfer stays PROCESSING until it is settled by hand in the admin
+      // portal. Wire it into the reconciliation cron once they expose one.
+      return res.status(200).json({
+        success: true,
+        pending: true,
+        message: message || 'Transfer accepted and is being processed.',
+        data: { ...(data?.data || {}), transactionId },
+      });
+    }
+
+    // Refunds the locked funds when the status is FAILED.
+    await resolveTransaction(transactionId, status, message, 'MAIN');
+
+    return res.status(status === 'SUCCESS' ? 200 : 400).json({
       success: status === 'SUCCESS',
-      message: response.data?.message || 'Transaction processed',
-      data: response.data,
-      transaction: dmtTxn,
+      message: message || (status === 'SUCCESS' ? 'Transfer successful' : 'Transfer failed'),
+      data: { ...(data?.data || {}), transactionId },
     });
   } catch (error) {
-    console.error('DMT Transfer Error:', error);
+    console.error('DMT Transfer Error:', error?.response?.data || error?.message || error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
@@ -294,45 +339,5 @@ export const getDmtHistory = async (req, res) => {
     return res.status(200).json({ success: true, data: history });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Internal server error' });
-  }
-};
-
-import fs from 'fs';
-import path from 'path';
-
-export const fetchBankList = async (req, res) => {
-  try {
-    const banksFilePath = path.join(process.cwd(), 'src/data/dmt_banks.json');
-
-    // Read the local JSON file containing PaySprint banks
-    if (fs.existsSync(banksFilePath)) {
-      const fileData = fs.readFileSync(banksFilePath, 'utf-8');
-      const banks = JSON.parse(fileData);
-
-      // Map the data to the format expected by the frontend
-      const formattedBanks = banks.map((bank) => ({
-        bankid: bank.BankId.toString(),
-        bankname: bank.BankName,
-        ifsc: '', // Partner provides IFSC themselves
-      }));
-
-      return res.status(200).json({
-        success: true,
-        data: {
-          status: true,
-          message: 'Banks fetched successfully',
-          data: formattedBanks,
-        },
-      });
-    } else {
-      return res
-        .status(500)
-        .json({ success: false, message: 'Bank list data not found on server' });
-    }
-  } catch (error) {
-    console.error('Failed to load bank list from file:', error);
-    return res
-      .status(500)
-      .json({ success: false, message: 'Internal server error while loading bank list' });
   }
 };

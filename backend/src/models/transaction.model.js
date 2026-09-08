@@ -39,6 +39,7 @@ const transactionSchema = new mongoose.Schema(
         'STD_PAN_CARD',
         'FUND_REQUEST',
         'FUND_TRANSFER',
+        'PG_COLLECTION',
       ],
       required: true,
     },

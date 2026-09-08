@@ -125,26 +125,35 @@ const dayHeading = (key: string) => {
 };
 
 /**
- * Buckets rows into the given local day keys, summing what the retailer
- * actually earned. Pure so the money arithmetic can be checked without a
+ * Buckets rows into the given local day keys, and folds in the per-day earnings
+ * the server aggregated. Pure so the arithmetic can be checked without a
  * renderer (see DashboardScreen.test.mjs).
  *
- * Only SUCCESS counts, and a refund is skipped: it reverses a sale whose
- * commission was already credited, so counting it would pay the day twice.
+ * Earnings are NOT summed from the rows. This list is capped at a row limit and
+ * sorted newest first, so on a busy day the earlier days of the window fall off
+ * the end and would read as zero — a wrong number, not a missing one. The
+ * commission-by-day endpoint aggregates every row server-side, net of TDS, so
+ * that is the only figure trusted for money here. The rows still drive the list
+ * and its per-day count of what is on screen.
  */
-export const bucketByDay = (transactions: any[], keys: string[]) => {
+export const bucketByDay = (
+  transactions: any[],
+  keys: string[],
+  commissionByDay: Record<string, { commission?: number; count?: number }> = {}
+) => {
   const byDay = new Map<string, { commission: number; count: number; rows: any[] }>();
-  for (const key of keys) byDay.set(key, { commission: 0, count: 0, rows: [] });
+  for (const key of keys) {
+    byDay.set(key, {
+      commission: Number(commissionByDay?.[key]?.commission || 0),
+      count: Number(commissionByDay?.[key]?.count || 0),
+      rows: [],
+    });
+  }
 
   for (const tx of transactions) {
     const day = byDay.get(isoDate(new Date(tx.createdAt || tx.date)));
     if (!day) continue;
     day.rows.push(tx);
-    const isRefund = /^REF(UND)?-/.test(String(tx.transactionId || ''));
-    if (tx.status === 'SUCCESS' && !isRefund) {
-      day.commission += Number(tx.commissions?.retailerEarned || 0);
-      day.count += 1;
-    }
   }
   return byDay;
 };
@@ -169,6 +178,12 @@ export const DashboardScreen: React.FC = () => {
     async () => (await api.getRecentTransactions({ limit: 60, ...windowRange() })).data,
     []
   );
+  // Earnings come from their own aggregation rather than from the rows above,
+  // which are capped and would understate a busy day.
+  const earnings = useAsync<Record<string, { commission: number; count: number }>>(
+    async () => (await api.getCommissionByDay(WINDOW_DAYS)).data ?? {},
+    []
+  );
 
   const stats = dashboard.data?.stats;
   const transactions: any[] = Array.isArray(activity.data)
@@ -179,6 +194,7 @@ export const DashboardScreen: React.FC = () => {
     dashboard.refresh();
     balances.refresh();
     activity.refresh();
+    earnings.refresh();
   };
 
   const initials = (user?.name || 'R')
@@ -204,7 +220,11 @@ export const DashboardScreen: React.FC = () => {
     date.setDate(date.getDate() - (WINDOW_DAYS - 1 - index));
     return { key: isoDate(date), date };
   });
-  const byDay = bucketByDay(transactions, days.map((day) => day.key));
+  const byDay = bucketByDay(
+    transactions,
+    days.map((day) => day.key),
+    earnings.data ?? {}
+  );
 
   const strip = days.map(({ key, date }) => ({
     key,
