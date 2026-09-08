@@ -59,10 +59,19 @@ export const RechargeScreen: React.FC = () => {
   const operators = useAsync<Operator[]>(async () => {
     setOperator(null);
     setPlanList([]);
-    return (await api.getRechargeOperators(type)).data ?? [];
+    const res = await api.getRechargeOperators(type);
+    // A refused list is not an empty list. Swallowing the failure left the
+    // retailer staring at an empty dropdown with nothing to say whether the
+    // provider was down, the service was off, or the app was broken.
+    if (!res.success) throw new Error(res.message || 'Could not load operators.');
+    return res.data ?? [];
   }, [type]);
 
-  const circles = useAsync<Circle[]>(async () => (await api.getRechargeCircles()).data ?? [], []);
+  const circles = useAsync<Circle[]>(async () => {
+    const res = await api.getRechargeCircles();
+    if (!res.success) throw new Error(res.message || 'Could not load circles.');
+    return res.data ?? [];
+  }, []);
 
   const history = useAsync<any[]>(async () => (await api.getRechargeHistory()).data ?? [], []);
 
@@ -185,6 +194,16 @@ export const RechargeScreen: React.FC = () => {
         </CardHeader>
         <CardContent style={styles.form}>
           {!!operators.error && <ErrorBanner message={operators.error} onRetry={operators.reload} />}
+          {/* The provider can answer with an empty catalogue — its prepaid list
+              is empty today — which is not a failure and not something the
+              retailer can fix by tapping again. Say so instead of showing a
+              dropdown with nothing in it. */}
+          {!operators.loading && !operators.error && !(operators.data ?? []).length && (
+            <Banner
+              tone="warning"
+              message={`No ${TYPES.find((t) => t.key === type)?.label.toLowerCase() ?? ''} operators are available from the provider right now. Please try again later.`}
+            />
+          )}
 
           <SelectField
             label="Operator"
@@ -244,6 +263,7 @@ export const RechargeScreen: React.FC = () => {
 
           {type === 'prepaid' && (
             <>
+              {!!circles.error && <ErrorBanner message={circles.error} onRetry={circles.reload} />}
               <SelectField
                 label="Circle"
                 value={circle?.name ?? 'Select circle'}

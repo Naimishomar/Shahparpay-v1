@@ -24,6 +24,9 @@ import Retailer from '../models/users/retailer.model.js';
 
 const getFrontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:5173';
 
+/** The gateway refuses anything smaller: "Minimum amount is 200.00". */
+const MIN_ORDER_AMOUNT = 200;
+
 /**
  * Creates the checkout order and returns the link to show the customer.
  */
@@ -35,6 +38,14 @@ export const createOrder = async (req, res) => {
 
     if (!(totalAmount > 0)) {
       return res.status(400).json({ success: false, message: 'Amount must be greater than 0' });
+    }
+    // Checked before anything is recorded: the gateway would refuse it anyway,
+    // and a rejected order should not leave a dead PENDING row behind.
+    if (totalAmount < MIN_ORDER_AMOUNT) {
+      return res.status(400).json({
+        success: false,
+        message: `The minimum payment amount is ₹${MIN_ORDER_AMOUNT}.`,
+      });
     }
     if (!name || !String(name).trim()) {
       return res.status(400).json({ success: false, message: "The payer's name is required" });
@@ -74,14 +85,24 @@ export const createOrder = async (req, res) => {
       failure_url: `${getFrontendUrl()}/payments/collect?ref=${referenceId}&result=failure`,
     });
 
-    if (!isOk(data) || !data?.data?.payment_url) {
+    // The gateway returns the link at the top level — {status, message,
+    // payment_url} — not under `data` as its documentation shows, and sends no
+    // order id at all: our own reference is what /pg/verify is queried by.
+    const paymentUrl = data?.payment_url || data?.data?.payment_url || null;
+    const orderId = data?.order_id || data?.data?.order_id || referenceId;
+
+    if (!isOk(data) || !paymentUrl) {
       await Transaction.findOneAndUpdate(
         { transactionId: referenceId, status: 'PENDING' },
         { $set: { status: 'FAILED', 'metadata.apiResponse': data } }
       );
       return res.status(400).json({
         success: false,
-        message: providerMessage(data, 'Could not create the payment link.'),
+        // An accepted-looking message with no link is still a failure, and
+        // echoing "Payment initiated successfully" back would be a lie.
+        message: isOk(data)
+          ? 'The gateway accepted the order but returned no payment link.'
+          : providerMessage(data, 'Could not create the payment link.'),
       });
     }
 
@@ -89,8 +110,8 @@ export const createOrder = async (req, res) => {
       { transactionId: referenceId },
       {
         $set: {
-          'metadata.orderId': data.data.order_id || referenceId,
-          'metadata.paymentUrl': data.data.payment_url,
+          'metadata.orderId': orderId,
+          'metadata.paymentUrl': paymentUrl,
           'metadata.apiResponse': data,
         },
       }
@@ -101,10 +122,10 @@ export const createOrder = async (req, res) => {
       message: providerMessage(data, 'Payment link created.'),
       data: {
         transactionId: referenceId,
-        orderId: data.data.order_id || referenceId,
-        paymentUrl: data.data.payment_url,
+        orderId,
+        paymentUrl,
         amount: totalAmount,
-        status: data.data.status || 'PENDING',
+        status: data?.data?.status || 'PENDING',
       },
     });
   } catch (error) {

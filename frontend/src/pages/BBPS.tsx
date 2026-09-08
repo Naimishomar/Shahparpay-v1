@@ -54,7 +54,10 @@ const BBPS = () => {
         const fetchCategories = async () => {
             try {
                 const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/bill-categories`);
-                if (!res.data.success) return;
+                if (!res.data.success) {
+                    toast.error(res.data.message || 'Could not load bill categories');
+                    return;
+                }
                 const fromProvider = (res.data.data || []).map((cat: any) => {
                     // The category name is what the biller registry is keyed by, so it
                     // is also the id every later call sends back.
@@ -83,11 +86,16 @@ const BBPS = () => {
         try {
             const apiType = type;
             const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/operators/${apiType}`);
-            if (res.data.success) {
-                setOperators(res.data.data);
+            if (!res.data.success) {
+                toast.error(res.data.message || 'Could not load billers');
+                setOperators([]);
+                return;
             }
-        } catch (error) {
+            setOperators(res.data.data);
+            if (!res.data.data?.length) toast.info('No billers are available for this category right now');
+        } catch (error: any) {
             console.error("Failed to fetch operators", error);
+            toast.error(error.response?.data?.message || 'Could not load billers');
             setOperators([]);
         }
     };

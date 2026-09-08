@@ -21,6 +21,9 @@ import api from '@/services/api';
 
 const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 
+/** The gateway refuses anything smaller: "Minimum amount is 200.00". */
+const MIN_ORDER_AMOUNT = 200;
+
 const TABS = [
   { key: 'link', label: 'Payment link' },
   { key: 'qr', label: 'UPI QR' },
@@ -83,7 +86,8 @@ export const CollectScreen: React.FC = () => {
     return res.data;
   });
 
-  const orderValid = name.trim().length > 2 && mobile.length === 10 && Number(amount) > 0;
+  const orderValid =
+    name.trim().length > 2 && mobile.length === 10 && Number(amount) >= MIN_ORDER_AMOUNT;
   const qrValid =
     qrName.trim().length > 2 && qrAccount.trim().length >= 6 && IFSC_RE.test(qrIfsc.trim().toUpperCase());
 
@@ -144,8 +148,13 @@ export const CollectScreen: React.FC = () => {
                 value={amount}
                 onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))}
                 keyboardType="decimal-pad"
-                placeholder="0.00"
+                placeholder={`${MIN_ORDER_AMOUNT}.00`}
                 leftIcon="currency-inr"
+                error={
+                  amount && Number(amount) < MIN_ORDER_AMOUNT
+                    ? `The minimum payment amount is ₹${MIN_ORDER_AMOUNT}`
+                    : undefined
+                }
               />
               {!!createOrder.error && <ErrorBanner message={createOrder.error} />}
               <Button

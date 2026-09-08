@@ -82,7 +82,8 @@ const Collect = () => {
         const amount = Number(form.amount);
         if (!form.name.trim()) return toast.error("Enter the customer's name");
         if (form.mobile.length !== 10) return toast.error('Enter a valid 10-digit mobile number');
-        if (!(amount > 0)) return toast.error('Enter an amount greater than 0');
+        // The gateway refuses anything smaller: "Minimum amount is 200.00".
+        if (!(amount >= 200)) return toast.error('The minimum payment amount is ₹200');
 
         setLoading(true);
         try {

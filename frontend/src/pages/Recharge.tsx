@@ -52,12 +52,17 @@ const Recharge = () => {
         try {
             const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/operators/${type}`);
             const data = await res.json();
-            if (data.success) {
-                if (type === 'prepaid') setPrepaidOperators(data.data);
-                if (type === 'dth') setDthOperators(data.data);
+            if (!data.success) {
+                // A refused list is not an empty list — say why, rather than
+                // leaving an empty dropdown that looks like our bug.
+                toast.error(data.message || `Could not load ${type} operators`);
+                return;
             }
+            if (type === 'prepaid') setPrepaidOperators(data.data);
+            if (type === 'dth') setDthOperators(data.data);
         } catch (error) {
             console.error(`Failed to fetch ${type} operators`, error);
+            toast.error(`Could not load ${type} operators`);
         }
     };
 
@@ -65,9 +70,14 @@ const Recharge = () => {
         try {
             const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/circles`);
             const data = await res.json();
-            if (data.success) setCircles(data.data);
+            if (!data.success) {
+                toast.error(data.message || 'Could not load circles');
+                return;
+            }
+            setCircles(data.data);
         } catch (error) {
             console.error("Failed to fetch circles", error);
+            toast.error('Could not load circles');
         }
     };
 

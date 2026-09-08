@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, SelectField } from '@/components/ui/Input';
 import {
   Screen,
+  Banner,
   EmptyState,
   ErrorBanner,
   LoadingBlock,
@@ -34,14 +35,16 @@ export const BbpsScreen: React.FC = () => {
   // The categories are whatever the provider currently bills for: a category we
   // invent here has no biller registry behind it, and one they add would be
   // invisible until someone edited this file.
-  const categories = useAsync<any[]>(
-    async () =>
-      ((await api.getBillCategories()).data ?? []).map((c: any) => ({
-        key: c.category || c.name || c.code,
-        label: c.name || c.category || c.code,
-      })),
-    []
-  );
+  const categories = useAsync<any[]>(async () => {
+    const res = await api.getBillCategories();
+    // A refused list is not an empty list: swallowing it left the screen with no
+    // categories, no billers and nothing to explain why.
+    if (!res.success) throw new Error(res.message || 'Could not load bill categories.');
+    return (res.data ?? []).map((c: any) => ({
+      key: c.category || c.name || c.code,
+      label: c.name || c.category || c.code,
+    }));
+  }, []);
   const [category, setCategory] = useState('');
   const [biller, setBiller] = useState<Biller | null>(null);
   const [showBillers, setShowBillers] = useState(false);
@@ -58,7 +61,9 @@ export const BbpsScreen: React.FC = () => {
     setBill(null);
     setAmount('');
     if (!category) return [];
-    return (await api.getRechargeOperators(category)).data ?? [];
+    const res = await api.getRechargeOperators(category);
+    if (!res.success) throw new Error(res.message || 'Could not load billers.');
+    return res.data ?? [];
   }, [category]);
 
   // The first category the provider lists, once they have loaded.
@@ -142,6 +147,15 @@ export const BbpsScreen: React.FC = () => {
         </CardContent>
       </Card>
 
+      {!!categories.error && (
+        <ErrorBanner message={categories.error} onRetry={categories.reload} />
+      )}
+      {!categories.loading && !categories.error && !(categories.data ?? []).length && (
+        <Banner
+          tone="warning"
+          message="No bill categories are available from the provider right now. Please try again later."
+        />
+      )}
       <Segmented options={categories.data ?? []} value={category} onChange={setCategory} />
 
       <Card>
@@ -150,6 +164,12 @@ export const BbpsScreen: React.FC = () => {
         </CardHeader>
         <CardContent style={styles.form}>
           {!!billers.error && <ErrorBanner message={billers.error} onRetry={billers.reload} />}
+          {!billers.loading && !billers.error && !!category && !(billers.data ?? []).length && (
+            <Banner
+              tone="warning"
+              message="No billers are available for this category right now."
+            />
+          )}
 
           <SelectField
             label="Biller"
