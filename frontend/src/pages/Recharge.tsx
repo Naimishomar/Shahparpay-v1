@@ -14,9 +14,7 @@ const Recharge = () => {
     const [loading, setLoading] = useState(false);
     
     // Data State
-    const [prepaidOperators, setPrepaidOperators] = useState<any[]>([]);
     const [dthOperators, setDthOperators] = useState<any[]>([]);
-    const [circles, setCircles] = useState<any[]>([]);
     const [plans, setPlans] = useState<any[]>([]);
     const [showPlansModal, setShowPlansModal] = useState(false);
     const [planSearch, setPlanSearch] = useState("");
@@ -26,10 +24,10 @@ const Recharge = () => {
 
     // Form State (Prepaid)
     const [mobileNumber, setMobileNumber] = useState("");
-    const [prepaidOperator, setPrepaidOperator] = useState("");
-    // A prepaid recharge is routed by circle as well as operator, and the circle
-    // is a provider code — not a name — so it has to come from the provider.
-    const [circle, setCircle] = useState("");
+    // Icchhamati resolves both values from the mobile number during plan lookup.
+    // They are kept internally for the recharge request and are not retailer inputs.
+    const [resolvedOperator, setResolvedOperator] = useState("");
+    const [resolvedCircle, setResolvedCircle] = useState("");
     const [prepaidAmount, setPrepaidAmount] = useState("");
     const [prepaidPin, setPrepaidPin] = useState("");
 
@@ -42,9 +40,7 @@ const Recharge = () => {
 
     // Initial Data Fetch
     useEffect(() => {
-        fetchOperators('prepaid');
         fetchOperators('dth');
-        fetchCircles();
         fetchHistory();
     }, []);
 
@@ -58,26 +54,10 @@ const Recharge = () => {
                 toast.error(data.message || `Could not load ${type} operators`);
                 return;
             }
-            if (type === 'prepaid') setPrepaidOperators(data.data);
             if (type === 'dth') setDthOperators(data.data);
         } catch (error) {
             console.error(`Failed to fetch ${type} operators`, error);
             toast.error(`Could not load ${type} operators`);
-        }
-    };
-
-    const fetchCircles = async () => {
-        try {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/circles`);
-            const data = await res.json();
-            if (!data.success) {
-                toast.error(data.message || 'Could not load circles');
-                return;
-            }
-            setCircles(data.data);
-        } catch (error) {
-            console.error("Failed to fetch circles", error);
-            toast.error('Could not load circles');
         }
     };
 
@@ -107,15 +87,9 @@ const Recharge = () => {
             });
             if (response.data && response.data.success) {
                 // Icchhamati resolves the operator and circle from the number.
-                // Use those values when they are present in our provider lists,
-                // while keeping manual selection available as a fallback.
                 const meta = response.data.meta || {};
-                if (meta.operator && prepaidOperators.some((op: any) => String(op.id) === String(meta.operator))) {
-                    setPrepaidOperator(String(meta.operator));
-                }
-                if (meta.circle && circles.some((item: any) => String(item.id) === String(meta.circle))) {
-                    setCircle(String(meta.circle));
-                }
+                setResolvedOperator(meta.operator ? String(meta.operator) : "");
+                setResolvedCircle(meta.circle ? String(meta.circle) : "");
 
                 // response.data.data contains the plans object with categories like TOPUP, 3G/4G, etc.
                 const plansData = response.data.data || {};
@@ -197,15 +171,15 @@ const Recharge = () => {
         let payload: any = { type, userId: user?.id || user?._id };
         
         if (type === 'prepaid') {
-            if (!mobileNumber || !prepaidOperator || !prepaidAmount || !prepaidPin) {
-                toast.error("Please fill all fields.");
+            if (!/^[6-9]\d{9}$/.test(mobileNumber) || !prepaidAmount || !prepaidPin) {
+                toast.error("Enter mobile number, amount and transaction PIN.");
                 return;
             }
-            if (!circle) {
-                toast.error("Please select the customer circle.");
+            if (!resolvedOperator || !resolvedCircle) {
+                toast.error("Please browse plans first so the operator and circle can be detected.");
                 return;
             }
-            payload = { ...payload, number: mobileNumber, operator: prepaidOperator, circle, amount: prepaidAmount, pin: prepaidPin };
+            payload = { ...payload, number: mobileNumber, operator: resolvedOperator, circle: resolvedCircle, amount: prepaidAmount, pin: prepaidPin };
         } else {
             if (!dthNumber || !dthOperator || !dthAmount || !dthPin) {
                 toast.error("Please fill all fields.");
@@ -219,10 +193,12 @@ const Recharge = () => {
             const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/do-recharge`, payload);
             
             if (response.data && response.data.success) {
-                const opList: any = type === 'prepaid' ? prepaidOperators : dthOperators;
-                const opId = type === 'prepaid' ? prepaidOperator : dthOperator;
-                const selectedOp = opList.find((op: any) => op.id.toString() === opId?.toString());
-                const opName = selectedOp ? selectedOp.name : "Unknown";
+                const selectedOp = type === 'prepaid'
+                    ? null
+                    : dthOperators.find((op: any) => op.id.toString() === dthOperator?.toString());
+                const opName = type === 'prepaid'
+                    ? response.data.data?.operatorname || response.data.data?.operator || resolvedOperator
+                    : selectedOp?.name || "Unknown";
                 const resData = response.data.data || {};
 
                 // The provider accepts a recharge before the operator confirms it, so a
@@ -333,35 +309,11 @@ const Recharge = () => {
                                                     return;
                                                 }
                                                 setMobileNumber(val);
+                                                setResolvedOperator("");
+                                                setResolvedCircle("");
                                             }}
                                             className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
                                         />
-                                    </div>
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-sm font-medium text-foreground">Operator</label>
-                                        <select 
-                                            value={prepaidOperator}
-                                            onChange={e => setPrepaidOperator(e.target.value)}
-                                            className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
-                                        >
-                                            <option value="">Select Operator</option>
-                                            {prepaidOperators.map((op: any) => (
-                                                <option key={op.id} value={op.id}>{op.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-sm font-medium text-foreground">Circle</label>
-                                        <select 
-                                            value={circle}
-                                            onChange={e => setCircle(e.target.value)}
-                                            className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
-                                        >
-                                            <option value="">Select Circle</option>
-                                            {circles.map((c: any) => (
-                                                <option key={c.id} value={c.id}>{c.name}</option>
-                                            ))}
-                                        </select>
                                     </div>
                                     <div className="flex items-end">
                                         <button 
