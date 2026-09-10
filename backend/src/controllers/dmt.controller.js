@@ -87,11 +87,16 @@ export const addBeneficiary = async (req, res) => {
     const beneName = benename || name;
     const beneAccount = String(beneaccount || accno || account || '').trim();
 
-    if (!mobile || !beneName || !beneAccount || !ifsc) {
+    const normalizedIfsc = String(ifsc || '').trim().toUpperCase();
+    if (!mobile || !beneName || !beneAccount || !normalizedIfsc) {
       return res.status(400).json({
         success: false,
         message: 'Sender mobile, beneficiary name, account number and IFSC are required',
       });
+    }
+
+    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(normalizedIfsc)) {
+      return res.status(400).json({ success: false, message: 'Enter a valid IFSC code' });
     }
 
     const data = await icchhamatiPost('/api/v2/beneficiaries/create', {
@@ -99,7 +104,7 @@ export const addBeneficiary = async (req, res) => {
       mobile,
       account: beneAccount,
       confirmAccount: beneAccount,
-      ifsc: String(ifsc).toUpperCase(),
+      ifsc: normalizedIfsc,
     });
 
     if (!isOk(data)) {
@@ -265,13 +270,24 @@ export const initiateTransfer = async (req, res) => {
       });
     }
 
-    const data = await icchhamatiPost('/api/v2/beneficiaries/beneficiary-payout', {
-      beneficiary_id: String(beneficiaryId),
-      amount: Math.round(totalAmount),
-      transfer_mode: mode,
-      transaction_id: transactionId,
-      details: `Money transfer ${transactionId}`,
-    });
+    let data;
+    try {
+      data = await icchhamatiPost('/api/v2/beneficiaries/beneficiary-payout', {
+        beneficiary_id: String(beneficiaryId),
+        amount: Math.round(totalAmount),
+        transfer_mode: mode,
+        transaction_id: transactionId,
+        details: `Money transfer ${transactionId}`,
+      });
+    } catch (providerError) {
+      // Do not refund on a timeout: the provider may have accepted the payout.
+      return res.status(202).json({
+        success: true,
+        pending: true,
+        message: 'Transfer submitted; provider status is being confirmed.',
+        data: { transactionId, status: 'PENDING' },
+      });
+    }
 
     // The envelope says whether the payout was accepted; the transaction's own
     // status says whether it has settled. A payout accepted but not yet settled

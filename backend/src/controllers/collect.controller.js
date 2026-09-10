@@ -238,20 +238,22 @@ export const generateQr = async (req, res) => {
       .trim()
       .toUpperCase();
 
-    if (!name || !accountNo || !accountIfsc) {
+    if (!name) {
       return res.status(400).json({
         success: false,
-        message: 'Account holder name, account number and IFSC are required',
+        message: 'Account holder name is required',
       });
     }
-    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(accountIfsc)) {
+    if ((accountNo && !accountIfsc) || (!accountNo && accountIfsc)) {
+      return res.status(400).json({ success: false, message: 'Account number and IFSC must be provided together' });
+    }
+    if (accountIfsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(accountIfsc)) {
       return res.status(400).json({ success: false, message: 'Enter a valid IFSC code' });
     }
 
     const data = await generateQrOnEitherPath({
       name: String(name).trim(),
-      account_number: accountNo,
-      account_ifsc: accountIfsc,
+      ...(accountNo ? { account_number: accountNo, account_ifsc: accountIfsc } : {}),
     });
 
     if (!isOk(data)) {

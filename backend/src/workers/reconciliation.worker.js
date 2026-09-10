@@ -282,7 +282,8 @@ export const startReconciliationWorker = () => {
           // A recharge can sit pending well past five minutes. Falling through to
           // the default below would refund the retailer for a recharge the
           // operator still goes on to deliver, so ask the provider instead.
-          finalStatus = (await fetchRechargeStatus(txn.transactionId, txn.metadata?.mode))
+          const providerTxnId = txn.metadata?.orderId || txn.metadata?.operatorTxnId || txn.transactionId;
+          finalStatus = (await fetchRechargeStatus(providerTxnId, txn.metadata?.mode))
             .finalStatus;
         } else if (NO_RECONCILER_TYPES.includes(txn.type)) {
           // The provider publishes no status endpoint for these, and the default

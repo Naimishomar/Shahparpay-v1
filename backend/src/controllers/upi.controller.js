@@ -3,6 +3,7 @@ import { generatePaySprintToken, getOnboardStatusEndpoint } from '../utils/paysp
 import Retailer from '../models/users/retailer.model.js';
 import MainWallet from '../models/mainWallet.model.js';
 import Transaction from '../models/transaction.model.js';
+import { logIntegration, logIntegrationError } from '../utils/integrationLogger.js';
 
 const getUpiBase = () => process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
 const getFrontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -43,12 +44,13 @@ const isBank6Onboarded = async (merchantCode, mobile) => {
         mobile: String(mobile),
         pipe: 'bank6',
       },
-      { headers: getUpiHeaders(), validateStatus: () => true }
+      { headers: getUpiHeaders(), validateStatus: () => true, timeout: 30000 }
     );
     const data = response.data || {};
+    logIntegration('provider_response', { provider: 'paysprint', service: 'upi_cashout_onboarding', httpStatus: response.status, providerStatus: data.response_code, merchantCode });
     return data.response_code === 1 && data.is_approved === 'Accepted';
   } catch (error) {
-    console.warn(`[upi] bank6 status check failed (${merchantCode}):`, error.message);
+    logIntegrationError('provider_request_error', error, { provider: 'paysprint', service: 'upi_cashout_onboarding', merchantCode });
     return null; // Unknown — let PaySprint validate during token generation.
   }
 };
@@ -152,9 +154,11 @@ export const generateToken = async (req, res) => {
     const response = await axios.post(`${getUpiBase()}/service/upi/cashout/get_token`, payload, {
       headers: getUpiHeaders(),
       validateStatus: () => true,
+      timeout: 30000,
     });
 
     const data = response.data || {};
+    logIntegration('provider_response', { provider: 'paysprint', service: 'upi_cashout_generate', httpStatus: response.status, providerStatus: data.response_code, transactionId: localId });
     if (data.response_code === 1 || data.status === true) {
       if (!data.url) {
         await Transaction.findOneAndUpdate(
@@ -231,10 +235,11 @@ export const getTxnStatus = async (req, res) => {
     const response = await axios.post(
       `${getUpiBase()}/service/upi/cashout/txn_status`,
       { merchant_code: merchantCode, refid: refToQuery },
-      { headers: getUpiHeaders(), validateStatus: () => true }
+      { headers: getUpiHeaders(), validateStatus: () => true, timeout: 30000 }
     );
 
     const data = response.data || {};
+    logIntegration('provider_response', { provider: 'paysprint', service: 'upi_cashout_status', httpStatus: response.status, providerStatus: data.response_code, transactionId, refid: refToQuery });
     const gatewayData = {
       ...(data.data || {}),
       message: data.message || data.data?.remarks || '',
@@ -328,10 +333,11 @@ export const merchantStatus = async (req, res) => {
         mobile: String(retailer.contactNumber),
         pipe: 'bank6',
       },
-      { headers: getUpiHeaders(), validateStatus: () => true }
+      { headers: getUpiHeaders(), validateStatus: () => true, timeout: 30000 }
     );
 
     const data = response.data || {};
+    logIntegration('provider_response', { provider: 'paysprint', service: 'upi_cashout_onboarding', httpStatus: response.status, providerStatus: data.response_code, merchantCode });
     return res.status(200).json({
       success: true,
       data: {

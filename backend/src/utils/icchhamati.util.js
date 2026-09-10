@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { logIntegration, logIntegrationError } from './integrationLogger.js';
 
 /**
  * Icchhamati Data Service ("Banking Service") API.
@@ -38,33 +39,42 @@ const getHeaders = () => {
  * retailer with a generic 500, so every call reads the body instead.
  */
 export const icchhamatiPost = async (path, body = {}) => {
-  const response = await axios.post(`${getBase()}${path}`, body, {
-    headers: getHeaders(),
-    validateStatus: () => true,
-    timeout: 60000,
-  });
-  return response.data;
+  const startedAt = Date.now();
+  try {
+    const response = await axios.post(`${getBase()}${path}`, body, {
+      headers: getHeaders(), validateStatus: () => true, timeout: 60000,
+    });
+    logIntegration('provider_response', { provider: 'icchhamati', method: 'POST', path, httpStatus: response.status, providerStatus: response.data?.status, durationMs: Date.now() - startedAt, transactionId: body?.transaction_id || body?.txnid || null });
+    return response.data;
+  } catch (error) {
+    logIntegrationError('provider_request_error', error, { provider: 'icchhamati', method: 'POST', path, durationMs: Date.now() - startedAt, transactionId: body?.transaction_id || body?.txnid || null });
+    throw error;
+  }
 };
 
 /** Deleting a beneficiary carries its OTP in the body, so DELETE needs one too. */
 export const icchhamatiDelete = async (path, body = {}) => {
-  const response = await axios.delete(`${getBase()}${path}`, {
-    headers: getHeaders(),
-    data: body,
-    validateStatus: () => true,
-    timeout: 60000,
-  });
-  return response.data;
+  const startedAt = Date.now();
+  try {
+    const response = await axios.delete(`${getBase()}${path}`, { headers: getHeaders(), data: body, validateStatus: () => true, timeout: 60000 });
+    logIntegration('provider_response', { provider: 'icchhamati', method: 'DELETE', path, httpStatus: response.status, providerStatus: response.data?.status, durationMs: Date.now() - startedAt });
+    return response.data;
+  } catch (error) {
+    logIntegrationError('provider_request_error', error, { provider: 'icchhamati', method: 'DELETE', path, durationMs: Date.now() - startedAt });
+    throw error;
+  }
 };
 
 export const icchhamatiGet = async (path, params = {}) => {
-  const response = await axios.get(`${getBase()}${path}`, {
-    headers: getHeaders(),
-    params,
-    validateStatus: () => true,
-    timeout: 60000,
-  });
-  return response.data;
+  const startedAt = Date.now();
+  try {
+    const response = await axios.get(`${getBase()}${path}`, { headers: getHeaders(), params, validateStatus: () => true, timeout: 60000 });
+    logIntegration('provider_response', { provider: 'icchhamati', method: 'GET', path, httpStatus: response.status, providerStatus: response.data?.status, durationMs: Date.now() - startedAt });
+    return response.data;
+  } catch (error) {
+    logIntegrationError('provider_request_error', error, { provider: 'icchhamati', method: 'GET', path, durationMs: Date.now() - startedAt });
+    throw error;
+  }
 };
 
 /**
@@ -226,7 +236,7 @@ export const fetchPayoutStatus = async (transactionId) => {
 export const fetchRechargeStatus = async (txnid, type) => {
   try {
     const path = isBillType(type) ? '/api/v2/bill-status' : '/api/v2/recharge-status';
-    const data = await icchhamatiPost(path, { txnid, transaction_id: txnid });
+    const data = await icchhamatiPost(path, { txnid });
     if (!isOk(data) && normaliseStatus(data?.status) !== 'PENDING') {
       return { finalStatus: 'PROCESSING', data };
     }

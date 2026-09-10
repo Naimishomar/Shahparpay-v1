@@ -428,12 +428,26 @@ export const doRecharge = async (req, res) => {
       ...(typeCode === 1 ? { circle: String(circle), circal: String(circle) } : {}),
     };
 
-    const providerResponse = await icchhamatiPost(
-      bill ? '/api/v2/bill-payment' : '/api/v2/mobile-recharge',
-      payload
-    );
+    let providerResponse;
+    try {
+      providerResponse = await icchhamatiPost(
+        bill ? '/api/v2/bill-payment' : '/api/v2/mobile-recharge',
+        payload
+      );
+    } catch (providerError) {
+      // A timeout does not prove that the provider rejected the request. Keep
+      // the debit locked and let reconciliation query the provider later.
+      return res.status(202).json({
+        success: true,
+        pending: true,
+        message: 'Transaction submitted; provider status is being confirmed.',
+        data: { transactionId: referenceId, status: 'PENDING' },
+      });
+    }
 
-    const status = normaliseStatus(providerResponse?.status);
+    // The envelope status means the request was accepted. The nested status is
+    // the actual recharge/bill outcome and may still be Pending.
+    const status = normaliseStatus(providerResponse?.data?.status ?? providerResponse?.status);
     const message = providerMessage(
       providerResponse,
       status === 'FAILED' ? 'The provider could not complete this transaction.' : ''
@@ -443,7 +457,7 @@ export const doRecharge = async (req, res) => {
       { transactionId: referenceId },
       {
         $set: {
-          'metadata.orderId': providerResponse?.data?.orderId || null,
+          'metadata.orderId': providerResponse?.data?.orderId || providerResponse?.data?.txnid || null,
           'metadata.operatorTxnId': providerResponse?.data?.txnId || null,
           'metadata.apiResponse': providerResponse,
         },
@@ -503,7 +517,8 @@ export const checkStatus = async (req, res) => {
       return res.status(200).json({ success: true, data: { status: txn.status } });
     }
 
-    const { finalStatus, data } = await fetchRechargeStatus(txn.transactionId, txn.metadata?.mode);
+    const providerTxnId = txn.metadata?.orderId || txn.metadata?.operatorTxnId || txn.transactionId;
+    const { finalStatus, data } = await fetchRechargeStatus(providerTxnId, txn.metadata?.mode);
     if (finalStatus !== 'PROCESSING') {
       await resolveTransaction(txn.transactionId, finalStatus, providerMessage(data, ''), 'MAIN');
     }
