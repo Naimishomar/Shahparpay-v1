@@ -223,11 +223,26 @@ export const verifyOrder = async (req, res) => {
  * lives, so the documented one is tried first and the other is used if the
  * gateway does not recognise it.
  */
+const hasQrData = (data) => Boolean(
+  data?.data?.qrcode_image || data?.data?.qrcode_pdf || data?.data?.virtual_upi_handle
+);
+
 const generateQrOnEitherPath = async (payload) => {
-  const data = await icchhamatiPost('/api/v2/generate-qr', payload);
-  const notRouted = /not found|no query results|404|route/i.test(String(data?.message || ''));
-  if (isOk(data) || !notRouted) return data;
-  return icchhamatiPost('/api/va/generate-qr', payload);
+  // The provider's own live virtual-account client uses /api/va/generate-qr.
+  // Keep the docs route as a compatibility fallback because both have existed
+  // in different provider deployments.
+  const preferred = process.env.ICCHHAMATI_QR_PATH || '/api/va/generate-qr';
+  const fallback = preferred === '/api/va/generate-qr'
+    ? '/api/v2/generate-qr'
+    : '/api/va/generate-qr';
+  const first = await icchhamatiPost(preferred, payload);
+  const notRouted = /not found|no query results|404|route/i.test(String(first?.message || ''));
+  if (isOk(first) && hasQrData(first)) return first;
+  if (!notRouted && isOk(first)) {
+    // A successful envelope without a QR is not usable for a payment.
+    return icchhamatiPost(fallback, payload);
+  }
+  return notRouted ? icchhamatiPost(fallback, payload) : first;
 };
 
 export const generateQr = async (req, res) => {
@@ -238,22 +253,20 @@ export const generateQr = async (req, res) => {
       .trim()
       .toUpperCase();
 
-    if (!name) {
+    if (!name || !accountNo || !accountIfsc) {
       return res.status(400).json({
         success: false,
-        message: 'Account holder name is required',
+        message: 'Account holder name, account number and IFSC are required',
       });
     }
-    if ((accountNo && !accountIfsc) || (!accountNo && accountIfsc)) {
-      return res.status(400).json({ success: false, message: 'Account number and IFSC must be provided together' });
-    }
-    if (accountIfsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(accountIfsc)) {
+    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(accountIfsc)) {
       return res.status(400).json({ success: false, message: 'Enter a valid IFSC code' });
     }
 
     const data = await generateQrOnEitherPath({
       name: String(name).trim(),
-      ...(accountNo ? { account_number: accountNo, account_ifsc: accountIfsc } : {}),
+      account_number: accountNo,
+      account_ifsc: accountIfsc,
     });
 
     if (!isOk(data)) {

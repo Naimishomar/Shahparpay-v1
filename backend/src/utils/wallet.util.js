@@ -97,12 +97,23 @@ export const lockFundsForTransaction = async (userId, walletType, amount, transa
     }
 
     // 2. Create the Transaction Log as PROCESSING
-    const transactionLogs = await Transaction.create([
-      {
-        ...transactionDetails,
-        status: 'PROCESSING',
-      },
-    ]);
+    let transactionLogs;
+    try {
+      transactionLogs = await Transaction.create([
+        {
+          ...transactionDetails,
+          status: 'PROCESSING',
+          metadata: { ...transactionDetails.metadata, walletType },
+        },
+      ]);
+    } catch (transactionError) {
+      // Never leave wallet funds deducted when the audit row cannot be created.
+      await WalletModel.findOneAndUpdate(
+        { userId },
+        { $inc: { balance: -formattedAmount } }
+      );
+      throw transactionError;
+    }
 
     return transactionLogs[0];
   } catch (error) {
@@ -130,6 +141,8 @@ export const resolveTransaction = async (
       return txn; // Already resolved
     }
 
+    const resolvedWalletType = txn.metadata?.walletType || walletType;
+
     if (finalStatus === 'SUCCESS') {
       // Funds are already deducted, just update status
       txn.status = 'SUCCESS';
@@ -140,7 +153,7 @@ export const resolveTransaction = async (
       // Must refund the deducted amount
       const refundAmount = Math.abs(txn.amount); // Always positive
 
-      const WalletModel = walletType === 'MAIN' ? MainWallet : AepsWallet;
+      const WalletModel = resolvedWalletType === 'MAIN' ? MainWallet : AepsWallet;
       await WalletModel.findOneAndUpdate(
         { userId: txn.userId },
         { $inc: { balance: refundAmount } }
@@ -182,7 +195,18 @@ export const updateWalletAtomically = async (userId, walletType, amount, transac
       throw new Error(`Insufficient funds or wallet not found for ${walletType} wallet.`);
     }
 
-    const transactionLogs = await Transaction.create([transactionDetails]);
+    let transactionLogs;
+    try {
+      transactionLogs = await Transaction.create([
+        { ...transactionDetails, metadata: { ...transactionDetails.metadata, walletType } },
+      ]);
+    } catch (transactionError) {
+      await WalletModel.findOneAndUpdate(
+        { userId },
+        { $inc: { balance: -formattedAmount } }
+      );
+      throw transactionError;
+    }
     return transactionLogs[0];
   } catch (error) {
     throw error;

@@ -117,11 +117,8 @@ const Collect = () => {
     };
 
     const generateQr = async () => {
-        if (!qrForm.name.trim()) {
-            return toast.error('Enter the account holder name');
-        }
-        if ((qrForm.account_number && !qrForm.account_ifsc) || (!qrForm.account_number && qrForm.account_ifsc)) {
-            return toast.error('Enter both account number and IFSC, or leave both blank');
+        if (!qrForm.name.trim() || !qrForm.account_number || !qrForm.account_ifsc) {
+            return toast.error('Enter the account holder name, account number and IFSC');
         }
         setLoading(true);
         try {
@@ -268,11 +265,11 @@ const Collect = () => {
                                 <input type="text" className={input} value={qrForm.name} onChange={e => setQrForm({ ...qrForm, name: e.target.value })} />
                             </div>
                             <div>
-                                <label className="text-sm font-medium text-foreground mb-1.5 block">Account Number <span className="text-muted-foreground font-normal">(optional)</span></label>
+                                <label className="text-sm font-medium text-foreground mb-1.5 block">Account Number</label>
                                 <input type="text" className={input} value={qrForm.account_number} onChange={e => setQrForm({ ...qrForm, account_number: e.target.value.replace(/\D/g, '') })} />
                             </div>
                             <div>
-                                <label className="text-sm font-medium text-foreground mb-1.5 block">IFSC Code <span className="text-muted-foreground font-normal">(optional)</span></label>
+                                <label className="text-sm font-medium text-foreground mb-1.5 block">IFSC Code</label>
                                 <input type="text" className={`${input} uppercase`} value={qrForm.account_ifsc} onChange={e => setQrForm({ ...qrForm, account_ifsc: e.target.value.toUpperCase() })} />
                             </div>
 
