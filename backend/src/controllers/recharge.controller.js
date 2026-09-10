@@ -13,6 +13,7 @@ import {
   isBillType,
   OPERATOR_CATEGORY,
   BILLER_CATEGORY,
+  dedupeBillCategories,
 } from '../utils/icchhamati.util.js';
 import { lockFundsForTransaction, resolveTransaction } from '../utils/wallet.util.js';
 import Transaction from '../models/transaction.model.js';
@@ -37,6 +38,10 @@ import AepsWallet from '../models/aepsWallet.model.js';
 const operatorSource = (type) => {
   const key = String(type || '').toLowerCase();
   if (OPERATOR_CATEGORY[key]) return { kind: 'operator', category: OPERATOR_CATEGORY[key] };
+  const providerOperatorCategory = Object.values(OPERATOR_CATEGORY).find(
+    (category) => String(category).toLowerCase() === key
+  );
+  if (providerOperatorCategory) return { kind: 'operator', category: providerOperatorCategory };
   // BILLER_CATEGORY only names the categories our own screens hardcode. Anything
   // else is passed through as-is, so a category taken straight off
   // /bill-categories works without this map having to know about it first.
@@ -88,9 +93,16 @@ export const getOperators = async (req, res) => {
     }
 
     const rows = data.operators || data.billers || data.data || [];
+    const seen = new Set();
+    const uniqueRows = rows.filter((row) => {
+      const key = String(row.code ?? row.id ?? row.name ?? '').trim().toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
     return res.status(200).json({
       success: true,
-      data: rows.filter((row) => row.is_active !== false).map((row) => toOperator(row, type)),
+      data: uniqueRows.filter((row) => row.is_active !== false).map((row) => toOperator(row, type)),
     });
   } catch (error) {
     console.error('Fetch Operators Error:', error?.response?.data || error?.message);
@@ -135,7 +147,10 @@ export const getBillCategories = async (req, res) => {
         message: providerMessage(data, 'Bill categories are unavailable right now.'),
       });
     }
-    return res.status(200).json({ success: true, data: data.categories || data.data || [] });
+    return res.status(200).json({
+      success: true,
+      data: dedupeBillCategories(data.categories || data.data || []),
+    });
   } catch (error) {
     console.error('Fetch Bill Categories Error:', error?.response?.data || error?.message);
     return res.status(500).json({ success: false, message: 'Failed to fetch bill categories' });
@@ -153,11 +168,15 @@ export const getBillCategories = async (req, res) => {
 export const browsePlans = async (req, res) => {
   try {
     const { mobileNumber } = req.body;
-    if (!mobileNumber) {
-      return res.status(400).json({ success: false, message: 'Mobile number is required' });
+    const number = String(mobileNumber || '').replace(/\D/g, '');
+    if (!/^[6-9]\d{9}$/.test(number)) {
+      return res.status(400).json({
+        success: false,
+        message: 'A valid 10-digit mobile number is required',
+      });
     }
 
-    const data = await icchhamatiPost('/api/v2/mobile-plan', { number: mobileNumber });
+    const data = await icchhamatiPost('/api/v2/mobile-plan', { number });
     if (!isOk(data)) {
       return res.status(400).json({
         success: false,
@@ -174,17 +193,32 @@ export const browsePlans = async (req, res) => {
       rs: plan.rs ?? plan.amount ?? plan.price ?? 0,
       desc: plan.desc ?? plan.description ?? plan.details ?? '',
       validity: plan.validity ?? 'NA',
+      planstatus: plan.planstatus ?? plan.status ?? 'Active',
     });
+    const isActivePlan = (plan) => {
+      const status = String(plan.planstatus || '').trim().toLowerCase();
+      return !['inactive', 'in-active', '0', 'false', 'disabled'].includes(status);
+    };
 
     const grouped = Array.isArray(raw)
-      ? { Plans: raw.map(normalise) }
+      ? { Plans: raw.map(normalise).filter(isActivePlan) }
       : Object.fromEntries(
           Object.entries(raw)
             .filter(([, plans]) => Array.isArray(plans))
-            .map(([category, plans]) => [category, plans.map(normalise)])
+            .map(([category, plans]) => [category, plans.map(normalise).filter(isActivePlan)])
         );
 
-    return res.status(200).json({ success: true, data: grouped });
+    const providerData = data.data || {};
+    return res.status(200).json({
+      success: true,
+      data: grouped,
+      meta: {
+        operator: providerData.operator ?? null,
+        operatorName: providerData.operatorname ?? providerData.operatorName ?? null,
+        circle: providerData.circal ?? providerData.circle ?? null,
+        circleName: providerData.circalname ?? providerData.circleName ?? null,
+      },
+    });
   } catch (error) {
     console.error('Browse Plans Error:', error?.response?.data || error?.message);
     return res.status(500).json({ success: false, message: 'Failed to browse plans' });

@@ -31,6 +31,24 @@ const styleFor = (name: string) =>
     CATEGORY_STYLE.find((s) => s.match.test(name)) ||
     { icon: ReceiptText, color: "text-muted-foreground", border: "border-border" };
 
+const canonicalCategory = (category: any) => {
+    const raw = String(category?.id || category?.code || category?.category || category?.name || '').toLowerCase();
+    if (/postpaid|mobile/.test(raw)) return 'postpaid';
+    if (/dth/.test(raw)) return 'dth-bill';
+    if (/electric/.test(raw)) return 'electricity';
+    if (/piped.?gas|gas/.test(raw)) return 'gas';
+    if (/water/.test(raw)) return 'water';
+    if (/broadband|internet|wifi/.test(raw)) return 'broadband';
+    if (/lpg/.test(raw)) return 'lpg';
+    if (/fastag/.test(raw)) return 'fastag';
+    if (/landline/.test(raw)) return 'landline';
+    if (/insur/.test(raw)) return 'insurance';
+    if (/loan/.test(raw)) return 'loan';
+    if (/credit.?card/.test(raw)) return 'creditcard';
+    if (/emi/.test(raw)) return 'emi';
+    return raw.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'other';
+};
+
 const BBPS = () => {
     const [bbpsServices, setBbpsServices] = useState<any[]>([]);
     const [selectedService, setSelectedService] = useState<any>(null);
@@ -58,19 +76,26 @@ const BBPS = () => {
                     toast.error(res.data.message || 'Could not load bill categories');
                     return;
                 }
-                const fromProvider = (res.data.data || []).map((cat: any) => {
-                    // The category name is what the biller registry is keyed by, so it
-                    // is also the id every later call sends back.
-                    const id = cat.category || cat.name || cat.code;
-                    return { id, name: cat.name || id, ...styleFor(String(id)) };
+                const unique = new Map<string, any>();
+                (res.data.data || []).forEach((cat: any) => {
+                    const id = canonicalCategory(cat);
+                    if (!unique.has(id)) {
+                        unique.set(id, {
+                            id,
+                            name: cat.name || id,
+                            label: cat.label || null,
+                            providerCategory: cat.providerCategory || cat.apiCategory || cat.category || cat.name || id,
+                            image: cat.biller_icon || cat.image || null,
+                            ...styleFor(id),
+                        });
+                    }
                 });
-                // Postpaid mobile is billed like any other utility but is listed
-                // with the telecom operators rather than the bill categories, so
-                // it would otherwise have no tile anywhere.
-                setBbpsServices([
-                    { id: "postpaid", name: "Postpaid", ...styleFor("postpaid") },
-                    ...fromProvider,
-                ]);
+                // Some provider accounts publish Postpaid as a category while
+                // others only expose it through MobilePostpaid operators.
+                if (!unique.has('postpaid')) {
+                    unique.set('postpaid', { id: 'postpaid', name: 'Postpaid', ...styleFor('postpaid') });
+                }
+                setBbpsServices(Array.from(unique.values()));
             } catch (error) {
                 console.error("Failed to fetch bill categories", error);
             }
@@ -84,8 +109,7 @@ const BBPS = () => {
 
     const fetchOperators = async (type: string) => {
         try {
-            const apiType = type;
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/operators/${apiType}`);
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/operators/${encodeURIComponent(type)}`);
             if (!res.data.success) {
                 toast.error(res.data.message || 'Could not load billers');
                 setOperators([]);
@@ -107,7 +131,7 @@ const BBPS = () => {
         setAmount("");
         setPin("");
         setFetchedBill(null);
-        fetchOperators(service.id);
+        fetchOperators(service.providerCategory || service.id);
     };
 
     const handleFetchBill = async () => {
@@ -158,7 +182,8 @@ const BBPS = () => {
             });
 
             if (response.data.success) {
-                setReceiptData({ ...response.data.data, isSuccess: true });
+                const pending = Boolean(response.data.pending || String(response.data.data?.status || '').toUpperCase() === 'PENDING');
+                setReceiptData({ ...response.data.data, status: pending ? 'PENDING' : 'SUCCESS', isSuccess: !pending });
                 setShowReceiptModal(true);
                 window.dispatchEvent(new Event('wallet-updated'));
                 setSelectedService(null);
@@ -213,6 +238,9 @@ const BBPS = () => {
             pdf.save('BBPS_Receipt.pdf');
         });
     };
+
+    const receiptIsPending = receiptData?.status === 'PENDING';
+    const receiptIsSuccess = Boolean(receiptData?.isSuccess) && !receiptIsPending;
 
     return (
         <div className="flex flex-col gap-6 w-full p-2 animate-in fade-in slide-in-from-bottom-4 duration-1000">
@@ -392,11 +420,11 @@ const BBPS = () => {
                 <div className="fixed inset-0 bg-background/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in zoom-in-95 duration-300">
                     <div className="glass-card rounded-2xl w-full max-w-md p-6 border border-border shadow-2xl">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className={`text-xl font-bold flex items-center gap-2 ${receiptData.isSuccess ? 'text-emerald-500' : 'text-destructive'}`}>
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${receiptData.isSuccess ? 'bg-emerald-500/20' : 'bg-destructive/20'}`}>
-                                    <div className={`w-3 h-3 rounded-full ${receiptData.isSuccess ? 'bg-emerald-500' : 'bg-destructive'}`}></div>
+                            <h3 className={`text-xl font-bold flex items-center gap-2 ${receiptIsPending ? 'text-amber-500' : receiptIsSuccess ? 'text-emerald-500' : 'text-destructive'}`}>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${receiptIsPending ? 'bg-amber-500/20' : receiptIsSuccess ? 'bg-emerald-500/20' : 'bg-destructive/20'}`}>
+                                    <div className={`w-3 h-3 rounded-full ${receiptIsPending ? 'bg-amber-500' : receiptIsSuccess ? 'bg-emerald-500' : 'bg-destructive'}`}></div>
                                 </div>
-                                {receiptData.isSuccess ? 'Payment Successful!' : 'Payment Failed!'}
+                                {receiptIsPending ? 'Payment Pending' : receiptIsSuccess ? 'Payment Successful!' : 'Payment Failed!'}
                             </h3>
                             <button onClick={() => setShowReceiptModal(false)} className="text-muted-foreground hover:text-destructive transition-colors bg-background/50 p-2 rounded-full">
                                 <XCircle className="w-5 h-5" />
@@ -404,7 +432,7 @@ const BBPS = () => {
                         </div>
                         
                         <div id="receipt-content" className="bg-background p-6 rounded-xl border border-border mb-6 relative overflow-hidden shadow-inner">
-                            <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${receiptData.isSuccess ? 'from-emerald-400 to-emerald-600' : 'from-red-400 to-red-600'}`}></div>
+                            <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${receiptIsPending ? 'from-amber-400 to-amber-600' : receiptIsSuccess ? 'from-emerald-400 to-emerald-600' : 'from-red-400 to-red-600'}`}></div>
                             
                             <div className="flex flex-col items-center text-center mb-6 pb-6 border-b border-border border-dashed">
                                 <img src={logo} alt="Shahparpay" className="w-32 h-auto max-h-24 object-contain mb-2" crossOrigin="anonymous" />
@@ -430,7 +458,7 @@ const BBPS = () => {
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-muted-foreground">Status</span> 
-                                    <span className={`font-bold ${receiptData.isSuccess ? 'text-emerald-500' : 'text-destructive'}`}>{receiptData.status}</span>
+                                    <span className={`font-bold ${receiptIsPending ? 'text-amber-500' : receiptIsSuccess ? 'text-emerald-500' : 'text-destructive'}`}>{receiptData.status}</span>
                                 </div>
                                 
                                 {!receiptData.isSuccess && receiptData.errorReason && (

@@ -32,8 +32,8 @@ const requireMobile = (mobile) => {
 };
 
 const toBeneficiary = (row) => ({
-  id: String(row.id),
-  beneid: String(row.id), // the name the existing screens read
+  id: String(row.id ?? row.beneficiary_id ?? row.bene_id ?? ''),
+  beneid: String(row.id ?? row.beneficiary_id ?? row.bene_id ?? ''), // the name the existing screens read
   name: row.name,
   benename: row.name,
   mobile: row.mobile,
@@ -219,13 +219,43 @@ export const initiateTransfer = async (req, res) => {
     const { beneficiary_id, beneid, amount, pin, transfer_mode, beneaccount, ifsc } = req.body;
     const beneficiaryId = beneficiary_id || beneid;
     const totalAmount = Number(amount);
+    const senderMobile = requireMobile(req.body?.mobile);
 
-    if (!beneficiaryId || !totalAmount || totalAmount <= 0 || !pin) {
+    if (!beneficiaryId || !senderMobile || !totalAmount || totalAmount <= 0 || !pin) {
       return res.status(400).json({
         success: false,
-        message: 'Beneficiary, a valid amount and the transaction PIN are required',
+        message: 'Sender mobile, beneficiary, a valid amount and the transaction PIN are required',
       });
     }
+
+    // The provider beneficiary registry is shared by the merchant account. Do
+    // not trust an ID/account supplied by the browser: verify that this exact
+    // beneficiary belongs to the sender mobile currently being transferred.
+    const beneficiaryList = await icchhamatiGet('/api/v2/beneficiaries', {
+      search: senderMobile,
+      per_page: 100,
+    });
+    if (!isOk(beneficiaryList)) {
+      return res.status(502).json({
+        success: false,
+        message: providerMessage(beneficiaryList, 'Could not verify the beneficiary right now.'),
+      });
+    }
+    const providerRows = beneficiaryList.data?.data || beneficiaryList.data || [];
+    const providerBeneficiary = providerRows.find((row) => {
+      const rowId = row.id ?? row.beneficiary_id ?? row.bene_id;
+      const rowMobile = String(row.mobile || '').replace(/\D/g, '');
+      return String(rowId) === String(beneficiaryId) && rowMobile === senderMobile;
+    });
+    if (!providerBeneficiary) {
+      return res.status(400).json({
+        success: false,
+        message: 'This beneficiary does not belong to the selected sender mobile number.',
+      });
+    }
+    const verifiedBeneficiary = toBeneficiary(providerBeneficiary);
+    const providerAccount = verifiedBeneficiary.account || String(beneaccount || '');
+    const providerIfsc = verifiedBeneficiary.ifsc || String(ifsc || '').toUpperCase();
 
     // IMPS and NEFT are the only modes the provider settles; anything else would
     // be rejected after the wallet had already been debited.
@@ -258,7 +288,7 @@ export const initiateTransfer = async (req, res) => {
         amount: totalAmount,
         metadata: {
           beneficiaryId: String(beneficiaryId),
-          beneficiaryAccount: beneaccount || null,
+          beneficiaryAccount: providerAccount || null,
           transferMode: mode,
           provider: 'ICCHHAMATI',
         },
@@ -312,9 +342,9 @@ export const initiateTransfer = async (req, res) => {
     await DmtTransaction.create({
       transactionId,
       retailerId,
-      remitterMobile: String(req.body?.mobile || ''),
-      beneficiaryAccount: String(data?.data?.account_no || beneaccount || 'NA'),
-      beneficiaryIfsc: String(ifsc || 'NA'),
+      remitterMobile: senderMobile,
+      beneficiaryAccount: String(data?.data?.account_no || providerAccount || 'NA'),
+      beneficiaryIfsc: String(providerIfsc || 'NA'),
       amount: totalAmount,
       status: status === 'SUCCESS' ? 'SUCCESS' : status === 'FAILED' ? 'FAILED' : 'PENDING',
       apiReference: data?.data?.txnid || data?.data?.rrn || null,

@@ -94,8 +94,8 @@ const Recharge = () => {
     };
 
     const handleBrowsePlan = async () => {
-        if (!mobileNumber || !prepaidOperator) {
-            toast.error("Please enter mobile number and select operator first.");
+        if (!/^[6-9]\d{9}$/.test(mobileNumber)) {
+            toast.error("Please enter a valid 10-digit mobile number.");
             return;
         }
         setLoading(true);
@@ -106,6 +106,17 @@ const Recharge = () => {
                 mobileNumber
             });
             if (response.data && response.data.success) {
+                // Icchhamati resolves the operator and circle from the number.
+                // Use those values when they are present in our provider lists,
+                // while keeping manual selection available as a fallback.
+                const meta = response.data.meta || {};
+                if (meta.operator && prepaidOperators.some((op: any) => String(op.id) === String(meta.operator))) {
+                    setPrepaidOperator(String(meta.operator));
+                }
+                if (meta.circle && circles.some((item: any) => String(item.id) === String(meta.circle))) {
+                    setCircle(String(meta.circle));
+                }
+
                 // response.data.data contains the plans object with categories like TOPUP, 3G/4G, etc.
                 const plansData = response.data.data || {};
                 const flattenedPlans: any[] = [];
@@ -118,11 +129,16 @@ const Recharge = () => {
                                 amount: p.rs || p.amount,
                                 description: p.desc || p.description,
                                 validity: p.validity,
+                                planstatus: p.planstatus || 'Active',
                             });
                         });
                     }
                 });
                 setPlans(flattenedPlans);
+                if (flattenedPlans.length === 0) {
+                    toast.info("No active plans were returned. You can enter the recharge amount manually.");
+                    return;
+                }
                 setShowPlansModal(true);
             }
         } catch (error: any) {
@@ -350,7 +366,7 @@ const Recharge = () => {
                                     <div className="flex items-end">
                                         <button 
                                             onClick={handleBrowsePlan}
-                                            disabled={loading || !mobileNumber || !prepaidOperator}
+                                            disabled={loading || !/^[6-9]\d{9}$/.test(mobileNumber)}
                                             className="w-full px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-md shadow-sm transition-all disabled:opacity-50"
                                         >
                                             {loading ? "Loading..." : "Browse Plan"}
