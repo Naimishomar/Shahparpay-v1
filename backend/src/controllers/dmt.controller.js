@@ -37,6 +37,28 @@ const beneficiaryMobile = (row) =>
 
 const beneficiaryId = (row) => row.id ?? row.beneficiary_id ?? row.bene_id;
 
+const fetchProviderBeneficiaries = async () => {
+  const rows = [];
+  let page = 1;
+  let lastPage = 1;
+
+  do {
+    const data = await icchhamatiGet('/api/v2/beneficiaries', {
+      page,
+      per_page: 100,
+      verified: true,
+    });
+    if (!isOk(data)) return { rows: [], error: data };
+
+    const pageRows = data.data?.data || data.data || [];
+    if (Array.isArray(pageRows)) rows.push(...pageRows);
+    lastPage = Math.max(1, Number(data.data?.last_page || 1));
+    page += 1;
+  } while (page <= lastPage && page <= 100);
+
+  return { rows, error: null };
+};
+
 const toBeneficiary = (row) => ({
   id: String(beneficiaryId(row) ?? ''),
   beneid: String(beneficiaryId(row) ?? ''), // the name the existing screens read
@@ -64,22 +86,17 @@ export const fetchBeneficiaries = async (req, res) => {
         .json({ success: false, message: 'A valid 10-digit sender mobile number is required' });
     }
 
-    const data = await icchhamatiGet('/api/v2/beneficiaries', {
-      search: mobile,
-      per_page: 100,
-      verified: true,
-    });
-    if (!isOk(data)) {
+    // Icchhamati's `search` parameter is unreliable for this endpoint: it can
+    // return an empty page even when the beneficiary exists. Fetch the
+    // paginated verified list and apply the exact mobile filter ourselves.
+    const { rows, error: providerError } = await fetchProviderBeneficiaries();
+    if (providerError) {
       return res.status(502).json({
         success: false,
-        message: providerMessage(data, 'Could not load beneficiaries right now.'),
+        message: providerMessage(providerError, 'Could not load beneficiaries right now.'),
       });
     }
 
-    // The search is the provider's own free-text filter, so it can return rows
-    // that merely mention the number. Only rows actually registered to this
-    // sender may be shown.
-    const rows = data.data?.data || data.data || [];
     const mine = rows.filter((row) => beneficiaryMobile(row) === mobile);
 
     return res.status(200).json({ success: true, data: mine.map(toBeneficiary) });
@@ -240,18 +257,14 @@ export const initiateTransfer = async (req, res) => {
     // The provider beneficiary registry is shared by the merchant account. Do
     // not trust an ID/account supplied by the browser: verify that this exact
     // beneficiary belongs to the sender mobile currently being transferred.
-    const beneficiaryList = await icchhamatiGet('/api/v2/beneficiaries', {
-      search: senderMobile,
-      per_page: 100,
-    });
-    if (!isOk(beneficiaryList)) {
+    const { rows: beneficiaryRows, error: beneficiaryError } = await fetchProviderBeneficiaries();
+    if (beneficiaryError) {
       return res.status(502).json({
         success: false,
-        message: providerMessage(beneficiaryList, 'Could not verify the beneficiary right now.'),
+        message: providerMessage(beneficiaryError, 'Could not verify the beneficiary right now.'),
       });
     }
-    const providerRows = beneficiaryList.data?.data || beneficiaryList.data || [];
-    const providerBeneficiary = providerRows.find((row) => {
+    const providerBeneficiary = beneficiaryRows.find((row) => {
       const rowId = beneficiaryId(row);
       const rowMobile = beneficiaryMobile(row);
       return String(rowId) === String(beneficiaryId) && rowMobile === senderMobile;
