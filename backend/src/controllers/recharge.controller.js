@@ -69,6 +69,29 @@ const toOperator = (row, type) => ({
   label: row.label || null,
 });
 
+/** Resolve legacy numeric biller IDs to the provider's actual biller code. */
+const resolveProviderOperatorCode = async (type, candidate) => {
+  const value = String(candidate || '').trim();
+  if (!value) return value;
+
+  try {
+    const { kind, category } = operatorSource(type);
+    if (!category) return value;
+    const data = kind === 'operator'
+      ? await icchhamatiPost('/api/v2/getOperator', { category })
+      : await icchhamatiPost('/api/v2/billers-by-category', { category });
+    if (!isOk(data)) return value;
+
+    const rows = data.operators || data.billers || data.data || [];
+    const match = rows.find((row) => String(row.code ?? '') === value)
+      || rows.find((row) => String(row.id ?? '') === value);
+    return String(match?.code ?? value);
+  } catch (error) {
+    console.error('Resolve BBPS provider code Error:', error?.response?.data || error?.message);
+    return value;
+  }
+};
+
 export const getOperators = async (req, res) => {
   try {
     const { type } = req.params; // 'prepaid', 'dth', 'electricity', ...
@@ -343,13 +366,15 @@ export const fetchBill = async (req, res) => {
       });
     }
 
+    const providerOperator = await resolveProviderOperatorCode(type, operator);
+
     // The published field docs and the published example disagree on the names
     // (biller_code/customer_id versus billerId/customerKey). Both are sent;
     // whichever pair the gateway reads, it gets the same values.
     const data = await icchhamatiPost('/api/v2/fetch-bill', {
-      biller_code: String(operator),
+      biller_code: providerOperator,
       customer_id: String(caNumber),
-      billerId: String(operator),
+      billerId: providerOperator,
       customerKey: String(caNumber),
     });
 
@@ -404,6 +429,9 @@ export const doRecharge = async (req, res) => {
 
     const typeCode = rechargeTypeCode(type);
     const bill = isBillType(type);
+    const providerOperator = bill
+      ? await resolveProviderOperatorCode(type, operator)
+      : String(operator);
     const providerAccountId = String(process.env.ICCHHAMATI_ACCOUNT_ID || '').trim();
     const providerMpin = String(process.env.ICCHHAMATI_MPIN || '').trim();
 
@@ -456,7 +484,7 @@ export const doRecharge = async (req, res) => {
         amount: totalAmount,
         metadata: {
           caNumber,
-          operator,
+          operator: providerOperator,
           mode: type,
           provider: 'ICCHHAMATI',
         },
@@ -474,7 +502,7 @@ export const doRecharge = async (req, res) => {
       account_id: providerAccountId,
       mpin: providerMpin,
       number: String(caNumber),
-      operator: String(operator),
+      operator: providerOperator,
       amount: Math.round(totalAmount),
       type: typeCode,
       transaction_id: referenceId,
