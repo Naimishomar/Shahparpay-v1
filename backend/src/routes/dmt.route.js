@@ -4,6 +4,7 @@ import {
   fetchBeneficiaries,
   addBeneficiary,
   sendBeneficiaryOtp,
+  sendBeneficiaryDeleteOtp,
   verifyBeneficiary,
   deleteBeneficiary,
   initiateTransfer,
@@ -17,6 +18,7 @@ router.use(authMiddlewares);
 router.post('/beneficiary/fetch', fetchBeneficiaries);
 router.post('/beneficiary/add', addBeneficiary);
 router.post('/beneficiary/otp', sendBeneficiaryOtp);
+router.post('/beneficiary/delete-otp', sendBeneficiaryDeleteOtp);
 router.post('/beneficiary/verify', verifyBeneficiary);
 router.post('/beneficiary/delete', deleteBeneficiary);
 

@@ -3,7 +3,6 @@ import {
   isOk,
   normaliseStatus,
   providerMessage,
-  makeReferenceId,
 } from '../utils/icchhamati.util.js';
 import Transaction from '../models/transaction.model.js';
 import MainWallet from '../models/mainWallet.model.js';
@@ -56,7 +55,12 @@ export const createOrder = async (req, res) => {
         .json({ success: false, message: 'Enter a valid 10-digit customer mobile number' });
     }
 
-    const referenceId = makeReferenceId('PG');
+    // Keep gateway references within the short order-id format used by
+    // Icchhamati/BharatPay examples. Recharge/DMT references can be longer,
+    // but checkout sessions may be keyed by a provider-limited order ID.
+    const referenceId = `PG${Date.now().toString().slice(-12)}${String(
+      Math.floor(Math.random() * 10000)
+    ).padStart(4, '0')}`;
 
     // Recorded before the gateway is called: the order id is what the verify
     // step and any later reconciliation key off, and a link handed to a customer
@@ -90,6 +94,19 @@ export const createOrder = async (req, res) => {
     // order id at all: our own reference is what /pg/verify is queried by.
     const paymentUrl = data?.payment_url || data?.data?.payment_url || null;
     const orderId = data?.order_id || data?.data?.order_id || referenceId;
+
+    console.info('Icchhamati payment link created', {
+      referenceId,
+      providerOrderId: orderId,
+      providerStatus: data?.status,
+      paymentUrlHost: paymentUrl ? (() => {
+        try {
+          return new URL(paymentUrl).host;
+        } catch {
+          return 'invalid-url';
+        }
+      })() : null,
+    });
 
     if (!isOk(data) || !paymentUrl) {
       await Transaction.findOneAndUpdate(

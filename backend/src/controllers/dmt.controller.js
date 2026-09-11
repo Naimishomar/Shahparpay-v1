@@ -180,6 +180,26 @@ export const sendBeneficiaryOtp = async (req, res) => {
   }
 };
 
+/** Icchhamati uses a separate OTP request for beneficiary deletion. */
+export const sendBeneficiaryDeleteOtp = async (req, res) => {
+  try {
+    const data = await icchhamatiPost('/api/v2/beneficiaries/send-otp', {});
+    if (!isOk(data)) {
+      return res
+        .status(400)
+        .json({ success: false, message: providerMessage(data, 'Could not send the deletion OTP.') });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: providerMessage(data, 'OTP sent to the registered sender mobile.'),
+    });
+  } catch (error) {
+    console.error('Beneficiary Delete OTP Error:', error?.response?.data || error?.message);
+    return res.status(500).json({ success: false, message: 'Failed to send deletion OTP' });
+  }
+};
+
 export const verifyBeneficiary = async (req, res) => {
   try {
     const { beneficiary_id, beneid, otp } = req.body;

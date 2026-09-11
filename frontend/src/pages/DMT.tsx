@@ -92,7 +92,9 @@ const DMT = () => {
         setOtp('');
         setOtpFor({ bene, action });
         try {
-            const res = await axios.post(`${api}/beneficiary/otp`, { beneficiary_id: bene.id }, getHeaders());
+            const otpPath = action === 'delete' ? 'beneficiary/delete-otp' : 'beneficiary/otp';
+            const body = action === 'delete' ? {} : { beneficiary_id: bene.id };
+            const res = await axios.post(`${api}/${otpPath}`, body, getHeaders());
             if (res.data.success) toast.success(res.data.message || 'OTP sent');
             else toast.error(res.data.message || 'Failed to send OTP');
         } catch (error: any) {
