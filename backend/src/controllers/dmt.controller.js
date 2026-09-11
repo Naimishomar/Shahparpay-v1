@@ -35,7 +35,7 @@ const beneficiaryMobile = (row) =>
   String(row.mobile ?? row.mobile_number ?? row.remitter_mobile ?? row.user?.mobile ?? '')
     .replace(/\D/g, '');
 
-const beneficiaryId = (row) => row.id ?? row.beneficiary_id ?? row.bene_id;
+const getBeneficiaryId = (row) => row.id ?? row.beneficiary_id ?? row.bene_id;
 
 const fetchProviderBeneficiaries = async () => {
   const rows = [];
@@ -60,8 +60,8 @@ const fetchProviderBeneficiaries = async () => {
 };
 
 const toBeneficiary = (row) => ({
-  id: String(beneficiaryId(row) ?? ''),
-  beneid: String(beneficiaryId(row) ?? ''), // the name the existing screens read
+  id: String(getBeneficiaryId(row) ?? ''),
+  beneid: String(getBeneficiaryId(row) ?? ''), // the name the existing screens read
   name: row.name,
   benename: row.name,
   mobile: row.mobile ?? row.mobile_number ?? row.remitter_mobile ?? row.user?.mobile,
@@ -265,7 +265,7 @@ export const initiateTransfer = async (req, res) => {
       });
     }
     const providerBeneficiary = beneficiaryRows.find((row) => {
-      const rowId = beneficiaryId(row);
+      const rowId = getBeneficiaryId(row);
       const rowMobile = beneficiaryMobile(row);
       return String(rowId) === String(beneficiaryId) && rowMobile === senderMobile;
     });
