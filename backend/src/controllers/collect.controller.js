@@ -1,4 +1,5 @@
 import {
+  icchhamatiGet,
   icchhamatiPost,
   isOk,
   normaliseStatus,
@@ -202,50 +203,18 @@ export const verifyOrder = async (req, res) => {
       return res.status(200).json({ success: true, data: { status: txn.status } });
     }
 
-    const data = await icchhamatiPost('/api/pg/verify', {
-      txnid: txn.metadata?.orderId || txn.transactionId,
-    });
-
-    const status = isOk(data) ? normaliseStatus(data?.data?.status ?? data?.status) : 'PENDING';
-
-    // An unpaid or still-open order is not a failure: the customer may pay in a
-    // minute. Only a definite answer moves it out of PENDING.
-    if (status === 'PENDING') {
-      return res.status(200).json({
-        success: true,
-        pending: true,
-        message: providerMessage(data, 'Payment not completed yet.'),
-        data: { status: 'PENDING' },
-      });
-    }
-
-    const claimed = await Transaction.findOneAndUpdate(
-      { _id: txn._id, status: 'PENDING' },
-      {
-        $set: {
-          status,
-          'metadata.gatewayStatus': data?.data?.status ?? null,
-          'metadata.verifyResponse': data,
-        },
-      },
-      { new: true }
-    );
-
-    if (claimed && status === 'SUCCESS') {
-      // An inflow: the customer paid the retailer, so the full amount lands in
-      // the retailer's MAIN wallet.
-      await MainWallet.findOneAndUpdate(
-        { userId: claimed.userId },
-        { $inc: { balance: Number(claimed.amount) } },
-        { upsert: true }
-      );
-    }
+    const { transaction, providerData } = await syncCollectionTransaction(txn);
+    const status = transaction.status;
 
     return res.status(200).json({
       success: status === 'SUCCESS',
       message: providerMessage(
-        data,
-        status === 'SUCCESS' ? 'Payment received.' : 'Payment failed.'
+        providerData,
+        status === 'SUCCESS'
+          ? 'Payment received.'
+          : status === 'PENDING'
+            ? 'Payment not completed yet.'
+            : 'Payment failed.'
       ),
       data: { status, transactionId: txn.transactionId },
     });
@@ -253,6 +222,55 @@ export const verifyOrder = async (req, res) => {
     console.error('Verify Payment Error:', error?.response?.data || error?.message);
     return res.status(500).json({ success: false, message: 'Failed to verify payment' });
   }
+};
+
+/**
+ * Refreshes one collection against Icchhamati and settles it exactly once.
+ *
+ * The provider's live checkout page resolves sessions through
+ * GET /api/pg/transaction?txnid=..., not the POST /api/pg/verify route. Keeping
+ * this operation server-side also means the frontend never trusts a customer's
+ * redirect or self-reported payment result.
+ */
+const syncCollectionTransaction = async (txn) => {
+  if (txn.status !== 'PENDING') return { transaction: txn, providerData: null };
+
+  const providerTxnId = txn.metadata?.orderId || txn.transactionId;
+  const providerData = await icchhamatiGet('/api/pg/transaction', {
+    txnid: providerTxnId,
+  });
+  const status = isOk(providerData)
+    ? normaliseStatus(providerData?.data?.status ?? providerData?.status)
+    : 'PENDING';
+
+  // An unpaid or still-open order is not a failure: the customer may pay in a
+  // minute. Only a definite answer moves it out of PENDING.
+  if (status === 'PENDING') return { transaction: txn, providerData };
+
+  const claimed = await Transaction.findOneAndUpdate(
+    { _id: txn._id, status: 'PENDING' },
+    {
+      $set: {
+        status,
+        'metadata.gatewayStatus': providerData?.data?.status ?? providerData?.status ?? null,
+        'metadata.verifyResponse': providerData,
+        'metadata.lastStatusCheckedAt': new Date(),
+      },
+    },
+    { new: true }
+  );
+
+  if (claimed && status === 'SUCCESS') {
+    // An inflow: the customer paid the retailer, so the full amount lands in
+    // the retailer's MAIN wallet. The PENDING claim makes this idempotent.
+    await MainWallet.findOneAndUpdate(
+      { userId: claimed.userId },
+      { $inc: { balance: Number(claimed.amount) } },
+      { upsert: true }
+    );
+  }
+
+  return { transaction: claimed || (await Transaction.findById(txn._id)), providerData };
 };
 
 /**
@@ -351,7 +369,26 @@ export const getCollectionHistory = async (req, res) => {
     const history = await Transaction.find({ userId: req.user.id, type: 'PG_COLLECTION' })
       .sort({ createdAt: -1 })
       .limit(100);
-    return res.status(200).json({ success: true, data: history });
+
+    // Make the Recent Collections table live: reconcile pending orders every
+    // time it is loaded/refreshed instead of returning stale local statuses.
+    await Promise.all(history
+      .filter((txn) => txn.status === 'PENDING')
+      .map(async (txn) => {
+        try {
+          await syncCollectionTransaction(txn);
+        } catch (error) {
+          console.error('Collection status refresh failed:', {
+            transactionId: txn.transactionId,
+            message: error?.response?.data || error?.message,
+          });
+        }
+      }));
+
+    const refreshedHistory = await Transaction.find({ userId: req.user.id, type: 'PG_COLLECTION' })
+      .sort({ createdAt: -1 })
+      .limit(100);
+    return res.status(200).json({ success: true, data: refreshedHistory });
   } catch (error) {
     console.error('Collection History Error:', error);
     return res.status(500).json({ success: false, message: 'Failed to fetch collections' });

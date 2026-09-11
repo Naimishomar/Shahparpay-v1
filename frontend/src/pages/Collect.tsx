@@ -46,6 +46,12 @@ const Collect = () => {
 
     useEffect(() => {
         if (token) fetchHistory();
+        if (!token) return;
+
+        // Keep pending collection rows synchronized while this page is open.
+        // The backend rechecks Icchhamati and credits the wallet idempotently.
+        const refreshTimer = window.setInterval(fetchHistory, 15000);
+        return () => window.clearInterval(refreshTimer);
     }, [token]);
 
     const verify = async (reference: string, quiet = false) => {
