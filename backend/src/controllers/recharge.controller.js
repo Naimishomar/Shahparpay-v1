@@ -405,6 +405,7 @@ export const doRecharge = async (req, res) => {
     const typeCode = rechargeTypeCode(type);
     const bill = isBillType(type);
     const providerAccountId = String(process.env.ICCHHAMATI_ACCOUNT_ID || '').trim();
+    const providerMpin = String(process.env.ICCHHAMATI_MPIN || '').trim();
 
     // Icchhamati now requires its own utility-account identifier for mobile
     // recharge and bill payment. It is not our Mongo user id and must never be
@@ -413,6 +414,12 @@ export const doRecharge = async (req, res) => {
       return res.status(503).json({
         success: false,
         message: 'Icchhamati account ID is not configured. Please contact support.',
+      });
+    }
+    if (!providerMpin) {
+      return res.status(503).json({
+        success: false,
+        message: 'Icchhamati utility-wallet MPIN is not configured. Please contact support.',
       });
     }
 
@@ -465,6 +472,7 @@ export const doRecharge = async (req, res) => {
     // as `circal`. Both are sent — one of them is the one the gateway reads.
     const payload = {
       account_id: providerAccountId,
+      mpin: providerMpin,
       number: String(caNumber),
       operator: String(operator),
       amount: Math.round(totalAmount),
