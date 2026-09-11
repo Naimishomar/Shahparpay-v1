@@ -31,20 +31,28 @@ const requireMobile = (mobile) => {
   return /^[6-9]\d{9}$/.test(digits) ? digits : null;
 };
 
+const beneficiaryMobile = (row) =>
+  String(row.mobile ?? row.mobile_number ?? row.remitter_mobile ?? row.user?.mobile ?? '')
+    .replace(/\D/g, '');
+
+const beneficiaryId = (row) => row.id ?? row.beneficiary_id ?? row.bene_id;
+
 const toBeneficiary = (row) => ({
-  id: String(row.id ?? row.beneficiary_id ?? row.bene_id ?? ''),
-  beneid: String(row.id ?? row.beneficiary_id ?? row.bene_id ?? ''), // the name the existing screens read
+  id: String(beneficiaryId(row) ?? ''),
+  beneid: String(beneficiaryId(row) ?? ''), // the name the existing screens read
   name: row.name,
   benename: row.name,
-  mobile: row.mobile,
-  account: row.account,
-  accno: row.account,
-  ifsc: row.ifsc,
+  mobile: row.mobile ?? row.mobile_number ?? row.remitter_mobile ?? row.user?.mobile,
+  account: row.account ?? row.account_number,
+  accno: row.account ?? row.account_number,
+  ifsc: row.ifsc ?? row.account_ifsc,
   bank: row.bank || null,
   bankname: row.bank || null,
   branch: row.branch || null,
   status: row.status || null,
-  verified: String(row.status || '').toLowerCase() === 'verified' || row.verified === true,
+  verified:
+    row.verified === true ||
+    ['verified', 'active', 'approved', '1', 'success'].includes(String(row.status || '').toLowerCase()),
 });
 
 export const fetchBeneficiaries = async (req, res) => {
@@ -59,6 +67,7 @@ export const fetchBeneficiaries = async (req, res) => {
     const data = await icchhamatiGet('/api/v2/beneficiaries', {
       search: mobile,
       per_page: 100,
+      verified: true,
     });
     if (!isOk(data)) {
       return res.status(502).json({
@@ -71,7 +80,7 @@ export const fetchBeneficiaries = async (req, res) => {
     // that merely mention the number. Only rows actually registered to this
     // sender may be shown.
     const rows = data.data?.data || data.data || [];
-    const mine = rows.filter((row) => String(row.mobile || '').replace(/\D/g, '') === mobile);
+    const mine = rows.filter((row) => beneficiaryMobile(row) === mobile);
 
     return res.status(200).json({ success: true, data: mine.map(toBeneficiary) });
   } catch (error) {
@@ -243,8 +252,8 @@ export const initiateTransfer = async (req, res) => {
     }
     const providerRows = beneficiaryList.data?.data || beneficiaryList.data || [];
     const providerBeneficiary = providerRows.find((row) => {
-      const rowId = row.id ?? row.beneficiary_id ?? row.bene_id;
-      const rowMobile = String(row.mobile || '').replace(/\D/g, '');
+      const rowId = beneficiaryId(row);
+      const rowMobile = beneficiaryMobile(row);
       return String(rowId) === String(beneficiaryId) && rowMobile === senderMobile;
     });
     if (!providerBeneficiary) {
