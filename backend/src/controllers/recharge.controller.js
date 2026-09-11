@@ -367,6 +367,11 @@ export const fetchBill = async (req, res) => {
     }
 
     const providerOperator = await resolveProviderOperatorCode(type, operator);
+    console.info('BBPS biller routing', {
+      category: String(type || ''),
+      submittedOperator: String(operator),
+      providerOperator,
+    });
 
     // The published field docs and the published example disagree on the names
     // (biller_code/customer_id versus billerId/customerKey). Both are sent;
