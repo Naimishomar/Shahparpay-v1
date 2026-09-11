@@ -23,6 +23,26 @@ import Retailer from '../models/users/retailer.model.js';
 
 const getFrontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:5173';
 
+const normalizePaymentUrl = (rawUrl, transactionId) => {
+  if (!rawUrl) return null;
+  try {
+    const url = new URL(rawUrl);
+    // Icchhamati currently returns a hash route whose access_key is not
+    // persisted, while its checkout API reliably resolves the same order by
+    // txnid. Use the provider's query-based checkout route for that host only.
+    if (
+      url.hostname === 'icchhamatidataservice.com' &&
+      url.pathname.startsWith('/pg/checkout/') &&
+      transactionId
+    ) {
+      return `${url.origin}/pg/checkout?txnid=${encodeURIComponent(transactionId)}`;
+    }
+    return url.toString();
+  } catch {
+    return rawUrl;
+  }
+};
+
 /** The gateway refuses anything smaller: "Minimum amount is 200.00". */
 const MIN_ORDER_AMOUNT = 200;
 
@@ -92,13 +112,15 @@ export const createOrder = async (req, res) => {
     // The gateway returns the link at the top level — {status, message,
     // payment_url} — not under `data` as its documentation shows, and sends no
     // order id at all: our own reference is what /pg/verify is queried by.
-    const paymentUrl = data?.payment_url || data?.data?.payment_url || null;
+    const rawPaymentUrl = data?.payment_url || data?.data?.payment_url || null;
     const orderId = data?.order_id || data?.data?.order_id || referenceId;
+    const paymentUrl = normalizePaymentUrl(rawPaymentUrl, orderId);
 
     console.info('Icchhamati payment link created', {
       referenceId,
       providerOrderId: orderId,
       providerStatus: data?.status,
+      normalizedPaymentUrl: paymentUrl !== rawPaymentUrl,
       paymentUrlHost: paymentUrl ? (() => {
         try {
           return new URL(paymentUrl).host;

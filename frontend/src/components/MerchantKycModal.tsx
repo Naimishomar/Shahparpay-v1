@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Fingerprint, Loader2, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Fingerprint, Loader2, CheckCircle2, ShieldAlert, ArrowLeft } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -8,6 +8,7 @@ import type { DeviceBrand } from '../utils/rdService';
 
 interface MerchantKycModalProps {
     onClose: () => void;
+    onBack?: () => void;
     latitude?: string;
     longitude?: string;
 }
@@ -21,7 +22,7 @@ const PIPE_WADH: Record<string, string> = {
     bank6: 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=',
 };
 
-const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, longitude }) => {
+const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, onBack, latitude, longitude }) => {
     const { user, token } = useAuth();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -170,6 +171,15 @@ const MerchantKycModal: React.FC<MerchantKycModalProps> = ({ onClose, latitude, 
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in p-4">
             <div className="bg-background w-full max-w-md rounded-2xl shadow-2xl border border-border overflow-hidden">
                 <div className="p-5 border-b border-border bg-muted/30 flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={onBack || onClose}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        aria-label="Go back"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back
+                    </button>
                     <ShieldAlert className="text-primary w-6 h-6" />
                     <div>
                         <h2 className="font-bold text-lg text-foreground">Merchant eKYC</h2>

@@ -5,6 +5,14 @@ import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
+const formatBalance = (value: unknown) => {
+    const amount = Number(value ?? 0);
+    return new Intl.NumberFormat('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(Number.isFinite(amount) ? amount : 0);
+};
+
 const Header = () => {
     const { theme, setTheme } = useTheme();
     const { user, token } = useAuth();
@@ -48,7 +56,7 @@ const Header = () => {
                             </div>
                             <div>
                                 <p className="text-xs font-medium text-muted-foreground">Admin Wallet</p>
-                                <p className="text-sm font-bold text-foreground">₹ {(balances.adminBalance || 0).toFixed(2)}</p>
+                                <p className="text-sm font-bold text-foreground">₹ {formatBalance(balances.adminBalance)}</p>
                             </div>
                         </div>
                     ) : (
@@ -59,7 +67,7 @@ const Header = () => {
                                 </div>
                                 <div>
                                     <p className="text-xs font-medium text-muted-foreground">AEPS Wallet</p>
-                                    <p className="text-sm font-bold text-foreground">₹ {(balances.aepsBalance || 0).toFixed(2)}</p>
+                                    <p className="text-sm font-bold text-foreground">₹ {formatBalance(balances.aepsBalance)}</p>
                                 </div>
                             </div>
                             <div className="w-px h-8 bg-black/10 dark:bg-white/10"></div>
@@ -69,7 +77,7 @@ const Header = () => {
                                 </div>
                                 <div>
                                     <p className="text-xs font-medium text-muted-foreground">Main Wallet</p>
-                                    <p className="text-sm font-bold text-foreground">₹ {(balances.mainBalance || 0).toFixed(2)}</p>
+                                    <p className="text-sm font-bold text-foreground">₹ {formatBalance(balances.mainBalance)}</p>
                                 </div>
                             </div>
                         </>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Fingerprint, Clock, CheckCircle2, XCircle, RefreshCcw, ShieldCheck, KeyRound, Wallet, FileText, IndianRupee, CreditCard, Loader2, Store, Phone, Printer } from "lucide-react";
 import logo from "../assets/logo.png";
 import MerchantKycModal from "../components/MerchantKycModal";
@@ -68,6 +68,7 @@ const extractPaySprintError = (result: any) => {
 
 const AEPS = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const { location } = useLocationContext();
     const actualMerchantCode = user?.retailerId || user?.distributorId || user?.adminId || "";
     // UI State
@@ -132,14 +133,18 @@ const AEPS = () => {
                     if (!selectedPipe && data.data.activePipes && data.data.activePipes.length > 0) {
                         setSelectedPipe(data.data.activePipes[0]);
                     }
-                    if (!data.data.isDailyAuthDoneToday) {
+                    // AEPS onboarding is required only when the retailer opens AEPS.
+                    // Do not block the rest of the application from Layout.tsx.
+                    if (user?.role === 'retailer' && !data.data.isMerchantKycComplete) {
+                        setShowKycModal(true);
+                    } else if (!data.data.isDailyAuthDoneToday) {
                         setShowDailyAuthModal(true);
                     }
                 }
             })
             .catch(err => console.error("Failed to fetch merchant status", err))
             .finally(() => setIsLoadingStatus(false));
-    }, [merchantCode, selectedPipe]);
+    }, [merchantCode, selectedPipe, user?.role]);
     
     // Biometric Capture State
     const [pidData, setPidData] = useState<string | null>(null);
@@ -1168,6 +1173,7 @@ const AEPS = () => {
                 <MerchantKycModal 
                     latitude={location?.latitude?.toString()}
                     longitude={location?.longitude?.toString()}
+                    onBack={() => navigate(-1)}
                     onClose={() => {
                         setShowKycModal(false);
                         // Force refresh status
