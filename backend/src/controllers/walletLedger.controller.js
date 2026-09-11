@@ -4,7 +4,7 @@ import Transaction from '../models/transaction.model.js';
 
 // Credit types where the wallet receives the transaction amount PLUS the
 // retailer's commission (verified against applyAepsWithdrawalSuccess).
-const CREDIT_WITH_COMMISSION = new Set(['AEPS_WITHDRAWAL']);
+const CREDIT_WITH_COMMISSION = new Set(['AEPS_WITHDRAWAL', 'MATM']);
 
 // Credit types where the wallet receives only the transaction amount
 // (topups, refunds and AadhaarPay never earn commission on the ledger).
@@ -42,6 +42,7 @@ export const getWalletLabel = (tx) => WALLET_LABELS[tx.type] || 'Main';
 
 const TXNTYPE_LABELS = {
   AEPS_WITHDRAWAL: 'AEPS Wallet',
+  MATM: 'MATM / AEPS Wallet',
   AADHAAR_PAY: 'AadhaarPay',
   WALLET_TOPUP: 'Wallet Topup',
   RECHARGE: 'Recharge',
@@ -91,6 +92,8 @@ export const getNarration = (tx) => {
     case 'AEPS_WITHDRAWAL':
     case 'AADHAAR_PAY':
       return `Aadhaar *${m.aadhaar ? String(m.aadhaar).slice(-4) : 'N/A'} withdrawal`;
+    case 'MATM':
+      return `MATM cash withdrawal${m.bankRRN ? ' RRN ' + m.bankRRN : ''}`;
     case 'WALLET_TOPUP':
       return `Wallet Top-up ${m.utr ? 'UTR ' + m.utr : ''}`.trim();
     case 'RECHARGE':

@@ -125,6 +125,26 @@ export const addBeneficiary = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Enter a valid IFSC code' });
     }
 
+    // Verify the destination account before creating the beneficiary. This is
+    // the provider's penny-drop check and prevents an account typo from
+    // entering the OTP/payout flow. Credentials are supplied by the existing
+    // server-side ICCHHAMATI_MID / ICCHHAMATI_MKEY environment variables.
+    const pennyDrop = await icchhamatiPost('/api/v2/verify/bank-account', {
+      accountno: beneAccount,
+      ifsccode: normalizedIfsc,
+    });
+
+    if (!isOk(pennyDrop)) {
+      return res.status(400).json({
+        success: false,
+        message: providerMessage(
+          pennyDrop,
+          'Bank account verification failed. Check the account number and IFSC code.'
+        ),
+        data: { pennyDropVerified: false },
+      });
+    }
+
     const data = await icchhamatiPost('/api/v2/beneficiaries/create', {
       name: beneName,
       mobile,
@@ -142,8 +162,11 @@ export const addBeneficiary = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: providerMessage(data, 'Beneficiary added. Verify it with the OTP to pay it.'),
-      data: data.data ? toBeneficiary(data.data) : null,
+      message: 'Bank account verified successfully. Beneficiary added; verify it with OTP to pay it.',
+      data: {
+        ...(data.data ? toBeneficiary(data.data) : {}),
+        pennyDropVerified: true,
+      },
     });
   } catch (error) {
     console.error('Add Beneficiary Error:', error?.response?.data || error?.message);

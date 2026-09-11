@@ -51,6 +51,7 @@ const tx = (type, over = {}) => ({
 // does not crash — it shows the retailer a balance that never happened.
 const EXPECTED = {
   AEPS_WITHDRAWAL: ['aeps', +1],
+  MATM: ['aeps', +1],
   AADHAAR_PAY: ['aeps', +1],
   AEPS_SETTLEMENT: ['aeps', -1],
   WALLET_TOPUP: ['main', +1],

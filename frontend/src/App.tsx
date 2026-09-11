@@ -33,6 +33,7 @@ import AdminPortal from "./pages/AdminPortal"
 import DistributorPortal from "./pages/DistributorPortal"
 import KycStatus from "./pages/KycStatus"
 import Profile from "./pages/Profile"
+import MATM from "./pages/MATM"
 
 import { Toaster } from 'sonner'
 import { useAuth } from './context/AuthContext'
@@ -72,6 +73,7 @@ function App() {
         <Route path="/aeps" element={<AEPS/>}/>
         <Route path="/aeps/pipes" element={<PipeStatus/>}/>
         <Route path="/aeps-settlement" element={<AepsSettlement/>}/>
+        <Route path="/matm" element={<MATM/>}/>
         <Route path="/direct-payout" element={<DirectPayout/>}/>
         <Route path="/dmt" element={<DMT/>}/>
         <Route path="/recharge" element={<Recharge/>}/>

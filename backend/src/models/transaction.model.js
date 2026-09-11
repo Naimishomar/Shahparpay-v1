@@ -40,6 +40,7 @@ const transactionSchema = new mongoose.Schema(
         'FUND_REQUEST',
         'FUND_TRANSFER',
         'PG_COLLECTION',
+        'MATM',
       ],
       required: true,
     },

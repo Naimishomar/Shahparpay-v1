@@ -99,7 +99,7 @@ export const normaliseStatus = (status) => {
   const value = String(status ?? '')
     .trim()
     .toUpperCase();
-  if (value === '1' || value === 'SUCCESS' || value === 'TRUE') return 'SUCCESS';
+  if (['1', 'SUCCESS', 'SUCCESSFUL', 'PAID', 'COMPLETED', 'CAPTURED', 'SETTLED', 'TRUE'].includes(value)) return 'SUCCESS';
   if (value === '2' || value === 'PENDING' || value === 'PROCESSING' || value === 'INITIATED') {
     return 'PENDING';
   }

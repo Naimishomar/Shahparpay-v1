@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/sidebar"
 
 import { Link, useLocation } from "react-router-dom"
-import { BarChart3, Wallet, Send, Zap, ScanFace, Landmark, ArrowRightLeft, LayoutDashboard, Users, Store, UserPlus, UserCircle, FileText, QrCode } from "lucide-react"
+import { BarChart3, Wallet, Send, Zap, ScanFace, Landmark, ArrowRightLeft, LayoutDashboard, Users, Store, UserPlus, UserCircle, FileText, QrCode, CreditCard } from "lucide-react"
 import logo from "../assets/logo.png"
 import { useAuth } from "../context/AuthContext"
 
@@ -15,6 +15,7 @@ const retailerProjects = [
   { name: "Dashboard", url: "/", icon: BarChart3 },
   { name: "AEPS", url: "/aeps", icon: ScanFace },
   { name: "AEPS Settlement", url: "/aeps-settlement", icon: Landmark },
+  { name: "MATM", url: "/matm", icon: CreditCard },
   { name: "PAN Card", url: "/pan", icon: FileText },
   { name: "Lead Generation", url: "/lead-generation", icon: UserPlus },
   { name: "ITR Filing", url: "/itr", icon: FileText },
