@@ -404,6 +404,17 @@ export const doRecharge = async (req, res) => {
 
     const typeCode = rechargeTypeCode(type);
     const bill = isBillType(type);
+    const providerAccountId = String(process.env.ICCHHAMATI_ACCOUNT_ID || '').trim();
+
+    // Icchhamati now requires its own utility-account identifier for mobile
+    // recharge and bill payment. It is not our Mongo user id and must never be
+    // accepted from the browser.
+    if (!providerAccountId) {
+      return res.status(503).json({
+        success: false,
+        message: 'Icchhamati account ID is not configured. Please contact support.',
+      });
+    }
 
     // A prepaid recharge is routed by circle as well as operator, so a missing
     // one would either be refused or routed to the wrong lane.
@@ -453,6 +464,7 @@ export const doRecharge = async (req, res) => {
     // `circle` is the documented field name; the provider's own client sends it
     // as `circal`. Both are sent — one of them is the one the gateway reads.
     const payload = {
+      account_id: providerAccountId,
       number: String(caNumber),
       operator: String(operator),
       amount: Math.round(totalAmount),
