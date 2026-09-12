@@ -93,7 +93,7 @@ const DMT = () => {
         setOtpFor({ bene, action });
         try {
             const otpPath = action === 'delete' ? 'beneficiary/delete-otp' : 'beneficiary/otp';
-            const body = action === 'delete' ? {} : { beneficiary_id: bene.id };
+            const body = { beneficiary_id: bene.id };
             const res = await axios.post(`${api}/${otpPath}`, body, getHeaders());
             if (res.data.success) {
                 const expiry = res.data.expiresIn ? ` Valid for ${Math.ceil(Number(res.data.expiresIn) / 60)} minutes.` : '';

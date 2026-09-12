@@ -207,10 +207,23 @@ export const sendBeneficiaryOtp = async (req, res) => {
   }
 };
 
-/** Icchhamati uses a separate OTP request for beneficiary deletion. */
+/**
+ * Deletion must be authorised by the sender/remitter who owns the beneficiary,
+ * not by the retailer operating the portal. The provider's generic send-otp
+ * endpoint targets the retailer mobile, so deletion deliberately uses the
+ * beneficiary OTP endpoint with the canonical provider beneficiary ID.
+ */
 export const sendBeneficiaryDeleteOtp = async (req, res) => {
   try {
-    const data = await icchhamatiPost('/api/v2/beneficiaries/send-otp', {});
+    const { beneficiary_id, beneid } = req.body;
+    const id = beneficiary_id || beneid;
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Beneficiary id is required' });
+    }
+
+    const data = await icchhamatiPost('/api/v2/beneficiaries/get-beneficiary-otp', {
+      beneficiary_id: String(id),
+    });
     if (!isOk(data)) {
       return res
         .status(400)
@@ -219,7 +232,7 @@ export const sendBeneficiaryDeleteOtp = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: providerMessage(data, 'OTP sent to the registered sender mobile.'),
+      message: providerMessage(data, 'OTP sent to the beneficiary owner mobile.'),
       expiresIn: data?.data?.expires_in ?? data?.expires_in ?? null,
     });
   } catch (error) {
