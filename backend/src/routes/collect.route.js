@@ -3,6 +3,7 @@ import {
   createOrder,
   verifyOrder,
   generateQr,
+  verifyBankAccount,
   getCollectionHistory,
 } from '../controllers/collect.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
@@ -16,6 +17,7 @@ router.use(authMiddlewares);
 router.post('/order', createOrder);
 router.post('/verify', verifyOrder);
 router.post('/qr', generateQr);
+router.post('/verify-bank-account', verifyBankAccount);
 router.get('/history', getCollectionHistory);
 
 export default router;

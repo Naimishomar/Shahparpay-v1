@@ -35,6 +35,7 @@ const DMT = () => {
     const [transferMode, setTransferMode] = useState('IMPS');
     const [pin, setPin] = useState('');
     const [successTxn, setSuccessTxn] = useState<any>(null);
+    const [bankVerification, setBankVerification] = useState<any>(null);
 
     const api = `${import.meta.env.VITE_BACKEND_URL}/api/dmt`;
     const getHeaders = () => ({ headers: { Authorization: `Bearer ${token}` } });
@@ -72,6 +73,7 @@ const DMT = () => {
             const res = await axios.post(`${api}/beneficiary/add`, { mobile: sender, benename, beneaccount, ifsc }, getHeaders());
             if (res.data.success) {
                 toast.success(res.data.message || 'Beneficiary added');
+                setBankVerification(res.data.data?.bankVerification || null);
                 setShowAddBene(false);
                 setBeneData({ benename: '', beneaccount: '', confirmAccount: '', ifsc: '' });
                 await fetchBeneficiaries(sender);
@@ -82,6 +84,7 @@ const DMT = () => {
                 toast.error(res.data.message || 'Failed to add beneficiary');
             }
         } catch (error: any) {
+            setBankVerification(error.response?.data?.data?.bankVerification || null);
             toast.error(error.response?.data?.message || 'Failed to add beneficiary');
         } finally {
             setLoading(false);
@@ -316,6 +319,29 @@ const DMT = () => {
                     </div>
                 </div>
             </div>
+
+            {bankVerification && (
+                <div className="bg-card border border-green-500/30 rounded-2xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                        <div>
+                            <h2 className="font-bold text-foreground">Bank account verification</h2>
+                            <p className="text-xs text-muted-foreground">Verification response for the newly added beneficiary</p>
+                        </div>
+                        <button onClick={() => setBankVerification(null)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        {[
+                            ['Transaction ID', bankVerification.txnid], ['Status', bankVerification.status],
+                            ['Account Name', bankVerification.AccountName], ['Account Number', bankVerification.AccountNumber],
+                            ['Account Status', bankVerification.accountStatus], ['Bank', bankVerification.bank_name],
+                            ['UTR', bankVerification.utr], ['City', bankVerification.city],
+                            ['Branch', bankVerification.branch], ['MICR', bankVerification.micr],
+                            ['Response', bankVerification.resText], ['Name Match', bankVerification.nameMatch ? 'YES' : 'NO'],
+                            ['Account Match', bankVerification.accountMatch ? 'YES' : 'NO'],
+                        ].map(([label, value]) => <div key={label}><div className="text-xs text-muted-foreground">{label}</div><div className="font-medium text-foreground break-words">{String(value ?? '—')}</div></div>)}
+                    </div>
+                </div>
+            )}
 
             {/* Add Beneficiary */}
             {showAddBene && (

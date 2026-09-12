@@ -12,6 +12,7 @@ import { lockFundsForTransaction, resolveTransaction } from '../utils/wallet.uti
 import DmtTransaction from '../models/dmtTransaction.model.js';
 import Transaction from '../models/transaction.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
+import { verifyBankAccountWithProvider } from '../utils/bankAccountVerification.util.js';
 
 /**
  * Money transfer and beneficiaries, on Icchhamati.
@@ -132,19 +133,20 @@ export const addBeneficiary = async (req, res) => {
     // the provider's penny-drop check and prevents an account typo from
     // entering the OTP/payout flow. Credentials are supplied by the existing
     // server-side ICCHHAMATI_MID / ICCHHAMATI_MKEY environment variables.
-    const pennyDrop = await icchhamatiPost('/api/v2/verify/bank-account', {
-      accountno: beneAccount,
-      ifsccode: normalizedIfsc,
+    const verification = await verifyBankAccountWithProvider({
+      name: beneName,
+      accountNumber: beneAccount,
+      ifsc: normalizedIfsc,
     });
 
-    if (!isOk(pennyDrop)) {
+    if (!verification.verified) {
       return res.status(400).json({
         success: false,
-        message: providerMessage(
-          pennyDrop,
-          'Bank account verification failed. Check the account number and IFSC code.'
-        ),
-        data: { pennyDropVerified: false },
+        message: verification.message || 'Bank account and account-holder name could not be matched.',
+        data: {
+          pennyDropVerified: false,
+          bankVerification: { ...(verification.providerData || {}), accountMatch: verification.accountMatches, nameMatch: verification.nameMatch, verified: false },
+        },
       });
     }
 
@@ -169,6 +171,12 @@ export const addBeneficiary = async (req, res) => {
       data: {
         ...(data.data ? toBeneficiary(data.data) : {}),
         pennyDropVerified: true,
+        bankVerification: {
+          ...(verification.providerData || {}),
+          accountMatch: verification.accountMatches,
+          nameMatch: verification.nameMatch,
+          verified: true,
+        },
       },
     });
   } catch (error) {

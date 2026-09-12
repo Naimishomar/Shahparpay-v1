@@ -8,6 +8,7 @@ import {
 import Transaction from '../models/transaction.model.js';
 import MainWallet from '../models/mainWallet.model.js';
 import Retailer from '../models/users/retailer.model.js';
+import { verifyBankAccountWithProvider } from '../utils/bankAccountVerification.util.js';
 
 /**
  * Collecting money from a customer, two ways.
@@ -46,6 +47,43 @@ const normalizePaymentUrl = (rawUrl, transactionId) => {
 
 /** The gateway refuses anything smaller: "Minimum amount is 200.00". */
 const MIN_ORDER_AMOUNT = 200;
+
+export const verifyBankAccount = async (req, res) => {
+  try {
+    const { name, account_number, accountNumber, account_ifsc, ifsc } = req.body;
+    const accountNo = String(account_number || accountNumber || '').replace(/\D/g, '');
+    const accountIfsc = String(account_ifsc || ifsc || '').trim().toUpperCase();
+    const accountName = String(name || '').trim();
+
+    if (!accountName || !accountNo || !accountIfsc) {
+      return res.status(400).json({ success: false, message: 'Account holder name, account number and IFSC are required' });
+    }
+    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(accountIfsc)) {
+      return res.status(400).json({ success: false, message: 'Enter a valid IFSC code' });
+    }
+
+    const result = await verifyBankAccountWithProvider({
+      name: accountName,
+      accountNumber: accountNo,
+      ifsc: accountIfsc,
+    });
+    const verification = {
+      ...(result.providerData || {}),
+      accountMatch: result.accountMatches,
+      nameMatch: result.nameMatch,
+      verified: result.verified,
+    };
+
+    return res.status(result.verified ? 200 : 400).json({
+      success: result.verified,
+      message: result.verified ? 'Bank account and account-holder name verified.' : result.message,
+      data: verification,
+    });
+  } catch (error) {
+    console.error('Verify Bank Account Error:', error?.response?.data || error?.message);
+    return res.status(502).json({ success: false, message: 'Bank account verification service is unavailable' });
+  }
+};
 
 /**
  * Creates the checkout order and returns the link to show the customer.

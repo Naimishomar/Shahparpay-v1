@@ -31,6 +31,8 @@ const Collect = () => {
 
     const [qrForm, setQrForm] = useState({ name: '', account_number: '', account_ifsc: '' });
     const [qr, setQr] = useState<any>(null);
+    const [bankVerification, setBankVerification] = useState<any>(null);
+    const [verifyingBank, setVerifyingBank] = useState(false);
 
     const api = `${import.meta.env.VITE_BACKEND_URL}/api/collect`;
     const getHeaders = () => ({ headers: { Authorization: `Bearer ${token}` } });
@@ -122,9 +124,31 @@ const Collect = () => {
         setTimeout(() => setCopied(false), 2000);
     };
 
+    const verifyBank = async () => {
+        if (!qrForm.name.trim() || !qrForm.account_number || !qrForm.account_ifsc) {
+            return toast.error('Enter the account holder name, account number and IFSC');
+        }
+        setVerifyingBank(true);
+        try {
+            const res = await axios.post(`${api}/verify-bank-account`, qrForm, getHeaders());
+            const details = res.data.data || null;
+            setBankVerification(details);
+            if (res.data.success) toast.success(res.data.message || 'Bank account verified');
+            else toast.error(res.data.message || 'Bank account details did not match');
+        } catch (error: any) {
+            setBankVerification(error.response?.data?.data || null);
+            toast.error(error.response?.data?.message || 'Could not verify the bank account');
+        } finally {
+            setVerifyingBank(false);
+        }
+    };
+
     const generateQr = async () => {
         if (!qrForm.name.trim() || !qrForm.account_number || !qrForm.account_ifsc) {
             return toast.error('Enter the account holder name, account number and IFSC');
+        }
+        if (!bankVerification?.verified) {
+            return toast.error('Verify the bank account before generating the QR code');
         }
         setLoading(true);
         try {
@@ -268,18 +292,42 @@ const Collect = () => {
 
                             <div>
                                 <label className="text-sm font-medium text-foreground mb-1.5 block">Account Holder Name</label>
-                                <input type="text" className={input} value={qrForm.name} onChange={e => setQrForm({ ...qrForm, name: e.target.value })} />
+                                <input type="text" className={input} value={qrForm.name} onChange={e => { setQrForm({ ...qrForm, name: e.target.value }); setBankVerification(null); }} />
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-foreground mb-1.5 block">Account Number</label>
-                                <input type="text" className={input} value={qrForm.account_number} onChange={e => setQrForm({ ...qrForm, account_number: e.target.value.replace(/\D/g, '') })} />
+                                <input type="text" className={input} value={qrForm.account_number} onChange={e => { setQrForm({ ...qrForm, account_number: e.target.value.replace(/\D/g, '') }); setBankVerification(null); }} />
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-foreground mb-1.5 block">IFSC Code</label>
-                                <input type="text" className={`${input} uppercase`} value={qrForm.account_ifsc} onChange={e => setQrForm({ ...qrForm, account_ifsc: e.target.value.toUpperCase() })} />
+                                <input type="text" className={`${input} uppercase`} value={qrForm.account_ifsc} onChange={e => { setQrForm({ ...qrForm, account_ifsc: e.target.value.toUpperCase() }); setBankVerification(null); }} />
                             </div>
 
-                            <button onClick={generateQr} disabled={loading} className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors disabled:opacity-50">
+                            <button onClick={verifyBank} disabled={verifyingBank} className="w-full py-3 bg-secondary text-secondary-foreground rounded-xl font-bold hover:bg-secondary/80 transition-colors disabled:opacity-50">
+                                {verifyingBank ? 'Verifying...' : 'Verify Bank Account'}
+                            </button>
+
+                            {bankVerification && (
+                                <div className={`rounded-xl border p-4 text-sm space-y-3 ${bankVerification.verified ? 'border-green-500/30 bg-green-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-semibold text-foreground">Bank verification details</span>
+                                        <span className={bankVerification.verified ? 'text-green-600' : 'text-red-600'}>{bankVerification.verified ? 'VERIFIED' : 'NOT VERIFIED'}</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-left">
+                                        {[
+                                            ['Transaction ID', bankVerification.txnid], ['Status', bankVerification.status],
+                                            ['Account Name', bankVerification.AccountName], ['Account Number', bankVerification.AccountNumber],
+                                            ['Account Status', bankVerification.accountStatus], ['Bank', bankVerification.bank_name],
+                                            ['UTR', bankVerification.utr], ['City', bankVerification.city],
+                                            ['Branch', bankVerification.branch], ['MICR', bankVerification.micr],
+                                            ['Response', bankVerification.resText], ['Name Match', bankVerification.nameMatch ? 'YES' : 'NO'],
+                                            ['Account Match', bankVerification.accountMatch ? 'YES' : 'NO'],
+                                        ].map(([label, value]) => <div key={label} className="min-w-0"><div className="text-xs text-muted-foreground">{label}</div><div className="font-medium text-foreground break-words">{String(value ?? '—')}</div></div>)}
+                                    </div>
+                                </div>
+                            )}
+
+                            <button onClick={generateQr} disabled={loading || !bankVerification?.verified} className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors disabled:opacity-50">
                                 {loading ? 'Generating...' : 'Generate QR Code'}
                             </button>
                         </div>
