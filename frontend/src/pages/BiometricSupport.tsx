@@ -6,27 +6,27 @@ const BiometricSupport = () => {
             id: 'mantra',
             name: 'Mantra MFS100',
             description: 'Download the latest RD Service & Driver for Mantra devices.',
-            winDriver: '#',
-            winRdService: '#',
-            androidApp: 'https://play.google.com/store/apps/details?id=com.mantra.rdservice',
+            winDriver: 'https://mantratec.com/Download/User',
+            winRdService: 'https://mantratec.com/Download/User',
+            androidApp: 'https://play.google.com/store/search?q=mantra+rd+service&c=apps&hl=en',
             icon: <Fingerprint className="text-primary w-12 h-12" />
         },
         {
             id: 'morpho',
             name: 'Morpho E3',
             description: 'IDEMIA Morpho RD Service driver for seamless AEPS transactions.',
-            winDriver: '#',
-            winRdService: '#',
-            androidApp: 'https://play.google.com/store/apps/details?id=com.scl.rdservice',
+            winDriver: 'https://rdserviceonline.com/pages/downloads?srsltid=AfmBOooCpC01RfH_ItD4KWDko8Y836XfqT4tmVy_idknPXzwmW4p1eFN',
+            winRdService: 'https://rdserviceonline.com/pages/downloads?srsltid=AfmBOooCpC01RfH_ItD4KWDko8Y836XfqT4tmVy_idknPXzwmW4p1eFN',
+            androidApp: 'https://play.google.com/store/apps/details?id=com.idemia.l1rdservice&hl=en_IN',
             icon: <HardDrive className="text-blue-500 w-12 h-12" />
         },
         {
             id: 'startek',
             name: 'Startek FM220',
             description: 'ACPL FM220 Registered Device Service and Windows drivers.',
-            winDriver: '#',
-            winRdService: '#',
-            androidApp: 'https://play.google.com/store/apps/details?id=com.acpl.registersample',
+            winDriver: 'https://www.acpl.in.net/RdServiceNew.html',
+            winRdService: 'https://www.acpl.in.net/RdServiceNew.html',
+            androidApp: 'https://play.google.com/store/apps/details?id=com.acpl.registersdk_l1',
             icon: <Fingerprint className="text-emerald-500 w-12 h-12" />
         }
     ];
@@ -72,6 +72,8 @@ const BiometricSupport = () => {
                                 <div className="space-y-3">
                                     <a 
                                         href={device.winRdService}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
                                         className="w-full flex items-center justify-between p-3 bg-muted/30 hover:bg-primary/10 hover:text-primary rounded-xl text-sm font-medium transition-colors border border-border"
                                     >
                                         <div className="flex items-center gap-2">
@@ -81,6 +83,8 @@ const BiometricSupport = () => {
                                     </a>
                                     <a 
                                         href={device.winDriver}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
                                         className="w-full flex items-center justify-between p-3 bg-muted/30 hover:bg-primary/10 hover:text-primary rounded-xl text-sm font-medium transition-colors border border-border"
                                     >
                                         <div className="flex items-center gap-2">
