@@ -18,6 +18,7 @@ export const DEVICE_LABELS: Record<DeviceBrand, string> = {
 // so we probe the whole 11100–11120 block.
 const RD_PORTS = Array.from({ length: 21 }, (_, i) => 11100 + i);
 const RD_HOSTS = ['127.0.0.1', 'localhost'];
+const RD_PROBE_TIMEOUT_MS = 900;
 
 // Preferred probe order per brand. When the user selects a specific scanner
 // brand we probe its known ports first so the capture always reaches the
@@ -50,11 +51,6 @@ export interface CaptureOptions {
 export const discoverRdServiceUrl = async (
   device?: DeviceBrand
 ): Promise<string | null> => {
-  const protocols =
-    typeof window !== 'undefined' && window.location.protocol === 'https:'
-      ? ['https', 'http']
-      : ['http', 'https'];
-
   // Probe the selected brand's ports first, then fall back to the rest.
   const preferred = device ? BRAND_PREFERRED_PORTS[device] : [];
   const orderedPorts = [
@@ -62,31 +58,46 @@ export const discoverRdServiceUrl = async (
     ...RD_PORTS.filter((p) => !preferred.includes(p)),
   ];
 
-  for (const host of RD_HOSTS) {
-    for (const protocol of protocols) {
-      for (const port of orderedPorts) {
-        try {
-          const testUrl = `${protocol}://${host}:${port}`;
-          const response = await fetch(`${testUrl}/rd/info`, {
-            method: 'RDSERVICE',
-            headers: { 'Accept': 'text/xml' },
-            signal: AbortSignal.timeout(500),
-          });
-          if (response.ok) {
-            const text = await response.text();
-            // Accept both the strict UIDAI readiness marker and any RD info
-            // response (some vendors omit status="READY").
-            if (text && (text.includes('status="READY"') || text.includes('Resp'))) {
-              return testUrl;
-            }
-          }
-        } catch {
-          // ignore and try next port
-        }
-      }
+  // Mantra's Windows RD Service normally exposes HTTP on 11100. Probe all
+  // candidates concurrently: a sequential scan can take 20–40 seconds and
+  // makes a healthy local service look unavailable to the retailer.
+  const candidates = [
+    ...orderedPorts.flatMap((port) =>
+      RD_HOSTS.map((host) => `http://${host}:${port}`)
+    ),
+    ...orderedPorts.flatMap((port) =>
+      RD_HOSTS.map((host) => `https://${host}:${port}`)
+    ),
+  ];
+
+  const probe = async (baseUrl: string): Promise<string | null> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), RD_PROBE_TIMEOUT_MS);
+    try {
+      const response = await fetch(`${baseUrl}/rd/info`, {
+        method: 'RDSERVICE',
+        headers: { Accept: 'text/xml' },
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      if (!response.ok) return null;
+      const text = await response.text();
+      // Accept both the strict UIDAI readiness marker and vendors that omit
+      // status="READY" but still return a valid RD service response.
+      return text && (/status\s*=\s*["']READY["']/i.test(text) || /<Resp\b/i.test(text))
+        ? baseUrl
+        : null;
+    } catch {
+      // Closed ports, mixed-content blocking, CORS and untrusted local TLS
+      // certificates are all expected failures while probing candidates.
+      return null;
+    } finally {
+      clearTimeout(timer);
     }
-  }
-  return null;
+  };
+
+  const results = await Promise.all(candidates.map(probe));
+  return results.find((url): url is string => Boolean(url)) ?? null;
 };
 
 /**
@@ -117,18 +128,27 @@ export const captureBiometric = async (
   options: CaptureOptions = {}
 ): Promise<RdCaptureResult> => {
   const activeUrl = await discoverRdServiceUrl(options.device);
+  const deviceLabel = options.device ? DEVICE_LABELS[options.device] : 'biometric device';
   if (!activeUrl) {
     throw new Error(
-      'RD Service not found on ports 11100-11120. Please ensure the Mantra/Morpho/Startek RD Service is installed, running, and the device is connected.'
+      `${deviceLabel} RD Service could not be reached from this browser. Start the RD Service, connect the scanner, allow browser access to localhost, and retry. If this portal is HTTPS, use the approved RD Service certificate or the provider-supported browser setup.`
     );
   }
 
-  const captureResponse = await fetch(`${activeUrl}/rd/capture`, {
-    method: 'CAPTURE',
-    body: buildCaptureXml(options),
-    headers: { 'Content-Type': 'text/xml', 'Accept': 'text/xml' },
-  });
-  const capturedData = await captureResponse.text();
+  let capturedData: string;
+  try {
+    const captureResponse = await fetch(`${activeUrl}/rd/capture`, {
+      method: 'CAPTURE',
+      body: buildCaptureXml(options),
+      headers: { 'Content-Type': 'text/xml', Accept: 'text/xml' },
+      cache: 'no-store',
+    });
+    capturedData = await captureResponse.text();
+  } catch {
+    throw new Error(
+      `${deviceLabel} RD Service was detected, but the browser could not start capture. Check the scanner connection and allow localhost access, then retry.`
+    );
+  }
   console.log('RD Capture Response:', capturedData);
 
   const errCodeMatch = capturedData.match(/errCode="([^"]*)"/);
