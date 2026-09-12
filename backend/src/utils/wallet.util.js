@@ -353,12 +353,14 @@ export const transferBetweenWallets = async (
 
   const FromWalletModel = fromWalletType === 'MAIN' ? MainWallet : AepsWallet;
   const ToWalletModel = toWalletType === 'MAIN' ? MainWallet : AepsWallet;
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
     const deductedWallet = await FromWalletModel.findOneAndUpdate(
       { userId, balance: { $gte: formattedAmount } },
       { $inc: { balance: -formattedAmount } },
-      { returnDocument: 'after' }
+      { returnDocument: 'after', session }
     );
 
     if (!deductedWallet) {
@@ -368,16 +370,20 @@ export const transferBetweenWallets = async (
     const creditedWallet = await ToWalletModel.findOneAndUpdate(
       { userId },
       { $inc: { balance: formattedAmount } },
-      { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true }
+      { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true, session }
     );
 
     if (!creditedWallet) {
       throw new Error(`Destination ${toWalletType} wallet not found.`);
     }
 
-    const transactionLogs = await Transaction.create([transactionDetails]);
+    const transactionLogs = await Transaction.create([transactionDetails], { session });
+    await session.commitTransaction();
+    session.endSession();
     return transactionLogs[0];
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     throw error;
   }
 };

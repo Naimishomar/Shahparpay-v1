@@ -4,9 +4,6 @@ import AdminWallet from '../models/adminWallet.model.js';
 import Transaction from '../models/transaction.model.js';
 import bcrypt from 'bcrypt';
 import { transferBetweenWallets } from '../utils/wallet.util.js';
-import { transferAepsToMainWalletApi, fetchAepsBalance } from '../utils/paysprint.util.js';
-import Retailer from '../models/users/retailer.model.js';
-import Distributor from '../models/users/distributor.model.js';
 import Otp from '../models/otp.model.js';
 
 // Helper to initialize wallets if they don't exist
@@ -169,46 +166,6 @@ export const transferAepsToMain = async (req, res) => {
     const transferAmount = Number(amount);
     const transactionId = `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
-    const role = req.user.role;
-    let user;
-    if (role === 'retailer') {
-      user = await Retailer.findById(userId);
-    } else if (role === 'distributor') {
-      user = await Distributor.findById(userId);
-    } else {
-      return res.status(403).json({ success: false, message: 'Invalid role for wallet transfer' });
-    }
-    const merchantcode =
-      role === 'distributor' ? user?.distributorId || userId : user?.retailerId || userId;
-
-    // VERIFICATION: Check the real PaySprint AEPS balance first!
-    const realAepsBalance = await fetchAepsBalance(merchantcode);
-    if (!realAepsBalance.success) {
-      return res.status(400).json({
-        success: false,
-        message: `Could not verify your PaySprint balance: ${realAepsBalance.message}`,
-      });
-    }
-
-    if (realAepsBalance.balance < transferAmount) {
-      return res.status(400).json({
-        success: false,
-        message: `Insufficient real AEPS balance on PaySprint. You have ₹${realAepsBalance.balance}, but tried to transfer ₹${transferAmount}.`,
-      });
-    }
-
-    const apiResponse = await transferAepsToMainWalletApi(
-      merchantcode,
-      transferAmount,
-      transactionId
-    );
-
-    if (!apiResponse.success) {
-      return res
-        .status(400)
-        .json({ success: false, message: `PaySprint Transfer Failed: ${apiResponse.message}` });
-    }
-
     let transaction;
     try {
       transaction = await transferBetweenWallets(userId, 'AEPS', 'MAIN', transferAmount, {
@@ -219,15 +176,14 @@ export const transferAepsToMain = async (req, res) => {
         status: 'SUCCESS',
         metadata: {
           operator: 'AEPSTOMAIN',
-          apiRef: apiResponse.data?.ackno || '',
+          source: 'LOCAL_WALLET_TRANSFER',
         },
       });
     } catch (error) {
-      // Local transfer failed, but PaySprint succeeded! This is critical, we must alert or log heavily
-      console.error('CRITICAL Sync Error: PaySprint succeeded but local DB failed!', error);
+      console.error('Local wallet transfer failed:', error);
       return res.status(500).json({
         success: false,
-        message: 'Funds transferred at PaySprint, but local sync failed.',
+        message: 'Wallet transfer failed. No external provider was charged.',
       });
     }
 
