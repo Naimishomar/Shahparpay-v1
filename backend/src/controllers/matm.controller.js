@@ -2,7 +2,18 @@ import { icchhamatiPost, isOk, normaliseStatus, providerMessage, makeReferenceId
 import Transaction from '../models/transaction.model.js';
 import Retailer from '../models/users/retailer.model.js';
 
-const getRetailer = async (req) => Retailer.findById(req.user.id).select('retailerId contactNumber');
+const getRetailer = async (req) => Retailer.findById(req.user.id).select('retailerId matmOutletId contactNumber');
+
+const getMatmOutletId = (retailer) =>
+  String(retailer?.matmOutletId || process.env.ICCHHAMATI_MATM_OUTLET_ID || retailer?.retailerId || '').trim();
+
+const matmProviderMessage = (data, fallback) => {
+  const message = String(data?.message || '').trim();
+  if (/invalid outlet\s*id/i.test(message)) {
+    return 'MATM outlet is not provisioned for this retailer. Configure the provider-issued MATM outlet ID first.';
+  }
+  return providerMessage(data, fallback);
+};
 
 const providerTransactionId = (data, fallback) =>
   String(data?.data?.merchantTransactionId || data?.data?.fpTransactionId || data?.data?.bankRRN || fallback);
@@ -11,19 +22,20 @@ const providerTransactionId = (data, fallback) =>
 export const getMatmConfig = async (req, res) => {
   try {
     const retailer = await getRetailer(req);
-    if (!retailer?.retailerId) {
+    const outletId = getMatmOutletId(retailer);
+    if (!outletId) {
       return res.status(404).json({ success: false, message: 'Retailer outlet ID is not configured' });
     }
 
     const data = await icchhamatiPost('/api/v2/matm-config', {
-      outletId: String(retailer.retailerId),
+      outletId,
       type: 'doTransaction',
     });
 
     if (!isOk(data)) {
       return res.status(400).json({
         success: false,
-        message: providerMessage(data, 'Could not initialize MATM configuration.'),
+        message: matmProviderMessage(data, 'Could not initialize MATM configuration.'),
         data,
       });
     }
@@ -43,7 +55,8 @@ export const getMatmConfig = async (req, res) => {
 export const processMatm = async (req, res) => {
   try {
     const retailer = await getRetailer(req);
-    if (!retailer?.retailerId) {
+    const outletId = getMatmOutletId(retailer);
+    if (!outletId) {
       return res.status(404).json({ success: false, message: 'Retailer outlet ID is not configured' });
     }
 
@@ -94,7 +107,7 @@ export const processMatm = async (req, res) => {
       amount,
       status: 'PENDING',
       metadata: {
-        outletId: String(retailer.retailerId),
+        outletId,
         mobile,
         terminalId: transactionData.terminalId || null,
         transactionType: transactionData.transactionType || 'WDLS',
@@ -105,7 +118,7 @@ export const processMatm = async (req, res) => {
     let data;
     try {
       data = await icchhamatiPost('/api/v2/matm-request', {
-        outletId: String(retailer.retailerId),
+        outletId,
         mobile,
         data: transactionData,
       });

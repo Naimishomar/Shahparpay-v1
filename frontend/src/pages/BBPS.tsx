@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "../context/AuthContext";
 import { Zap, Flame, Shield, CreditCard, Droplet, Smartphone, XCircle, ReceiptText, Car, Wifi, Tv, Building2 } from "lucide-react";
 import axios from "axios";
 import html2canvas from 'html2canvas';
@@ -57,13 +56,12 @@ const BBPS = () => {
     
     const [operatorId, setOperatorId] = useState("");
     const [consumerNumber, setConsumerNumber] = useState("");
+    const [customerMobile, setCustomerMobile] = useState("");
     const [amount, setAmount] = useState("");
     const [pin, setPin] = useState("");
     
     const [fetchedBill, setFetchedBill] = useState<any>(null);
     const [fetchingBill, setFetchingBill] = useState(false);
-
-    const { user } = useAuth();
 
     const [showReceiptModal, setShowReceiptModal] = useState(false);
     const [receiptData, setReceiptData] = useState<any>(null);
@@ -104,7 +102,7 @@ const BBPS = () => {
     }, []);
 
     const selectedOperator = operators.find(
-        (op: any) => op.id.toString() === operatorId.toString()
+        (op: any) => String(op.id) === String(operatorId)
     );
 
     const fetchOperators = async (type: string) => {
@@ -128,6 +126,7 @@ const BBPS = () => {
         setSelectedService(service);
         setOperatorId("");
         setConsumerNumber("");
+        setCustomerMobile("");
         setAmount("");
         setPin("");
         setFetchedBill(null);
@@ -145,7 +144,9 @@ const BBPS = () => {
             const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/fetch-bill`, {
                 operator: operatorId,
                 caNumber: consumerNumber,
-                type: selectedService?.id
+                type: selectedService?.id,
+                category: selectedService?.providerCategory,
+                customerMobile: customerMobile || undefined,
             });
 
             if (response.data.success) {
@@ -164,8 +165,12 @@ const BBPS = () => {
     };
 
     const handlePayment = async () => {
-        if (!operatorId || !consumerNumber || !amount || !pin) {
+        if (!selectedService || !operatorId || !consumerNumber.trim() || !amount || Number(amount) < 10 || pin.length !== 4) {
             toast.error("Please fill all fields");
+            return;
+        }
+        if (selectedOperator?.viewbill === "true" && !fetchedBill) {
+            toast.error("Fetch the bill details before making a payment");
             return;
         }
 
@@ -173,9 +178,8 @@ const BBPS = () => {
         try {
             const apiType = selectedService.id;
             const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/do-recharge`, {
-                userId: user?.id || user?._id,
                 type: apiType,
-                number: consumerNumber,
+                number: consumerNumber.trim(),
                 operator: operatorId,
                 amount: amount,
                 pin: pin
@@ -313,7 +317,13 @@ const BBPS = () => {
                                     <select 
                                         className="w-full bg-background border border-border rounded-xl p-3.5 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all appearance-none"
                                         value={operatorId}
-                                        onChange={(e) => setOperatorId(e.target.value)}
+                                        onChange={(e) => {
+                                            setOperatorId(e.target.value);
+                                            setConsumerNumber("");
+                                            setCustomerMobile("");
+                                            setAmount("");
+                                            setFetchedBill(null);
+                                        }}
                                     >
                                         <option value="">Select Biller</option>
                                         {operators.map((op: any) => (
@@ -331,7 +341,21 @@ const BBPS = () => {
                                         className="w-full bg-background border border-border rounded-xl p-3.5 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                                         placeholder={selectedOperator?.label ? `Enter ${selectedOperator.label}` : "Enter number"}
                                         value={consumerNumber}
-                                        onChange={(e) => setConsumerNumber(e.target.value)}
+                                        onChange={(e) => setConsumerNumber(e.target.value.slice(0, 40))}
+                                        readOnly={!!fetchedBill}
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5 mt-4">
+                                    <label className="text-sm font-medium text-foreground">Customer Mobile (optional)</label>
+                                    <input
+                                        type="tel"
+                                        inputMode="numeric"
+                                        maxLength={10}
+                                        className="w-full bg-background border border-border rounded-xl p-3.5 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                                        placeholder="10-digit mobile number"
+                                        value={customerMobile}
+                                        onChange={(e) => setCustomerMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
                                         readOnly={!!fetchedBill}
                                     />
                                 </div>
@@ -354,9 +378,16 @@ const BBPS = () => {
                                 ) : (
                                     <>
                                         {fetchedBill && <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 space-y-2 mb-4">
-                                            <p className="text-sm text-foreground/80"><strong>Customer Name:</strong> {fetchedBill.name || fetchedBill.CustomerName || fetchedBill.userName || 'N/A'}</p>
-                                            <p className="text-sm text-foreground/80"><strong>Due Date:</strong> {fetchedBill.duedate || fetchedBill.DueDate || fetchedBill.dueDate || 'N/A'}</p>
-                                            <p className="text-sm text-foreground/80"><strong>Amount Due:</strong> ₹{fetchedBill.amount || fetchedBill.Amount || fetchedBill.billAmount || amount}</p>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                <p className="text-sm text-foreground/80"><strong>Customer:</strong> {fetchedBill.customerName || 'N/A'}</p>
+                                                <p className="text-sm text-foreground/80"><strong>Account:</strong> {fetchedBill.account || consumerNumber}</p>
+                                                <p className="text-sm text-foreground/80"><strong>Bill number:</strong> {fetchedBill.billNumber || 'N/A'}</p>
+                                                <p className="text-sm text-foreground/80"><strong>Bill date:</strong> {fetchedBill.billDate || 'N/A'}</p>
+                                                <p className="text-sm text-foreground/80"><strong>Due date:</strong> {fetchedBill.dueDate || 'N/A'}</p>
+                                                <p className="text-sm text-foreground/80"><strong>Bill period:</strong> {fetchedBill.billPeriod || 'N/A'}</p>
+                                                <p className="text-sm text-foreground/80"><strong>Amount due:</strong> ₹{fetchedBill.dueAmount ?? fetchedBill.amount ?? amount}</p>
+                                                <p className="text-sm text-foreground/80"><strong>Fetch reference:</strong> {fetchedBill.fetchRefId || fetchedBill.fetchBillId || 'N/A'}</p>
+                                            </div>
                                         </div>}
 
                                         <div className="space-y-1.5">
@@ -365,6 +396,9 @@ const BBPS = () => {
                                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">₹</span>
                                                 <input 
                                                     type="number"
+                                                    min="10"
+                                                    step="1"
+                                                    inputMode="numeric"
                                                     className="w-full bg-background border border-border rounded-xl py-3.5 pl-8 pr-4 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                                                     placeholder="0.00"
                                                     value={amount}
@@ -381,7 +415,7 @@ const BBPS = () => {
                                                 className="w-full bg-background border border-border rounded-xl p-3.5 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all tracking-widest"
                                                 placeholder="••••"
                                                 value={pin}
-                                                onChange={(e) => setPin(e.target.value)}
+                                                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                                                 maxLength={4}
                                             />
                                         </div>

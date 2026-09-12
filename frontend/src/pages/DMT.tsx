@@ -125,7 +125,7 @@ const DMT = () => {
     };
 
     const handleTransfer = async () => {
-        if (!amount || pin.length !== 4) return toast.error('Enter amount and 4-digit PIN');
+        if (!amount || Number(amount) < 10 || pin.length !== 4) return toast.error('Enter an amount of at least ₹10 and a 4-digit PIN');
         setLoading(true);
         try {
             const res = await axios.post(`${api}/transfer`, {
@@ -396,8 +396,10 @@ const DMT = () => {
                                 <label className="text-sm font-medium text-foreground mb-1.5 block">Amount (₹)</label>
                                 <input
                                     type="text"
+                                    inputMode="numeric"
+                                    min="10"
                                     value={amount}
-                                    onChange={e => setAmount(e.target.value.replace(/\D/g, ''))}
+                                    onChange={e => setAmount(e.target.value.replace(/\D/g, '').slice(0, 7))}
                                     placeholder="0"
                                     className="w-full px-4 py-3 text-2xl font-bold bg-background border border-border/50 rounded-xl text-foreground focus:ring-2 focus:ring-primary/20"
                                 />
@@ -435,7 +437,7 @@ const DMT = () => {
                                 <span className="text-lg font-bold text-primary">₹ {amount || '0'}</span>
                             </div>
 
-                            <button onClick={handleTransfer} disabled={loading || !amount || pin.length !== 4} className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50">
+                            <button onClick={handleTransfer} disabled={loading || !amount || Number(amount) < 10 || pin.length !== 4} className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50">
                                 {loading ? 'Processing...' : 'Confirm Transfer'}
                             </button>
                         </div>

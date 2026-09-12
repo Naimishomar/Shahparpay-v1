@@ -348,9 +348,28 @@ export const fetchDthInfo = async (req, res) => {
   }
 };
 
+const normaliseBillDetails = (raw = {}) => ({
+  ...raw,
+  billerId: raw.billerId ?? raw.biller_code ?? raw.billerid ?? null,
+  account: raw.account ?? raw.customer_id ?? raw.customerKey ?? null,
+  amount: raw.amount ?? raw.billAmount ?? raw.dueamount ?? raw.due_amount ?? null,
+  dueAmount: raw.dueAmount ?? raw.dueamount ?? raw.billAmount ?? raw.due_amount ?? raw.amount ?? null,
+  customerName: raw.customerName ?? raw.customername ?? raw.customer_name ?? raw.name ?? null,
+  billNumber: raw.billNumber ?? raw.billnumber ?? raw.bill_no ?? null,
+  billDate: raw.billDate ?? raw.billdate ?? null,
+  dueDate: raw.dueDate ?? raw.duedate ?? raw.due_date ?? null,
+  billPeriod: raw.billPeriod ?? raw.bilperiod ?? raw.billperiod ?? null,
+  fetchBillId: raw.fetchBillId ?? raw.fetchBillID ?? null,
+  fetchRefId: raw.fetchRefId ?? raw.fetch_ref_id ?? raw.rpid ?? null,
+  operatorId: raw.operatorId ?? raw.opid ?? null,
+  errorCode: raw.errorCode ?? raw.errorcode ?? null,
+  providerStatus: raw.providerStatus ?? raw.status ?? null,
+  providerMessage: raw.providerMessage ?? raw.msg ?? raw.message ?? null,
+});
+
 export const fetchBill = async (req, res) => {
   try {
-    const { caNumber, operator, type } = req.body;
+    const { caNumber, operator, type, category, customerMobile, mobile_number, mobile, amount } = req.body;
     if (!caNumber || !operator) {
       return res
         .status(400)
@@ -376,11 +395,16 @@ export const fetchBill = async (req, res) => {
     // The published field docs and the published example disagree on the names
     // (biller_code/customer_id versus billerId/customerKey). Both are sent;
     // whichever pair the gateway reads, it gets the same values.
+    const billerId = String(providerOperator);
+    const customerId = String(caNumber);
+    const customerMobileNumber = String(customerMobile || mobile_number || mobile || '').trim();
     const data = await icchhamatiPost('/api/v2/fetch-bill', {
+      category: String(category || type || ''),
+      billerid: billerId,
       biller_code: providerOperator,
-      customer_id: String(caNumber),
-      billerId: providerOperator,
-      customerKey: String(caNumber),
+      customer_id: customerId,
+      ...(customerMobileNumber ? { mobile_number: customerMobileNumber, mobile: customerMobileNumber } : {}),
+      ...(amount ? { amount: Number(amount) } : {}),
     });
 
     if (!isOk(data)) {
@@ -393,14 +417,11 @@ export const fetchBill = async (req, res) => {
       });
     }
 
-    const bill = data.billDetails || data.data || {};
+    const bill = normaliseBillDetails(data.billDetails || data.data || {});
     return res.status(200).json({
       success: true,
       data: {
         ...bill,
-        amount: bill.amount ?? bill.billAmount ?? bill.due_amount ?? null,
-        customerName: bill.customerName ?? bill.customer_name ?? null,
-        dueDate: bill.dueDate ?? bill.due_date ?? null,
       },
       message: 'Bill fetched successfully',
     });

@@ -4,11 +4,9 @@ import axios from "axios";
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
-import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
 const Recharge = () => {
-    const { user } = useAuth();
     // UI State
     const [activeTab, setActiveTab] = useState("prepaid");
     const [loading, setLoading] = useState(false);
@@ -168,7 +166,7 @@ const Recharge = () => {
     };
 
     const handleRechargeSubmit = async (type: string) => {
-        let payload: any = { type, userId: user?.id || user?._id };
+        let payload: any = { type };
         
         if (type === 'prepaid') {
             if (!/^[6-9]\d{9}$/.test(mobileNumber) || !prepaidAmount || !prepaidPin) {
@@ -179,13 +177,13 @@ const Recharge = () => {
                 toast.error("Please browse plans first so the operator and circle can be detected.");
                 return;
             }
-            payload = { ...payload, number: mobileNumber, operator: resolvedOperator, circle: resolvedCircle, amount: prepaidAmount, pin: prepaidPin };
+            payload = { ...payload, mobileNumber, operator: resolvedOperator, circle: resolvedCircle, amount: prepaidAmount, pin: prepaidPin };
         } else {
-            if (!dthNumber || !dthOperator || !dthAmount || !dthPin) {
+            if (!dthNumber.trim() || !dthOperator || !dthAmount || !dthPin || Number(dthAmount) < 10) {
                 toast.error("Please fill all fields.");
                 return;
             }
-            payload = { ...payload, number: dthNumber, operator: dthOperator, amount: dthAmount, pin: dthPin };
+            payload = { ...payload, dthNumber: dthNumber.trim(), operator: dthOperator, amount: dthAmount, pin: dthPin };
         }
 
         setLoading(true);
@@ -300,6 +298,8 @@ const Recharge = () => {
                                         <label className="text-sm font-medium text-foreground">Mobile Number</label>
                                         <input 
                                             type="text" 
+                                            inputMode="numeric"
+                                            maxLength={10}
                                             placeholder="Enter 10-digit mobile number"
                                             value={mobileNumber}
                                             onChange={e => {
@@ -327,12 +327,21 @@ const Recharge = () => {
                                 </div>
                             </div>
 
+                            {resolvedOperator && resolvedCircle && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-background border border-border rounded-lg p-4 text-sm">
+                                    <div><span className="text-muted-foreground">Detected operator</span><p className="font-semibold text-foreground">{resolvedOperator}</p></div>
+                                    <div><span className="text-muted-foreground">Customer circle</span><p className="font-semibold text-foreground">{resolvedCircle}</p></div>
+                                </div>
+                            )}
                             {/* Bottom Inputs */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end mt-2">
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-sm font-medium text-foreground">Amount</label>
                                     <input 
                                         type="number" 
+                                        min="10"
+                                        step="1"
+                                        inputMode="numeric"
                                         value={prepaidAmount}
                                         onChange={e => setPrepaidAmount(e.target.value)}
                                         className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
@@ -342,8 +351,10 @@ const Recharge = () => {
                                     <label className="text-sm font-medium text-foreground">Transaction PIN</label>
                                     <input 
                                         type="password" 
+                                        inputMode="numeric"
+                                        maxLength={4}
                                         value={prepaidPin}
-                                        onChange={e => setPrepaidPin(e.target.value)}
+                                        onChange={e => setPrepaidPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                                         className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
                                     />
                                 </div>
@@ -370,6 +381,8 @@ const Recharge = () => {
                                         <label className="text-sm font-medium text-foreground">DTH Number</label>
                                         <input 
                                             type="text" 
+                                            inputMode="text"
+                                            maxLength={20}
                                             placeholder="Enter DTH Number"
                                             value={dthNumber}
                                             onChange={e => setDthNumber(e.target.value)}
@@ -409,7 +422,7 @@ const Recharge = () => {
                                             <tr>
                                                 <th className="px-4 py-3 font-semibold">Name</th>
                                                 <th className="px-4 py-3 font-semibold">Balance</th>
-                                                <th className="px-4 py-3 font-semibold">Monthly Recharge</th>
+                                                <th className="px-4 py-3 font-semibold">Plan</th>
                                                 <th className="px-4 py-3 font-semibold">Next Recharge Date</th>
                                                 <th className="px-4 py-3 font-semibold">Status</th>
                                                 <th className="px-4 py-3 font-semibold">Monthly Recharge</th>
@@ -419,7 +432,7 @@ const Recharge = () => {
                                             <tr className="border-b border-border/50 hover:bg-muted/10 font-medium">
                                                 <td className="px-4 py-4">{dthInfo.customerName || '-'}</td>
                                                 <td className="px-4 py-4 text-primary">₹ {dthInfo.Balance || 0}</td>
-                                                <td className="px-4 py-4">₹ {dthInfo.MonthlyRecharge || 0}</td>
+                                                <td className="px-4 py-4">{dthInfo.planName || '-'}</td>
                                                 <td className="px-4 py-4">{dthInfo.NextRechargeDate || '-'}</td>
                                                 <td className="px-4 py-4 text-emerald-500">{dthInfo.status || 'Active'}</td>
                                                 <td className="px-4 py-4">₹ {dthInfo.MonthlyRecharge || 0}</td>
@@ -435,6 +448,9 @@ const Recharge = () => {
                                     <label className="text-sm font-medium text-foreground">Amount</label>
                                     <input 
                                         type="number" 
+                                        min="10"
+                                        step="1"
+                                        inputMode="numeric"
                                         value={dthAmount}
                                         onChange={e => setDthAmount(e.target.value)}
                                         className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
@@ -444,8 +460,10 @@ const Recharge = () => {
                                     <label className="text-sm font-medium text-foreground">Transaction PIN</label>
                                     <input 
                                         type="password" 
+                                        inputMode="numeric"
+                                        maxLength={4}
                                         value={dthPin}
-                                        onChange={e => setDthPin(e.target.value)}
+                                        onChange={e => setDthPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                                         className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
                                     />
                                 </div>

@@ -142,7 +142,7 @@ const MATM = () => {
                         <div><label className="text-sm font-medium block mb-1.5">FP Transaction ID (optional)</label><input className={input} value={form.fpTransactionId} onChange={e => setField('fpTransactionId', e.target.value)} /></div>
                     </div>
                     <button onClick={processTransaction} disabled={loading || configLoading} className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold disabled:opacity-50">{loading ? 'Processing...' : 'Process MATM Transaction'}</button>
-                    <p className="text-xs text-muted-foreground">The outlet ID is taken from the logged-in retailer account and cannot be changed from the browser.</p>
+                    <p className="text-xs text-muted-foreground">The MATM outlet ID is configured securely on the server and cannot be changed from the browser.</p>
                 </div>
 
                 <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">

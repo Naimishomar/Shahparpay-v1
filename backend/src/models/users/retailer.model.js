@@ -9,6 +9,13 @@ const retailerSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
+    // Icchhamati MATM outlets are provider-provisioned and may differ from
+    // the normal retailer/AEPS merchant code.
+    matmOutletId: {
+      type: String,
+      trim: true,
+      default: null,
+    },
     distributorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Distributor',
