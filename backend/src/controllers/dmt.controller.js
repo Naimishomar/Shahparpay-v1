@@ -286,6 +286,15 @@ export const deleteBeneficiary = async (req, res) => {
     });
 
     if (!isOk(data)) {
+      const providerError = String(data?.message || '').toLowerCase();
+      if (providerError.includes('undefined variable') || providerError.includes('$request')) {
+        console.error('Icchhamati beneficiary delete endpoint is failing server-side:', data?.message);
+        return res.status(502).json({
+          success: false,
+          message: 'Beneficiary deletion is temporarily unavailable at the service provider. Please try again later.',
+          providerUnavailable: true,
+        });
+      }
       return res
         .status(400)
         .json({ success: false, message: providerMessage(data, 'Could not delete beneficiary.') });

@@ -16,9 +16,21 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const requestLocation = () => {
         setLoading(true);
+        setError(null);
         if (!navigator.geolocation) {
             setError("Geolocation is not supported by your browser");
             setPermissionDenied(true);
+            setLoading(false);
+            return;
+        }
+
+        // Browser geolocation is blocked on plain HTTP (except localhost).
+        // Surface the actionable cause instead of leaving the retailer to
+        // retry a request the browser will reject every time.
+        if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            setError('Location access requires a secure HTTPS connection.');
+            setPermissionDenied(true);
+            setLoading(false);
             return;
         }
 
@@ -30,15 +42,24 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 });
                 setPermissionDenied(false);
                 setError(null);
+                setLoading(false);
             },
             (err) => {
-                setError(err.message);
+                setError(
+                    err.code === err.PERMISSION_DENIED
+                        ? 'Location permission was denied. Allow location access in your browser settings and retry.'
+                        : err.code === err.TIMEOUT
+                            ? 'Location lookup timed out. Turn on device location and retry.'
+                            : err.message || 'Unable to determine your location.'
+                );
                 if (err.code === err.PERMISSION_DENIED) {
                     setPermissionDenied(true);
                 } else {
-                    // For timeout or position unavailable, still show the modal since location is required
+                    // Location is required for regulated AEPS operations; keep
+                    // the modal visible but always release the retry spinner.
                     setPermissionDenied(true);
                 }
+                setLoading(false);
             },
             {
                 enableHighAccuracy: true,
@@ -50,7 +71,6 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     useEffect(() => {
         requestLocation();
-        setLoading(false);
     }, []);
 
     return (
