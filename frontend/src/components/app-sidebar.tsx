@@ -39,6 +39,8 @@ const retailerProjects = [
       { name: "PAN Reports", url: "/reports/pan" },
       { name: "ITR Reports", url: "/reports/itr" },
       { name: "Lead Generation Reports", url: "/reports/lead-generation" },
+      { name: "Recharge Reports", url: "/reports/recharge" },
+      { name: "BBPS Reports", url: "/reports/bbps" },
     ]
   },
   { name: "Fund Request", url: "/fund-request", icon: Send },

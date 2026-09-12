@@ -12,12 +12,21 @@ import axios from "axios"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 
-const getCrDr = (type: string) => {
+const getCrDr = (tx: any) => {
+    if (tx.type === 'AEPS_WITHDRAWAL' && tx.status !== 'SUCCESS') return 'NONE';
+    const type = tx.type;
     const credits = ['AEPS_WITHDRAWAL', 'WALLET_TOPUP'];
     const debits = ['BILL_PAYMENT', 'RECHARGE', 'AEPS_SETTLEMENT', 'AEPS'];
     if (credits.includes(type)) return 'CR';
     if (debits.includes(type)) return 'DR';
     return 'CR'; // Default fallback
+};
+
+const displayStatus = (tx: any) => {
+    if (tx.type === 'AEPS_WITHDRAWAL' && tx.status !== 'SUCCESS') {
+        return tx.status === 'PROCESSING' ? 'PENDING - NOT CREDITED' : 'DECLINED - NOT CREDITED';
+    }
+    return tx.status || 'UNKNOWN';
 };
 
 /**
@@ -90,7 +99,9 @@ const AepsReport = () => {
         const csvRows = [headers.join(",")];
         
         filteredTransactions.forEach((tx, idx) => {
-            const isCr = getCrDr(tx.type) === 'CR';
+            const direction = getCrDr(tx);
+            const isCr = direction === 'CR';
+            const isDr = direction === 'DR';
             const row = [
                 idx + 1,
                 tx.transactionId || tx._id || "N/A",
@@ -99,9 +110,9 @@ const AepsReport = () => {
                 maskAadhaar(tx.metadata?.aadhaar || tx.metadata?.aadhar) || "N/A",
                 tx.metadata?.mobile || "N/A",
                 isCr ? tx.amount || 0 : 0,
-                !isCr ? tx.amount || 0 : 0,
+                isDr ? tx.amount || 0 : 0,
                 bankBalanceOf(tx) ?? "N/A",
-                tx.status || "UNKNOWN",
+                displayStatus(tx),
                 reasonOf(tx) || "N/A"
             ];
             const escapedRow = row.map(v => `"${String(v).replace(/"/g, '""')}"`);
@@ -126,7 +137,9 @@ const AepsReport = () => {
         const tableRows: any[] = [];
 
         filteredTransactions.forEach((tx, idx) => {
-            const isCr = getCrDr(tx.type) === 'CR';
+            const direction = getCrDr(tx);
+            const isCr = direction === 'CR';
+            const isDr = direction === 'DR';
             const txData = [
                 idx + 1,
                 tx.transactionId || tx._id || "N/A",
@@ -134,9 +147,9 @@ const AepsReport = () => {
                 tx.metadata?.name || tx.metadata?.customerName || "N/A",
                 maskAadhaar(tx.metadata?.aadhaar || tx.metadata?.aadhar) || "-",
                 isCr ? tx.amount || 0 : "-",
-                !isCr ? tx.amount || 0 : "-",
+                isDr ? tx.amount || 0 : "-",
                 bankBalanceOf(tx) ?? "-",
-                tx.status || "UNKNOWN",
+                displayStatus(tx),
                 reasonOf(tx) || "-"
             ];
             tableRows.push(txData);
@@ -231,7 +244,9 @@ const AepsReport = () => {
                                     </TableRow>
                                 ) : (
                                     paginatedTransactions.map((tx, idx) => {
-                                        const isCr = getCrDr(tx.type) === 'CR';
+                                        const direction = getCrDr(tx);
+                                        const isCr = direction === 'CR';
+                                        const isDr = direction === 'DR';
                                         const serialNumber = ((currentPage - 1) * itemsPerPage) + idx + 1;
                                         return (
                                             <TableRow key={idx} className="hover:bg-muted/50 transition-colors">
@@ -258,7 +273,7 @@ const AepsReport = () => {
                                                     {isCr ? `₹ ${tx.amount || 0}` : "-"}
                                                 </TableCell>
                                                 <TableCell className="text-sm font-bold text-rose-500 text-right px-4 py-2">
-                                                    {!isCr ? `₹ ${tx.amount || 0}` : "-"}
+                                                    {isDr ? `₹ ${tx.amount || 0}` : "-"}
                                                 </TableCell>
                                                 <TableCell className="text-sm font-medium text-foreground/80 text-right px-4 py-2">
                                                     {bankBalanceOf(tx) != null ? `₹ ${bankBalanceOf(tx)}` : "-"}
@@ -269,7 +284,7 @@ const AepsReport = () => {
                                                         tx.status === 'FAILED' ? 'bg-rose-500/10 text-rose-500' : 
                                                         'bg-yellow-500/10 text-yellow-500'
                                                     }`}>
-                                                        {tx.status || "UNKNOWN"}
+                                                        {displayStatus(tx)}
                                                     </span>
                                                     {isFailed(tx) && reasonOf(tx) && (
                                                         <span className="text-[11px] text-rose-500 block mt-1 line-clamp-2">{reasonOf(tx)}</span>

@@ -9,7 +9,10 @@ import EsevaPanTab from '../components/pancard/EsevaPanTab';
 
 const PanCard: React.FC = () => {
     const { token } = useAuth();
-    const [activeTab, setActiveTab] = useState<'BIOMETRIC' | 'STANDARD' | 'ESEVATECH'>('BIOMETRIC');
+    // Biometric PSA and Standard Web PSA are temporarily disabled in the UI.
+    // Their components, handlers, and backend APIs are intentionally retained
+    // so the tabs can be restored later without reimplementing the flows.
+    const [activeTab, setActiveTab] = useState<'BIOMETRIC' | 'STANDARD' | 'ESEVATECH'>('ESEVATECH');
     
     const [fetchingStatus, setFetchingStatus] = useState(true);
     const [hasPsa, setHasPsa] = useState(false);
@@ -203,6 +206,7 @@ const PanCard: React.FC = () => {
 
                 {/* Tabs Navigation */}
                 <div className="flex bg-muted/50 p-1 rounded-xl w-full max-w-md border border-border/50">
+                    {/* Temporarily disabled — retain these buttons/components for later re-enable.
                     <button
                         onClick={() => setActiveTab('BIOMETRIC')}
                         className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'BIOMETRIC' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
@@ -215,6 +219,7 @@ const PanCard: React.FC = () => {
                     >
                         Standard Web PSA
                     </button>
+                    */}
                     <button
                         onClick={() => setActiveTab('ESEVATECH')}
                         className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'ESEVATECH' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}

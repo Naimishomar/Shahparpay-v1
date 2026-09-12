@@ -22,6 +22,7 @@ import UpiReport from "./pages/UpiReport"
 import PanReport from "./pages/PanReport"
 import ItrReport from "./pages/ItrReport"
 import LeadGenerationReport from "./pages/LeadGenerationReport"
+import ServiceReport from "./pages/ServiceReport"
 import WalletLedger from "./pages/WalletLedger"
 import LeadGeneration from "./pages/LeadGeneration"
 import PanCard from "./pages/PanCard"
@@ -94,6 +95,8 @@ function App() {
         <Route path="/reports/pan" element={<PanReport/>}/>
         <Route path="/reports/itr" element={<ItrReport/>}/>
         <Route path="/reports/lead-generation" element={<LeadGenerationReport/>}/>
+        <Route path="/reports/recharge" element={<ServiceReport kind="recharge" title="Recharge Reports" description="Mobile prepaid and DTH recharge transactions and retailer commissions."/>}/>
+        <Route path="/reports/bbps" element={<ServiceReport kind="bbps" title="BBPS Reports" description="Bill payment transactions, statuses, amounts, and retailer commissions."/>}/>
         <Route path="/reports/wallet-ledger" element={<WalletLedger/>}/>
 
         <Route path="/fund-request" element={<FundRequest/>}/>

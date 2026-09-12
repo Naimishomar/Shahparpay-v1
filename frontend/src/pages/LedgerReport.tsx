@@ -14,12 +14,22 @@ import autoTable from "jspdf-autotable"
 import { useAuth } from "../context/AuthContext"
 
 const getCrDr = (tx: any) => {
+    // AEPS withdrawal money is credited only after bank success. A declined or
+    // still-reconciling request must not look like a wallet credit in reports.
+    if (tx.type === 'AEPS_WITHDRAWAL' && tx.status !== 'SUCCESS') return 'NONE';
     if (tx.transactionId?.startsWith('REF-')) return 'CR';
     const credits = ['AEPS_WITHDRAWAL', 'WALLET_TOPUP', 'REFUND'];
     const debits = ['BILL_PAYMENT', 'RECHARGE', 'AEPS_SETTLEMENT', 'DMT', 'DIRECT_PAYOUT'];
     if (credits.includes(tx.type)) return 'CR';
     if (debits.includes(tx.type)) return 'DR';
     return 'CR'; // Default fallback
+};
+
+const displayStatus = (tx: any) => {
+    if (tx.type === 'AEPS_WITHDRAWAL' && tx.status !== 'SUCCESS') {
+        return tx.status === 'PROCESSING' ? 'PENDING - NOT CREDITED' : 'DECLINED - NOT CREDITED';
+    }
+    return tx.status || 'UNKNOWN';
 };
 
 /** Why the gateway ended the transaction the way it did. */
@@ -88,7 +98,9 @@ const LedgerReport = () => {
         const csvRows = [headers.join(",")];
         
         filteredTransactions.forEach((tx, idx) => {
-            const isCr = getCrDr(tx) === 'CR';
+            const direction = getCrDr(tx);
+            const isCr = direction === 'CR';
+            const isDr = direction === 'DR';
             const row = [
                 idx + 1,
                 tx.transactionId || tx._id || "N/A",
@@ -96,8 +108,8 @@ const LedgerReport = () => {
                 tx.metadata?.name || tx.metadata?.customerName || "N/A",
                 tx.metadata?.mobile || "N/A",
                 isCr ? tx.amount || 0 : 0,
-                !isCr ? tx.amount || 0 : 0,
-                tx.status || "UNKNOWN"
+                isDr ? tx.amount || 0 : 0,
+                displayStatus(tx)
             ];
             const escapedRow = row.map(v => `"${String(v).replace(/"/g, '""')}"`);
             csvRows.push(escapedRow.join(","));
@@ -121,15 +133,17 @@ const LedgerReport = () => {
         const tableRows: any[] = [];
 
         filteredTransactions.forEach((tx, idx) => {
-            const isCr = getCrDr(tx) === 'CR';
+            const direction = getCrDr(tx);
+            const isCr = direction === 'CR';
+            const isDr = direction === 'DR';
             const txData = [
                 idx + 1,
                 tx.transactionId || tx._id || "N/A",
                 new Date(tx.createdAt).toLocaleDateString(),
                 tx.metadata?.name || tx.metadata?.customerName || "N/A",
                 isCr ? tx.amount || 0 : "-",
-                !isCr ? tx.amount || 0 : "-",
-                tx.status || "UNKNOWN"
+                isDr ? tx.amount || 0 : "-",
+                displayStatus(tx)
             ];
             tableRows.push(txData);
         });
@@ -243,7 +257,9 @@ const LedgerReport = () => {
                                     </TableRow>
                                 ) : (
                                     paginatedTransactions.map((tx, idx) => {
-                                        const isCr = getCrDr(tx) === 'CR';
+                                        const direction = getCrDr(tx);
+                                        const isCr = direction === 'CR';
+                                        const isDr = direction === 'DR';
                                         const serialNumber = ((currentPage - 1) * itemsPerPage) + idx + 1;
                                         return (
                                             <TableRow 
@@ -278,7 +294,7 @@ const LedgerReport = () => {
                                                     {isCr ? `₹ ${tx.amount || 0}` : "-"}
                                                 </TableCell>
                                                 <TableCell className="text-sm font-bold text-rose-500 text-right px-4 py-2">
-                                                    {!isCr ? `₹ ${tx.amount || 0}` : "-"}
+                                                    {isDr ? `₹ ${tx.amount || 0}` : "-"}
                                                 </TableCell>
                                                 <TableCell className="px-4 py-2 text-center">
                                                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
@@ -286,7 +302,7 @@ const LedgerReport = () => {
                                                         tx.status === 'FAILED' ? 'bg-rose-500/10 text-rose-500' : 
                                                         'bg-yellow-500/10 text-yellow-500'
                                                     }`}>
-                                                        {tx.status || "UNKNOWN"}
+                                                        {displayStatus(tx)}
                                                     </span>
                                                     {isFailed(tx) && reasonOf(tx) && (
                                                         <span className="text-[11px] text-rose-500 block mt-1 line-clamp-2">{reasonOf(tx)}</span>

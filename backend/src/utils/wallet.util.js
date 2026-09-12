@@ -47,6 +47,70 @@ export const getAepsDepositCommission = (amount) => {
 };
 
 /**
+ * Icchhamati recharge commissions are credited in full to the retailer's
+ * MainWallet after a successful recharge. The recharge amount itself remains
+ * unchanged: the customer pays the exact amount entered by the retailer.
+ *
+ * Operator values can be provider codes or display names, depending on which
+ * client created the transaction, so both forms are supported here.
+ */
+const normaliseRechargeOperator = (operator) =>
+  String(operator || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+
+export const getRechargeCommissionRate = (operator, mode) => {
+  const value = normaliseRechargeOperator(operator);
+  const type = String(mode || '').trim().toLowerCase();
+
+  if (type === 'dth') {
+    if (['airtel', 'airtel dth', 'airtel-dth', 'ad', 'airtel dth'].some((v) => value === normaliseRechargeOperator(v))) return 3.5;
+    if (['videocon', 'videocondth', 'd2h', 'vd', 'videocon dth'].some((v) => value === normaliseRechargeOperator(v))) return 3.4;
+    if (['dish', 'dishtv', 'dish tv', 'dt'].some((v) => value === normaliseRechargeOperator(v))) return 3.5;
+    if (['tata', 'tatasky', 'tata play', 'tatadth', 'ts'].some((v) => value === normaliseRechargeOperator(v))) return 2.7;
+    if (['sun', 'sundirect', 'sun direct', 'sd'].some((v) => value === normaliseRechargeOperator(v))) return 2.85;
+    return 0;
+  }
+
+  if (['airtel', 'at', 'airtelprepaid'].some((v) => value === normaliseRechargeOperator(v))) return 2.2;
+  if (['jio', 'ji', 'rj', 'reliancejio', 'jio prepaid'].some((v) => value === normaliseRechargeOperator(v))) return 0.8;
+  if (['vi', 'vodafoneidea', 'vodafone', 'idea', 'vi prepaid'].some((v) => value === normaliseRechargeOperator(v))) return 3;
+  if (['bsnl', 'bs', 'bsnl prepaid'].some((v) => value === normaliseRechargeOperator(v))) return 4;
+  if (['mtnl', 'mt', 'mtnl prepaid'].some((v) => value === normaliseRechargeOperator(v))) return 4;
+  return 0;
+};
+
+export const getRechargeCommission = (amount, operator, mode) => {
+  const rate = getRechargeCommissionRate(operator, mode);
+  return formatAmount((Number(amount) || 0) * (rate / 100));
+};
+
+/**
+ * Icchhamati BBPS commissions. Flat commissions are returned in rupees;
+ * percentage commissions are calculated from the bill amount.
+ */
+export const getBbpsCommissionRule = (service) => {
+  const value = String(service || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+  if (value.includes('electric')) return { kind: 'flat', value: 1.8 };
+  if (value.includes('water')) return { kind: 'flat', value: 3 };
+  if (value.includes('gas') || value.includes('lpg')) return { kind: 'flat', value: 1.8 };
+  if (value.includes('creditcard')) return { kind: 'flat', value: 5 };
+  if (value.includes('loan') || value.includes('emi')) return { kind: 'flat', value: 3 };
+  if (value.includes('insurance')) return { kind: 'flat', value: 3 };
+  if (value.includes('fastag')) return { kind: 'percent', value: 0.11 };
+  return { kind: 'percent', value: 1 };
+};
+
+export const getBbpsCommission = (amount, service) => {
+  const rule = getBbpsCommissionRule(service);
+  const numericAmount = Number(amount) || 0;
+  return formatAmount(
+    rule.kind === 'flat' ? rule.value : numericAmount * (rule.value / 100)
+  );
+};
+
+/**
  * What the retailer actually earned on a transaction.
  *
  * `commissions.retailerEarned` is the GROSS commission; the wallet is credited
@@ -144,7 +208,69 @@ export const resolveTransaction = async (
     const resolvedWalletType = txn.metadata?.walletType || walletType;
 
     if (finalStatus === 'SUCCESS') {
-      // Funds are already deducted, just update status
+      // Recharge commission must be settled atomically with the one-way
+      // PROCESSING -> SUCCESS transition. This makes the immediate response
+      // path and the reconciliation worker safe to run concurrently.
+      if (txn.type === 'RECHARGE' || txn.type === 'BILL_PAYMENT') {
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+          const claimed = await Transaction.findOneAndUpdate(
+            { transactionId, status: 'PROCESSING' },
+            { $set: { status: 'SUCCESS' } },
+            { session, new: true }
+          );
+          if (!claimed) {
+            await session.commitTransaction();
+            session.endSession();
+            return Transaction.findOne({ transactionId });
+          }
+
+          const isRecharge = claimed.type === 'RECHARGE';
+          const rate = isRecharge
+            ? getRechargeCommissionRate(claimed.metadata?.operator, claimed.metadata?.mode)
+            : getBbpsCommissionRule(claimed.metadata?.mode);
+          const commission = isRecharge
+            ? getRechargeCommission(
+                claimed.amount,
+                claimed.metadata?.operator,
+                claimed.metadata?.mode
+              )
+            : getBbpsCommission(claimed.amount, claimed.metadata?.mode);
+
+          if (commission > 0) {
+            await MainWallet.findOneAndUpdate(
+              { userId: claimed.userId, userModel: 'Retailer' },
+              { $inc: { balance: commission } },
+              { upsert: true, session }
+            );
+          }
+
+          claimed.commissions = {
+            ...claimed.commissions,
+            retailerEarned: commission,
+            retailerTds: 0,
+            retailerCommissionGross: commission,
+          };
+          claimed.metadata = {
+            ...claimed.metadata,
+            apiMessage,
+            ...(isRecharge
+              ? { rechargeCommissionRate: rate }
+              : { bbpsCommissionRule: rate }),
+          };
+          await claimed.save({ session });
+          await session.commitTransaction();
+          session.endSession();
+          return claimed;
+        } catch (error) {
+          await session.abortTransaction();
+          session.endSession();
+          throw error;
+        }
+      }
+
+      // Non-recharge transactions retain the existing resolution behavior.
       txn.status = 'SUCCESS';
       txn.metadata = { ...txn.metadata, apiMessage };
       await txn.save();

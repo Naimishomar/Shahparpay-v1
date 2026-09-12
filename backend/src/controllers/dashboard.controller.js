@@ -277,7 +277,19 @@ export const getRecentTransactions = async (req, res) => {
       .populate('userId', 'name businessName retailerId')
       .lean();
 
-    return res.status(200).json({ success: true, data: transactions });
+    // A failed transaction can be fully refunded after the provider rejects it.
+    // Reports must show the final wallet outcome, otherwise retailers see a
+    // debit-looking FAILED row even though the held amount was returned.
+    const reportTransactions = transactions.map((transaction) => {
+      const isRefunded =
+        transaction.metadata?.refundStatus === 'COMPLETED' &&
+        ['FAILED', 'REFUNDED'].includes(transaction.status);
+      return isRefunded
+        ? { ...transaction, status: 'REFUNDED', reportStatus: 'REFUNDED' }
+        : transaction;
+    });
+
+    return res.status(200).json({ success: true, data: reportTransactions });
   } catch (error) {
     console.error('Fetch transactions error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
