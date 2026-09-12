@@ -95,7 +95,10 @@ const DMT = () => {
             const otpPath = action === 'delete' ? 'beneficiary/delete-otp' : 'beneficiary/otp';
             const body = action === 'delete' ? {} : { beneficiary_id: bene.id };
             const res = await axios.post(`${api}/${otpPath}`, body, getHeaders());
-            if (res.data.success) toast.success(res.data.message || 'OTP sent');
+            if (res.data.success) {
+                const expiry = res.data.expiresIn ? ` Valid for ${Math.ceil(Number(res.data.expiresIn) / 60)} minutes.` : '';
+                toast.success(`${res.data.message || 'OTP sent'}${expiry}`);
+            }
             else toast.error(res.data.message || 'Failed to send OTP');
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to send OTP');

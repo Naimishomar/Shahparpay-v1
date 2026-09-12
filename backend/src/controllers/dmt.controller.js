@@ -35,7 +35,10 @@ const beneficiaryMobile = (row) =>
   String(row.mobile ?? row.mobile_number ?? row.remitter_mobile ?? row.user?.mobile ?? '')
     .replace(/\D/g, '');
 
-const getBeneficiaryId = (row) => row.id ?? row.beneficiary_id ?? row.bene_id;
+// Icchhamati currently returns `id`; retain the aliases used by older account
+// responses so OTP, delete, and payout always use the provider's real ID.
+const getBeneficiaryId = (row) =>
+  row.id ?? row.beneficiary_id ?? row.bene_id ?? row.beneficiaryId ?? row.beneId;
 
 const fetchProviderBeneficiaries = async () => {
   const rows = [];
@@ -73,7 +76,7 @@ const toBeneficiary = (row) => ({
   branch: row.branch || null,
   status: row.status || null,
   verified:
-    row.verified === true ||
+    row.verified === true || row.account_verified === true || row.ifsc_verified === true ||
     ['verified', 'active', 'approved', '1', 'success'].includes(String(row.status || '').toLowerCase()),
 });
 
@@ -196,6 +199,7 @@ export const sendBeneficiaryOtp = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: providerMessage(data, 'OTP sent to the registered sender mobile.'),
+      expiresIn: data?.data?.expires_in ?? data?.expires_in ?? null,
     });
   } catch (error) {
     console.error('Beneficiary OTP Error:', error?.response?.data || error?.message);
@@ -216,6 +220,7 @@ export const sendBeneficiaryDeleteOtp = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: providerMessage(data, 'OTP sent to the registered sender mobile.'),
+      expiresIn: data?.data?.expires_in ?? data?.expires_in ?? null,
     });
   } catch (error) {
     console.error('Beneficiary Delete OTP Error:', error?.response?.data || error?.message);
