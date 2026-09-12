@@ -285,21 +285,12 @@ const hasQrData = (data) => Boolean(
 );
 
 const generateQrOnEitherPath = async (payload) => {
-  // The provider's own live virtual-account client uses /api/va/generate-qr.
-  // Keep the docs route as a compatibility fallback because both have existed
-  // in different provider deployments.
-  const preferred = process.env.ICCHHAMATI_QR_PATH || '/api/va/generate-qr';
-  const fallback = preferred === '/api/va/generate-qr'
-    ? '/api/v2/generate-qr'
-    : '/api/va/generate-qr';
-  const first = await icchhamatiPost(preferred, payload);
-  const notRouted = /not found|no query results|404|route/i.test(String(first?.message || ''));
-  if (isOk(first) && hasQrData(first)) return first;
-  if (!notRouted && isOk(first)) {
-    // A successful envelope without a QR is not usable for a payment.
-    return icchhamatiPost(fallback, payload);
-  }
-  return notRouted ? icchhamatiPost(fallback, payload) : first;
+  // The documented account-linked QR endpoint accepts the settlement account
+  // and IFSC. The provider's VA route can map collections to the provider
+  // wallet instead of the bank account supplied by the retailer, so it must
+  // never be selected as an automatic fallback.
+  const path = process.env.ICCHHAMATI_QR_PATH || '/api/v2/generate-qr';
+  return icchhamatiPost(path, payload);
 };
 
 export const generateQr = async (req, res) => {
