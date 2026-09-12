@@ -67,7 +67,7 @@ const WalletTransfer = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.data.success) {
-                toast.error("PIN set successfully!");
+                toast.success("PIN set successfully!");
                 setHasPin(true);
                 setShowSetPinModal(false);
                 setNewPin("");
@@ -124,7 +124,7 @@ const WalletTransfer = () => {
                 window.dispatchEvent(new Event('wallet-updated'));
                 
                 setShowEnterPinModal(false);
-                toast.error("Wallet Transfer Successful!");
+                toast.success("Wallet transfer successful!");
             }
         } catch (error: any) {
             toast.error(error.response?.data?.message || "Transfer failed.");

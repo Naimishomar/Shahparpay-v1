@@ -24,7 +24,7 @@ const retailerProjects = [
   { name: "Recharge", url: "/recharge", icon: Zap },
   { name: "BBPS", url: "/bbps", icon: Zap },
   { name: "Collect Payments", url: "/payments/collect", icon: QrCode },
-  // { name: "Wallet Transfer", url: "/wallet-transfer", icon: Wallet },
+  { name: "Wallet Transfer", url: "/wallet-transfer", icon: Wallet },
   // { name: "Direct Payout", url: "/direct-payout", icon: ArrowRightLeft },
   {
     name: "Reports",
