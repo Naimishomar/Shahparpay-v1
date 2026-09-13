@@ -34,7 +34,7 @@ const SupportWidget = () => {
     if (!token || user?.role === 'admin') return null;
 
     return <>
-        <button onClick={() => { setOpen(true); load(); }} aria-label="Contact support" className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-[0_8px_30px_rgba(99,102,241,0.45)] flex items-center justify-center hover:scale-105 transition-transform"><Headset className="w-6 h-6" /></button>
+        <button onClick={() => { setOpen(true); load(); }} aria-label="Contact support" className="fixed bottom-8 right-8 z-40 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-[0_8px_30px_rgba(99,102,241,0.45)] flex items-center justify-center hover:scale-105 transition-transform"><Headset className="w-6 h-6" /></button>
         {open && <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4">
             <div className="bg-card border border-border w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
                 <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-primary/5"><div className="flex items-center gap-3"><div className="p-2 rounded-xl bg-primary/10 text-primary"><MessageCircle className="w-5 h-5" /></div><div><h2 className="font-bold text-foreground">Customer Support</h2><p className="text-xs text-muted-foreground">Tell us what you need help with</p></div></div><button onClick={() => { setOpen(false); setSelected(null); }} className="text-muted-foreground hover:text-foreground"><X /></button></div>
