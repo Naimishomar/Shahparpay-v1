@@ -1,4 +1,4 @@
-import { Fingerprint, Download, ExternalLink, HelpCircle, HardDrive, Smartphone, Monitor, Phone, Mail } from 'lucide-react';
+import { Fingerprint, Download, ExternalLink, HelpCircle, HardDrive, Smartphone, Monitor, Phone, Mail, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 const BiometricSupport = () => {
     const devices = [
@@ -44,7 +44,7 @@ const BiometricSupport = () => {
                         Download RD Services and Drivers for your AEPS devices.
                     </p>
                 </div>
-                <button className="px-6 py-2.5 bg-primary/10 text-primary rounded-xl font-medium hover:bg-primary/20 transition-all flex items-center gap-2">
+                    <button onClick={() => document.getElementById('setup-steps')?.scrollIntoView({ behavior: 'smooth' })} className="px-6 py-2.5 bg-primary/10 text-primary rounded-xl font-medium hover:bg-primary/20 transition-all flex items-center gap-2">
                     <HelpCircle className="w-5 h-5" />
                     Setup Guide
                 </button>
@@ -104,10 +104,36 @@ const BiometricSupport = () => {
                                         <ExternalLink className="w-4 h-4 opacity-70" />
                                     </a>
                                 </div>
+                                <div className="mt-6 pt-5 border-t border-border" id={`${device.id}-steps`}>
+                                    <h4 className="font-bold text-foreground mb-3 flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-primary" /> Enable {device.name}</h4>
+                                    <ol className="space-y-2 text-sm text-muted-foreground">
+                                        <li className="flex gap-2"><span className="font-bold text-primary">1.</span> Uninstall old RD Service and old scanner drivers from Windows, then restart the computer.</li>
+                                        <li className="flex gap-2"><span className="font-bold text-primary">2.</span> Open the official download link above and install the Windows driver as Administrator.</li>
+                                        <li className="flex gap-2"><span className="font-bold text-primary">3.</span> Install the {device.name} RD Service, accept the certificate/firewall prompts, and restart again.</li>
+                                        <li className="flex gap-2"><span className="font-bold text-primary">4.</span> Connect the scanner directly to a working USB port; avoid hubs and confirm its indicator light turns on.</li>
+                                        <li className="flex gap-2"><span className="font-bold text-primary">5.</span> On Android, install the Android RD app above, allow nearby-device/USB permissions, and keep it running in the background.</li>
+                                        <li className="flex gap-2"><span className="font-bold text-primary">6.</span> Open the RD Service status page and confirm the device is detected and registered.</li>
+                                        <li className="flex gap-2"><span className="font-bold text-primary">7.</span> Return to ShahparPay → AEPS/Merchant eKYC, allow browser permissions, select this device, and click Capture.</li>
+                                    </ol>
+                                </div>
                             </div>
                         ))}
                     </div>
                     
+                    <div id="setup-steps" className="mt-8 p-6 bg-primary/5 border border-primary/20 rounded-2xl">
+                        <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2"><CheckCircle2 className="text-primary" /> Final checklist before AEPS/eKYC</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground">
+                            <p>✓ Only one RD Service should be running for the connected scanner.</p>
+                            <p>✓ Device must appear as registered/ready in the RD Service.</p>
+                            <p>✓ Windows users should check ports 11100–11120 are not blocked.</p>
+                            <p>✓ Temporarily allow the RD Service through Windows Firewall.</p>
+                            <p>✓ Use Chrome/Edge and allow localhost, USB, and camera/device permissions.</p>
+                            <p>✓ On Android, keep the RD app open and reconnect the USB/OTG cable.</p>
+                            <p>✓ If capture fails, unplug the scanner, restart RD Service, and retry once.</p>
+                            <p>✓ Do not share Aadhaar, fingerprints, or MPIN in screenshots sent to support.</p>
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
                         <div className="p-6 bg-yellow-500/5 border border-yellow-500/20 rounded-2xl flex items-start gap-4">
                             <div className="p-2 bg-yellow-500/20 rounded-lg text-yellow-500 mt-0.5">

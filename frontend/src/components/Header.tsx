@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import NotificationCenter from './NotificationCenter';
+import LanguageSelector from './LanguageSelector';
 
 const formatBalance = (value: unknown) => {
     const amount = Number(value ?? 0);
@@ -87,6 +88,7 @@ const Header = () => {
             )}
 
             {user && <NotificationCenter />}
+            {user && <LanguageSelector />}
 
             {/* Theme Toggle */}
             <button 

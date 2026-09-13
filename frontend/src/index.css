@@ -187,3 +187,8 @@
     display: none !important;
   }
 }
+
+/* Keep the Google page-translation banner from covering the authenticated app. */
+body { top: 0 !important; }
+.goog-te-banner-frame.skiptranslate { display: none !important; }
+.goog-te-gadget { display: none !important; }
