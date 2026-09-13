@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/sidebar"
 
 import { Link, useLocation } from "react-router-dom"
-import { BarChart3, Wallet, Send, Zap, ScanFace, Landmark, LayoutDashboard, Users, Store, UserPlus, UserCircle, FileText, QrCode, CreditCard, Bell, Headset, ShieldCheck } from "lucide-react"
+import { BarChart3, Wallet, Send, Zap, ScanFace, Landmark, ArrowRightLeft, LayoutDashboard, Users, Store, UserPlus, UserCircle, FileText, QrCode, CreditCard, Bell, Headset } from "lucide-react"
 import logo from "../assets/logo.png"
 import { useAuth } from "../context/AuthContext"
 
@@ -83,19 +83,13 @@ export function AppSidebar() {
                    retailerProjects;
 
   return (
-    <Sidebar className="border-r border-slate-800/80 !bg-slate-950">
-      <SidebarContent className="bg-transparent text-slate-100">
-        <div className="p-5 pb-3 flex flex-col items-center justify-center relative">
-            <div className="absolute top-0 left-0 w-full h-[130px] bg-teal-500/20 blur-[55px] -z-10 rounded-full"></div>
-            <div className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 shadow-2xl shadow-teal-950/20">
-              <img src={logo} alt="logo" className="w-full object-contain brightness-0 invert opacity-95" />
-            </div>
-            <div className="mt-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
-              Digital finance platform
-            </div>
+    <Sidebar className="border-r border-black/10 dark:border-white/10 !bg-background/95">
+      <SidebarContent className="bg-transparent text-foreground">
+        <div className="p-6 pb-2 flex flex-col items-center justify-center relative">
+            <div className="absolute top-0 left-0 w-full h-[100px] bg-primary/10 blur-[50px] -z-10 rounded-full"></div>
+            <img src={logo} alt="logo" className="w-[80%] object-contain dark:brightness-0 dark:invert dark:opacity-90 dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
         </div>
-        <SidebarMenu className="px-3 py-5 gap-1.5 mt-2">
+        <SidebarMenu className="px-4 py-6 gap-3 mt-2">
           {projects.map((project: any) => {
             const Icon = project.icon
             
@@ -106,7 +100,7 @@ export function AppSidebar() {
                       <Collapsible defaultOpen={isSubActive} className="group/collapsible w-full">
                           <CollapsibleTrigger asChild>
                               <SidebarMenuButton className={`p-0 h-auto hover:bg-transparent ${isSubActive ? 'bg-gray-500/20 text-white border border-white rounded-xl' : 'text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground border border-transparent rounded-xl'}`}>
-                                  <div className="flex items-center justify-between w-full py-3 px-3.5 transition-all duration-300">
+                                  <div className="flex items-center justify-between w-full py-3 px-4 transition-all duration-300">
                                       <div className="flex items-center gap-3">
                                           <Icon className={`w-5 h-5 transition-transform ${isSubActive ? 'drop-shadow-[0_0_5px_rgba(139,92,246,0.5)] dark:drop-shadow-[0_0_8px_rgba(139,92,246,0.8)] scale-110' : 'group-hover:scale-110'}`} />
                                           <span className="font-medium text-sm">{project.name}</span>
@@ -122,9 +116,9 @@ export function AppSidebar() {
                                       return (
                                           <SidebarMenuSubItem key={subItem.name}>
                                               <SidebarMenuSubButton asChild className="p-0 h-auto hover:bg-transparent">
-                                  <Link
+                                                  <Link
                                                       to={subItem.url}
-                                                      className={`block py-2 px-3 w-full rounded-lg transition-all duration-300 text-sm ${isItemActive ? 'bg-teal-400/15 text-teal-200 font-semibold' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                                                      className={`block py-2 px-3 w-full rounded-lg transition-all duration-300 text-sm ${isItemActive ? 'bg-white/10 text-white font-medium' : 'text-muted-foreground hover:text-foreground hover:bg-white/5'}`}
                                                   >
                                                       {subItem.name}
                                                   </Link>
@@ -146,10 +140,10 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild className="p-0 h-auto hover:bg-transparent">
                   <Link 
                     to={project.url!} 
-                    className={`flex items-center gap-3 py-3 px-3.5 w-full rounded-xl transition-all duration-300 ${
+                    className={`flex items-center gap-3 py-3 px-4 w-full rounded-xl transition-all duration-300 ${
                         isActive 
-                        ? 'bg-gradient-to-r from-teal-400/20 to-blue-400/10 text-white border border-teal-300/20 shadow-lg shadow-teal-950/20'
-                        : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
+                        ? 'bg-gray-500/20 text-white border border-white'
+                        : 'text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground border border-transparent'
                     }`}
                   >
                     <Icon className={`w-5 h-5 transition-transform ${isActive ? 'drop-shadow-[0_0_5px_rgba(139,92,246,0.5)] dark:drop-shadow-[0_0_8px_rgba(139,92,246,0.8)] scale-110' : 'group-hover:scale-110'}`} />
@@ -160,15 +154,6 @@ export function AppSidebar() {
             )
           })}
         </SidebarMenu>
-        <div className="mt-auto px-4 pb-5">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-              <ShieldCheck className="h-4 w-4 text-teal-300" />
-              Platform protected
-            </div>
-            <p className="mt-1 text-[11px] leading-4 text-slate-500">Secure payments and services for your business.</p>
-          </div>
-        </div>
       </SidebarContent>
     </Sidebar>
   )
