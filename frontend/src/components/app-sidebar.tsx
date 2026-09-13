@@ -46,6 +46,7 @@ const retailerProjects = [
   { name: "Fund Request", url: "/fund-request", icon: Send },
   { name: "AEPS Pipe Status", url: "/aeps/pipes", icon: ScanFace },
   { name: "Biometric Support", url: "/biometric-support", icon: ScanFace },
+  { name: "Support Center", url: "/support", icon: Headset },
 ]
 
 const adminProjects = [
@@ -66,6 +67,7 @@ const distributorProjects = [
   { name: "Fund Requests", url: "/distributor/fund-requests", icon: Store },
   { name: "Add New", url: "/distributor/create", icon: UserPlus },
   { name: "My Profile", url: "/distributor/profile", icon: UserCircle },
+  { name: "Support Center", url: "/support", icon: Headset },
 ]
 
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"

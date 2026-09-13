@@ -16,7 +16,7 @@ const Layout = () => {
     }
 
     if (user?.role === 'admin' && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/reports/')) return <Navigate to="/admin" replace />;
-    if (user?.role === 'distributor' && !location.pathname.startsWith('/distributor')) return <Navigate to="/distributor" replace />;
+    if (user?.role === 'distributor' && !location.pathname.startsWith('/distributor') && location.pathname !== '/support') return <Navigate to="/distributor" replace />;
 
     return (
         <SidebarProvider>

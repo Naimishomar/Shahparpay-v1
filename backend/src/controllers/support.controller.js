@@ -11,7 +11,8 @@ const attachmentFromRequest = async (req) => {
   const uploaded = await uploadOnR2(req.file.path);
   return uploaded?.url ? [{ url: uploaded.url, name: req.file.originalname, mimeType: req.file.mimetype }] : [];
 };
-const assignedForUser = async (req) => {
+const assignedForUser = async (req, recipient = 'distributor') => {
+  if (recipient === 'admin') return { assignedToModel: 'Admin' };
   if (req.user.role === 'retailer') {
     const retailer = await Retailer.findById(req.user._id || req.user.id).select('distributorId');
     return retailer?.distributorId ? { assignedTo: retailer.distributorId, assignedToModel: 'Distributor' } : {};
@@ -40,7 +41,8 @@ export const createTicket = async (req, res) => {
     const description = String(req.body.description || '').trim();
     const attachments = await attachmentFromRequest(req);
     if (!subject || (!description && !attachments.length)) return res.status(400).json({ success: false, message: 'Add a subject and message or photo' });
-    const ticket = await SupportTicket.create({ ...ownerFilter(req), ...(await assignedForUser(req)), subject, description: description || 'Photo attachment', messages: [{ senderRole: 'user', senderName: req.user.name || '', message: description || 'Photo attachment', attachments }] });
+    const recipient = req.user.role === 'retailer' && req.body.recipient === 'admin' ? 'admin' : 'distributor';
+    const ticket = await SupportTicket.create({ ...ownerFilter(req), ...(await assignedForUser(req, recipient)), subject, description: description || 'Photo attachment', messages: [{ senderRole: 'user', senderName: req.user.name || '', message: description || 'Photo attachment', attachments }] });
     return res.status(201).json({ success: true, message: 'Support ticket created', data: ticket });
   } catch (error) {
     console.error('Create support ticket error:', error);

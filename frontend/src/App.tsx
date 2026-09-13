@@ -35,6 +35,7 @@ import DistributorPortal from "./pages/DistributorPortal"
 import KycStatus from "./pages/KycStatus"
 import Profile from "./pages/Profile"
 import MATM from "./pages/MATM"
+import Support from "./pages/Support"
 
 import { Toaster } from 'sonner'
 import { useAuth } from './context/AuthContext'
@@ -102,6 +103,7 @@ function App() {
         <Route path="/fund-request" element={<FundRequest/>}/>
         <Route path="/biometric-support" element={<BiometricSupport/>}/>
         <Route path="/profile" element={<Profile/>}/>
+        <Route path="/support" element={<Support/>}/>
       </Route>
       </>
     )
