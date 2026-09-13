@@ -240,6 +240,7 @@ export const browsePlans = async (req, res) => {
         operatorName: providerData.operatorname ?? providerData.operatorName ?? null,
         circle: providerData.circal ?? providerData.circle ?? null,
         circleName: providerData.circalname ?? providerData.circleName ?? null,
+        logo: providerData.logo ?? null,
       },
     });
   } catch (error) {

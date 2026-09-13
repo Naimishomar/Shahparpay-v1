@@ -4,6 +4,7 @@ import { useTheme } from "next-themes";
 import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import NotificationCenter from './NotificationCenter';
 
 const formatBalance = (value: unknown) => {
     const amount = Number(value ?? 0);
@@ -84,6 +85,8 @@ const Header = () => {
                     )}
                 </div>
             )}
+
+            {user && <NotificationCenter />}
 
             {/* Theme Toggle */}
             <button 

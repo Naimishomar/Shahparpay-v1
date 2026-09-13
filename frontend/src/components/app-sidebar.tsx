@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/sidebar"
 
 import { Link, useLocation } from "react-router-dom"
-import { BarChart3, Wallet, Send, Zap, ScanFace, Landmark, ArrowRightLeft, LayoutDashboard, Users, Store, UserPlus, UserCircle, FileText, QrCode, CreditCard } from "lucide-react"
+import { BarChart3, Wallet, Send, Zap, ScanFace, Landmark, ArrowRightLeft, LayoutDashboard, Users, Store, UserPlus, UserCircle, FileText, QrCode, CreditCard, Bell, Headset } from "lucide-react"
 import logo from "../assets/logo.png"
 import { useAuth } from "../context/AuthContext"
 
@@ -54,6 +54,8 @@ const adminProjects = [
   { name: "Fund Requests", url: "/admin/fund-requests", icon: Store },
   { name: "Add New", url: "/admin/create", icon: UserPlus },
   { name: "Commissions", url: "/admin/commissions", icon: FileText },
+  { name: "Notifications", url: "/admin/notifications", icon: Bell },
+  { name: "Customer Support", url: "/admin/support", icon: Headset },
   { name: "Ledger", url: "/reports/ledger", icon: FileText },
   { name: "Lead Generation", url: "/lead-generation", icon: UserPlus },
 ]

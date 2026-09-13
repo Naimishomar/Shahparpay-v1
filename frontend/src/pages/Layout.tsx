@@ -4,6 +4,7 @@ import News from "@/components/News"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Outlet, Navigate, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
+import SupportWidget from "../components/SupportWidget"
 
 const Layout = () => {
     const { user, token } = useAuth();
@@ -31,6 +32,7 @@ const Layout = () => {
                     <div className="absolute bottom-0 right-0 w-full h-[500px] bg-gradient-to-t from-white/5 to-transparent pointer-events-none -z-10 rounded-full blur-3xl opacity-30 translate-x-[10%] translate-y-[20%]"></div>
                     <Outlet />
                 </div>
+                <SupportWidget />
             </main>
         </SidebarProvider>
     )

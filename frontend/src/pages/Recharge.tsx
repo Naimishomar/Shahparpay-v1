@@ -14,6 +14,7 @@ const Recharge = () => {
     // Data State
     const [dthOperators, setDthOperators] = useState<any[]>([]);
     const [plans, setPlans] = useState<any[]>([]);
+    const [planMeta, setPlanMeta] = useState<any>(null);
     const [showPlansModal, setShowPlansModal] = useState(false);
     const [planSearch, setPlanSearch] = useState("");
     const [history, setHistory] = useState<any[]>([]);
@@ -86,6 +87,12 @@ const Recharge = () => {
             if (response.data && response.data.success) {
                 // Icchhamati resolves the operator and circle from the number.
                 const meta = response.data.meta || {};
+                setPlanMeta({
+                    ...meta,
+                    logo: meta.logo || response.data.logo || response.data.data?.logo || null,
+                    operatorName: meta.operatorName || response.data.operatorname || response.data.data?.operatorname || null,
+                    circleName: meta.circleName || response.data.circalname || response.data.data?.circalname || null,
+                });
                 setResolvedOperator(meta.operator ? String(meta.operator) : "");
                 setResolvedCircle(meta.circle ? String(meta.circle) : "");
 
@@ -553,10 +560,13 @@ const Recharge = () => {
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="p-4 border-b border-border flex justify-between items-center bg-muted/30">
-                            <h3 className="font-bold text-lg flex items-center gap-2">
-                                <Smartphone className="text-primary" />
-                                Available Plans for {mobileNumber}
-                            </h3>
+                            <div className="flex items-center gap-3 min-w-0">
+                                {planMeta?.logo ? <img src={planMeta.logo} alt={planMeta.operatorName || 'Operator'} className="w-10 h-10 rounded-full object-contain bg-white border border-border p-1" /> : <Smartphone className="text-primary" />}
+                                <div className="min-w-0">
+                                    <h3 className="font-bold text-lg truncate">Available Plans for {mobileNumber}</h3>
+                                    <p className="text-xs text-muted-foreground truncate">{planMeta?.operatorName || 'Operator'} {planMeta?.circleName ? `· ${planMeta.circleName}` : ''}</p>
+                                </div>
+                            </div>
                             <button onClick={() => { setShowPlansModal(false); setPlanSearch(""); }} className="text-muted-foreground hover:text-foreground">
                                 <XCircle size={24} />
                             </button>

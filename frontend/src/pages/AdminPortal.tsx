@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import AdminCommissions from '../components/AdminCommissions';
+import AdminNotifications from '../components/AdminNotifications';
+import AdminSupport from '../components/AdminSupport';
 import DailyAuthModal from '../components/DailyAuthModal';
 import { INDIAN_STATES } from '../constants';
 
@@ -348,6 +350,8 @@ const AdminPortal = () => {
                 
 
                 {/* Dashboard Tab */}
+                {activeTab === 'notifications' && <AdminNotifications />}
+                {activeTab === 'support' && <AdminSupport />}
                 {activeTab === 'dashboard' && (
                     <div className="animate-in fade-in duration-500">
                         <div className="mb-8">
