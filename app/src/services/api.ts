@@ -616,7 +616,7 @@ class ApiService {
     return this.post(API_ENDPOINTS.recharge.dthInfo, data);
   }
 
-  async fetchBill(data: { caNumber: string; operator: string; type?: string }) {
+  async fetchBill(data: { caNumber: string; operator: string; type?: string; customerMobile?: string }) {
     return this.post(API_ENDPOINTS.recharge.fetchBill, data);
   }
 

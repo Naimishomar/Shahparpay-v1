@@ -182,12 +182,23 @@ const BBPS = () => {
                 number: consumerNumber.trim(),
                 operator: operatorId,
                 amount: amount,
-                pin: pin
+                pin: pin,
+                customerName: fetchedBill?.customerName || undefined,
+                customerMobile: customerMobile || undefined,
+                billDetails: fetchedBill || undefined,
             });
 
             if (response.data.success) {
                 const pending = Boolean(response.data.pending || String(response.data.data?.status || '').toUpperCase() === 'PENDING');
-                setReceiptData({ ...response.data.data, status: pending ? 'PENDING' : 'SUCCESS', isSuccess: !pending });
+                setReceiptData({
+                    ...response.data.data,
+                    billDetails: response.data.data?.billDetails || fetchedBill,
+                    billerName: selectedOperator?.name,
+                    customerName: response.data.data?.customerName || fetchedBill?.customerName,
+                    customerMobile: response.data.data?.customerMobile || customerMobile,
+                    status: pending ? 'PENDING' : 'SUCCESS',
+                    isSuccess: !pending,
+                });
                 setShowReceiptModal(true);
                 window.dispatchEvent(new Event('wallet-updated'));
                 setSelectedService(null);
@@ -202,6 +213,10 @@ const BBPS = () => {
                     amount: amount,
                     number: consumerNumber,
                     operator: operatorId,
+                    billerName: selectedOperator?.name,
+                    customerName: fetchedBill?.customerName,
+                    customerMobile,
+                    billDetails: fetchedBill,
                     type: apiType,
                     errorReason: errorMsg,
                     isSuccess: false
@@ -219,6 +234,10 @@ const BBPS = () => {
                 amount: amount,
                 number: consumerNumber,
                 operator: operatorId,
+                billerName: selectedOperator?.name,
+                customerName: fetchedBill?.customerName,
+                customerMobile,
+                billDetails: fetchedBill,
                 type: selectedService?.id || 'unknown',
                 errorReason: finalMsg,
                 isSuccess: false
@@ -245,6 +264,7 @@ const BBPS = () => {
 
     const receiptIsPending = receiptData?.status === 'PENDING';
     const receiptIsSuccess = Boolean(receiptData?.isSuccess) && !receiptIsPending;
+    const receiptBill = receiptData?.billDetails || {};
 
     return (
         <div className="flex flex-col gap-6 w-full p-2 animate-in fade-in slide-in-from-bottom-4 duration-1000">
@@ -473,26 +493,58 @@ const BBPS = () => {
                                 <div className="text-sm text-muted-foreground mt-1">BBPS Transaction Receipt</div>
                             </div>
                             
-                            <div className="space-y-4 text-sm">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground">Service</span> 
-                                    <span className="font-semibold capitalize text-foreground bg-secondary px-3 py-1 rounded-full">{receiptData.type}</span>
+                            <div className="space-y-3 text-sm">
+                                <div className="flex justify-between items-start gap-4">
+                                    <span className="text-muted-foreground">Service</span>
+                                    <span className="font-semibold capitalize text-right text-foreground">{receiptData.type || 'BBPS'}</span>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground">Consumer No</span> 
-                                    <span className="font-medium text-foreground tracking-wide">{receiptData.number}</span>
+                                <div className="flex justify-between items-start gap-4">
+                                    <span className="text-muted-foreground">Biller</span>
+                                    <span className="font-semibold text-right text-foreground">{receiptData.billerName || receiptData.operator || 'N/A'}</span>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground">Transaction ID</span> 
-                                    <span className="font-medium text-foreground text-xs bg-muted px-2 py-1 rounded">{receiptData.transactionId}</span>
+                                <div className="flex justify-between items-start gap-4">
+                                    <span className="text-muted-foreground">Customer name</span>
+                                    <span className="font-semibold text-right text-foreground">{receiptData.customerName || 'N/A'}</span>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground">Operator Ref</span> 
-                                    <span className="font-medium text-foreground">{receiptData.operatorRef || 'N/A'}</span>
+                                <div className="flex justify-between items-start gap-4">
+                                    <span className="text-muted-foreground">Customer mobile</span>
+                                    <span className="font-medium text-right text-foreground">{receiptData.customerMobile || 'N/A'}</span>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground">Status</span> 
+                                <div className="flex justify-between items-start gap-4">
+                                    <span className="text-muted-foreground">Consumer / account no.</span>
+                                    <span className="font-medium text-right text-foreground tracking-wide">{receiptData.number || receiptBill.account || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between items-start gap-4">
+                                    <span className="text-muted-foreground">Bill number</span>
+                                    <span className="font-medium text-right text-foreground">{receiptBill.billNumber || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between items-start gap-4">
+                                    <span className="text-muted-foreground">Bill date</span>
+                                    <span className="font-medium text-right text-foreground">{receiptBill.billDate || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between items-start gap-4">
+                                    <span className="text-muted-foreground">Due date</span>
+                                    <span className="font-medium text-right text-foreground">{receiptBill.dueDate || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between items-start gap-4">
+                                    <span className="text-muted-foreground">Fetch reference</span>
+                                    <span className="font-medium text-right text-foreground">{receiptBill.fetchRefId || receiptBill.fetchBillId || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between items-start gap-4">
+                                    <span className="text-muted-foreground">Transaction ID</span>
+                                    <span className="font-medium text-right text-foreground text-xs break-all">{receiptData.transactionId || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between items-start gap-4">
+                                    <span className="text-muted-foreground">Operator reference</span>
+                                    <span className="font-medium text-right text-foreground">{receiptData.operatorRef || receiptData.txnId || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between items-start gap-4">
+                                    <span className="text-muted-foreground">Status</span>
                                     <span className={`font-bold ${receiptIsPending ? 'text-amber-500' : receiptIsSuccess ? 'text-emerald-500' : 'text-destructive'}`}>{receiptData.status}</span>
+                                </div>
+                                <div className="flex justify-between items-start gap-4">
+                                    <span className="text-muted-foreground">Date & time</span>
+                                    <span className="font-medium text-right text-foreground">{receiptData.date || receiptData.transactionDate || new Date().toLocaleString()}</span>
                                 </div>
                                 
                                 {!receiptData.isSuccess && receiptData.errorReason && (

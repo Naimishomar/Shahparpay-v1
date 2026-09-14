@@ -436,7 +436,19 @@ export const fetchBill = async (req, res) => {
 
 export const doRecharge = async (req, res) => {
   try {
-    const { mobileNumber, dthNumber, number, operator, amount, pin, type, circle } = req.body;
+    const {
+      mobileNumber,
+      dthNumber,
+      number,
+      operator,
+      amount,
+      pin,
+      type,
+      circle,
+      customerName,
+      customerMobile,
+      billDetails,
+    } = req.body;
 
     // The wallet to debit comes from the access token, never from the body:
     // a caller must not be able to spend someone else's balance.
@@ -514,6 +526,13 @@ export const doRecharge = async (req, res) => {
           operator: providerOperator,
           mode: type,
           provider: 'ICCHHAMATI',
+          customerName: customerName || billDetails?.customerName || null,
+          customerMobile: customerMobile || null,
+          billNumber: billDetails?.billNumber || null,
+          billDate: billDetails?.billDate || null,
+          dueDate: billDetails?.dueDate || null,
+          billPeriod: billDetails?.billPeriod || null,
+          fetchRefId: billDetails?.fetchRefId || billDetails?.fetchBillId || null,
         },
       });
     } catch (walletError) {
@@ -580,7 +599,17 @@ export const doRecharge = async (req, res) => {
         success: true,
         pending: true,
         message: message || 'Recharge submitted and is being processed.',
-        data: { ...providerResponse?.data, transactionId: referenceId },
+        data: {
+          ...providerResponse?.data,
+          transactionId: referenceId,
+          customerName: customerName || billDetails?.customerName || null,
+          customerMobile: customerMobile || null,
+          number: caNumber,
+          operator: providerOperator,
+          type,
+          amount: totalAmount,
+          billDetails: billDetails || null,
+        },
       });
     }
 
@@ -591,7 +620,17 @@ export const doRecharge = async (req, res) => {
       return res.status(200).json({
         success: true,
         message: message || 'Recharge successful',
-        data: { ...providerResponse?.data, transactionId: referenceId },
+        data: {
+          ...providerResponse?.data,
+          transactionId: referenceId,
+          customerName: customerName || billDetails?.customerName || null,
+          customerMobile: customerMobile || null,
+          number: caNumber,
+          operator: providerOperator,
+          type,
+          amount: totalAmount,
+          billDetails: billDetails || null,
+        },
       });
     }
 

@@ -50,6 +50,7 @@ export const BbpsScreen: React.FC = () => {
   const [showBillers, setShowBillers] = useState(false);
   const [billerQuery, setBillerQuery] = useState('');
   const [caNumber, setCaNumber] = useState('');
+  const [customerMobile, setCustomerMobile] = useState('');
   const [amount, setAmount] = useState('');
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
@@ -79,6 +80,7 @@ export const BbpsScreen: React.FC = () => {
       caNumber: caNumber.trim(),
       operator: String(biller?.id),
       type: category,
+      customerMobile: customerMobile || undefined,
     });
     if (!res.success) throw new Error(res.message);
     return res.data;
@@ -226,6 +228,16 @@ export const BbpsScreen: React.FC = () => {
             leftIcon="identifier"
           />
 
+          <Input
+            label="Customer mobile (optional)"
+            value={customerMobile}
+            onChangeText={(v) => setCustomerMobile(v.replace(/\D/g, '').slice(0, 10))}
+            keyboardType="number-pad"
+            placeholder="10-digit mobile number"
+            leftIcon="phone-outline"
+            maxLength={10}
+          />
+
           {/* A top-up has no bill to fetch, so the step is hidden rather than
               left to fail. */}
           {biller?.viewbill === 'true' && (
@@ -247,15 +259,17 @@ export const BbpsScreen: React.FC = () => {
           {!!bill && (
             <View style={styles.infoBox}>
               <Row label="Customer" value={bill.customerName || bill.name} />
+              <Row label="Account" value={bill.account || bill.accountNumber || caNumber} />
               <Row label="Bill number" value={bill.billnumber || bill.billNumber} />
               <Row label="Bill date" value={bill.billdate || bill.billDate} />
               <Row label="Due date" value={bill.duedate || bill.dueDate} />
+              <Row label="Bill period" value={bill.bilperiod || bill.billPeriod} />
               <Row
                 label="Amount due"
                 value={money(bill.amount ?? bill.Amount ?? bill.dueamount ?? bill.billAmount)}
                 mono
-                last
               />
+              <Row label="Fetch reference" value={bill.fetchBillID || bill.fetchRefId || '—'} last />
             </View>
           )}
 

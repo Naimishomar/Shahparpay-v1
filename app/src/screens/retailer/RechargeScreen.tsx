@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { View, Text, Pressable, ScrollView, Image } from 'react-native';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -46,8 +46,8 @@ export const RechargeScreen: React.FC = () => {
   // A prepaid recharge is routed by circle as well as operator, and the circle is
   // a provider code rather than a name, so the list has to come from the provider.
   const [circle, setCircle] = useState<Circle | null>(null);
-  const [showCircles, setShowCircles] = useState(false);
   const [planList, setPlanList] = useState<any[]>([]);
+  const [planMeta, setPlanMeta] = useState<any>(null);
   const [number, setNumber] = useState('');
   const [amount, setAmount] = useState('');
   const [pin, setPin] = useState('');
@@ -59,6 +59,7 @@ export const RechargeScreen: React.FC = () => {
   const operators = useAsync<Operator[]>(async () => {
     setOperator(null);
     setPlanList([]);
+    setPlanMeta(null);
     const res = await api.getRechargeOperators(type);
     // A refused list is not an empty list. Swallowing the failure left the
     // retailer staring at an empty dropdown with nothing to say whether the
@@ -66,12 +67,6 @@ export const RechargeScreen: React.FC = () => {
     if (!res.success) throw new Error(res.message || 'Could not load operators.');
     return res.data ?? [];
   }, [type]);
-
-  const circles = useAsync<Circle[]>(async () => {
-    const res = await api.getRechargeCircles();
-    if (!res.success) throw new Error(res.message || 'Could not load circles.');
-    return res.data ?? [];
-  }, []);
 
   const history = useAsync<any[]>(async () => (await api.getRechargeHistory()).data ?? [], []);
 
@@ -85,7 +80,9 @@ export const RechargeScreen: React.FC = () => {
   const plans = useAction(async () => {
     const res = await api.browseRechargePlans({ mobileNumber: number.trim() });
     if (!res.success) throw new Error(res.message);
-    return res.data;
+    // Keep `meta` together with the grouped plans. The website uses this
+    // metadata to populate the operator, circle and logo after lookup.
+    return res;
   });
 
   const dthInfo = useAction(async () => {
@@ -148,8 +145,26 @@ export const RechargeScreen: React.FC = () => {
   );
 
   const onBrowsePlans = async () => {
-    const grouped = await plans.run();
-    if (!grouped) return;
+    const payload: any = await plans.run();
+    if (!payload) return;
+
+    // The website displays the provider metadata returned alongside `data`.
+    // Keep the same response shape here so the retailer can verify that the
+    // number resolved to the expected operator and circle before paying.
+    const meta = payload.meta || {};
+    setPlanMeta(meta);
+    if (meta.operator) {
+      setOperator({
+        id: String(meta.operator),
+        name: meta.operatorName || String(meta.operator),
+        displayname: meta.operatorName || String(meta.operator),
+      });
+    }
+    if (meta.circle) {
+      setCircle({ id: String(meta.circle), name: meta.circleName || String(meta.circle) });
+    }
+
+    const grouped = payload.data ?? payload;
     const flat = Array.isArray(grouped)
       ? grouped
       : Object.entries(grouped).flatMap(([group, items]: any) =>
@@ -205,15 +220,15 @@ export const RechargeScreen: React.FC = () => {
             />
           )}
 
-          <SelectField
+          {type !== 'prepaid' && <SelectField
             label="Operator"
             required
             value={operator ? operator.displayname || operator.name : ''}
             placeholder={operators.loading ? 'Loading operators…' : 'Select operator'}
             open={showOperators}
             onPress={() => setShowOperators(!showOperators)}
-          />
-          {showOperators && (
+          />}
+          {type !== 'prepaid' && showOperators && (
             <View style={styles.picker}>
               <Input
                 placeholder="Search operator"
@@ -254,49 +269,37 @@ export const RechargeScreen: React.FC = () => {
             label={type === 'dth' ? 'Subscriber ID' : 'Mobile number'}
             required
             value={number}
-            onChangeText={(v) => setNumber(v.replace(/\D/g, '').slice(0, 15))}
+            onChangeText={(v) => {
+              setNumber(v.replace(/\D/g, '').slice(0, 15));
+              if (type === 'prepaid') {
+                setPlanMeta(null);
+                setOperator(null);
+                setCircle(null);
+                setPlanList([]);
+              }
+            }}
             keyboardType="number-pad"
             placeholder={type === 'dth' ? 'Customer ID' : '10-digit mobile number'}
             leftIcon={type === 'dth' ? 'television' : 'phone-outline'}
             autoComplete={type === 'dth' ? undefined : 'tel'}
           />
 
-          {type === 'prepaid' && (
-            <>
-              {!!circles.error && <ErrorBanner message={circles.error} onRetry={circles.reload} />}
-              <SelectField
-                label="Circle"
-                value={circle?.name ?? 'Select circle'}
-                open={showCircles}
-                onPress={() => setShowCircles(!showCircles)}
-              />
-              {showCircles && (
-                <View style={styles.picker}>
-                  <ScrollView
-                    style={styles.pickerList}
-                    nestedScrollEnabled
-                    keyboardShouldPersistTaps="handled"
-                  >
-                    {(circles.data ?? []).map((c) => (
-                      <Pressable
-                        key={c.id}
-                        onPress={() => {
-                          setCircle(c);
-                          setShowCircles(false);
-                        }}
-                        style={({ pressed }) => [
-                          styles.pickerItem,
-                          pressed && styles.pickerItemPressed,
-                        ]}
-                        accessibilityRole="button"
-                      >
-                        <Text style={styles.pickerText}>{c.name}</Text>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
+          {!!planMeta && type === 'prepaid' && (
+            <View style={styles.detectedOperator}>
+              {planMeta.logo ? (
+                <Image source={{ uri: planMeta.logo }} style={styles.operatorLogo} resizeMode="contain" />
+              ) : (
+                <View style={styles.operatorLogoFallback}>
+                  <Text style={styles.operatorLogoFallbackText}>SIM</Text>
                 </View>
               )}
-            </>
+              <View style={styles.detectedText}>
+                <Text style={styles.detectedLabel}>Number detected as</Text>
+                <Text style={styles.detectedName}>{planMeta.operatorName || planMeta.operator || 'Unknown operator'}</Text>
+                <Text style={styles.detectedCircle}>{planMeta.circleName || planMeta.circle || 'Circle unavailable'}</Text>
+              </View>
+              <Text style={styles.detectedCheck}>✓</Text>
+            </View>
           )}
 
           <View style={styles.toolbar}>
@@ -307,7 +310,7 @@ export const RechargeScreen: React.FC = () => {
                 icon="format-list-bulleted"
                 onPress={onBrowsePlans}
                 loading={plans.pending}
-                disabled={!operator || number.trim().length < 10}
+                disabled={number.trim().length < 10}
                 style={styles.flex}
               >
                 Browse plans
@@ -330,10 +333,10 @@ export const RechargeScreen: React.FC = () => {
           {/* A greyed-out button with no reason attached is unreportable: a
               retailer cannot tell it apart from a broken one, and neither can
               support. Name whichever requirement is still missing. */}
-          {type === 'prepaid' && (!operator || number.trim().length < 10) && (
+          {type === 'prepaid' && (!operator || !circle || number.trim().length < 10) && (
             <Text style={styles.hint}>
-              {!operator
-                ? 'Select an operator to browse plans.'
+              {!operator || !circle
+                ? 'Browse plans to detect the operator and circle.'
                 : `Enter all 10 digits to browse plans (${number.trim().length}/10 entered).`}
             </Text>
           )}
@@ -473,6 +476,31 @@ const styles = themed((c) => ({
   pickerText: { fontSize: t.small, color: c.foreground },
   pickerEmpty: { fontSize: t.caption, color: c.mutedForeground, padding: space.md },
   hint: { fontSize: t.caption, color: c.mutedForeground },
+  detectedOperator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: c.infoSubtle,
+    borderWidth: 1,
+    borderColor: c.info,
+  },
+  operatorLogo: { width: 44, height: 44, borderRadius: radius.sm, backgroundColor: c.card },
+  operatorLogoFallback: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: c.card,
+  },
+  operatorLogoFallbackText: { fontSize: t.micro, fontWeight: '800', color: c.mutedForeground },
+  detectedText: { flex: 1, minWidth: 0, gap: 2 },
+  detectedLabel: { fontSize: t.micro, color: c.info },
+  detectedName: { fontSize: t.small, fontWeight: '700', color: c.foreground },
+  detectedCircle: { fontSize: t.caption, color: c.mutedForeground },
+  detectedCheck: { fontSize: t.bodyLg, fontWeight: '800', color: c.success },
   infoBox: { padding: space.md, borderRadius: radius.md, backgroundColor: c.secondary },
   plan: {
     flexDirection: 'row',
