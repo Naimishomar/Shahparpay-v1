@@ -21,7 +21,7 @@ const Layout = () => {
     return (
         <SidebarProvider>
             <AppSidebar />
-            <main className="flex-1 min-h-0 bg-background text-foreground flex flex-col overflow-x-hidden w-full relative">
+            <main className="flex-1 h-svh min-h-0 bg-background text-foreground flex flex-col overflow-hidden w-full relative">
                 <div className="sticky top-0 z-50 flex items-center justify-between p-5 bg-background/80 backdrop-blur-md border-b border-black/10 dark:border-white/10 shadow-sm">
                     <SidebarTrigger className="text-foreground transition-transform hover:scale-105"/>
                     <Header/>
