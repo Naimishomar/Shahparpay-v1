@@ -21,6 +21,7 @@ const transactionSchema = new mongoose.Schema(
         'WALLET_TOPUP',
         'RECHARGE',
         'AEPSTOMAIN',
+        'QRTO_MAIN',
         'AEPS_SETTLEMENT',
         'DMT',
         'DIRECT_PAYOUT',

@@ -3,7 +3,7 @@ import {
   getBalances,
   setPin,
   changePin,
-  transferAepsToMain,
+  transferQrToMain,
   getTransferHistory,
 } from '../controllers/wallet.controller.js';
 import { getWalletLedger } from '../controllers/walletLedger.controller.js';
@@ -16,7 +16,7 @@ router.use(authMiddlewares);
 router.get('/balance', getBalances);
 router.post('/set-pin', setPin);
 router.post('/change-pin', changePin);
-router.post('/transfer', transferAepsToMain);
+router.post('/transfer', transferQrToMain);
 router.get('/history', getTransferHistory);
 router.get('/ledger', getWalletLedger);
 

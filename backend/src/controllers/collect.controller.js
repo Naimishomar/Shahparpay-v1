@@ -312,6 +312,101 @@ const syncCollectionTransaction = async (txn) => {
 };
 
 /**
+ * Reconciles a successful payment received on a standing virtual-account QR.
+ * The provider has already settled the money into the Icchhamati merchant
+ * account; this local entry mirrors that settlement into the retailer QR
+ * wallet exactly once.
+ */
+export const collectionWebhook = async (req, res) => {
+  try {
+    const configuredSecret = String(process.env.ICCHHAMATI_COLLECTION_WEBHOOK_SECRET || '').trim();
+    const suppliedSecret = String(
+      req.get('x-icchhamati-signature') || req.get('x-webhook-secret') || ''
+    ).trim();
+    if (configuredSecret && suppliedSecret !== configuredSecret) {
+      return res.status(401).json({ success: false, message: 'Invalid webhook signature' });
+    }
+
+    const body = req.body || {};
+    const data = body.data || body.transaction || body;
+    const status = normaliseStatus(
+      data.status || data.payment_status || data.transaction_status || body.status
+    );
+    const virtualAccountId = String(
+      data.virtual_account_id || data.virtualAccountId || data.account_id || data.accountId || ''
+    ).trim();
+    const providerReference = String(
+      data.txnid || data.transaction_id || data.transactionId || data.utr || data.rrn || data.reference_id || ''
+    ).trim();
+    const amount = Number(data.amount ?? data.paid_amount ?? data.total_amount ?? data.credit_amount);
+
+    if (!virtualAccountId || !providerReference || status !== 'SUCCESS' || !Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ success: false, message: 'Incomplete QR payment notification' });
+    }
+
+    const retailer = await Retailer.findOne({ 'collectionQr.virtualAccountId': virtualAccountId }).select('_id');
+    if (!retailer) {
+      return res.status(404).json({ success: false, message: 'QR virtual account is not mapped to a retailer' });
+    }
+
+    const transactionId = `QR_${providerReference}`;
+    const txn = await Transaction.findOneAndUpdate(
+      { transactionId },
+      {
+        $setOnInsert: {
+          transactionId,
+          userId: retailer._id,
+          type: 'PG_COLLECTION',
+          amount,
+          status: 'PENDING',
+          metadata: {
+            provider: 'ICCHHAMATI',
+            collectionChannel: 'QR',
+            virtualAccountId,
+            providerTxnId: providerReference,
+            webhookPayload: body,
+          },
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    const claimed = await Transaction.findOneAndUpdate(
+      { _id: txn._id, status: 'PENDING' },
+      {
+        $set: {
+          status: 'SUCCESS',
+          'metadata.gatewayStatus': data.status || body.status || 'SUCCESS',
+          'metadata.lastStatusCheckedAt': new Date(),
+        },
+      },
+      { new: true }
+    );
+
+    if (claimed) {
+      await QrWallet.findOneAndUpdate(
+        { userId: retailer._id },
+        {
+          $inc: { balance: amount },
+          $setOnInsert: { userModel: 'Retailer' },
+        },
+        { upsert: true, setDefaultsOnInsert: true }
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      status: 'SUCCESS',
+      transactionId,
+      credited: Boolean(claimed),
+    });
+  } catch (error) {
+    console.error('Collection Webhook Error:', error?.response?.data || error?.message);
+    return res.status(500).json({ success: false, message: 'QR payment reconciliation failed' });
+  }
+};
+
+/**
  * Generates the retailer's UPI QR against a bank account.
  *
  * The documented path and the provider's own client disagree on where this

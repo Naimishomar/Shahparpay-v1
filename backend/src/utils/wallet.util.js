@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import axios from 'axios';
 import MainWallet from '../models/mainWallet.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
+import QrWallet from '../models/qrWallet.model.js';
 import AdminWallet from '../models/adminWallet.model.js';
 import Admin from '../models/users/admin.model.js';
 import GlobalSettings from '../models/globalSettings.model.js';
@@ -351,8 +352,12 @@ export const transferBetweenWallets = async (
 ) => {
   const formattedAmount = formatAmount(Math.abs(amount));
 
-  const FromWalletModel = fromWalletType === 'MAIN' ? MainWallet : AepsWallet;
-  const ToWalletModel = toWalletType === 'MAIN' ? MainWallet : AepsWallet;
+  const walletModels = { MAIN: MainWallet, AEPS: AepsWallet, QR: QrWallet };
+  const FromWalletModel = walletModels[fromWalletType];
+  const ToWalletModel = walletModels[toWalletType];
+  if (!FromWalletModel || !ToWalletModel) {
+    throw new Error(`Unsupported wallet transfer: ${fromWalletType} -> ${toWalletType}`);
+  }
   const session = await mongoose.startSession();
   session.startTransaction();
 

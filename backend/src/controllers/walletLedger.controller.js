@@ -36,6 +36,7 @@ const WALLET_LABELS = {
   AADHAAR_PAY: 'AEPS',
   AEPS_SETTLEMENT: 'AEPS',
   AEPSTOMAIN: 'AEPS→Main',
+  QRTO_MAIN: 'QR→Main',
 };
 
 export const getWalletLabel = (tx) => WALLET_LABELS[tx.type] || 'Main';
@@ -59,6 +60,7 @@ const TXNTYPE_LABELS = {
   DAILY_AUTH_CHARGE: 'Daily Auth',
   MERCHANT_ONBOARDING_CHARGE: 'Onboarding Charge',
   AEPSTOMAIN: 'Wallet Transfer',
+  QRTO_MAIN: 'QR Wallet Transfer',
   DIRECT_PAYOUT_REFUND: 'Refund',
   AEPS_DEPOSIT_REFUND: 'Refund',
   FUND_REQUEST: 'Fund Request',
@@ -126,6 +128,8 @@ export const getNarration = (tx) => {
       return `PaySprint onboarding charge${m.requestId ? ' ref ' + m.requestId : ''}`;
     case 'AEPSTOMAIN':
       return 'AEPS → Main Transfer';
+    case 'QRTO_MAIN':
+      return 'QR Wallet → Main Transfer';
     default:
       return tx.type ? String(tx.type).replace(/_/g, ' ') : 'Transaction';
   }
@@ -200,9 +204,14 @@ export const getWalletDeltas = (tx) => {
     return { main: round2(amount), aeps: 0 };
   }
 
-  // Internal transfer AEPS → Main.
+  // Internal transfer AEPS → Main (legacy records).
   if (tx.type === 'AEPSTOMAIN') {
     return { main: round2(amount), aeps: round2(-amount) };
+  }
+
+  // Internal transfer QR Wallet → Main.
+  if (tx.type === 'QRTO_MAIN') {
+    return { main: round2(amount), aeps: 0, qr: round2(-amount) };
   }
 
   // AEPS wallet credits.

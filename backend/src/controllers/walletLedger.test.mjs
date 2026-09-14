@@ -78,13 +78,17 @@ const EXPECTED = {
   MERCHANT_ONBOARDING_CHARGE: ['main', -1],
 };
 
-// AEPSTOMAIN is the one type that moves both wallets at once.
+// Internal wallet transfers move money between two wallets.
 const aepsToMain = getWalletDeltas(tx('AEPSTOMAIN'));
 assert.strictEqual(aepsToMain.main, 100);
 assert.strictEqual(aepsToMain.aeps, -100);
 
+const qrToMain = getWalletDeltas(tx('QRTO_MAIN'));
+assert.strictEqual(qrToMain.main, 100);
+assert.strictEqual(qrToMain.qr, -100);
+
 for (const type of TYPES) {
-  if (type === 'AEPSTOMAIN') continue;
+  if (type === 'AEPSTOMAIN' || type === 'QRTO_MAIN') continue;
   const expected = EXPECTED[type];
   assert.ok(expected, `${type} is in the schema enum but has no pinned ledger effect here`);
   const [wallet, sign] = expected;

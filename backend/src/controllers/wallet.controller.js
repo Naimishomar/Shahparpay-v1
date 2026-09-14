@@ -131,7 +131,7 @@ export const changePin = async (req, res) => {
   }
 };
 
-export const transferAepsToMain = async (req, res) => {
+export const transferQrToMain = async (req, res) => {
   try {
     const userId = req.user.id;
     const { amount, pin } = req.body;
@@ -150,21 +150,23 @@ export const transferAepsToMain = async (req, res) => {
       return res.status(400).json({ success: false, message: 'PIN is required.' });
     }
 
-    const aepsWallet = await AepsWallet.findOne({ userId });
+    const qrWallet = await QrWallet.findOne({ userId });
     const mainWallet = await MainWallet.findOne({ userId });
 
-    if (!aepsWallet || !mainWallet) {
+    if (!qrWallet || !mainWallet) {
       return res.status(404).json({ success: false, message: 'Wallets not initialized.' });
     }
 
-    if (!aepsWallet.pin) {
+    // The transfer PIN remains the retailer's existing secure wallet PIN.
+    const pinWallet = await AepsWallet.findOne({ userId });
+    if (!pinWallet?.pin) {
       return res
         .status(400)
         .json({ success: false, message: 'PIN not set. Please set a PIN first.' });
     }
 
     // Verify PIN
-    const isPinValid = await bcrypt.compare(pin.toString(), aepsWallet.pin);
+    const isPinValid = await bcrypt.compare(pin.toString(), pinWallet.pin);
     if (!isPinValid) {
       return res.status(401).json({ success: false, message: 'Incorrect PIN.' });
     }
@@ -174,14 +176,14 @@ export const transferAepsToMain = async (req, res) => {
 
     let transaction;
     try {
-      transaction = await transferBetweenWallets(userId, 'AEPS', 'MAIN', transferAmount, {
+      transaction = await transferBetweenWallets(userId, 'QR', 'MAIN', transferAmount, {
         transactionId,
         userId,
-        type: 'AEPSTOMAIN',
+        type: 'QRTO_MAIN',
         amount: transferAmount,
         status: 'SUCCESS',
         metadata: {
-          operator: 'AEPSTOMAIN',
+          operator: 'QRTO_MAIN',
           source: 'LOCAL_WALLET_TRANSFER',
         },
       });
@@ -194,7 +196,7 @@ export const transferAepsToMain = async (req, res) => {
     }
 
     // Fetch fresh balances for response
-    const refreshedAeps = await AepsWallet.findOne({ userId });
+    const refreshedQr = await QrWallet.findOne({ userId });
     const refreshedMain = await MainWallet.findOne({ userId });
 
     return res.status(200).json({
@@ -202,7 +204,7 @@ export const transferAepsToMain = async (req, res) => {
       message: 'Wallet transfer successful.',
       transaction,
       balances: {
-        aepsBalance: refreshedAeps.balance,
+        qrBalance: refreshedQr.balance,
         mainBalance: refreshedMain.balance,
       },
     });
@@ -218,7 +220,7 @@ export const getTransferHistory = async (req, res) => {
 
     const history = await Transaction.find({
       userId,
-      type: 'AEPSTOMAIN',
+      type: { $in: ['QRTO_MAIN', 'AEPSTOMAIN'] },
     })
       .sort({ createdAt: -1 })
       .limit(50);

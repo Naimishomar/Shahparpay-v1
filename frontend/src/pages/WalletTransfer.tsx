@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 const WalletTransfer = () => {
     const { token } = useAuth();
     const [activeTab, setActiveTab] = useState<'transfer' | 'history'>('transfer');
-    const [aepsBalance, setAepsBalance] = useState<string>("0.0000");
+    const [qrBalance, setQrBalance] = useState<string>("0.0000");
     const [mainBalance, setMainBalance] = useState<string>("0.0000");
     const [amount, setAmount] = useState<string>("");
     const [pin, setPin] = useState<string>("");
@@ -32,7 +32,7 @@ const WalletTransfer = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.data.success) {
-                setAepsBalance(res.data.data.aepsBalance.toFixed(4));
+                setQrBalance(res.data.data.qrBalance.toFixed(4));
                 setMainBalance(res.data.data.mainBalance.toFixed(4));
                 setHasPin(res.data.data.hasPin);
             }
@@ -90,8 +90,8 @@ const WalletTransfer = () => {
             return;
         }
         
-        if (Number(amount) > Number(aepsBalance)) {
-            toast.error("Insufficient balance in AEPS Wallet.");
+        if (Number(amount) > Number(qrBalance)) {
+            toast.error("Insufficient balance in QR Wallet.");
             return;
         }
 
@@ -115,7 +115,7 @@ const WalletTransfer = () => {
             });
 
             if (res.data.success) {
-                setAepsBalance(res.data.balances.aepsBalance.toFixed(4));
+                setQrBalance(res.data.balances.qrBalance.toFixed(4));
                 setMainBalance(res.data.balances.mainBalance.toFixed(4));
                 setAmount("");
                 setPin("");
@@ -176,13 +176,13 @@ const WalletTransfer = () => {
                         <div className="flex flex-col gap-8 animate-in fade-in duration-300 max-w-4xl">
                             
                             <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_1fr] gap-4 md:gap-6 items-end">
-                                {/* AEPS Wallet */}
+                                {/* QR Wallet */}
                                 <div className="flex flex-col gap-2">
-                                    <label className="text-sm font-semibold text-foreground/80 pl-1">AEPS Wallet</label>
+                                    <label className="text-sm font-semibold text-foreground/80 pl-1">QR Wallet</label>
                                     <div className="relative">
                                         <input 
                                             type="text" 
-                                            value={aepsBalance}
+                                            value={qrBalance}
                                             disabled
                                             className="w-full p-3 pl-10 border border-border rounded-xl bg-muted/30 text-foreground font-medium shadow-sm transition-colors cursor-not-allowed opacity-80"
                                         />
@@ -243,7 +243,7 @@ const WalletTransfer = () => {
                                 <div>
                                     <h4 className="font-semibold text-foreground text-sm">Secure Transfer</h4>
                                     <p className="text-muted-foreground text-xs mt-1 leading-relaxed">
-                                        Wallet transfers from AEPS to Main Wallet are processed instantly. Please ensure you enter the correct amount and your 4-digit security PIN. Once processed, transfers cannot be reversed.
+                                        Wallet transfers from QR Wallet to Main Wallet are processed instantly. Please ensure you enter the correct amount and your 4-digit security PIN. Once processed, transfers cannot be reversed.
                                     </p>
                                 </div>
                             </div>
