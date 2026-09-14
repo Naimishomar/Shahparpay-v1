@@ -61,6 +61,7 @@ export const Screen: React.FC<ScreenProps> = ({
   const scroll = (
     <ScrollView
       style={styles.scrollView}
+      nestedScrollEnabled
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"

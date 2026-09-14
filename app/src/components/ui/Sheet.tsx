@@ -88,6 +88,7 @@ export const Sheet: React.FC<SheetProps> = ({
 
           <ScrollView
             style={styles.scroll}
+            nestedScrollEnabled
             contentContainerStyle={[
               styles.scrollContent,
               { paddingHorizontal: padding },

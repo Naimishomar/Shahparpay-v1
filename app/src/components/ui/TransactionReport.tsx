@@ -296,9 +296,12 @@ export const TransactionReport: React.FC<Props> = ({
         <LoadingBlock label="Loading report" />
       ) : (
         <FlatList
+          style={styles.list}
           data={items}
           keyExtractor={keyExtractor}
           contentContainerStyle={{ padding, paddingBottom: padding * 2 + insets.bottom, gap }}
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="handled"
           refreshing={report.refreshing}
           onRefresh={report.refresh}
           initialNumToRender={12}
@@ -485,6 +488,7 @@ const Tile: React.FC<{ label: string; value: string; tone?: SummaryTile['tone'] 
 
 const styles = themed((c) => ({
   container: { flex: 1, backgroundColor: c.background },
+  list: { flex: 1 },
   rangeRow: { flexDirection: 'row', gap: space.xs, flexWrap: 'wrap' },
   rangeChip: {
     // 34 visually, with hitSlop below taking the real target past 48dp. A
