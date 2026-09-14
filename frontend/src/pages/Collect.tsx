@@ -13,9 +13,8 @@ import { toast } from 'sonner';
  * which is why nothing here trusts the customer's own "I paid" and every order
  * is verified against the gateway before anything is shown as received.
  *
- * The QR is different: a standing UPI code printed against the retailer's own
- * bank account. Money scanned into it settles to that bank account directly,
- * never through the wallet.
+ * QR proceeds are handled by the platform's Icchhamati merchant account.
+ * Confirmed collection credits are kept separately in the retailer's QR wallet.
  */
 const Collect = () => {
     const { token } = useAuth();
@@ -286,9 +285,7 @@ const Collect = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm space-y-4">
                             <h2 className="text-xl font-bold text-foreground">Generate UPI QR</h2>
-                            <p className="text-sm text-muted-foreground">
-                                Money scanned into this QR settles straight to the bank account below — it does not pass through your wallet.
-                            </p>
+                            <p className="text-sm text-muted-foreground">Customer payments are settled through the platform's Icchhamati account. Confirmed collection credits are kept in your QR wallet.</p>
 
                             <div>
                                 <label className="text-sm font-medium text-foreground mb-1.5 block">Account Holder Name</label>
@@ -342,7 +339,7 @@ const Collect = () => {
                                         <p className="text-sm font-medium text-foreground break-all">{qr.upiHandle}</p>
                                     )}
                                     {qr.virtualAccountId && (
-                                        <p className="text-xs text-muted-foreground">Virtual account {qr.virtualAccountId}</p>
+                                        <p className="text-xs text-muted-foreground">Virtual account {qr.virtualAccountId} · QR wallet settlement</p>
                                     )}
                                     {qr.qrPdf && (
                                         <a href={qr.qrPdf} download="upi-qr.pdf" className="w-full py-2.5 bg-primary/10 text-primary rounded-xl font-medium hover:bg-primary/20 transition-colors flex items-center justify-center gap-2">

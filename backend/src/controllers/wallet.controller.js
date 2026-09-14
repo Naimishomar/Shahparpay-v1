@@ -1,6 +1,7 @@
 import AepsWallet from '../models/aepsWallet.model.js';
 import MainWallet from '../models/mainWallet.model.js';
 import AdminWallet from '../models/adminWallet.model.js';
+import QrWallet from '../models/qrWallet.model.js';
 import Transaction from '../models/transaction.model.js';
 import bcrypt from 'bcrypt';
 import { transferBetweenWallets } from '../utils/wallet.util.js';
@@ -10,6 +11,7 @@ import Otp from '../models/otp.model.js';
 const initializeWallets = async (userId, userModel) => {
   let aepsWallet = await AepsWallet.findOne({ userId });
   let mainWallet = await MainWallet.findOne({ userId });
+  let qrWallet = await QrWallet.findOne({ userId });
 
   if (!aepsWallet) {
     aepsWallet = await AepsWallet.create({ userId, userModel, balance: 0 });
@@ -17,8 +19,11 @@ const initializeWallets = async (userId, userModel) => {
   if (!mainWallet) {
     mainWallet = await MainWallet.create({ userId, userModel, balance: 0 });
   }
+  if (!qrWallet) {
+    qrWallet = await QrWallet.create({ userId, userModel, balance: 0 });
+  }
 
-  return { aepsWallet, mainWallet };
+  return { aepsWallet, mainWallet, qrWallet };
 };
 
 export const getBalances = async (req, res) => {
@@ -38,13 +43,14 @@ export const getBalances = async (req, res) => {
 
     const userModel = req.user.role === 'distributor' ? 'Distributor' : 'Retailer';
 
-    const { aepsWallet, mainWallet } = await initializeWallets(userId, userModel);
+    const { aepsWallet, mainWallet, qrWallet } = await initializeWallets(userId, userModel);
 
     return res.status(200).json({
       success: true,
       data: {
         aepsBalance: aepsWallet.balance,
         mainBalance: mainWallet.balance,
+        qrBalance: qrWallet.balance,
         hasPin: !!aepsWallet.pin,
       },
     });

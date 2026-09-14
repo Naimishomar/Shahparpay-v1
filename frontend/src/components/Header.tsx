@@ -18,7 +18,7 @@ const formatBalance = (value: unknown) => {
 const Header = () => {
     const { theme, setTheme } = useTheme();
     const { user, token } = useAuth();
-    const [balances, setBalances] = useState({ aepsBalance: 0, mainBalance: 0, adminBalance: 0 });
+    const [balances, setBalances] = useState({ aepsBalance: 0, mainBalance: 0, qrBalance: 0, adminBalance: 0 });
 
     useEffect(() => {
         const fetchBalances = async () => {
@@ -70,6 +70,16 @@ const Header = () => {
                                 <div>
                                     <p className="text-xs font-medium text-muted-foreground">AEPS Wallet</p>
                                     <p className="text-sm font-bold text-foreground">₹ {formatBalance(balances.aepsBalance)}</p>
+                                </div>
+                            </div>
+                            <div className="w-px h-8 bg-black/10 dark:bg-white/10"></div>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-cyan-500/10 rounded-lg border border-cyan-500/20">
+                                    <Wallet className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium text-muted-foreground">QR Wallet</p>
+                                    <p className="text-sm font-bold text-foreground">₹ {formatBalance(balances.qrBalance)}</p>
                                 </div>
                             </div>
                             <div className="w-px h-8 bg-black/10 dark:bg-white/10"></div>

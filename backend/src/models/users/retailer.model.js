@@ -147,6 +147,7 @@ const retailerSchema = new mongoose.Schema(
       accountNumber: { type: String, default: null },
       ifsc: { type: String, default: null },
       generatedAt: { type: Date, default: null },
+      settlement: { type: String, default: 'ICCHHAMATI_MAIN_WALLET' },
     },
   },
   { timestamps: true }

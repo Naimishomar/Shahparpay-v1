@@ -16,7 +16,7 @@ const CREDIT_AMOUNT_ONLY = new Set([
   'FUND_REQUEST',
   'REFUND',
   // A customer paid the retailer through the payment gateway; the whole amount
-  // lands in MAIN once the payment verifies (see collect.controller.js).
+  // lands in the QR wallet once the payment verifies (see collect.controller.js).
   'PG_COLLECTION',
   // Also an inflow, and it was missing here: the customer pays the retailer over
   // a UPI QR and finalizeUpiCashout credits MAIN with the full amount. Falling
@@ -181,6 +181,12 @@ export const getWalletDeltas = (tx) => {
   const amount = toNumber(tx.amount);
   const { net } = getCommissionSplit(tx);
   const isRefund = isRefundTxnId(tx.transactionId);
+
+  // Collection proceeds are tracked in the separate QR wallet. They must not
+  // be included in the Main wallet reconstruction.
+  if (tx.type === 'PG_COLLECTION' && tx.metadata?.collectionChannel) {
+    return { main: 0, aeps: 0 };
+  }
 
   // Refund entries always credit back to the same wallet the original used.
   if (isRefund) {
