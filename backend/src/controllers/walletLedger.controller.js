@@ -324,8 +324,12 @@ export const getWalletLedger = async (req, res) => {
       const isDailyAuth = tx.type === 'DAILY_AUTH_CHARGE';
       const isRefundRow = isRefundTxnId(tx.transactionId);
       // Commission is never shown on refund rows (refunds credit the amount only).
+      // Recharge and BBPS commission is settled in resolveTransaction and is
+      // stored on the same transaction under commissions.retailerEarned.
       const hasCommission =
-        gross > 0 && (tx.type === 'AEPS_WITHDRAWAL' || tx.type === 'AEPS_DEPOSIT') && !isRefundRow;
+        gross > 0 &&
+        ['AEPS_WITHDRAWAL', 'AEPS_DEPOSIT', 'RECHARGE', 'BILL_PAYMENT'].includes(tx.type) &&
+        !isRefundRow;
 
       // TDS (2%) is deducted ONLY from commission-paying transactions, never
       // from the principal. The daily 2FA auth charge is shown under GST (₹1).
