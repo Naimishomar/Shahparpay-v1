@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Image, Share } from 'react-native';
+import { View, Text, Share } from 'react-native';
 import { themed, radius, space, type as t } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -10,7 +10,6 @@ import {
   EmptyState,
   ErrorBanner,
   Row,
-  Segmented,
   StatusPill,
   SuccessBanner,
   money,
@@ -19,15 +18,11 @@ import {
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
 
-const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
-
 /** The gateway refuses anything smaller: "Minimum amount is 200.00". */
 const MIN_ORDER_AMOUNT = 200;
 
-const TABS = [
-  { key: 'link', label: 'Payment link' },
-  { key: 'qr', label: 'UPI QR' },
-];
+/** The gateway refuses an order with no email, though it documents it optional. */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Collecting money from a customer.
@@ -37,13 +32,10 @@ const TABS = [
  * why nothing here trusts the customer saying they paid and every order is
  * checked against the gateway.
  *
- * The QR is different: a standing UPI code against the retailer's own bank
- * account. Money scanned into it settles to that account directly, never
- * through the wallet.
+ * The standing counter QR is issued from UPI payments, not here, but its
+ * proceeds are collections too, so they are listed below alongside the links.
  */
 export const CollectScreen: React.FC = () => {
-  const [tab, setTab] = useState('link');
-
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
@@ -51,18 +43,13 @@ export const CollectScreen: React.FC = () => {
   const [order, setOrder] = useState<any>(null);
   const [notice, setNotice] = useState('');
 
-  const [qrName, setQrName] = useState('');
-  const [qrAccount, setQrAccount] = useState('');
-  const [qrIfsc, setQrIfsc] = useState('');
-  const [qr, setQr] = useState<any>(null);
-
   const history = useAsync<any[]>(async () => (await api.getCollectionHistory()).data ?? [], []);
 
   const createOrder = useAction(async () => {
     const res = await api.createCollectionOrder({
       name: name.trim(),
       mobile: mobile.trim(),
-      email: email.trim() || undefined,
+      email: email.trim(),
       amount: Number(amount),
     });
     if (!res.success) throw new Error(res.message);
@@ -76,20 +63,11 @@ export const CollectScreen: React.FC = () => {
     return { status: res.data?.status ?? 'PENDING', message: res.message };
   });
 
-  const makeQr = useAction(async () => {
-    const res = await api.generateCollectionQr({
-      name: qrName.trim(),
-      account_number: qrAccount.trim(),
-      account_ifsc: qrIfsc.trim().toUpperCase(),
-    });
-    if (!res.success) throw new Error(res.message);
-    return res.data;
-  });
-
   const orderValid =
-    name.trim().length > 2 && mobile.length === 10 && Number(amount) >= MIN_ORDER_AMOUNT;
-  const qrValid =
-    qrName.trim().length > 2 && qrAccount.trim().length >= 6 && IFSC_RE.test(qrIfsc.trim().toUpperCase());
+    name.trim().length > 2 &&
+    mobile.length === 10 &&
+    EMAIL_RE.test(email.trim()) &&
+    Number(amount) >= MIN_ORDER_AMOUNT;
 
   const onCheck = async (transactionId: string) => {
     const res = await verify.run(transactionId);
@@ -108,196 +86,114 @@ export const CollectScreen: React.FC = () => {
       error={history.error}
       onRetry={history.reload}
     >
-      <Segmented options={TABS} value={tab} onChange={setTab} />
+      <Card>
+        <CardHeader>
+          <CardTitle icon="link-variant">New payment request</CardTitle>
+        </CardHeader>
+        <CardContent style={styles.form}>
+          <Input
+            label="Customer name"
+            required
+            value={name}
+            onChangeText={setName}
+            leftIcon="account-outline"
+          />
+          <Input
+            label="Customer mobile"
+            required
+            value={mobile}
+            onChangeText={(v) => setMobile(v.replace(/\D/g, '').slice(0, 10))}
+            keyboardType="number-pad"
+            placeholder="10-digit mobile number"
+            leftIcon="phone-outline"
+            autoComplete="tel"
+          />
+          <Input
+            label="Customer email"
+            required
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            leftIcon="email-outline"
+            error={email.trim() && !EMAIL_RE.test(email.trim()) ? 'Enter a valid email address' : undefined}
+          />
+          <Input
+            label="Amount"
+            required
+            value={amount}
+            onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))}
+            keyboardType="decimal-pad"
+            placeholder={`${MIN_ORDER_AMOUNT}.00`}
+            leftIcon="currency-inr"
+            error={
+              amount && Number(amount) < MIN_ORDER_AMOUNT
+                ? `The minimum payment amount is ₹${MIN_ORDER_AMOUNT}`
+                : undefined
+            }
+          />
+          {!!createOrder.error && <ErrorBanner message={createOrder.error} />}
+          <Button
+            onPress={async () => {
+              setNotice('');
+              const data = await createOrder.run();
+              if (data) {
+                setOrder({ ...data, status: 'PENDING' });
+                history.reload();
+              }
+            }}
+            loading={createOrder.pending}
+            disabled={!orderValid}
+            icon="link-plus"
+            size="lg"
+            fullWidth
+          >
+            Create payment link
+          </Button>
+        </CardContent>
+      </Card>
 
-      {tab === 'link' && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle icon="link-variant">New payment request</CardTitle>
-            </CardHeader>
-            <CardContent style={styles.form}>
-              <Input
-                label="Customer name"
-                required
-                value={name}
-                onChangeText={setName}
-                leftIcon="account-outline"
-              />
-              <Input
-                label="Customer mobile"
-                required
-                value={mobile}
-                onChangeText={(v) => setMobile(v.replace(/\D/g, '').slice(0, 10))}
-                keyboardType="number-pad"
-                placeholder="10-digit mobile number"
-                leftIcon="phone-outline"
-                autoComplete="tel"
-              />
-              <Input
-                label="Customer email"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                leftIcon="email-outline"
-              />
-              <Input
-                label="Amount"
-                required
-                value={amount}
-                onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))}
-                keyboardType="decimal-pad"
-                placeholder={`${MIN_ORDER_AMOUNT}.00`}
-                leftIcon="currency-inr"
-                error={
-                  amount && Number(amount) < MIN_ORDER_AMOUNT
-                    ? `The minimum payment amount is ₹${MIN_ORDER_AMOUNT}`
-                    : undefined
-                }
-              />
-              {!!createOrder.error && <ErrorBanner message={createOrder.error} />}
-              <Button
-                onPress={async () => {
-                  setNotice('');
-                  const data = await createOrder.run();
-                  if (data) {
-                    setOrder({ ...data, status: 'PENDING' });
-                    history.reload();
-                  }
-                }}
-                loading={createOrder.pending}
-                disabled={!orderValid}
-                icon="link-plus"
-                size="lg"
-                fullWidth
-              >
-                Create payment link
-              </Button>
-            </CardContent>
-          </Card>
-
-          {!!order && (
-            <Card>
-              <CardHeader>
-                <CardTitle icon="receipt">Payment link</CardTitle>
-              </CardHeader>
-              <CardContent style={styles.form}>
-                <View style={styles.infoBox}>
-                  <Row label="Amount" value={money(order.amount)} mono />
-                  <Row label="Order" value={order.orderId} />
-                  <Row label="Status" value={order.status} last />
-                </View>
-                <Text style={styles.link} selectable>
-                  {order.paymentUrl}
-                </Text>
-                <Button
-                  variant="outline"
-                  icon="share-variant-outline"
-                  onPress={() =>
-                    Share.share({
-                      message: `Pay ₹${order.amount} here: ${order.paymentUrl}`,
-                    })
-                  }
-                  fullWidth
-                >
-                  Send to customer
-                </Button>
-                {!!verify.error && <ErrorBanner message={verify.error} />}
-                {!!notice && <SuccessBanner message={notice} />}
-                <Button
-                  variant="secondary"
-                  icon="refresh"
-                  onPress={() => onCheck(order.transactionId)}
-                  loading={verify.pending}
-                  fullWidth
-                >
-                  Check payment status
-                </Button>
-                <Banner
-                  tone="info"
-                  message="Your wallet is credited only once the gateway confirms the payment."
-                />
-              </CardContent>
-            </Card>
-          )}
-        </>
-      )}
-
-      {tab === 'qr' && (
+      {!!order && (
         <Card>
           <CardHeader>
-            <CardTitle icon="qrcode">UPI QR</CardTitle>
+            <CardTitle icon="receipt">Payment link</CardTitle>
           </CardHeader>
           <CardContent style={styles.form}>
-            <Banner
-              tone="info"
-              message="Money scanned into this QR settles straight to the bank account below — it does not pass through your wallet."
-            />
-            <Input
-              label="Account holder name"
-              required
-              value={qrName}
-              onChangeText={setQrName}
-              leftIcon="account-outline"
-            />
-            <Input
-              label="Account number"
-              required
-              value={qrAccount}
-              onChangeText={(v) => setQrAccount(v.replace(/\D/g, ''))}
-              keyboardType="number-pad"
-              leftIcon="numeric"
-            />
-            <Input
-              label="IFSC code"
-              required
-              value={qrIfsc}
-              onChangeText={setQrIfsc}
-              autoCapitalize="characters"
-              maxLength={11}
-              leftIcon="bank-outline"
-              error={
-                qrIfsc.length === 11 && !IFSC_RE.test(qrIfsc.toUpperCase())
-                  ? 'Invalid IFSC format'
-                  : undefined
-              }
-            />
-            {!!makeQr.error && <ErrorBanner message={makeQr.error} />}
+            <View style={styles.infoBox}>
+              <Row label="Amount" value={money(order.amount)} mono />
+              <Row label="Order" value={order.orderId} />
+              <Row label="Status" value={order.status} last />
+            </View>
+            <Text style={styles.link} selectable>
+              {order.paymentUrl}
+            </Text>
             <Button
-              onPress={async () => {
-                const data = await makeQr.run();
-                if (data) setQr(data);
-              }}
-              loading={makeQr.pending}
-              disabled={!qrValid}
-              icon="qrcode-plus"
-              size="lg"
+              variant="outline"
+              icon="share-variant-outline"
+              onPress={() =>
+                Share.share({
+                  message: `Pay ₹${order.amount} here: ${order.paymentUrl}`,
+                })
+              }
               fullWidth
             >
-              Generate QR code
+              Send to customer
             </Button>
-
-            {!!qr && (
-              <View style={styles.qrBox}>
-                {!!qr.qrImage && (
-                  <Image
-                    source={{ uri: qr.qrImage }}
-                    style={styles.qrImage}
-                    resizeMode="contain"
-                    accessibilityLabel="UPI QR code"
-                  />
-                )}
-                {!!qr.upiHandle && (
-                  <Text style={styles.qrHandle} selectable>
-                    {qr.upiHandle}
-                  </Text>
-                )}
-                {!!qr.virtualAccountId && (
-                  <Text style={styles.qrMeta}>Virtual account {qr.virtualAccountId}</Text>
-                )}
-              </View>
-            )}
+            {!!verify.error && <ErrorBanner message={verify.error} />}
+            {!!notice && <SuccessBanner message={notice} />}
+            <Button
+              variant="secondary"
+              icon="refresh"
+              onPress={() => onCheck(order.transactionId)}
+              loading={verify.pending}
+              fullWidth
+            >
+              Check payment status
+            </Button>
+            <Banner
+              tone="info"
+              message="Your wallet is credited only once the gateway confirms the payment."
+            />
           </CardContent>
         </Card>
       )}
@@ -349,10 +245,6 @@ const styles = themed((c) => ({
     borderWidth: 1,
     borderColor: c.border,
   },
-  qrBox: { alignItems: 'center', gap: space.sm, paddingVertical: space.md },
-  qrImage: { width: 220, height: 220, backgroundColor: '#FFFFFF', borderRadius: radius.md },
-  qrHandle: { fontSize: t.small, fontWeight: '700', color: c.foreground },
-  qrMeta: { fontSize: t.micro, color: c.mutedForeground },
   item: { paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
   itemTop: {
     flexDirection: 'row',

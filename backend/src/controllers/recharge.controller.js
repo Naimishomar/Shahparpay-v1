@@ -206,16 +206,21 @@ export const getCircles = async (req, res) => {
 };
 
 /**
- * The BBPS categories worth offering.
+ * Every BBPS category the provider publishes.
  *
  * `id` is the provider's own category name, verbatim, because that exact string
  * is the only thing /billers-by-category answers to.
  *
- * The provider publishes 28 categories but has billers behind only a handful of
- * them, so most tiles could only ever answer "no billers are available for this
- * category". A category is offered once the provider confirms it has at least
- * one biller; one whose lookup is refused is kept, because a provider that is
- * briefly unreachable must not empty the screen.
+ * The provider lists far more categories than it has billers for, and asking
+ * for an empty one succeeds — `status: 1` with no billers — so those used to
+ * open a form that could only answer "no billers are available for this
+ * category". None is dropped: a category the provider lists is a service it
+ * intends to offer, and a missing tile looks like our bug rather than their
+ * registry. `available` says whether a retailer can get anywhere by opening it,
+ * so the screen can show the category and still keep it shut.
+ *
+ * A category whose lookup is refused stays available: a provider that is
+ * briefly unreachable must not grey out the whole screen.
  */
 export const getBillCategories = async (req, res) => {
   try {
@@ -230,30 +235,37 @@ export const getBillCategories = async (req, res) => {
     const rows = (data.categories || data.data || []).filter((row) =>
       String(row.category || '').trim()
     );
-    const categories = (
-      await Promise.all(
-        rows.map(async (row) => {
-          const category = String(row.category).trim();
-          const billers = await fetchBillers(category).catch(() => ({ ok: false, rows: [] }));
-          if (billers.ok && !billers.rows.length) return null;
-          return {
-            id: category,
-            name: row.name || category,
-            category,
-            providerCategory: category,
-            label: row.label || null,
-            image: row.biller_icon || row.icon || null,
-            billerCount: billers.rows.length,
-          };
-        })
-      )
-    ).filter(Boolean);
+    const categories = await Promise.all(
+      rows.map(async (row) => {
+        const category = String(row.category).trim();
+        const billers = await fetchBillers(category).catch(() => ({ ok: false, rows: [] }));
+        return {
+          id: category,
+          name: row.name || category,
+          category,
+          providerCategory: category,
+          label: row.label || null,
+          image: row.biller_icon || row.icon || null,
+          billerCount: billers.rows.length,
+          available: !billers.ok || billers.rows.length > 0,
+        };
+      })
+    );
 
     // Postpaid mobile is billed like any other utility, but its operators live
     // in the operator registry rather than the biller registry, so the
     // provider's own "Mobile Postpaid" category row has nothing behind it and
-    // is dropped above.
-    if (!categories.some((category) => /^(mobile )?postpaid$/i.test(category.id))) {
+    // reads as unavailable. Point that row at the operator registry instead of
+    // adding a second postpaid tile beside a greyed-out one.
+    const postpaid = categories.find((category) => /^(mobile )?postpaid$/i.test(category.id));
+    if (postpaid && !postpaid.available) {
+      Object.assign(postpaid, {
+        id: OPERATOR_CATEGORY.postpaid,
+        category: OPERATOR_CATEGORY.postpaid,
+        providerCategory: OPERATOR_CATEGORY.postpaid,
+        available: true,
+      });
+    } else if (!postpaid) {
       categories.push({
         id: OPERATOR_CATEGORY.postpaid,
         name: 'Postpaid',
@@ -262,6 +274,7 @@ export const getBillCategories = async (req, res) => {
         label: 'Mobile Number',
         image: null,
         billerCount: 0,
+        available: true,
       });
     }
 

@@ -23,7 +23,6 @@ const CREDIT_AMOUNT_ONLY = new Set([
   // through to the default debit made the ledger subtract money the wallet had
   // just received, so a retailer's reconstructed balance drifted by twice the
   // value of every UPI collection.
-  'UPI_CASHOUT',
 ]);
 
 const MONEY_MOVING_STATUSES = ['SUCCESS', 'REFUNDED', 'APPROVED'];
@@ -67,7 +66,6 @@ const TXNTYPE_LABELS = {
   FUND_TRANSFER: 'Fund Transfer',
   STD_PAN_CARD: 'PAN Card',
   PG_COLLECTION: 'Payment Collected',
-  UPI_CASHOUT: 'UPI Collection',
 };
 
 const toNumber = (v) => {

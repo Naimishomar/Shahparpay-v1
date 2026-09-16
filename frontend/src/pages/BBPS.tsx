@@ -65,6 +65,11 @@ const BBPS = () => {
                     label: cat.label || null,
                     providerCategory: cat.providerCategory || cat.category || cat.id,
                     image: cat.image || null,
+                    // The provider lists the category but has no biller behind
+                    // it yet. The tile stays, so the service does not look
+                    // dropped, but it does not open onto a form that can only
+                    // fail.
+                    available: cat.available !== false,
                     ...styleFor(cat.name || cat.category || ''),
                 })));
             } catch (error) {
@@ -97,6 +102,10 @@ const BBPS = () => {
     };
 
     const handleServiceClick = (service: any) => {
+        if (!service.available) {
+            toast.info(`${service.name} is not live on our BBPS provider yet.`);
+            return;
+        }
         setSelectedService(service);
         setOperatorId("");
         setConsumerNumber("");
@@ -272,12 +281,20 @@ const BBPS = () => {
                             <div 
                                 key={service.id}
                                 onClick={() => handleServiceClick(service)}
-                                className={`flex flex-col items-center justify-center aspect-square border ${service.border} rounded-2xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 hover:scale-105 hover:shadow-[0_0_15px_rgba(var(--primary),0.2)] transition-all bg-background/50 backdrop-blur-sm group/card`}
+                                title={service.available ? undefined : `${service.name} is not live on our BBPS provider yet`}
+                                className={`relative flex flex-col items-center justify-center aspect-square border ${service.border} rounded-2xl transition-all bg-background/50 backdrop-blur-sm group/card ${
+                                    service.available
+                                        ? 'cursor-pointer hover:border-primary/50 hover:bg-primary/5 hover:scale-105 hover:shadow-[0_0_15px_rgba(var(--primary),0.2)]'
+                                        : 'cursor-not-allowed opacity-40 grayscale'
+                                }`}
                             >
-                                <div className={`p-4 rounded-full bg-background mb-3 shadow-inner group-hover/card:scale-110 transition-transform ${service.color}`}>
+                                <div className={`p-4 rounded-full bg-background mb-3 shadow-inner ${service.available ? 'group-hover/card:scale-110 transition-transform' : ''} ${service.color}`}>
                                     <service.icon className="w-8 h-8" />
                                 </div>
-                                <span className="text-sm font-semibold capitalize text-foreground">{service.name}</span>
+                                <span className="text-sm font-semibold capitalize text-foreground text-center px-1">{service.name}</span>
+                                {!service.available && (
+                                    <span className="absolute bottom-2 text-[10px] uppercase tracking-wide text-muted-foreground">Coming soon</span>
+                                )}
                             </div>
                         ))}
                     </div>

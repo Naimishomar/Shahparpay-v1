@@ -60,7 +60,6 @@ const EXPECTED = {
   AEPS_DEPOSIT_REFUND: ['main', +1],
   // Inflows: the customer paid the retailer, over the gateway or a UPI QR.
   PG_COLLECTION: ['main', +1],
-  UPI_CASHOUT: ['main', +1],
   FUND_TRANSFER: ['main', -1],
   RECHARGE: ['main', -1],
   BILL_PAYMENT: ['main', -1],

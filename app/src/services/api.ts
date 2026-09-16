@@ -658,19 +658,6 @@ class ApiService {
     return this.get(API_ENDPOINTS.collect.history);
   }
 
-  // ----------------------------------------------------------------- UPI
-  async getUpiMerchantStatus() {
-    return this.get(API_ENDPOINTS.upi.merchantStatus);
-  }
-
-  async generateUpiToken(data: { mobile: string; amount: number; redirectUrl?: string }) {
-    return this.post(API_ENDPOINTS.upi.generateToken, data);
-  }
-
-  async getUpiTxnStatus(data: { transactionId?: string; refid?: string }) {
-    return this.post(API_ENDPOINTS.upi.status, data);
-  }
-
   // ----------------------------------------------------------------- PAN
   async getMyPsaStatus() {
     return this.get(API_ENDPOINTS.pan.myPsaStatus);

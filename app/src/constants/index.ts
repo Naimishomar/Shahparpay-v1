@@ -151,11 +151,11 @@ export const SERVICE_ITEMS: MenuEntry[] = [
   { name: 'DMT', route: 'DMT', icon: 'bank-transfer', hint: 'Money transfer', group: 'Banking' },
   { name: 'Wallet Transfer', route: 'WalletTransfer', icon: 'wallet-plus-outline', hint: 'AEPS to main wallet', group: 'Banking' },
   { name: 'Direct Payout', route: 'DirectPayout', icon: 'cash-fast', hint: 'Pay any account', group: 'Banking' },
-  { name: 'UPI Collect', route: 'UPIPayments', icon: 'qrcode', hint: 'Collect on UPI', group: 'Banking' },
+  { name: 'UPI Payments', route: 'UPIPayments', icon: 'qrcode', hint: 'Printable counter QR', group: 'Payments' },
 
   { name: 'Recharge', route: 'Recharge', icon: 'cellphone', hint: 'Mobile & DTH', group: 'Payments' },
   { name: 'BBPS', route: 'BBPS', icon: 'receipt', hint: 'Utility bills', group: 'Payments' },
-  { name: 'Collect Payments', route: 'Collect', icon: 'qrcode-scan', hint: 'Payment link & UPI QR', group: 'Payments' },
+  { name: 'Collect Payments', route: 'Collect', icon: 'link-variant', hint: 'Payment links', group: 'Payments' },
   { name: 'Fund Request', route: 'FundRequest', icon: 'hand-coin-outline', hint: 'Top up wallet', group: 'Payments' },
 
   { name: 'PAN Card', route: 'PAN', icon: 'card-account-details-outline', hint: 'PSA & applications', group: 'Government' },
@@ -300,11 +300,6 @@ export const API_ENDPOINTS = {
     verify: '/api/collect/verify',
     qr: '/api/collect/qr',
     history: '/api/collect/history',
-  },
-  upi: {
-    merchantStatus: '/api/upi/cashout/merchant-status',
-    generateToken: '/api/upi/cashout/generate-token',
-    status: '/api/upi/cashout/status',
   },
   pan: {
     // Biometric PSA (PaySprint)

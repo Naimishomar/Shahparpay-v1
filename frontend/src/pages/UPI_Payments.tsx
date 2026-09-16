@@ -1,361 +1,187 @@
-import { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Wallet, Loader2, ExternalLink, RefreshCw, CheckCircle2, XCircle, Hourglass, Smartphone, IndianRupee } from 'lucide-react';
+import { useState } from 'react';
+import { QrCode, Download, Loader2, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
-type TxnStatus = 'idle' | 'PENDING' | 'SUCCESS' | 'FAILED';
-
+/**
+ * A standing UPI QR for the counter.
+ *
+ * The retailer names the account the money should settle to, that account is
+ * verified against the bank before anything is printed — a QR pointing at a
+ * mistyped account number sends every customer's payment somewhere else, and it
+ * is printed and stuck to a counter, so there is no second chance to catch it —
+ * and the confirmed QR is then issued against the platform's Icchhamati
+ * merchant account.
+ *
+ * Proceeds are NOT credited automatically. Icchhamati issues one virtual
+ * account per merchant account rather than per retailer — /api/qr-details
+ * returns a single VA for the whole MID and /api/v2/generate-qr takes no
+ * retailer identifier — and publishes neither a webhook registration nor a
+ * collections feed. So a payment cannot be attributed to the retailer whose QR
+ * was scanned, and support reconciles it by hand from the Icchhamati portal.
+ * The banner below says so rather than letting the screen imply otherwise.
+ */
 const UPI_Payments = () => {
-    const { token, user } = useAuth();
-    const [searchParams, setSearchParams] = useSearchParams();
+    const { token } = useAuth();
 
-    const [mobile, setMobile] = useState('');
-    const [amount, setAmount] = useState('');
+    const [qrForm, setQrForm] = useState({ name: '', account_number: '', account_ifsc: '' });
+    const [qr, setQr] = useState<any>(null);
+    const [bankVerification, setBankVerification] = useState<any>(null);
+    const [verifyingBank, setVerifyingBank] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [status, setStatus] = useState<TxnStatus>('idle');
-    const [message, setMessage] = useState('');
-    const [txn, setTxn] = useState<any>(null);
-    const [polling, setPolling] = useState(false);
-    const [merchantOk, setMerchantOk] = useState<boolean | null>(null);
-    const [merchantStatusMsg, setMerchantStatusMsg] = useState('');
-    const [checkingMerchant, setCheckingMerchant] = useState(true);
-    const [onboarding, setOnboarding] = useState(false);
 
-    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const api = `${import.meta.env.VITE_BACKEND_URL}/api/collect`;
+    const getHeaders = () => ({ headers: { Authorization: `Bearer ${token}` } });
 
-    const getHeaders = () => ({ headers: { 'Authorization': `Bearer ${token}` } });
-
-    const stopPolling = () => {
-        if (pollRef.current) {
-            clearInterval(pollRef.current);
-            pollRef.current = null;
+    const verifyBank = async () => {
+        if (!qrForm.name.trim() || !qrForm.account_number || !qrForm.account_ifsc) {
+            return toast.error('Enter the account holder name, account number and IFSC');
         }
-        setPolling(false);
-    };
-
-    const checkMerchantStatus = async () => {
-        setCheckingMerchant(true);
+        setVerifyingBank(true);
         try {
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/upi/cashout/merchant-status`, getHeaders());
-            if (res.data?.success) {
-                setMerchantOk(res.data.data?.onboarded ?? null);
-                setMerchantStatusMsg(res.data.data?.message || '');
-            }
+            const res = await axios.post(`${api}/verify-bank-account`, qrForm, getHeaders());
+            const details = res.data.data || null;
+            setBankVerification(details);
+            if (res.data.success) toast.success(res.data.message || 'Bank account verified');
+            else toast.error(res.data.message || 'Bank account details did not match');
         } catch (error: any) {
-            setMerchantOk(null);
-            console.error('Merchant status check failed', error);
+            setBankVerification(error.response?.data?.data || null);
+            toast.error(error.response?.data?.message || 'Could not verify the bank account');
         } finally {
-            setCheckingMerchant(false);
+            setVerifyingBank(false);
         }
     };
 
-    // Kicks off PaySprint Bank 6 web onboarding for the current merchant.
-    const handleStartOnboarding = async () => {
-        const merchantId = user?.retailerId || user?.distributorId;
-        if (!merchantId) return toast.error('Merchant code not found');
-        setOnboarding(true);
-        try {
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/paysprint/get-onboard-url`, {
-                merchantId,
-                isNew: false,
-                pipe: 'bank6'
-            }, getHeaders());
-
-            if (res.data?.success && res.data.alreadyOnboarded) {
-                toast.success('Your merchant is already onboarded on Bank 6!');
-                checkMerchantStatus();
-            } else if (res.data?.success && res.data.url) {
-                window.open(res.data.url, '_blank', 'noopener,noreferrer');
-                toast.success('Bank 6 onboarding page opened. Complete it, then come back and re-check your status.');
-            } else {
-                toast.error(res.data?.message || 'Failed to start Bank 6 onboarding');
-            }
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to start Bank 6 onboarding');
-        } finally {
-            setOnboarding(false);
+    const generateQr = async () => {
+        if (!qrForm.name.trim() || !qrForm.account_number || !qrForm.account_ifsc) {
+            return toast.error('Enter the account holder name, account number and IFSC');
         }
-    };
-
-    const checkStatus = async (transactionId: string) => {
-        try {
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/upi/cashout/status`, { transactionId }, getHeaders());
-            const data = res.data?.data;
-            if (!res.data?.success || !data) return;
-
-            setStatus(data.status);
-            setTxn(data.transaction || null);
-            setMessage(data.message || data.transaction?.metadata?.gatewayMessage || '');
-
-            if (data.status === 'SUCCESS' || data.status === 'FAILED') {
-                stopPolling();
-                if (data.status === 'SUCCESS') {
-                    window.dispatchEvent(new Event('wallet-updated'));
-                    toast.success('UPI cashout successful! Amount credited to your MAIN wallet.');
-                } else if (data.status === 'FAILED') {
-                    toast.error(data.message || 'UPI cashout failed.');
-                }
-            }
-        } catch (error: any) {
-            console.error('Status check failed', error);
+        if (!bankVerification?.verified) {
+            return toast.error('Verify the bank account before generating the QR code');
         }
-    };
-
-    const startPolling = (transactionId: string) => {
-        stopPolling();
-        setPolling(true);
-        checkStatus(transactionId);
-        pollRef.current = setInterval(() => checkStatus(transactionId), 4000);
-    };
-
-    useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        checkMerchantStatus();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    useEffect(() => {
-        const txnId = searchParams.get('txn');
-        if (txnId) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            startPolling(txnId);
-            setSearchParams({}, { replace: true });
-        }
-        return () => stopPolling();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    // When the user returns from the PaySprint onboarding tab, refresh status.
-    useEffect(() => {
-        const onFocus = () => {
-            if (!polling && merchantOk === false) checkMerchantStatus();
-        };
-        window.addEventListener('focus', onFocus);
-        return () => window.removeEventListener('focus', onFocus);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [polling, merchantOk]);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!mobile || !amount) return toast.error('Enter customer mobile and amount');
-        if (!/^\d{10}$/.test(mobile)) return toast.error('Enter a valid 10-digit customer mobile number');
-
         setLoading(true);
-        setStatus('PENDING');
-        setMessage('');
-        setTxn(null);
         try {
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/upi/cashout/generate-token`, {
-                mobile,
-                amount: Number(amount)
-            }, getHeaders());
-
-            if (res.data?.success && res.data.data?.url) {
-                window.open(res.data.data.url, '_blank', 'noopener,noreferrer');
-                startPolling(res.data.data.transactionId);
-                toast.success('UPI Cashout QR page opened. Awaiting customer payment...');
+            const res = await axios.post(`${api}/qr`, qrForm, getHeaders());
+            if (res.data.success) {
+                setQr(res.data.data);
+                toast.success(res.data.message || 'QR code generated');
             } else {
-                setStatus('FAILED');
-                setMessage(res.data?.message || 'Failed to generate UPI cashout');
-                toast.error(res.data?.message || 'Failed to generate UPI cashout');
+                toast.error(res.data.message || 'Could not generate the QR code');
             }
         } catch (error: any) {
-            setStatus('FAILED');
-            setMessage(error.response?.data?.message || 'Failed to initiate UPI cashout');
-            toast.error(error.response?.data?.message || 'Failed to initiate UPI cashout');
+            toast.error(error.response?.data?.message || 'Could not generate the QR code');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
-    const resetForm = () => {
-        stopPolling();
-        setStatus('idle');
-        setMessage('');
-        setTxn(null);
-        setMobile('');
-        setAmount('');
+    const input = 'w-full px-3 py-2.5 bg-background border border-border/50 rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all';
+
+    // Any edit invalidates the verification: a QR must never be issued against
+    // an account number that differs from the one the bank confirmed.
+    const editQrForm = (patch: Partial<typeof qrForm>) => {
+        setQrForm((prev) => ({ ...prev, ...patch }));
+        setBankVerification(null);
     };
 
     return (
-        <div className="flex flex-col gap-6 w-full p-2 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="flex items-center gap-8">
-                    <h1 className="text-2xl font-bold text-glow flex items-center gap-3">
-                        <Wallet className="w-7 h-7 text-primary" />
-                        UPI Cashout
+        <div className="min-h-screen bg-background p-4 lg:p-8">
+            <div className="max-w-5xl mx-auto space-y-6">
+
+                <div className="flex flex-col gap-2">
+                    <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+                        <QrCode className="w-8 h-8 text-primary" />
+                        UPI Payments
                     </h1>
+                    <p className="text-muted-foreground">Generate a printable UPI QR so customers can pay you straight at the counter.</p>
                 </div>
-            </div>
 
-            {checkingMerchant ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Checking merchant onboarding status...
+                <div className="flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-400">
+                    <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+                    <p>
+                        <span className="font-semibold">Collections are not credited automatically yet.</span>{' '}
+                        Payments into this QR reach the company account and are credited to your QR wallet by support, usually within 24 hours.
+                        For an instant credit, send the customer a payment link from Collect Payments instead.
+                    </p>
                 </div>
-            ) : merchantOk === false ? (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg border border-yellow-500/40 bg-yellow-500/10 text-yellow-700 text-sm">
-                    <div className="flex items-start gap-2">
-                        <span>Your merchant is not onboarded for UPI Cashout (Bank 6). {merchantStatusMsg ? `PaySprint: ${merchantStatusMsg}` : 'Complete onboarding before accepting payments.'}</span>
-                    </div>
-                    <button
-                        onClick={handleStartOnboarding}
-                        disabled={onboarding}
-                        className="flex items-center gap-2 justify-center bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50 whitespace-nowrap"
-                    >
-                        {onboarding ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
-                        Onboard for Bank 6
-                    </button>
-                </div>
-            ) : merchantOk === true ? (
-                <div className="flex items-center justify-between gap-3 p-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-600 text-sm">
-                    <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Merchant is onboarded on Bank 6 — UPI Cashout is ready.</span>
-                    </div>
-                    <button
-                        onClick={checkMerchantStatus}
-                        className="flex items-center gap-2 justify-center border border-emerald-500/40 hover:bg-emerald-500/10 text-emerald-600 px-3 py-1.5 rounded-md font-medium transition-colors whitespace-nowrap"
-                    >
-                        <RefreshCw className="w-4 h-4" /> Re-check
-                    </button>
-                </div>
-            ) : null}
 
-            {/* Main Container */}
-            <div className="flex flex-col gap-6 glass-card p-6 rounded-2xl relative overflow-hidden group border border-border">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-50 pointer-events-none"></div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm space-y-4">
+                        <h2 className="text-xl font-bold text-foreground">Generate UPI QR</h2>
+                        <p className="text-sm text-muted-foreground">Customer payments are settled through the platform's Icchhamati account, then passed on to your QR wallet by support.</p>
 
-                <div className="relative z-10 flex flex-col gap-6">
-                    <div className="flex flex-col gap-4 bg-primary/5 p-5 border-l-4 border-primary rounded-lg">
-                        <div className="flex justify-between items-center border-b border-border/50 pb-2">
-                            <h2 className="text-lg font-bold text-foreground">Give Cash, Get Paid via UPI</h2>
-                            <span className="text-xs px-3 py-1 bg-emerald-500/20 text-emerald-600 rounded-full font-medium">Credits to Main Wallet</span>
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-1.5 block">Account Holder Name</label>
+                            <input type="text" className={input} value={qrForm.name} onChange={e => editQrForm({ name: e.target.value })} />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-1.5 block">Account Number</label>
+                            <input type="text" className={input} value={qrForm.account_number} onChange={e => editQrForm({ account_number: e.target.value.replace(/\D/g, '') })} />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-1.5 block">IFSC Code</label>
+                            <input type="text" className={`${input} uppercase`} value={qrForm.account_ifsc} onChange={e => editQrForm({ account_ifsc: e.target.value.toUpperCase() })} />
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-foreground">Customer Mobile</label>
-                                    <div className="relative">
-                                        <Smartphone className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                                        <input
-                                            type="tel"
-                                            value={mobile}
-                                            onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                            placeholder="10-digit mobile number"
-                                            required
-                                            disabled={polling}
-                                            className="w-full pl-9 pr-3 py-2.5 bg-background border border-border rounded-md focus:border-primary outline-none shadow-sm transition-colors text-foreground"
-                                        />
-                                    </div>
-                                </div>
+                        <button onClick={verifyBank} disabled={verifyingBank} className="w-full py-3 bg-secondary text-secondary-foreground rounded-xl font-bold hover:bg-secondary/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                            {verifyingBank && <Loader2 className="w-4 h-4 animate-spin" />}
+                            {verifyingBank ? 'Verifying...' : 'Verify Bank Account'}
+                        </button>
 
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-foreground">Amount (₹)</label>
-                                    <div className="relative">
-                                        <IndianRupee className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                                        <input
-                                            type="number"
-                                            value={amount}
-                                            onChange={(e) => setAmount(e.target.value)}
-                                            placeholder="0.00"
-                                            required
-                                            min="1"
-                                            disabled={polling}
-                                            className="w-full pl-9 pr-3 py-2.5 bg-background border border-border rounded-md focus:border-primary outline-none shadow-sm transition-colors text-foreground"
-                                        />
-                                    </div>
+                        {bankVerification && (
+                            <div className={`rounded-xl border p-4 text-sm space-y-3 ${bankVerification.verified ? 'border-green-500/30 bg-green-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
+                                <div className="flex items-center justify-between">
+                                    <span className="font-semibold text-foreground">Bank verification details</span>
+                                    <span className={bankVerification.verified ? 'text-green-600' : 'text-red-600'}>{bankVerification.verified ? 'VERIFIED' : 'NOT VERIFIED'}</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-left">
+                                    {[
+                                        ['Transaction ID', bankVerification.txnid], ['Status', bankVerification.status],
+                                        ['Account Name', bankVerification.AccountName], ['Account Number', bankVerification.AccountNumber],
+                                        ['Account Status', bankVerification.accountStatus], ['Bank', bankVerification.bank_name],
+                                        ['UTR', bankVerification.utr], ['City', bankVerification.city],
+                                        ['Branch', bankVerification.branch], ['MICR', bankVerification.micr],
+                                        ['Response', bankVerification.resText], ['Name Match', bankVerification.nameMatch ? 'YES' : 'NO'],
+                                        ['Account Match', bankVerification.accountMatch ? 'YES' : 'NO'],
+                                    ].map(([label, value]) => <div key={label} className="min-w-0"><div className="text-xs text-muted-foreground">{label}</div><div className="font-medium text-foreground break-words">{String(value ?? '—')}</div></div>)}
                                 </div>
                             </div>
+                        )}
 
-                            <div className="flex flex-wrap gap-3">
-                                <button
-                                    type="submit"
-                                    disabled={loading || polling}
-                                    className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2.5 rounded-md font-medium transition-colors disabled:opacity-50"
-                                >
-                                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
-                                    {polling ? 'Cashout In Progress...' : 'Start UPI Cashout'}
-                                </button>
-
-                                {polling && (
-                                    <button
-                                        type="button"
-                                        onClick={() => { const id = txn?.transactionId; if (id) checkStatus(id); }}
-                                        className="flex items-center gap-2 border border-border hover:bg-muted px-5 py-2.5 rounded-md font-medium transition-colors"
-                                    >
-                                        <RefreshCw className="w-4 h-4" /> Check Status
-                                    </button>
-                                )}
-
-                                {status !== 'idle' && (
-                                    <button
-                                        type="button"
-                                        onClick={resetForm}
-                                        className="flex items-center gap-2 border border-border hover:bg-muted px-5 py-2.5 rounded-md font-medium transition-colors"
-                                    >
-                                        New Cashout
-                                    </button>
-                                )}
-                            </div>
-                        </form>
+                        <button onClick={generateQr} disabled={loading || !bankVerification?.verified} className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors disabled:opacity-50">
+                            {loading ? 'Generating...' : 'Generate QR Code'}
+                        </button>
                     </div>
 
-                    {/* Status Panel */}
-                    {status !== 'idle' && (
-                        <div className={`flex flex-col gap-3 p-5 rounded-xl border ${
-                            status === 'SUCCESS' ? 'border-emerald-500/40 bg-emerald-500/10' :
-                            status === 'FAILED' ? 'border-rose-500/40 bg-rose-500/10' :
-                            'border-primary/30 bg-primary/5'
-                        }`}>
-                            <div className="flex items-center gap-3">
-                                {status === 'SUCCESS' ? (
-                                    <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-                                ) : status === 'FAILED' ? (
-                                    <XCircle className="w-8 h-8 text-rose-500" />
-                                ) : (
-                                    <Hourglass className="w-8 h-8 text-primary animate-pulse" />
+                    <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center">
+                        {qr ? (
+                            <div className="space-y-4 w-full">
+                                {qr.qrImage && (
+                                    <img src={qr.qrImage} alt="UPI QR code" className="w-56 h-56 mx-auto rounded-xl border border-border/50 bg-white p-2" />
                                 )}
-                                <div className="flex flex-col gap-0.5">
-                                    <span className={`text-lg font-bold ${
-                                        status === 'SUCCESS' ? 'text-emerald-500' :
-                                        status === 'FAILED' ? 'text-rose-500' : 'text-primary'
-                                    }`}>
-                                        {status === 'SUCCESS' ? 'Cashout Successful' :
-                                         status === 'FAILED' ? 'Cashout Failed' : 'Awaiting Customer Payment...'}
-                                    </span>
-                                    <span className="text-sm text-muted-foreground">
-                                        {status === 'PENDING' && polling
-                                            ? 'QR page opened — ask the customer to scan and pay. You will be notified once the payment completes.'
-                                            : message || (txn?.metadata?.gatewayMessage || '') || 'Processing...'}
-                                    </span>
-                                </div>
+                                {qr.upiHandle && (
+                                    <p className="text-sm font-medium text-foreground break-all">{qr.upiHandle}</p>
+                                )}
+                                {qr.virtualAccountId && (
+                                    <p className="text-xs text-muted-foreground">Virtual account {qr.virtualAccountId} · quote this to support when reconciling</p>
+                                )}
+                                {qr.qrPdf && (
+                                    <a href={qr.qrPdf} download="upi-qr.pdf" className="w-full py-2.5 bg-primary/10 text-primary rounded-xl font-medium hover:bg-primary/20 transition-colors flex items-center justify-center gap-2">
+                                        <Download className="w-4 h-4" /> Download Printable QR
+                                    </a>
+                                )}
                             </div>
-
-                            {txn && (
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-1">
-                                    <div className="flex flex-col">
-                                        <span className="text-xs text-muted-foreground">Amount</span>
-                                        <span className="text-sm font-semibold">₹ {txn.amount || 0}</span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-xs text-muted-foreground">Customer</span>
-                                        <span className="text-sm font-semibold">{txn.metadata?.mobile || '—'}</span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-xs text-muted-foreground">Reference</span>
-                                        <span className="text-xs font-semibold truncate max-w-[120px]">{txn.metadata?.refid || txn.transactionId || '—'}</span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-xs text-muted-foreground">Status</span>
-                                        <span className="text-sm font-semibold uppercase">{status}</span>
-                                    </div>
+                        ) : (
+                            <>
+                                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                                    <QrCode className="w-8 h-8 text-primary opacity-80" />
                                 </div>
-                            )}
-                        </div>
-                    )}
+                                <h3 className="text-lg font-bold text-foreground mb-1">No QR Yet</h3>
+                                <p className="text-sm text-muted-foreground max-w-xs">Enter your settlement account details to generate a QR you can print for the counter.</p>
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

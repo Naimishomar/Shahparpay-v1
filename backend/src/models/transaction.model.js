@@ -34,7 +34,6 @@ const transactionSchema = new mongoose.Schema(
         'PAN_SERVICE',
         'PAN_COUPON',
         'DAILY_AUTH_CHARGE',
-        'UPI_CASHOUT',
         'MERCHANT_ONBOARDING_CHARGE',
         'AADHAAR_PAY',
         'STD_PAN_CARD',

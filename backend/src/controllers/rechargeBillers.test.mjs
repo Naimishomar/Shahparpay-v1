@@ -33,7 +33,7 @@ for (const category of ['Water', 'Water Supplier', 'Loan Repayment', 'Clubs & As
 assert.equal(operatorSource('  Electric  ').category, 'Electric');
 assert.equal(operatorSource('').category, null);
 
-// --- the category list only offers categories that have a biller -----------
+// --- every published category is listed, and says whether it can be opened -
 
 const withProvider = async (handler, run) => {
   const server = http.createServer(handler);
@@ -93,22 +93,28 @@ await withProvider(provider(CATEGORIES, (category) => ({ status: 1, billers: BIL
   const { code, body } = await call(getBillCategories);
   assert.equal(code, 200);
   const ids = body.data.map((row) => row.id);
+  const byId = (id) => body.data.find((row) => row.id === id);
 
-  // The provider's own names, unrewritten, because they are what the next call
-  // has to send back.
-  assert.deepEqual(ids, ['Electric', 'Water', 'Loan Repayment', 'Postpaid']);
+  // Every category the provider publishes survives, under the provider's own
+  // name, unrewritten — that name is what the next call has to send back.
+  // Nothing is dropped: a missing tile reads as our bug, not their registry.
+  assert.deepEqual(ids, ['Electric', 'Water Supplier', 'Water', 'Loan Repayment', 'Postpaid']);
 
-  // "Water Supplier" has no billers and "Water" has some. Both used to collapse
-  // onto one tile and the empty one won, so Water showed nothing.
-  assert.ok(!ids.includes('Water Supplier'));
-  assert.equal(body.data.find((row) => row.id === 'Water').billerCount, 1, 'a biller with no code cannot be picked, and an inactive one is gone');
+  // "Water Supplier" and "Water" used to collapse onto one tile and the empty
+  // one won, so Water showed nothing. They are now two tiles, and only the one
+  // with billers opens.
+  assert.equal(byId('Water Supplier').available, false);
+  assert.equal(byId('Water').available, true);
+  assert.equal(byId('Water').billerCount, 1, 'a biller with no code cannot be picked, and an inactive one is gone');
 
   // Postpaid is billed like a utility but is listed with the operators, so the
   // provider's own category row for it is empty and it is offered separately.
-  assert.ok(!ids.includes('Mobile Postpaid'));
+  assert.ok(!ids.includes('Mobile Postpaid'), 'the empty biller-registry row is not a second tile');
+  assert.equal(byId('Postpaid').available, true);
+  assert.equal(byId('Postpaid').name, 'Postpaid');
   assert.equal(operatorSource('Postpaid').kind, 'operator');
 
-  assert.equal(body.data.find((row) => row.id === 'Electric').label, 'Consumer Number');
+  assert.equal(byId('Electric').label, 'Consumer Number');
 });
 
 // A provider that refuses the biller lookup must not empty the screen: an
@@ -125,11 +131,12 @@ await withProvider(
   provider(OUTAGE_CATEGORIES, () => ({ status: 0, message: 'Service temporarily unavailable' })),
   async () => {
     const { body } = await call(getBillCategories);
-    const ids = body.data.map((row) => row.id);
     for (const { category } of OUTAGE_CATEGORIES) {
-      assert.ok(ids.includes(category), `${category} must survive a refused lookup`);
+      const row = body.data.find((entry) => entry.id === category);
+      assert.ok(row, `${category} must survive a refused lookup`);
+      assert.equal(row.available, true, 'a provider we could not ask is not a provider with nothing');
     }
   }
 );
 
-console.log('rechargeBillers: provider category names reach the provider unrewritten OK');
+console.log('rechargeBillers: every category is listed, under the provider\'s own name OK');

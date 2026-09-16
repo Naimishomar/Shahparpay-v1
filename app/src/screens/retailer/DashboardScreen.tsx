@@ -74,7 +74,6 @@ const ICON_FOR: Record<string, string> = {
   RECHARGE: 'cellphone',
   BILL_PAYMENT: 'receipt',
   WALLET_TOPUP: 'qrcode',
-  UPI_CASHOUT: 'qrcode',
   DIRECT_PAYOUT: 'cash-fast',
   DIRECT_PAYOUT_REFUND: 'cash-refund',
   FUND_REQUEST: 'hand-coin-outline',

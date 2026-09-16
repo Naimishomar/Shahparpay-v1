@@ -92,6 +92,7 @@ export const createOrder = async (req, res) => {
     const { amount, name, mobile, mobile_number, email } = req.body;
     const totalAmount = Number(amount);
     const payerMobile = String(mobile || mobile_number || '').replace(/\D/g, '');
+    const payerEmail = String(email || '').trim();
 
     if (!(totalAmount > 0)) {
       return res.status(400).json({ success: false, message: 'Amount must be greater than 0' });
@@ -111,6 +112,24 @@ export const createOrder = async (req, res) => {
       return res
         .status(400)
         .json({ success: false, message: 'Enter a valid 10-digit customer mobile number' });
+    }
+    // The gateway's own documentation marks email optional, but it refuses the
+    // order without one — {"status":0,"message":"Validation failed","errors":
+    // {"email":["The email field is required."]}} — and an empty string counts
+    // as absent. Caught here so the retailer is told which field is missing
+    // rather than watching every link fail on a generic validation error.
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payerEmail)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "The customer's email address is required by the payment gateway" });
+    }
+    // A collection credits a QR wallet recorded against a Retailer, so only a
+    // retailer can raise one.
+    if (req.user.role !== 'retailer') {
+      return res.status(403).json({
+        success: false,
+        message: 'A payment link can only be created for a retailer account.',
+      });
     }
 
     // Keep gateway references within the short order-id format used by
@@ -132,7 +151,7 @@ export const createOrder = async (req, res) => {
       metadata: {
         payerName: String(name).trim(),
         payerMobile,
-        payerEmail: email || null,
+        payerEmail,
         provider: 'ICCHHAMATI',
         collectionChannel: 'PAYMENT_LINK',
       },
@@ -142,7 +161,7 @@ export const createOrder = async (req, res) => {
       reference_id: referenceId,
       amount: Math.round(totalAmount),
       name: String(name).trim(),
-      email: email || undefined,
+      email: payerEmail,
       mobile_number: payerMobile,
       success_url: `${getFrontendUrl()}/payments/collect?ref=${referenceId}&result=success`,
       failure_url: `${getFrontendUrl()}/payments/collect?ref=${referenceId}&result=failure`,
@@ -268,7 +287,7 @@ export const verifyOrder = async (req, res) => {
  * Keeping this operation server-side means the frontend never trusts a
  * customer's redirect or self-reported payment result.
  */
-const syncCollectionTransaction = async (txn) => {
+export const syncCollectionTransaction = async (txn) => {
   if (txn.status !== 'PENDING') return { transaction: txn, providerData: null };
 
   const providerTxnId = txn.metadata?.providerTxnId || txn.metadata?.orderId || txn.transactionId;
@@ -319,11 +338,22 @@ const syncCollectionTransaction = async (txn) => {
  */
 export const collectionWebhook = async (req, res) => {
   try {
+    // This endpoint credits a wallet on the caller's say-so, so an unauthenticated
+    // caller who learns a virtual account id could mint balance with a forged
+    // notification. With no secret configured there is nothing to check, and
+    // skipping the check in that case makes a missing environment variable an
+    // open door — so it refuses instead.
     const configuredSecret = String(process.env.ICCHHAMATI_COLLECTION_WEBHOOK_SECRET || '').trim();
+    if (!configuredSecret) {
+      console.error(
+        '[Collection Webhook] ICCHHAMATI_COLLECTION_WEBHOOK_SECRET is not set — refusing the callback. Set it and register the same secret with Icchhamati.'
+      );
+      return res.status(503).json({ success: false, message: 'Webhook is not configured' });
+    }
     const suppliedSecret = String(
       req.get('x-icchhamati-signature') || req.get('x-webhook-secret') || ''
     ).trim();
-    if (configuredSecret && suppliedSecret !== configuredSecret) {
+    if (suppliedSecret !== configuredSecret) {
       return res.status(401).json({ success: false, message: 'Invalid webhook signature' });
     }
 
@@ -344,10 +374,28 @@ export const collectionWebhook = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Incomplete QR payment notification' });
     }
 
-    const retailer = await Retailer.findOne({ 'collectionQr.virtualAccountId': virtualAccountId }).select('_id');
-    if (!retailer) {
+    // Icchhamati issues one virtual account per merchant account, not per
+    // retailer: /api/qr-details returns a single VA for the whole MID, and
+    // /api/v2/generate-qr takes no retailer identifier. So two retailers can end
+    // up holding the same virtual account id, and crediting "the" owner would
+    // pay one retailer for money a different one collected. Nothing is credited
+    // unless exactly one retailer owns the account.
+    const owners = await Retailer.find({ 'collectionQr.virtualAccountId': virtualAccountId })
+      .select('_id')
+      .limit(2);
+    if (!owners.length) {
       return res.status(404).json({ success: false, message: 'QR virtual account is not mapped to a retailer' });
     }
+    if (owners.length > 1) {
+      console.error(
+        `[Collection Webhook] virtual account ${virtualAccountId} is shared by multiple retailers — refusing to credit. Icchhamati must issue a virtual account per retailer before QR collections can settle automatically.`
+      );
+      return res.status(409).json({
+        success: false,
+        message: 'This QR virtual account is shared by more than one retailer; the payment cannot be attributed.',
+      });
+    }
+    const retailer = owners[0];
 
     const transactionId = `QR_${providerReference}`;
     const txn = await Transaction.findOneAndUpdate(
@@ -443,6 +491,18 @@ export const generateQr = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Enter a valid IFSC code' });
     }
 
+    // The webhook finds the owner of an incoming payment by looking the virtual
+    // account up on the Retailer collection, so only a retailer can own a QR.
+    // A distributor or admin used to get a working QR back whose virtual account
+    // was never recorded: every customer payment into it would then arrive with
+    // nobody to credit.
+    if (req.user.role !== 'retailer') {
+      return res.status(403).json({
+        success: false,
+        message: 'A collection QR can only be generated for a retailer account.',
+      });
+    }
+
     const data = await generateQrOnEitherPath({
       name: String(name).trim(),
       account_number: accountNo,
@@ -456,13 +516,26 @@ export const generateQr = async (req, res) => {
     }
 
     const qr = data.data || {};
+    const virtualAccountId = qr.virtual_account_id || null;
+    // Without a virtual account id there is nothing for the webhook to match a
+    // payment against, so the QR would collect money that could never be
+    // credited. Better to fail here than to print it and find out later.
+    if (!virtualAccountId) {
+      console.error('Generate QR: provider returned no virtual account id', qr);
+      return res.status(502).json({
+        success: false,
+        message: 'The provider did not return a usable QR. Please try again.',
+      });
+    }
+
     // The QR is a standing instrument for this retailer, not a one-off, so it is
     // kept: it does not have to be regenerated on every visit, and support can
-    // see which virtual account a retailer is collecting into.
-    await Retailer.findByIdAndUpdate(req.user.id, {
+    // see which virtual account a retailer is collecting into. The QR is only
+    // handed over once that mapping is on record.
+    const mapped = await Retailer.findByIdAndUpdate(req.user.id, {
       $set: {
         collectionQr: {
-          virtualAccountId: qr.virtual_account_id || null,
+          virtualAccountId,
           upiHandle: qr.virtual_upi_handle || null,
           accountNumber: accountNo,
           ifsc: accountIfsc,
@@ -472,11 +545,19 @@ export const generateQr = async (req, res) => {
       },
     });
 
+    if (!mapped) {
+      console.error(`Generate QR: no retailer ${req.user.id} to map virtual account ${virtualAccountId}`);
+      return res.status(500).json({
+        success: false,
+        message: 'The QR could not be linked to your account. Please contact support.',
+      });
+    }
+
     return res.status(200).json({
       success: true,
       message: providerMessage(data, 'QR code generated.'),
       data: {
-        virtualAccountId: qr.virtual_account_id || null,
+        virtualAccountId,
         upiHandle: qr.virtual_upi_handle || null,
         qrImage: qr.qrcode_image || null,
         qrPdf: qr.qrcode_pdf || null,

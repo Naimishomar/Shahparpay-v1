@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/sidebar"
 
 import { Link, useLocation } from "react-router-dom"
-import { BarChart3, Wallet, Send, Zap, ScanFace, Landmark, ArrowRightLeft, LayoutDashboard, Users, Store, UserPlus, UserCircle, FileText, QrCode, CreditCard, Bell, Headset } from "lucide-react"
+import { BarChart3, Wallet, Send, Zap, ScanFace, Landmark, ArrowRightLeft, LayoutDashboard, Users, Store, UserPlus, UserCircle, FileText, QrCode, Link2, CreditCard, Bell, Headset } from "lucide-react"
 import logo from "../assets/logo.png"
 import { useAuth } from "../context/AuthContext"
 
@@ -19,11 +19,11 @@ const retailerProjects = [
   { name: "PAN Card", url: "/pan", icon: FileText },
   { name: "Lead Generation", url: "/lead-generation", icon: UserPlus },
   { name: "ITR Filing", url: "/itr", icon: FileText },
-  { name: "UPI Payments", url: "/upi-payments", icon: Wallet },
+  { name: "UPI Payments", url: "/upi-payments", icon: QrCode },
   { name: "DMT", url: "/dmt", icon: Send },
   { name: "Recharge", url: "/recharge", icon: Zap },
   { name: "BBPS", url: "/bbps", icon: Zap },
-  { name: "Collect Payments", url: "/payments/collect", icon: QrCode },
+  { name: "Collect Payments", url: "/payments/collect", icon: Link2 },
   { name: "Wallet Transfer", url: "/wallet-transfer", icon: Wallet },
   // { name: "Direct Payout", url: "/direct-payout", icon: ArrowRightLeft },
   {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { QrCode, Link2, Copy, Check, RefreshCw, Clock, CheckCircle2, XCircle, Download } from 'lucide-react';
+import { Link2, Copy, Check, RefreshCw, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -13,13 +13,12 @@ import { toast } from 'sonner';
  * which is why nothing here trusts the customer's own "I paid" and every order
  * is verified against the gateway before anything is shown as received.
  *
- * QR proceeds are handled by the platform's Icchhamati merchant account.
- * Confirmed collection credits are kept separately in the retailer's QR wallet.
+ * The standing counter QR is issued from UPI Payments, not here, but its
+ * proceeds are collections too, so they are listed below alongside the links.
  */
 const Collect = () => {
     const { token } = useAuth();
     const [searchParams] = useSearchParams();
-    const [tab, setTab] = useState<'link' | 'qr'>('link');
 
     const [form, setForm] = useState({ name: '', mobile: '', email: '', amount: '' });
     const [order, setOrder] = useState<any>(null);
@@ -27,11 +26,6 @@ const Collect = () => {
     const [verifying, setVerifying] = useState(false);
     const [copied, setCopied] = useState(false);
     const [history, setHistory] = useState<any[]>([]);
-
-    const [qrForm, setQrForm] = useState({ name: '', account_number: '', account_ifsc: '' });
-    const [qr, setQr] = useState<any>(null);
-    const [bankVerification, setBankVerification] = useState<any>(null);
-    const [verifyingBank, setVerifyingBank] = useState(false);
 
     const api = `${import.meta.env.VITE_BACKEND_URL}/api/collect`;
     const getHeaders = () => ({ headers: { Authorization: `Bearer ${token}` } });
@@ -89,6 +83,11 @@ const Collect = () => {
         const amount = Number(form.amount);
         if (!form.name.trim()) return toast.error("Enter the customer's name");
         if (form.mobile.length !== 10) return toast.error('Enter a valid 10-digit mobile number');
+        // The gateway rejects an order without one, despite documenting it as
+        // optional, so it is asked for here rather than failing at checkout.
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+            return toast.error("Enter the customer's email address");
+        }
         // The gateway refuses anything smaller: "Minimum amount is 200.00".
         if (!(amount >= 200)) return toast.error('The minimum payment amount is ₹200');
 
@@ -97,7 +96,7 @@ const Collect = () => {
             const res = await axios.post(`${api}/order`, {
                 name: form.name.trim(),
                 mobile: form.mobile,
-                email: form.email || undefined,
+                email: form.email.trim(),
                 amount,
             }, getHeaders());
 
@@ -123,48 +122,6 @@ const Collect = () => {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const verifyBank = async () => {
-        if (!qrForm.name.trim() || !qrForm.account_number || !qrForm.account_ifsc) {
-            return toast.error('Enter the account holder name, account number and IFSC');
-        }
-        setVerifyingBank(true);
-        try {
-            const res = await axios.post(`${api}/verify-bank-account`, qrForm, getHeaders());
-            const details = res.data.data || null;
-            setBankVerification(details);
-            if (res.data.success) toast.success(res.data.message || 'Bank account verified');
-            else toast.error(res.data.message || 'Bank account details did not match');
-        } catch (error: any) {
-            setBankVerification(error.response?.data?.data || null);
-            toast.error(error.response?.data?.message || 'Could not verify the bank account');
-        } finally {
-            setVerifyingBank(false);
-        }
-    };
-
-    const generateQr = async () => {
-        if (!qrForm.name.trim() || !qrForm.account_number || !qrForm.account_ifsc) {
-            return toast.error('Enter the account holder name, account number and IFSC');
-        }
-        if (!bankVerification?.verified) {
-            return toast.error('Verify the bank account before generating the QR code');
-        }
-        setLoading(true);
-        try {
-            const res = await axios.post(`${api}/qr`, qrForm, getHeaders());
-            if (res.data.success) {
-                setQr(res.data.data);
-                toast.success(res.data.message || 'QR code generated');
-            } else {
-                toast.error(res.data.message || 'Could not generate the QR code');
-            }
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Could not generate the QR code');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const statusChip = (status: string) => {
         const map: Record<string, { cls: string; icon: any }> = {
             SUCCESS: { cls: 'bg-green-500/10 text-green-600 dark:text-green-400', icon: CheckCircle2 },
@@ -188,177 +145,82 @@ const Collect = () => {
 
                 <div className="flex flex-col gap-2">
                     <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-                        <QrCode className="w-8 h-8 text-primary" />
+                        <Link2 className="w-8 h-8 text-primary" />
                         Collect Payments
                     </h1>
-                    <p className="text-muted-foreground">Send a payment link or print a UPI QR to accept money from customers.</p>
+                    <p className="text-muted-foreground">Send a customer a payment link they can pay by UPI, card or netbanking.</p>
                 </div>
 
-                <div className="flex items-center gap-2 border-b border-border/50">
-                    <button
-                        onClick={() => setTab('link')}
-                        className={`pb-3 px-3 font-semibold flex items-center gap-2 transition-colors ${tab === 'link' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                        <Link2 className="w-4 h-4" /> Payment Link
-                    </button>
-                    <button
-                        onClick={() => setTab('qr')}
-                        className={`pb-3 px-3 font-semibold flex items-center gap-2 transition-colors ${tab === 'qr' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                        <QrCode className="w-4 h-4" /> UPI QR
-                    </button>
-                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm space-y-4">
+                        <h2 className="text-xl font-bold text-foreground">New Payment Request</h2>
 
-                {tab === 'link' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm space-y-4">
-                            <h2 className="text-xl font-bold text-foreground">New Payment Request</h2>
-
-                            <div>
-                                <label className="text-sm font-medium text-foreground mb-1.5 block">Customer Name</label>
-                                <input type="text" className={input} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-foreground mb-1.5 block">Customer Mobile</label>
-                                <input type="text" className={input} value={form.mobile} onChange={e => setForm({ ...form, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="10-digit mobile" />
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-foreground mb-1.5 block">Customer Email <span className="text-muted-foreground font-normal">(optional)</span></label>
-                                <input type="email" className={input} value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-foreground mb-1.5 block">Amount (₹)</label>
-                                <input type="text" className={input} value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value.replace(/\D/g, '') })} placeholder="0" />
-                            </div>
-
-                            <button onClick={createOrder} disabled={loading} className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors disabled:opacity-50">
-                                {loading ? 'Creating...' : 'Create Payment Link'}
-                            </button>
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-1.5 block">Customer Name</label>
+                            <input type="text" className={input} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-1.5 block">Customer Mobile</label>
+                            <input type="text" className={input} value={form.mobile} onChange={e => setForm({ ...form, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="10-digit mobile" />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-1.5 block">Customer Email</label>
+                            <input type="email" className={input} value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-1.5 block">Amount (₹)</label>
+                            <input type="text" className={input} value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value.replace(/\D/g, '') })} placeholder="0" />
                         </div>
 
-                        <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
-                            {order ? (
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h2 className="text-xl font-bold text-foreground">₹ {order.amount}</h2>
-                                        {statusChip(order.status)}
-                                    </div>
-                                    <p className="text-sm text-muted-foreground">Order {order.orderId}</p>
+                        <button onClick={createOrder} disabled={loading} className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors disabled:opacity-50">
+                            {loading ? 'Creating...' : 'Create Payment Link'}
+                        </button>
+                    </div>
 
-                                    <div className="bg-background border border-border/50 rounded-xl p-3 break-all text-sm text-foreground">
-                                        {order.paymentUrl}
-                                    </div>
+                    <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+                        {order ? (
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-xl font-bold text-foreground">₹ {order.amount}</h2>
+                                    {statusChip(order.status)}
+                                </div>
+                                <p className="text-sm text-muted-foreground">Order {order.orderId}</p>
 
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <button onClick={copyLink} className="py-2.5 bg-primary/10 text-primary rounded-xl font-medium hover:bg-primary/20 transition-colors flex items-center justify-center gap-2">
-                                            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                                            {copied ? 'Copied' : 'Copy Link'}
-                                        </button>
-                                        <a href={order.paymentUrl} target="_blank" rel="noreferrer" className="py-2.5 bg-background border border-border/50 text-foreground rounded-xl font-medium hover:border-primary/40 transition-colors flex items-center justify-center gap-2">
-                                            <Link2 className="w-4 h-4" /> Open
-                                        </a>
-                                    </div>
+                                <div className="bg-background border border-border/50 rounded-xl p-3 break-all text-sm text-foreground">
+                                    {order.paymentUrl}
+                                </div>
 
-                                    <button onClick={() => verify(order.transactionId)} disabled={verifying} className="w-full py-2.5 bg-background border border-border/50 text-foreground rounded-xl font-medium hover:border-primary/40 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
-                                        <RefreshCw className={`w-4 h-4 ${verifying ? 'animate-spin' : ''}`} />
-                                        {verifying ? 'Checking...' : 'Check Payment Status'}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button onClick={copyLink} className="py-2.5 bg-primary/10 text-primary rounded-xl font-medium hover:bg-primary/20 transition-colors flex items-center justify-center gap-2">
+                                        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                        {copied ? 'Copied' : 'Copy Link'}
                                     </button>
+                                    <a href={order.paymentUrl} target="_blank" rel="noreferrer" className="py-2.5 bg-background border border-border/50 text-foreground rounded-xl font-medium hover:border-primary/40 transition-colors flex items-center justify-center gap-2">
+                                        <Link2 className="w-4 h-4" /> Open
+                                    </a>
+                                </div>
 
-                                    <p className="text-xs text-muted-foreground text-center">
-                                        Your wallet is credited only once the gateway confirms the payment.
-                                    </p>
+                                <button onClick={() => verify(order.transactionId)} disabled={verifying} className="w-full py-2.5 bg-background border border-border/50 text-foreground rounded-xl font-medium hover:border-primary/40 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                                    <RefreshCw className={`w-4 h-4 ${verifying ? 'animate-spin' : ''}`} />
+                                    {verifying ? 'Checking...' : 'Check Payment Status'}
+                                </button>
+
+                                <p className="text-xs text-muted-foreground text-center">
+                                    Your wallet is credited only once the gateway confirms the payment.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-center">
+                                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                                    <Link2 className="w-8 h-8 text-primary opacity-80" />
                                 </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-center">
-                                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                                        <Link2 className="w-8 h-8 text-primary opacity-80" />
-                                    </div>
-                                    <h3 className="text-lg font-bold text-foreground mb-1">No Active Request</h3>
-                                    <p className="text-sm text-muted-foreground max-w-xs">Fill in the customer's details to create a payment link you can send them.</p>
-                                </div>
-                            )}
-                        </div>
+                                <h3 className="text-lg font-bold text-foreground mb-1">No Active Request</h3>
+                                <p className="text-sm text-muted-foreground max-w-xs">Fill in the customer's details to create a payment link you can send them.</p>
+                            </div>
+                        )}
                     </div>
-                )}
+                </div>
 
-                {tab === 'qr' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm space-y-4">
-                            <h2 className="text-xl font-bold text-foreground">Generate UPI QR</h2>
-                            <p className="text-sm text-muted-foreground">Customer payments are settled through the platform's Icchhamati account. Confirmed collection credits are kept in your QR wallet.</p>
-
-                            <div>
-                                <label className="text-sm font-medium text-foreground mb-1.5 block">Account Holder Name</label>
-                                <input type="text" className={input} value={qrForm.name} onChange={e => { setQrForm({ ...qrForm, name: e.target.value }); setBankVerification(null); }} />
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-foreground mb-1.5 block">Account Number</label>
-                                <input type="text" className={input} value={qrForm.account_number} onChange={e => { setQrForm({ ...qrForm, account_number: e.target.value.replace(/\D/g, '') }); setBankVerification(null); }} />
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-foreground mb-1.5 block">IFSC Code</label>
-                                <input type="text" className={`${input} uppercase`} value={qrForm.account_ifsc} onChange={e => { setQrForm({ ...qrForm, account_ifsc: e.target.value.toUpperCase() }); setBankVerification(null); }} />
-                            </div>
-
-                            <button onClick={verifyBank} disabled={verifyingBank} className="w-full py-3 bg-secondary text-secondary-foreground rounded-xl font-bold hover:bg-secondary/80 transition-colors disabled:opacity-50">
-                                {verifyingBank ? 'Verifying...' : 'Verify Bank Account'}
-                            </button>
-
-                            {bankVerification && (
-                                <div className={`rounded-xl border p-4 text-sm space-y-3 ${bankVerification.verified ? 'border-green-500/30 bg-green-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
-                                    <div className="flex items-center justify-between">
-                                        <span className="font-semibold text-foreground">Bank verification details</span>
-                                        <span className={bankVerification.verified ? 'text-green-600' : 'text-red-600'}>{bankVerification.verified ? 'VERIFIED' : 'NOT VERIFIED'}</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-left">
-                                        {[
-                                            ['Transaction ID', bankVerification.txnid], ['Status', bankVerification.status],
-                                            ['Account Name', bankVerification.AccountName], ['Account Number', bankVerification.AccountNumber],
-                                            ['Account Status', bankVerification.accountStatus], ['Bank', bankVerification.bank_name],
-                                            ['UTR', bankVerification.utr], ['City', bankVerification.city],
-                                            ['Branch', bankVerification.branch], ['MICR', bankVerification.micr],
-                                            ['Response', bankVerification.resText], ['Name Match', bankVerification.nameMatch ? 'YES' : 'NO'],
-                                            ['Account Match', bankVerification.accountMatch ? 'YES' : 'NO'],
-                                        ].map(([label, value]) => <div key={label} className="min-w-0"><div className="text-xs text-muted-foreground">{label}</div><div className="font-medium text-foreground break-words">{String(value ?? '—')}</div></div>)}
-                                    </div>
-                                </div>
-                            )}
-
-                            <button onClick={generateQr} disabled={loading || !bankVerification?.verified} className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors disabled:opacity-50">
-                                {loading ? 'Generating...' : 'Generate QR Code'}
-                            </button>
-                        </div>
-
-                        <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center">
-                            {qr ? (
-                                <div className="space-y-4 w-full">
-                                    {qr.qrImage && (
-                                        <img src={qr.qrImage} alt="UPI QR code" className="w-56 h-56 mx-auto rounded-xl border border-border/50 bg-white p-2" />
-                                    )}
-                                    {qr.upiHandle && (
-                                        <p className="text-sm font-medium text-foreground break-all">{qr.upiHandle}</p>
-                                    )}
-                                    {qr.virtualAccountId && (
-                                        <p className="text-xs text-muted-foreground">Virtual account {qr.virtualAccountId} · QR wallet settlement</p>
-                                    )}
-                                    {qr.qrPdf && (
-                                        <a href={qr.qrPdf} download="upi-qr.pdf" className="w-full py-2.5 bg-primary/10 text-primary rounded-xl font-medium hover:bg-primary/20 transition-colors flex items-center justify-center gap-2">
-                                            <Download className="w-4 h-4" /> Download Printable QR
-                                        </a>
-                                    )}
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                                        <QrCode className="w-8 h-8 text-primary opacity-80" />
-                                    </div>
-                                    <h3 className="text-lg font-bold text-foreground mb-1">No QR Yet</h3>
-                                    <p className="text-sm text-muted-foreground max-w-xs">Enter your settlement account details to generate a QR you can print for the counter.</p>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                )}
 
                 {/* Collections */}
                 <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">

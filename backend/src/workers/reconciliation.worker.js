@@ -12,6 +12,7 @@ import axios from 'axios';
 import crypto from 'crypto';
 import { generatePaySprintToken } from '../utils/paysprint.util.js';
 import { fetchRechargeStatus } from '../utils/icchhamati.util.js';
+import { syncCollectionTransaction } from '../controllers/collect.controller.js';
 
 /**
  * PaySprint header generator helper
@@ -240,8 +241,7 @@ export const startReconciliationWorker = () => {
         // query endpoint — never auto-FAILED/refunded here. Auto-FAILING
         // an AEPS withdrawal would wrongly refund money the bank may
         // have actually debited. AEPS_WITHDRAWAL and AEPS_DEPOSIT are
-        // fully wired; the remaining AEPS types and UPI_CASHOUT (which
-        // resolves via the UPI-CASHOUT webhook) have no reconciler and
+        // fully wired; the remaining AEPS types have no reconciler and
         // are skipped so they are never auto-finalized incorrectly.
         const AEPS_TYPES = [
           'AEPS_WITHDRAWAL',
@@ -249,13 +249,12 @@ export const startReconciliationWorker = () => {
           'AEPS_DEPOSIT_REFUND',
           'AEPSTOMAIN',
           'AEPS_SETTLEMENT',
-          'UPI_CASHOUT',
         ];
 
         // Money that has left our wallet on an outward rail with no status
         // endpoint behind it. Auto-failing one of these refunds a retailer for a
         // transfer that may already have landed, so they are never resolved here.
-        const NO_RECONCILER_TYPES = ['DMT', 'PG_COLLECTION'];
+        const NO_RECONCILER_TYPES = ['DMT'];
         if (AEPS_TYPES.includes(txn.type)) {
           try {
             if (txn.type === 'AEPS_WITHDRAWAL') {
@@ -278,6 +277,28 @@ export const startReconciliationWorker = () => {
 
         if (txn.type === 'DIRECT_PAYOUT') {
           finalStatus = await verifyPayoutStatus(txn);
+        } else if (txn.type === 'PG_COLLECTION') {
+          // A payment link is only settled while the retailer has the Collect
+          // page open — on the gateway's redirect back, or by the poll that runs
+          // beside it. Close the tab and a customer's payment was never credited
+          // to anyone. /api/pg/verify answers for our own reference id, so it is
+          // asked here instead.
+          //
+          // This is an inflow: nothing is locked and nothing is refunded, so a
+          // non-answer costs only another pass. Only a confirmed SUCCESS credits,
+          // and it is never auto-FAILED — marking a paid order failed would lose
+          // the retailer their money, which falling through to the default below
+          // used to risk.
+          try {
+            const { transaction } = await syncCollectionTransaction(txn);
+            console.log(`CRON: Collection ${txn.transactionId} is ${transaction.status}.`);
+          } catch (error) {
+            console.error(
+              `CRON: Collection reconciliation failed for ${txn.transactionId}:`,
+              error.message
+            );
+          }
+          continue;
         } else if (txn.type === 'RECHARGE' || txn.type === 'BILL_PAYMENT') {
           // A recharge can sit pending well past five minutes. Falling through to
           // the default below would refund the retailer for a recharge the
