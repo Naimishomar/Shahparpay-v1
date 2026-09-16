@@ -153,74 +153,18 @@ export const isBillType = (type) => rechargeTypeCode(type) === 3;
 /**
  * Operator lists come from two different places. Prepaid, postpaid and DTH have
  * their own operator registry; every other category is a BBPS biller and comes
- * from the biller registry keyed by the category name.
+ * out of the biller registry, keyed by the provider's own category name.
+ *
+ * These three names are the only ones the operator registry answers to. It was
+ * asked for "MobilePrepaid" and "MobilePostpaid" for a long time, and that
+ * never looked like a refusal: both are accepted and both answer `status: 1`,
+ * but "MobilePrepaid" comes back with an empty list and "MobilePostpaid" with
+ * one operator out of four.
  */
 export const OPERATOR_CATEGORY = {
-  prepaid: 'MobilePrepaid',
-  postpaid: 'MobilePostpaid',
+  prepaid: 'Prepaid',
+  postpaid: 'Postpaid',
   dth: 'DTH',
-};
-
-/** Our service names, to the category names the biller registry is keyed by. */
-export const BILLER_CATEGORY = {
-  electricity: 'Electric',
-  electric: 'Electric',
-  water: 'Water',
-  gas: 'Gas',
-  lpg: 'LPG',
-  broadband: 'Broadband',
-  landline: 'Landline',
-  insurance: 'Insurance',
-  loan: 'Loan',
-  fastag: 'Fastag',
-  cable: 'Cable',
-  emi: 'EMI',
-  municipality: 'Municipality',
-  'dth-bill': 'DTH',
-  dthbill: 'DTH',
-  creditcard: 'CreditCard',
-};
-
-const BILL_CATEGORY_ALIASES = [
-  { match: /electric/i, id: 'electricity', name: 'Electricity', apiCategory: 'Electric' },
-  { match: /water/i, id: 'water', name: 'Water', apiCategory: 'Water' },
-  { match: /piped.?gas|gas/i, id: 'gas', name: 'Gas', apiCategory: 'Gas' },
-  { match: /broadband|internet|wifi/i, id: 'broadband', name: 'Broadband', apiCategory: 'Broadband' },
-  { match: /dth/i, id: 'dth-bill', name: 'DTH Bill', apiCategory: 'DTH' },
-  { match: /lpg/i, id: 'lpg', name: 'LPG', apiCategory: 'LPG' },
-  { match: /fastag/i, id: 'fastag', name: 'FASTag', apiCategory: 'Fastag' },
-  { match: /landline/i, id: 'landline', name: 'Landline', apiCategory: 'Landline' },
-  { match: /insur/i, id: 'insurance', name: 'Insurance', apiCategory: 'Insurance' },
-  { match: /loan/i, id: 'loan', name: 'Loan', apiCategory: 'Loan' },
-  { match: /credit.?card/i, id: 'creditcard', name: 'Credit Card', apiCategory: 'CreditCard' },
-  { match: /emi/i, id: 'emi', name: 'EMI', apiCategory: 'EMI' },
-  { match: /municipal|property|tax/i, id: 'municipality', name: 'Municipality', apiCategory: 'Municipality' },
-  { match: /cable|television|tv/i, id: 'cable', name: 'Cable TV', apiCategory: 'Cable' },
-  { match: /postpaid|mobile/i, id: 'postpaid', name: 'Postpaid', apiCategory: 'MobilePostpaid' },
-];
-
-export const normaliseBillCategory = (row) => {
-  const source = String(row?.category || row?.code || row?.name || '').trim();
-  const known = BILL_CATEGORY_ALIASES.find((entry) => entry.match.test(source));
-  if (known) return { ...row, ...known, providerCategory: known.apiCategory };
-
-  const id = source.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'other';
-  return {
-    ...row,
-    id,
-    name: row?.name || source || 'Other',
-    apiCategory: row?.category || row?.code || source,
-    providerCategory: row?.category || row?.code || source,
-  };
-};
-
-export const dedupeBillCategories = (categories = []) => {
-  const seen = new Set();
-  return categories.map(normaliseBillCategory).filter((category) => {
-    if (seen.has(category.id)) return false;
-    seen.add(category.id);
-    return true;
-  });
 };
 
 /**

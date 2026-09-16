@@ -23,30 +23,12 @@ const CATEGORY_STYLE: { match: RegExp; icon: any; color: string; border: string 
     { match: /broadband|internet|wifi/i, icon: Wifi, color: "text-sky-400", border: "border-sky-400/20" },
     { match: /dth|cable|tv/i, icon: Tv, color: "text-violet-400", border: "border-violet-400/20" },
     { match: /postpaid|mobile|landline/i, icon: Smartphone, color: "text-primary", border: "border-primary/20" },
-    { match: /municipal|tax|housing/i, icon: Building2, color: "text-amber-500", border: "border-amber-500/20" },
+    { match: /mun[i]?cipal|tax|housing/i, icon: Building2, color: "text-amber-500", border: "border-amber-500/20" },
 ];
 
 const styleFor = (name: string) =>
     CATEGORY_STYLE.find((s) => s.match.test(name)) ||
     { icon: ReceiptText, color: "text-muted-foreground", border: "border-border" };
-
-const canonicalCategory = (category: any) => {
-    const raw = String(category?.id || category?.code || category?.category || category?.name || '').toLowerCase();
-    if (/postpaid|mobile/.test(raw)) return 'postpaid';
-    if (/dth/.test(raw)) return 'dth-bill';
-    if (/electric/.test(raw)) return 'electricity';
-    if (/piped.?gas|gas/.test(raw)) return 'gas';
-    if (/water/.test(raw)) return 'water';
-    if (/broadband|internet|wifi/.test(raw)) return 'broadband';
-    if (/lpg/.test(raw)) return 'lpg';
-    if (/fastag/.test(raw)) return 'fastag';
-    if (/landline/.test(raw)) return 'landline';
-    if (/insur/.test(raw)) return 'insurance';
-    if (/loan/.test(raw)) return 'loan';
-    if (/credit.?card/.test(raw)) return 'creditcard';
-    if (/emi/.test(raw)) return 'emi';
-    return raw.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'other';
-};
 
 const BBPS = () => {
     const [bbpsServices, setBbpsServices] = useState<any[]>([]);
@@ -74,28 +56,20 @@ const BBPS = () => {
                     toast.error(res.data.message || 'Could not load bill categories');
                     return;
                 }
-                const unique = new Map<string, any>();
-                (res.data.data || []).forEach((cat: any) => {
-                    const id = canonicalCategory(cat);
-                    if (!unique.has(id)) {
-                        unique.set(id, {
-                            id,
-                            name: cat.name || id,
-                            label: cat.label || null,
-                            providerCategory: cat.providerCategory || cat.apiCategory || cat.category || cat.name || id,
-                            image: cat.biller_icon || cat.image || null,
-                            ...styleFor(id),
-                        });
-                    }
-                });
-                // Some provider accounts publish Postpaid as a category while
-                // others only expose it through MobilePostpaid operators.
-                if (!unique.has('postpaid')) {
-                    unique.set('postpaid', { id: 'postpaid', name: 'Postpaid', ...styleFor('postpaid') });
-                }
-                setBbpsServices(Array.from(unique.values()));
+                // `id` is the provider's own category name, verbatim: it is the
+                // only string their biller registry answers to, so every later
+                // call sends it back unchanged.
+                setBbpsServices((res.data.data || []).map((cat: any) => ({
+                    id: cat.id || cat.category,
+                    name: cat.name || cat.category,
+                    label: cat.label || null,
+                    providerCategory: cat.providerCategory || cat.category || cat.id,
+                    image: cat.image || null,
+                    ...styleFor(cat.name || cat.category || ''),
+                })));
             } catch (error) {
                 console.error("Failed to fetch bill categories", error);
+                toast.error('Could not load bill categories');
             }
         };
         fetchCategories();

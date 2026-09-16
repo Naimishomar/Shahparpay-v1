@@ -12,8 +12,6 @@ import {
   rechargeTypeCode,
   isBillType,
   OPERATOR_CATEGORY,
-  BILLER_CATEGORY,
-  dedupeBillCategories,
 } from '../utils/icchhamati.util.js';
 import { lockFundsForTransaction, resolveTransaction } from '../utils/wallet.util.js';
 import Transaction from '../models/transaction.model.js';
@@ -35,17 +33,66 @@ import AepsWallet from '../models/aepsWallet.model.js';
  * service is a BBPS biller and comes out of the biller registry instead, keyed
  * by the biller category name.
  */
-const operatorSource = (type) => {
-  const key = String(type || '').toLowerCase();
+export const operatorSource = (type) => {
+  const key = String(type || '').trim().toLowerCase();
   if (OPERATOR_CATEGORY[key]) return { kind: 'operator', category: OPERATOR_CATEGORY[key] };
   const providerOperatorCategory = Object.values(OPERATOR_CATEGORY).find(
     (category) => String(category).toLowerCase() === key
   );
   if (providerOperatorCategory) return { kind: 'operator', category: providerOperatorCategory };
-  // BILLER_CATEGORY only names the categories our own screens hardcode. Anything
-  // else is passed through as-is, so a category taken straight off
-  // /bill-categories works without this map having to know about it first.
-  return { kind: 'biller', category: BILLER_CATEGORY[key] || String(type || '').trim() || null };
+  // Everything else is a biller category, and the string is the provider's own
+  // — verbatim, spaces and spelling included. The registry matches it exactly
+  // and answers an unknown name with an empty list rather than an error, so
+  // tidying "Water Supplier" into "Water" or "Loan Repayment" into "Loan"
+  // silently emptied the category instead of failing where it could be seen.
+  return { kind: 'biller', category: String(type || '').trim() || null };
+};
+
+/**
+ * Billers for a provider category.
+ *
+ * The category screen needs a biller count for every category at once — one
+ * call each — to know which tiles are worth offering at all. The registry
+ * changes rarely, so answers are reused instead of re-fetched on every load.
+ * Refusals are not cached: a provider that is briefly down must not leave the
+ * screen empty for the rest of the window.
+ */
+const BILLER_TTL_MS = 10 * 60 * 1000;
+const billerCache = new Map();
+
+const fetchBillers = async (category) => {
+  const key = String(category);
+  const cached = billerCache.get(key);
+  if (cached && Date.now() - cached.at < BILLER_TTL_MS) return cached.result;
+
+  const data = await icchhamatiPost('/api/v2/billers-by-category', { category: key });
+  if (!isOk(data)) {
+    return {
+      ok: false,
+      rows: [],
+      message: providerMessage(data, 'The biller list is unavailable right now.'),
+    };
+  }
+
+  // A biller with no code cannot be named on a fetch or a payment, so it is not
+  // one a retailer can pick.
+  const rows = (data.billers || data.operators || data.data || []).filter(
+    (row) => row.is_active !== false && String(row.code ?? '').trim()
+  );
+  const result = { ok: true, rows, message: null };
+  billerCache.set(key, { at: Date.now(), result });
+  return result;
+};
+
+/** One row per operator/biller code: the registries repeat a few. */
+const dedupeRows = (rows) => {
+  const seen = new Set();
+  return rows.filter((row) => {
+    const key = String(row.code ?? row.id ?? row.name ?? '').trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 };
 
 /**
@@ -77,12 +124,17 @@ const resolveProviderOperatorCode = async (type, candidate) => {
   try {
     const { kind, category } = operatorSource(type);
     if (!category) return value;
-    const data = kind === 'operator'
-      ? await icchhamatiPost('/api/v2/getOperator', { category })
-      : await icchhamatiPost('/api/v2/billers-by-category', { category });
-    if (!isOk(data)) return value;
+    let rows;
+    if (kind === 'operator') {
+      const data = await icchhamatiPost('/api/v2/getOperator', { category });
+      if (!isOk(data)) return value;
+      rows = data.operators || data.data || [];
+    } else {
+      const billers = await fetchBillers(category);
+      if (!billers.ok) return value;
+      rows = billers.rows;
+    }
 
-    const rows = data.operators || data.billers || data.data || [];
     const match = rows.find((row) => String(row.code ?? '') === value)
       || rows.find((row) => String(row.id ?? '') === value);
     return String(match?.code ?? value);
@@ -103,11 +155,15 @@ export const getOperators = async (req, res) => {
         .json({ success: false, message: `No operators are available for "${type}".` });
     }
 
-    const data =
-      kind === 'operator'
-        ? await icchhamatiPost('/api/v2/getOperator', { category })
-        : await icchhamatiPost('/api/v2/billers-by-category', { category });
+    if (kind === 'biller') {
+      const { ok, rows, message } = await fetchBillers(category);
+      if (!ok) return res.status(502).json({ success: false, message });
+      return res
+        .status(200)
+        .json({ success: true, data: dedupeRows(rows).map((row) => toOperator(row, type)) });
+    }
 
+    const data = await icchhamatiPost('/api/v2/getOperator', { category });
     if (!isOk(data)) {
       return res.status(502).json({
         success: false,
@@ -115,17 +171,10 @@ export const getOperators = async (req, res) => {
       });
     }
 
-    const rows = data.operators || data.billers || data.data || [];
-    const seen = new Set();
-    const uniqueRows = rows.filter((row) => {
-      const key = String(row.code ?? row.id ?? row.name ?? '').trim().toLowerCase();
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    const rows = (data.operators || data.data || []).filter((row) => row.is_active !== false);
     return res.status(200).json({
       success: true,
-      data: uniqueRows.filter((row) => row.is_active !== false).map((row) => toOperator(row, type)),
+      data: dedupeRows(rows).map((row) => toOperator(row, type)),
     });
   } catch (error) {
     console.error('Fetch Operators Error:', error?.response?.data || error?.message);
@@ -157,9 +206,16 @@ export const getCircles = async (req, res) => {
 };
 
 /**
- * BBPS bill categories, as the provider publishes them. The BBPS screen keeps
- * its own tile list, so this is here for a client that would rather render
- * whatever the provider currently offers than a hardcoded set.
+ * The BBPS categories worth offering.
+ *
+ * `id` is the provider's own category name, verbatim, because that exact string
+ * is the only thing /billers-by-category answers to.
+ *
+ * The provider publishes 28 categories but has billers behind only a handful of
+ * them, so most tiles could only ever answer "no billers are available for this
+ * category". A category is offered once the provider confirms it has at least
+ * one biller; one whose lookup is refused is kept, because a provider that is
+ * briefly unreachable must not empty the screen.
  */
 export const getBillCategories = async (req, res) => {
   try {
@@ -170,10 +226,46 @@ export const getBillCategories = async (req, res) => {
         message: providerMessage(data, 'Bill categories are unavailable right now.'),
       });
     }
-    return res.status(200).json({
-      success: true,
-      data: dedupeBillCategories(data.categories || data.data || []),
-    });
+
+    const rows = (data.categories || data.data || []).filter((row) =>
+      String(row.category || '').trim()
+    );
+    const categories = (
+      await Promise.all(
+        rows.map(async (row) => {
+          const category = String(row.category).trim();
+          const billers = await fetchBillers(category).catch(() => ({ ok: false, rows: [] }));
+          if (billers.ok && !billers.rows.length) return null;
+          return {
+            id: category,
+            name: row.name || category,
+            category,
+            providerCategory: category,
+            label: row.label || null,
+            image: row.biller_icon || row.icon || null,
+            billerCount: billers.rows.length,
+          };
+        })
+      )
+    ).filter(Boolean);
+
+    // Postpaid mobile is billed like any other utility, but its operators live
+    // in the operator registry rather than the biller registry, so the
+    // provider's own "Mobile Postpaid" category row has nothing behind it and
+    // is dropped above.
+    if (!categories.some((category) => /^(mobile )?postpaid$/i.test(category.id))) {
+      categories.push({
+        id: OPERATOR_CATEGORY.postpaid,
+        name: 'Postpaid',
+        category: OPERATOR_CATEGORY.postpaid,
+        providerCategory: OPERATOR_CATEGORY.postpaid,
+        label: 'Mobile Number',
+        image: null,
+        billerCount: 0,
+      });
+    }
+
+    return res.status(200).json({ success: true, data: categories });
   } catch (error) {
     console.error('Fetch Bill Categories Error:', error?.response?.data || error?.message);
     return res.status(500).json({ success: false, message: 'Failed to fetch bill categories' });

@@ -596,7 +596,7 @@ class ApiService {
 
   // ------------------------------------------------- Recharge / BBPS
   async getRechargeOperators(type: string) {
-    return this.get(`${API_ENDPOINTS.recharge.operators}/${type}`);
+    return this.get(`${API_ENDPOINTS.recharge.operators}/${encodeURIComponent(type)}`);
   }
 
   async getRechargeCircles() {
