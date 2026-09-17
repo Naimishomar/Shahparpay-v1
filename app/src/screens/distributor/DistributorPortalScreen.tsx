@@ -16,6 +16,7 @@ import {
   SuccessBanner,
   money,
   shortDate,
+  isoDate,
 } from '@/components/ui/Screen';
 import { ConfirmSheet } from '@/components/ui/Sheet';
 import { ImageField } from '@/components/ui/ImageField';
@@ -32,7 +33,9 @@ const TABS = [
 ];
 
 const MODES = ['NEFT', 'IMPS', 'RTGS', 'UPI', 'CASH_DEPOSIT', 'CHEQUE'];
-const today = () => new Date().toISOString().slice(0, 10);
+/** Local date, not UTC: before 05:30 IST toISOString() is still on yesterday,
+ *  so the deposit date defaulted to the wrong day every early morning. */
+const today = () => isoDate(new Date());
 
 /** How far the summary card rides up into the brand band — same as Home. */
 const CARD_OVERLAP = 52;

@@ -14,6 +14,7 @@ import {
   StatusPill,
   money,
   shortDate,
+  isoDate,
 } from '@/components/ui/Screen';
 import { ImageField } from '@/components/ui/ImageField';
 import { useAsync, useAction } from '@/hooks/useAsync';
@@ -29,7 +30,9 @@ const MODES = [
   { key: 'CHEQUE', label: 'Cheque' },
 ] as const;
 
-const today = () => new Date().toISOString().slice(0, 10);
+/** Local date, not UTC: before 05:30 IST toISOString() is still on yesterday,
+ *  so the deposit date defaulted to the wrong day every early morning. */
+const today = () => isoDate(new Date());
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export const FundRequestScreen: React.FC = () => {

@@ -6,6 +6,7 @@ import {
   isOk,
   normaliseStatus,
   providerMessage,
+  cleanProviderMessage,
   makeReferenceId,
 } from '../utils/icchhamati.util.js';
 import { lockFundsForTransaction, resolveTransaction } from '../utils/wallet.util.js';
@@ -25,6 +26,18 @@ import { verifyBankAccountWithProvider } from '../utils/bankAccountVerification.
  * every read is filtered to the sender mobile the retailer is working with —
  * one retailer must not be able to page through another's beneficiaries.
  */
+
+/**
+ * The provider refuses a payout its OWN settlement float cannot cover, with
+ * "Insufficient balance for debit transaction". Passed through verbatim that
+ * reads as the retailer's wallet being empty — which it is not; their money was
+ * never sent and has already been refunded. Say whose balance it actually is.
+ */
+const PROVIDER_FLOAT_MESSAGE =
+  'Money transfer is temporarily unavailable at our banking partner. Your wallet has not been charged. Please try again later.';
+
+const isProviderFloatRefusal = (data) =>
+  /insufficient\s+(balance|fund)/i.test(cleanProviderMessage(data?.message));
 
 /** The sender's mobile is the only thing tying a beneficiary to a customer. */
 const requireMobile = (mobile) => {
@@ -403,7 +416,9 @@ export const initiateTransfer = async (req, res) => {
     let data;
     try {
       data = await icchhamatiPost('/api/v2/beneficiaries/beneficiary-payout', {
-        beneficiary_id: String(beneficiaryId),
+        // Integer, as the provider documents it — their own sample sends
+        // `"beneficiary_id": 12`, not a quoted string.
+        beneficiary_id: Number(beneficiaryId),
         amount: Math.round(totalAmount),
         transfer_mode: mode,
         transaction_id: transactionId,
@@ -423,10 +438,10 @@ export const initiateTransfer = async (req, res) => {
     // status says whether it has settled. A payout accepted but not yet settled
     // is PENDING, not SUCCESS.
     const status = isOk(data) ? normaliseStatus(data?.data?.status ?? '2') : 'FAILED';
-    const message = providerMessage(
-      data,
-      status === 'FAILED' ? 'The transfer was not accepted.' : ''
-    );
+    const message =
+      status === 'FAILED' && isProviderFloatRefusal(data)
+        ? PROVIDER_FLOAT_MESSAGE
+        : providerMessage(data, status === 'FAILED' ? 'The transfer was not accepted.' : '');
 
     await Transaction.findOneAndUpdate(
       { transactionId },

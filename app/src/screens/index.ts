@@ -1,6 +1,7 @@
 export { LoginScreen } from './auth/LoginScreen';
 export { LandingScreen } from './auth/LandingScreen';
 export { ServicesScreen } from './ServicesScreen';
+export { SupportScreen } from './SupportScreen';
 export { ReportsScreen } from './ReportsScreen';
 export { DashboardScreen } from './retailer/DashboardScreen';
 export { AepsScreen } from './retailer/AepsScreen';
@@ -10,6 +11,7 @@ export { LeadGenerationScreen } from './retailer/LeadGenerationScreen';
 export { ItrScreen } from './retailer/ItrScreen';
 export { UpiPaymentsScreen } from './retailer/UpiPaymentsScreen';
 export { DmtScreen } from './retailer/DmtScreen';
+export { MatmScreen } from './retailer/MatmScreen';
 export { RechargeScreen } from './retailer/RechargeScreen';
 export { BbpsScreen } from './retailer/BbpsScreen';
 export { CollectScreen } from './retailer/CollectScreen';

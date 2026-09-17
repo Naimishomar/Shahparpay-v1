@@ -82,13 +82,36 @@ export const DmtReport: React.FC = () => (
 
 export const RechargeReport: React.FC = () => (
   <TransactionReport
-    fetcher={byType('RECHARGE,BILL_PAYMENT')}
+    fetcher={byType('RECHARGE')}
     searchFields={txnSearch}
     titleOf={(i) => i?.metadata?.caNumber ?? 'Recharge'}
     subtitleOf={(i) => i?.metadata?.mode ?? i?.transactionId ?? ''}
     details={txnDetails}
     emptyIcon="cellphone"
     emptyTitle="No recharges yet"
+  />
+);
+
+/**
+ * Bill payments, split out of the recharge report the way the web portal
+ * splits /reports/recharge from /reports/bbps: a retailer chasing a failed
+ * electricity bill should not have to scroll past the day's mobile top-ups.
+ */
+export const BbpsReport: React.FC = () => (
+  <TransactionReport
+    fetcher={byType('BILL_PAYMENT')}
+    searchFields={txnSearch}
+    titleOf={(i) => i?.metadata?.billerName ?? i?.metadata?.operator ?? 'Bill payment'}
+    subtitleOf={(i) =>
+      (txnFailed(i) && txnReason(i)) || i?.metadata?.caNumber || i?.transactionId || ''
+    }
+    details={[
+      ...txnDetails,
+      { label: 'Biller', value: (i: any) => i?.metadata?.billerName ?? i?.metadata?.operator ?? '—' },
+      { label: 'Bill number', value: (i: any) => i?.metadata?.billNumber ?? '—' },
+    ]}
+    emptyIcon="receipt"
+    emptyTitle="No bill payments"
   />
 );
 

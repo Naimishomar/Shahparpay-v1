@@ -15,6 +15,7 @@ import { LeadGenerationScreen } from '@/screens/retailer/LeadGenerationScreen';
 import { ItrScreen } from '@/screens/retailer/ItrScreen';
 import { UpiPaymentsScreen } from '@/screens/retailer/UpiPaymentsScreen';
 import { DmtScreen } from '@/screens/retailer/DmtScreen';
+import { MatmScreen } from '@/screens/retailer/MatmScreen';
 import { RechargeScreen } from '@/screens/retailer/RechargeScreen';
 import { BbpsScreen } from '@/screens/retailer/BbpsScreen';
 import { CollectScreen } from '@/screens/retailer/CollectScreen';
@@ -29,11 +30,13 @@ import { AdminPortalScreen } from '@/screens/admin/AdminPortalScreen';
 import { DistributorPortalScreen } from '@/screens/distributor/DistributorPortalScreen';
 import { RetailersScreen } from '@/screens/distributor/RetailersScreen';
 import { ServicesScreen } from '@/screens/ServicesScreen';
+import { SupportScreen } from '@/screens/SupportScreen';
 import { ReportsScreen } from '@/screens/ReportsScreen';
 import {
   AepsReport,
   DmtReport,
   RechargeReport,
+  BbpsReport,
   UpiReport,
   ItrReport,
   PanReport,
@@ -75,6 +78,7 @@ const REPORT_SCREENS: [string, React.ComponentType<any>][] = [
   ['DmtReport', DmtReport],
   ['PayoutReport', PayoutReport],
   ['RechargeReport', RechargeReport],
+  ['BbpsReport', BbpsReport],
   ['UpiReport', UpiReport],
   ['PanReport', PanReport],
   ['ItrReport', ItrReport],
@@ -93,6 +97,7 @@ const RETAILER_SCREENS: [string, React.ComponentType<any>][] = [
   ['ITR', ItrScreen],
   ['UPIPayments', UpiPaymentsScreen],
   ['DMT', DmtScreen],
+  ['MATM', MatmScreen],
   ['Recharge', RechargeScreen],
   ['BBPS', BbpsScreen],
   ['Collect', CollectScreen],
@@ -103,11 +108,13 @@ const RETAILER_SCREENS: [string, React.ComponentType<any>][] = [
   ['PipeStatus', PipeStatusScreen],
   ['Profile', ProfileScreen],
   ['KycStatus', KycStatusScreen],
+  ['Support', SupportScreen],
 ];
 
 const ADMIN_SCREENS: [string, React.ComponentType<any>][] = [
   ['AdminPortal', AdminPortalScreen],
   ['Profile', ProfileScreen],
+  ['Support', SupportScreen],
   ...REPORT_SCREENS,
 ];
 
@@ -115,6 +122,7 @@ const DISTRIBUTOR_SCREENS: [string, React.ComponentType<any>][] = [
   ['DistributorPortal', DistributorPortalScreen],
   ['DistributorRetailers', RetailersScreen],
   ['Profile', ProfileScreen],
+  ['Support', SupportScreen],
   ...REPORT_SCREENS,
 ];
 

@@ -27,13 +27,35 @@ const TABS = [
   { key: 'overview', label: 'Overview' },
   { key: 'requests', label: 'Fund requests' },
   { key: 'distributors', label: 'Distributors' },
-  { key: 'settings', label: 'Settings' },
+  { key: 'notifications', label: 'Notifications' },
+  { key: 'commissions', label: 'Commissions' },
 ];
+
+const NOTIFICATION_KINDS = [
+  { key: 'info', label: 'Info' },
+  { key: 'success', label: 'Success' },
+  { key: 'warning', label: 'Warning' },
+  { key: 'urgent', label: 'Urgent' },
+];
+
+/** The percentages the backend stores under `aepsCommission`. */
+const COMMISSION_FIELDS = [
+  { key: 'retailerPercentage', label: 'Retailer %' },
+  { key: 'distributorPercentage', label: 'Distributor %' },
+  { key: 'totalApiPercentage', label: 'Total API %' },
+] as const;
+
+type CommissionKey = (typeof COMMISSION_FIELDS)[number]['key'];
 
 export const AdminPortalScreen: React.FC = () => {
   const [tab, setTab] = useState('overview');
   const [remarks, setRemarks] = useState<Record<string, string>>({});
-  const [commission, setCommission] = useState('');
+  const [commission, setCommission] = useState<Record<CommissionKey, string>>({
+    retailerPercentage: '',
+    distributorPercentage: '',
+    totalApiPercentage: '',
+  });
+  const [announcement, setAnnouncement] = useState({ title: '', message: '', kind: 'info' });
   const [notice, setNotice] = useState('');
   const [onboarding, setOnboarding] = useState(false);
   const [selectedDistributor, setSelectedDistributor] = useState<any | null>(null);
@@ -47,9 +69,19 @@ export const AdminPortalScreen: React.FC = () => {
   );
   const settings = useAsync<any>(async () => {
     const res = await api.getGlobalSettings();
-    setCommission(String(res.data?.aepsCommission ?? ''));
+    // `aepsCommission` is an object of three percentages, not a single rate:
+    // posting a bare number left the spread in the controller a no-op, so
+    // "Save settings" silently changed nothing.
+    const rates = res.data?.aepsCommission ?? {};
+    setCommission({
+      retailerPercentage: String(rates.retailerPercentage ?? ''),
+      distributorPercentage: String(rates.distributorPercentage ?? ''),
+      totalApiPercentage: String(rates.totalApiPercentage ?? ''),
+    });
     return res.data;
   }, []);
+
+  const notifications = useAsync<any[]>(async () => (await api.getNotifications()).data ?? [], []);
 
   const decide = useAction(async (requestId: string, status: 'APPROVED' | 'REJECTED') => {
     const res = await api.updateAdminFundRequest({
@@ -62,7 +94,38 @@ export const AdminPortalScreen: React.FC = () => {
   });
 
   const saveSettings = useAction(async () => {
-    const res = await api.updateGlobalSettings({ aepsCommission: Number(commission) });
+    const retailer = Number(commission.retailerPercentage);
+    const distributor = Number(commission.distributorPercentage);
+    const total = Number(commission.totalApiPercentage);
+    // Same guard the web portal applies: the two shares are carved out of the
+    // provider's total, and the admin keeps the remainder.
+    if (retailer + distributor > total) {
+      throw new Error('Retailer + distributor % cannot exceed the total API %.');
+    }
+    const res = await api.updateGlobalSettings({
+      aepsCommission: {
+        retailerPercentage: retailer,
+        distributorPercentage: distributor,
+        totalApiPercentage: total,
+      },
+    });
+    if (!res.success) throw new Error(res.message);
+    return res;
+  });
+
+  const publish = useAction(async () => {
+    const res = await api.createNotification({
+      title: announcement.title.trim(),
+      message: announcement.message.trim(),
+      kind: announcement.kind,
+      showInTicker: true,
+    });
+    if (!res.success) throw new Error(res.message);
+    return res;
+  });
+
+  const archive = useAction(async (id: string) => {
+    const res = await api.archiveNotification(id);
     if (!res.success) throw new Error(res.message);
     return res;
   });
@@ -91,6 +154,7 @@ export const AdminPortalScreen: React.FC = () => {
         fundRequests.refresh();
         recent.refresh();
         settings.refresh();
+        notifications.refresh();
       }}
       error={stats.error}
       onRetry={stats.reload}
@@ -274,20 +338,119 @@ export const AdminPortalScreen: React.FC = () => {
         </Card>
       )}
 
-      {tab === 'settings' && (
+      {tab === 'notifications' && (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle icon="bullhorn-outline">Publish an announcement</CardTitle>
+            </CardHeader>
+            <CardContent style={styles.form}>
+              <Segmented
+                options={NOTIFICATION_KINDS}
+                value={announcement.kind}
+                onChange={(kind) => setAnnouncement((prev) => ({ ...prev, kind }))}
+              />
+              <Input
+                label="Title"
+                value={announcement.title}
+                onChangeText={(title) => setAnnouncement((prev) => ({ ...prev, title }))}
+                maxLength={120}
+                required
+              />
+              <Input
+                label="Message"
+                value={announcement.message}
+                onChangeText={(message) => setAnnouncement((prev) => ({ ...prev, message }))}
+                maxLength={1000}
+                multiline
+                numberOfLines={4}
+                style={styles.textarea}
+                required
+              />
+              {!!publish.error && <ErrorBanner message={publish.error} />}
+              <Button
+                onPress={async () => {
+                  setNotice('');
+                  const res = await publish.run();
+                  if (res) {
+                    setNotice(res.message || 'Announcement published.');
+                    setAnnouncement({ title: '', message: '', kind: 'info' });
+                    notifications.reload();
+                  }
+                }}
+                loading={publish.pending}
+                disabled={!announcement.title.trim() || !announcement.message.trim()}
+                icon="send"
+                fullWidth
+              >
+                Publish to everyone
+              </Button>
+              <Text style={styles.help}>
+                Published announcements reach every retailer and distributor, in the header bell
+                and the Home updates strip.
+              </Text>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle icon="bell-outline">Active announcements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {notifications.loading ? null : notifications.data?.length ? (
+                notifications.data.map((item: any) => (
+                  <View key={item._id} style={styles.detailCard}>
+                    <Row label="Title" value={item.title} />
+                    <Row label="Message" value={item.message} />
+                    <Row label="Published" value={dateTime(item.createdAt)} />
+                    <Button
+                      onPress={async () => {
+                        const res = await archive.run(item._id);
+                        if (res) notifications.reload();
+                      }}
+                      variant="outline"
+                      size="sm"
+                      icon="archive-outline"
+                    >
+                      Archive
+                    </Button>
+                  </View>
+                ))
+              ) : (
+                <EmptyState
+                  icon="bell-outline"
+                  title="No active announcements"
+                  subtitle="Anything you publish shows here until it is archived"
+                />
+              )}
+              {!!archive.error && <ErrorBanner message={archive.error} />}
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      {tab === 'commissions' && (
         <Card>
           <CardHeader>
-            <CardTitle icon="cog-outline">Global settings</CardTitle>
+            <CardTitle icon="percent-outline">AEPS commission split</CardTitle>
           </CardHeader>
           <CardContent style={styles.form}>
-            <Input
-              label="AEPS commission"
-              value={commission}
-              onChangeText={(v) => setCommission(v.replace(/[^0-9.]/g, ''))}
-              keyboardType="decimal-pad"
-              leftIcon="percent-outline"
-              helperText="Applied to every AEPS withdrawal across the network"
-            />
+            {COMMISSION_FIELDS.map((field) => (
+              <Input
+                key={field.key}
+                label={field.label}
+                value={commission[field.key]}
+                onChangeText={(v) =>
+                  setCommission((prev) => ({ ...prev, [field.key]: v.replace(/[^0-9.]/g, '') }))
+                }
+                keyboardType="decimal-pad"
+                leftIcon="percent-outline"
+              />
+            ))}
+            <Text style={styles.help}>
+              The retailer and distributor shares are carved out of the total API commission; the
+              admin keeps whatever is left.
+            </Text>
             {!!settings.error && <ErrorBanner message={settings.error} onRetry={settings.reload} />}
             {!!saveSettings.error && <ErrorBanner message={saveSettings.error} />}
             <Button
@@ -300,7 +463,7 @@ export const AdminPortalScreen: React.FC = () => {
                 }
               }}
               loading={saveSettings.pending}
-              disabled={!commission}
+              disabled={COMMISSION_FIELDS.some((f) => !commission[f.key])}
               icon="content-save-outline"
               fullWidth
             >
@@ -386,6 +549,8 @@ const Tile: React.FC<{ label: string; value: string; tone?: 'warning' }> = ({
 );
 
 const styles = themed((c) => ({
+  help: { fontSize: t.caption, color: c.mutedForeground, lineHeight: 18 },
+  textarea: { minHeight: 90, textAlignVertical: 'top', paddingTop: space.sm },
   detailCard: {
     paddingHorizontal: space.lg,
     borderRadius: radius.md,

@@ -72,6 +72,10 @@ const CACHE_TTL: Record<string, number> = {
   [API_ENDPOINTS.distributor.stats]: MINUTE,
   [API_ENDPOINTS.admin.stats]: MINUTE,
   [API_ENDPOINTS.admin.distributors]: MINUTE,
+  // Announcements are polled by the header bell and the Home ticker on every
+  // screen; a short TTL keeps that from becoming a request per navigation.
+  [API_ENDPOINTS.notifications.list]: 30_000,
+  [API_ENDPOINTS.notifications.ticker]: 5 * MINUTE,
 };
 
 /** The TTL for a URL, matching on prefix so `/status/:id` inherits `/status`. */
@@ -843,6 +847,73 @@ class ApiService {
     endDate?: string;
   }) {
     return this.get(API_ENDPOINTS.dashboard.recentTransactions, params);
+  }
+
+  // ---------------------------------------------------------------- MATM
+  /** Initialises the provider's terminal session; must run before a request. */
+  async getMatmConfig() {
+    return this.post(API_ENDPOINTS.matm.config);
+  }
+
+  async processMatm(data: { mobile: string; data: Record<string, any> }) {
+    return this.post(API_ENDPOINTS.matm.request, data);
+  }
+
+  async getMatmHistory() {
+    return this.get(API_ENDPOINTS.matm.history);
+  }
+
+  // ------------------------------------------------------- Notifications
+  async getNotifications() {
+    return this.get(API_ENDPOINTS.notifications.list);
+  }
+
+  async getTickerUpdates() {
+    return this.get(API_ENDPOINTS.notifications.ticker);
+  }
+
+  async markNotificationRead(id: string) {
+    return this.post(`${API_ENDPOINTS.notifications.read}/${id}/read`);
+  }
+
+  /** Admin only — publishes an announcement to every retailer and distributor. */
+  async createNotification(data: {
+    title: string;
+    message: string;
+    kind?: string;
+    showInTicker?: boolean;
+    expiresAt?: string | null;
+  }) {
+    return this.post(API_ENDPOINTS.notifications.list, data);
+  }
+
+  async archiveNotification(id: string) {
+    return this.delete(`${API_ENDPOINTS.notifications.list}/${id}`);
+  }
+
+  // ------------------------------------------------------------- Support
+  async getSupportTickets() {
+    return this.get(API_ENDPOINTS.support.tickets);
+  }
+
+  /** Multipart: the issue photo is optional, and multer reads it as `attachment`. */
+  async createSupportTicket(
+    data: { subject: string; description: string; recipient?: string },
+    attachment?: { uri: string; name: string; type: string }
+  ) {
+    return this.postForm(API_ENDPOINTS.support.tickets, data, { attachment });
+  }
+
+  async addSupportMessage(
+    id: string,
+    message: string,
+    attachment?: { uri: string; name: string; type: string }
+  ) {
+    return this.postForm(`${API_ENDPOINTS.support.tickets}/${id}/messages`, { message }, { attachment });
+  }
+
+  async updateSupportTicket(id: string, status: string) {
+    return this.patch(`${API_ENDPOINTS.support.tickets}/${id}`, { status });
   }
 
   // --------------------------------------------------------- Distributor

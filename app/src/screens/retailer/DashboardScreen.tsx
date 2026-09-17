@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/Screen';
 import { useAsync } from '@/hooks/useAsync';
 import { useAuth } from '@/context/AuthContext';
+import { NotificationBell } from '@/components/layout/NotificationBell';
+import { UpdatesTicker } from '@/components/layout/UpdatesTicker';
 import { QUICK_ACTIONS, SERVICE_METRICS } from '@/constants';
 import { DashboardStats } from '@/types';
 import api from '@/services/api';
@@ -301,17 +303,15 @@ export const DashboardScreen: React.FC = () => {
             </Text>
           )}
         </View>
-        <IconButton
-          icon="bell-outline"
-          label="Reports"
-          onPress={() => navigation.navigate('Reports')}
-        />
+        <NotificationBell />
         <IconButton
           icon="cog-outline"
           label="Account"
           onPress={() => navigation.navigate('Profile')}
         />
       </View>
+
+      <UpdatesTicker />
 
       {/* Wallet. The one card that never takes the page ground: it is the
           object the whole screen is about. */}

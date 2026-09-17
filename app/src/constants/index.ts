@@ -137,17 +137,20 @@ export const RETAILER_TABS: TabEntry[] = [
 export const ADMIN_TABS: TabEntry[] = [
   { key: 'home', name: 'Overview', route: 'AdminPortal', icon: 'view-dashboard-outline', iconActive: 'view-dashboard' },
   { key: 'reports', name: 'Reports', route: 'Reports', icon: 'chart-box-outline', iconActive: 'chart-box' },
+  { key: 'support', name: 'Support', route: 'Support', icon: 'headset', iconActive: 'headset' },
 ];
 
 export const DISTRIBUTOR_TABS: TabEntry[] = [
   { key: 'home', name: 'Overview', route: 'DistributorPortal', icon: 'view-dashboard-outline', iconActive: 'view-dashboard' },
   { key: 'retailers', name: 'Retailers', route: 'DistributorRetailers', icon: 'store-outline', iconActive: 'store' },
   { key: 'reports', name: 'Reports', route: 'Reports', icon: 'chart-box-outline', iconActive: 'chart-box' },
+  { key: 'support', name: 'Support', route: 'Support', icon: 'headset', iconActive: 'headset' },
 ];
 
 /** Services grid — every route must also be registered in AppNavigator. */
 export const SERVICE_ITEMS: MenuEntry[] = [
   { name: 'AEPS', route: 'AEPS', icon: 'fingerprint', hint: 'Aadhaar banking', group: 'Banking' },
+  { name: 'MATM', route: 'MATM', icon: 'credit-card-outline', hint: 'Micro ATM withdrawal', group: 'Banking' },
   { name: 'DMT', route: 'DMT', icon: 'bank-transfer', hint: 'Money transfer', group: 'Banking' },
   { name: 'Wallet Transfer', route: 'WalletTransfer', icon: 'wallet-plus-outline', hint: 'AEPS to main wallet', group: 'Banking' },
   { name: 'Direct Payout', route: 'DirectPayout', icon: 'cash-fast', hint: 'Pay any account', group: 'Banking' },
@@ -165,6 +168,7 @@ export const SERVICE_ITEMS: MenuEntry[] = [
   { name: 'KYC Status', route: 'KycStatus', icon: 'shield-check-outline', hint: 'Verification', group: 'Account' },
   { name: 'Pipe Status', route: 'PipeStatus', icon: 'pipe', hint: 'Bank connectivity', group: 'Account' },
   { name: 'Biometric', route: 'BiometricSupport', icon: 'fingerprint-off', hint: 'Device help', group: 'Account' },
+  { name: 'Support Center', route: 'Support', icon: 'headset', hint: 'Raise an issue', group: 'Account' },
 ];
 
 /** Report destinations. `type` filters /api/dashboard/recent-transactions. */
@@ -182,7 +186,8 @@ export const REPORT_ITEMS: ReportEntry[] = [
   { name: 'AEPS Report', route: 'AepsReport', icon: 'fingerprint', hint: 'Withdrawals and enquiries', type: 'AEPS' },
   { name: 'DMT Report', route: 'DmtReport', icon: 'bank-transfer', hint: 'Money transfers', type: 'DMT' },
   { name: 'Payout Report', route: 'PayoutReport', icon: 'cash-fast', hint: 'Settlements and payouts' },
-  { name: 'Recharge Report', route: 'RechargeReport', icon: 'cellphone', hint: 'Recharges and bills', type: 'RECHARGE,BILL_PAYMENT' },
+  { name: 'Recharge Report', route: 'RechargeReport', icon: 'cellphone', hint: 'Mobile and DTH recharges', type: 'RECHARGE' },
+  { name: 'BBPS Report', route: 'BbpsReport', icon: 'receipt', hint: 'Utility bill payments', type: 'BILL_PAYMENT' },
   { name: 'UPI Report', route: 'UpiReport', icon: 'qrcode', hint: 'UPI collections', type: 'WALLET_TOPUP' },
   { name: 'PAN Report', route: 'PanReport', icon: 'card-account-details-outline', hint: 'PAN applications' },
   { name: 'ITR Report', route: 'ItrReport', icon: 'file-document-outline', hint: 'Filings and charges' },
@@ -341,6 +346,19 @@ export const API_ENDPOINTS = {
     admin: '/api/fund-request/admin',
     adminUpdate: '/api/fund-request/admin/update',
     delete: '/api/fund-request/delete', // append /:id
+  },
+  matm: {
+    config: '/api/matm/config',
+    request: '/api/matm/request',
+    history: '/api/matm/history',
+  },
+  notifications: {
+    list: '/api/notifications',
+    ticker: '/api/notifications/ticker',
+    read: '/api/notifications', // append /:id/read
+  },
+  support: {
+    tickets: '/api/support',
   },
   distributor: {
     stats: '/api/distributor/stats',

@@ -13,6 +13,7 @@ import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/services/api';
 import { WalletBalances } from '@/types';
+import { NotificationBell } from './NotificationBell';
 
 interface HeaderProps {
   title?: string;
@@ -120,6 +121,8 @@ export const Header: React.FC<HeaderProps> = ({
             </Text>
           )}
         </View>
+
+        <NotificationBell onBand={onBand} />
 
         <Pressable
           onPress={onAccount}

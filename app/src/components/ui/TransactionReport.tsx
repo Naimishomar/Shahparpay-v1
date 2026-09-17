@@ -15,6 +15,7 @@ import {
   Segmented,
   StatusPill,
   dateTime,
+  isoDate,
   money,
 } from './Screen';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -65,8 +66,6 @@ const RANGES = [
 
 type RangeKey = (typeof RANGES)[number]['key'];
 
-const isoDay = (d: Date) => d.toISOString().slice(0, 10);
-
 function rangeToDates(key: RangeKey): { startDate?: string; endDate?: string } {
   if (key === 'all') return {};
   const end = new Date();
@@ -74,7 +73,10 @@ function rangeToDates(key: RangeKey): { startDate?: string; endDate?: string } {
   if (key === 'today') start.setHours(0, 0, 0, 0);
   if (key === '7d') start.setDate(start.getDate() - 7);
   if (key === '30d') start.setDate(start.getDate() - 30);
-  return { startDate: isoDay(start), endDate: isoDay(end) };
+  // isoDate, not toISOString().slice(0,10): the latter converts to UTC first,
+  // so before 05:30 IST both ends of the range land on the previous day and
+  // "Today" comes back empty.
+  return { startDate: isoDate(start), endDate: isoDate(end) };
 }
 
 const STATUSES = ['ALL', 'SUCCESS', 'PENDING', 'FAILED'] as const;
