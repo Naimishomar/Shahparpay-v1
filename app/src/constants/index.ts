@@ -152,7 +152,7 @@ export const SERVICE_ITEMS: MenuEntry[] = [
   { name: 'AEPS', route: 'AEPS', icon: 'fingerprint', hint: 'Aadhaar banking', group: 'Banking' },
   { name: 'MATM', route: 'MATM', icon: 'credit-card-outline', hint: 'Micro ATM withdrawal', group: 'Banking' },
   { name: 'DMT', route: 'DMT', icon: 'bank-transfer', hint: 'Money transfer', group: 'Banking' },
-  { name: 'Wallet Transfer', route: 'WalletTransfer', icon: 'wallet-plus-outline', hint: 'AEPS to main wallet', group: 'Banking' },
+  { name: 'Wallet Transfer', route: 'WalletTransfer', icon: 'wallet-plus-outline', hint: 'QR to main wallet', group: 'Banking' },
   { name: 'Direct Payout', route: 'DirectPayout', icon: 'cash-fast', hint: 'Pay any account', group: 'Banking' },
   { name: 'UPI Payments', route: 'UPIPayments', icon: 'qrcode', hint: 'Printable counter QR', group: 'Payments' },
 

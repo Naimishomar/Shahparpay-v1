@@ -827,7 +827,13 @@ class ApiService {
     return this.post(API_ENDPOINTS.wallet.changePin, data);
   }
 
-  async transferAepsToMain(data: { amount: number; pin: string }) {
+  /**
+   * QR wallet -> Main wallet. Named for what the endpoint actually does:
+   * `/api/wallet/transfer` is `transferQrToMain`, which debits the QR wallet.
+   * It was called transferAepsToMain here, so the app offered the retailer
+   * their AEPS balance and then asked the server to move QR money.
+   */
+  async transferQrToMain(data: { amount: number; pin: string }) {
     return this.post(API_ENDPOINTS.wallet.transfer, data);
   }
 

@@ -28,6 +28,8 @@ interface HeaderProps {
    * black slab pinned above a white page, which is why this is opt-in.
    */
   onBand?: boolean;
+  /** Hidden on the Notifications screen itself — it would link to itself. */
+  showBell?: boolean;
 }
 
 const money = (value?: number) =>
@@ -48,11 +50,13 @@ export const Header: React.FC<HeaderProps> = ({
   onAccount,
   topInset = 0,
   onBand = false,
+  showBell = true,
 }) => {
   const { user, token } = useAuth();
   const [balances, setBalances] = useState<WalletBalances>({
     aepsBalance: 0,
     mainBalance: 0,
+    qrBalance: 0,
     adminBalance: 0,
   });
   const [anchor, setAnchor] = useState<Anchor | null>(null);
@@ -74,6 +78,7 @@ export const Header: React.FC<HeaderProps> = ({
       ? [{ label: 'Admin wallet', amount: balances.adminBalance, icon: 'shield-account' }]
       : [
           { label: 'AEPS wallet', amount: balances.aepsBalance, icon: 'fingerprint' },
+          { label: 'QR wallet', amount: balances.qrBalance, icon: 'qrcode' },
           { label: 'Main wallet', amount: balances.mainBalance, icon: 'wallet' },
         ];
 
@@ -122,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </View>
 
-        <NotificationBell onBand={onBand} />
+        {showBell && <NotificationBell onBand={onBand} />}
 
         <Pressable
           onPress={onAccount}

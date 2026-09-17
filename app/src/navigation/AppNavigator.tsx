@@ -31,6 +31,7 @@ import { DistributorPortalScreen } from '@/screens/distributor/DistributorPortal
 import { RetailersScreen } from '@/screens/distributor/RetailersScreen';
 import { ServicesScreen } from '@/screens/ServicesScreen';
 import { SupportScreen } from '@/screens/SupportScreen';
+import { NotificationsScreen } from '@/screens/NotificationsScreen';
 import { ReportsScreen } from '@/screens/ReportsScreen';
 import {
   AepsReport,
@@ -70,6 +71,12 @@ const withLayout = (Screen: React.ComponentType<any>) => {
   return wrapped;
 };
 
+// Reachable from the header bell, which every authenticated screen carries.
+const COMMON_SCREENS: [string, React.ComponentType<any>][] = [
+  ['Notifications', NotificationsScreen],
+  ['Support', SupportScreen],
+];
+
 // Every report route, shared by all three roles.
 const REPORT_SCREENS: [string, React.ComponentType<any>][] = [
   ['Reports', ReportsScreen],
@@ -108,13 +115,13 @@ const RETAILER_SCREENS: [string, React.ComponentType<any>][] = [
   ['PipeStatus', PipeStatusScreen],
   ['Profile', ProfileScreen],
   ['KycStatus', KycStatusScreen],
-  ['Support', SupportScreen],
+  ...COMMON_SCREENS,
 ];
 
 const ADMIN_SCREENS: [string, React.ComponentType<any>][] = [
   ['AdminPortal', AdminPortalScreen],
   ['Profile', ProfileScreen],
-  ['Support', SupportScreen],
+  ...COMMON_SCREENS,
   ...REPORT_SCREENS,
 ];
 
@@ -122,7 +129,7 @@ const DISTRIBUTOR_SCREENS: [string, React.ComponentType<any>][] = [
   ['DistributorPortal', DistributorPortalScreen],
   ['DistributorRetailers', RetailersScreen],
   ['Profile', ProfileScreen],
-  ['Support', SupportScreen],
+  ...COMMON_SCREENS,
   ...REPORT_SCREENS,
 ];
 

@@ -28,6 +28,7 @@ const TITLES: Record<string, { title: string; subtitle?: string }> = {
   AdminPortal: { title: 'Overview' },
   DistributorPortal: { title: 'Overview' },
   DistributorRetailers: { title: 'Retailers', subtitle: 'Your network' },
+  Notifications: { title: 'Notifications', subtitle: 'Latest announcements' },
 };
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
@@ -97,6 +98,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         topInset={insets.top}
         title={named.title}
         subtitle={named.subtitle}
+        showBell={route.name !== 'Notifications'}
         onAccount={route.name === 'Profile' ? undefined : () => navigation.navigate('Profile')}
       />}
 

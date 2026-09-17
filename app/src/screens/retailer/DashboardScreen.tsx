@@ -304,11 +304,6 @@ export const DashboardScreen: React.FC = () => {
           )}
         </View>
         <NotificationBell />
-        <IconButton
-          icon="cog-outline"
-          label="Account"
-          onPress={() => navigation.navigate('Profile')}
-        />
       </View>
 
       <UpdatesTicker />
@@ -316,11 +311,16 @@ export const DashboardScreen: React.FC = () => {
       {/* Wallet. The one card that never takes the page ground: it is the
           object the whole screen is about. */}
       <View style={styles.wallet}>
-        {/* viewBox + preserveAspectRatio="none": a percentage-sized <Rect>
-            resolves against the SVG's own default viewport, which left the
-            gradient short of the card's right edge. In user units the fill
-            stretches to whatever the card measures. */}
+        {/* width/height as PROPS, not only via style. absoluteFill positions
+            the host view, but react-native-svg still sizes its canvas from the
+            width/height attributes, which default to 100 — so the gradient
+            painted a 100x100 patch and stopped, leaving the card's flat
+            backgroundColor showing along the right edge and the bottom.
+            viewBox + preserveAspectRatio="none" then stretches those user
+            units to whatever the card actually measures. */}
         <Svg
+          width="100%"
+          height="100%"
           style={StyleSheet.absoluteFill as any}
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
@@ -353,7 +353,7 @@ export const DashboardScreen: React.FC = () => {
 
         <View style={styles.walletFoot}>
           <Text style={styles.walletMeta} numberOfLines={1}>
-            {user?.retailerId ? `Account ** ${String(user.retailerId).slice(-4)}` : 'Main wallet'}
+            QR {money(balances.data?.qrBalance)}
           </Text>
           <Text style={styles.walletMeta} numberOfLines={1}>
             AEPS {money(balances.data?.aepsBalance)}
@@ -397,11 +397,17 @@ export const DashboardScreen: React.FC = () => {
           onPress={() => navigation.navigate('Reports')}
           style={({ pressed }) => [styles.tile, styles.tileHalf, pressed && styles.pressed]}
           accessibilityRole="button"
-          accessibilityLabel={`Earnings this month. ${money(stats?.TotalCommission)}`}
+          accessibilityLabel={`Earnings this month, net of TDS. ${money(stats?.TotalCommission)}`}
         >
           <Text style={styles.tileTitle}>Earnings</Text>
           <Text style={styles.tileValue} numberOfLines={1} adjustsFontSizeToFit>
             {money(stats?.TotalCommission)}
+          </Text>
+          {/* Both the window and the basis, because neither is obvious and the
+              ledger reports the same money over 30 days and before TDS. Without
+              this the two screens look like they disagree. */}
+          <Text style={styles.tileHint} numberOfLines={1}>
+            This month · net of TDS
           </Text>
           <View style={styles.dots}>
             {METRICS.slice(0, 4).map((metric, index) => (
@@ -638,22 +644,6 @@ const TransactionRow: React.FC<{ tx: any; index: number }> = ({ tx, index }) => 
   );
 };
 
-const IconButton: React.FC<{ icon: string; label: string; onPress: () => void }> = ({
-  icon,
-  label,
-  onPress,
-}) => (
-  <Pressable
-    onPress={onPress}
-    style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
-    accessibilityRole="button"
-    accessibilityLabel={label}
-    hitSlop={6}
-  >
-    <MaterialCommunityIcons name={icon as any} size={20} color={colors.foreground} />
-  </Pressable>
-);
-
 const SquareTile: React.FC<{ icon: string; label: string; onPress: () => void }> = ({
   icon,
   label,
@@ -716,14 +706,6 @@ const styles = themed((c) => ({
   identity: { flex: 1, minWidth: 0, gap: 1 },
   identityName: { fontSize: t.body, fontWeight: '700', color: c.foreground },
   identityCode: { fontSize: t.micro, color: c.mutedForeground },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.pill,
-    backgroundColor: c.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   pressed: { opacity: 0.75 },
 
   wallet: {
@@ -748,7 +730,7 @@ const styles = themed((c) => ({
     fontSize: 34,
     fontWeight: '800',
     color: '#FFFFFF',
-    marginTop: space.xxl,
+    marginTop: space.md,
     fontVariant: ['tabular-nums'],
   },
   walletFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },

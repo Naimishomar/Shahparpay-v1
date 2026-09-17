@@ -51,6 +51,8 @@ export interface ApiResponse<T> {
 export interface WalletBalances {
   aepsBalance: number;
   mainBalance: number;
+  /** UPI QR collections land here; only this wallet can be moved to Main. */
+  qrBalance: number;
   adminBalance: number;
 }
 

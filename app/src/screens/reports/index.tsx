@@ -217,14 +217,24 @@ const ledgerAmount = (i: any) =>
  * Ledger totals mirror the web portal: net movement plus what was earned and
  * withheld. A "failed" count is meaningless here — a ledger only ever contains
  * money that actually moved.
+ *
+ * Commission is shown twice on purpose. The ledger's COMMISSION column is the
+ * GROSS figure, but the wallet is credited net of 2% TDS, and Home's Earnings
+ * tile reports that net (see retailerNetCommission on the backend). Showing
+ * only the gross here left the two screens disagreeing by exactly the TDS with
+ * nothing on either to explain the gap, so the earned line leads with the
+ * number that actually reached the wallet and the gross sits beside it.
  */
 const ledgerSummary = (rows: any[]) => {
   const sum = (key: string) => rows.reduce((acc, r) => acc + Number(r?.[key] ?? 0), 0);
   const net = rows.reduce((acc, r) => acc + ledgerAmount(r), 0);
+  const gross = sum('COMMISSION');
+  const tds = sum('TDS');
   return [
     { label: 'Net amount', value: money(net), tone: net >= 0 ? ('success' as const) : ('error' as const) },
-    { label: 'Commission', value: money(sum('COMMISSION')), tone: 'success' as const },
-    { label: 'TDS', value: money(sum('TDS')), tone: 'warning' as const },
+    { label: 'Commission earned', value: money(gross - tds), tone: 'success' as const },
+    { label: 'Commission (gross)', value: money(gross) },
+    { label: 'TDS withheld', value: money(tds), tone: 'warning' as const },
     { label: 'GST', value: money(sum('GST')), tone: 'warning' as const },
   ];
 };

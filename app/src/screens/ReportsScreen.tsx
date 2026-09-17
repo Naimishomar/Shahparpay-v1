@@ -43,6 +43,16 @@ const RADIUS = (SIZE - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 /** Arc gap in px along the circumference — the reference leaves daylight. */
 const GAP = 14;
+/**
+ * Width the centre label gets. The hole is `SIZE - STROKE * 2` across, and a
+ * line of text is widest at its middle — which is exactly where the hole is
+ * widest too, so the full diameter is usable, less a margin so a long amount
+ * never touches the ring. Without an explicit width the block is absolutely
+ * positioned and unconstrained, so it laid out at its natural width and a
+ * crore-scale total printed straight over the arcs; `adjustsFontSizeToFit`
+ * had no bound to shrink against.
+ */
+const CENTRE_WIDTH = SIZE - STROKE * 2 - 20;
 
 export const ReportsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -76,11 +86,14 @@ export const ReportsScreen: React.FC = () => {
 
   // Each arc starts where the previous one ended, so one running offset walks
   // the ring; the gap is taken off the arc, not added between them, which
-  // keeps the total at exactly one revolution.
+  // keeps the total at exactly one revolution. A lone segment has nothing to
+  // be separated from, so it closes into a full ring instead of a circle with
+  // an arbitrary notch cut out of it.
+  const gap = segments.length > 1 ? GAP : 0;
   let walked = 0;
   const arcs = segments.map((segment) => {
     const length = (segment.value / total) * CIRCUMFERENCE;
-    const arc = { ...segment, length: Math.max(length - GAP, 2), offset: walked };
+    const arc = { ...segment, length: Math.max(length - gap, 2), offset: walked };
     walked += length;
     return arc;
   });
@@ -120,7 +133,7 @@ export const ReportsScreen: React.FC = () => {
                   r={RADIUS}
                   stroke={arc.color}
                   strokeWidth={STROKE}
-                  strokeLinecap="round"
+                  strokeLinecap="butt"
                   fill="none"
                   strokeDasharray={`${arc.length} ${CIRCUMFERENCE - arc.length}`}
                   strokeDashoffset={-arc.offset}
@@ -133,7 +146,14 @@ export const ReportsScreen: React.FC = () => {
               <Text style={styles.donutLabel}>
                 {period === 'day' ? 'Today' : `This ${period}`}
               </Text>
-              <Text style={styles.donutValue} numberOfLines={1} adjustsFontSizeToFit>
+              <Text
+                style={styles.donutValue}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                // Floor the shrink: past this the amount is smaller than the
+                // legend under it and stops being the thing the ring is for.
+                minimumFontScale={0.5}
+              >
                 {money(total)}
               </Text>
             </View>
@@ -255,7 +275,13 @@ const styles = themed((c) => ({
     justifyContent: 'center',
     paddingVertical: space.lg,
   },
-  donutCentre: { position: 'absolute', alignItems: 'center', gap: 4, paddingHorizontal: space.xl },
+  donutCentre: {
+    position: 'absolute',
+    width: CENTRE_WIDTH,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
   donutLabel: { fontSize: t.small, color: c.mutedForeground },
   donutValue: {
     fontSize: 30,

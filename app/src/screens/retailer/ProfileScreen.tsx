@@ -218,9 +218,12 @@ export const ProfileScreen: React.FC = () => {
               icon="percent-outline"
               label="AEPS commission"
               value={
-                settings.data?.aepsCommission == null
+                // aepsCommission is an object of three percentages, not a
+                // number — Number() on it rendered "NaN%". Show the retailer's
+                // share, which is the one this tile is about.
+                settings.data?.aepsCommission?.retailerPercentage == null
                   ? '—'
-                  : `${Number(settings.data.aepsCommission)}%`
+                  : `${Number(settings.data.aepsCommission.retailerPercentage)}%`
               }
             />
           </>
@@ -231,6 +234,7 @@ export const ProfileScreen: React.FC = () => {
               label="AEPS wallet"
               value={money(balances.data?.aepsBalance)}
             />
+            <Tile icon="qrcode" label="QR wallet" value={money(balances.data?.qrBalance)} />
             <Tile icon="wallet" label="Main wallet" value={money(balances.data?.mainBalance)} />
           </>
         )}

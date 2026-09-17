@@ -2,6 +2,7 @@ export { LoginScreen } from './auth/LoginScreen';
 export { LandingScreen } from './auth/LandingScreen';
 export { ServicesScreen } from './ServicesScreen';
 export { SupportScreen } from './SupportScreen';
+export { NotificationsScreen } from './NotificationsScreen';
 export { ReportsScreen } from './ReportsScreen';
 export { DashboardScreen } from './retailer/DashboardScreen';
 export { AepsScreen } from './retailer/AepsScreen';

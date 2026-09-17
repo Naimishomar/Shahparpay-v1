@@ -19,12 +19,25 @@ import {
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
 
+/** Only what this screen reads; the endpoint returns the AEPS balance too. */
 interface Balances {
-  aepsBalance: number;
+  qrBalance: number;
   mainBalance: number;
   hasPin: boolean;
 }
 
+/**
+ * QR wallet -> Main wallet, the same transfer the web portal offers.
+ *
+ * `/api/wallet/transfer` is `transferQrToMain` on the backend: it debits the
+ * QR wallet, where UPI QR collections land. This screen used to present the
+ * AEPS balance and validate against it while the server moved QR money, so a
+ * retailer with a full AEPS wallet and an empty QR wallet was shown a transfer
+ * the server could only refuse.
+ *
+ * The AEPS wallet is not transferable here — it settles straight to bank from
+ * the Withdraw screen.
+ */
 export const WalletTransferScreen: React.FC = () => {
   const [amount, setAmount] = useState('');
   const [pin, setPin] = useState('');
@@ -37,7 +50,7 @@ export const WalletTransferScreen: React.FC = () => {
   const history = useAsync<any[]>(async () => (await api.getWalletHistory()).data ?? [], []);
 
   const transfer = useAction(async () => {
-    const res = await api.transferAepsToMain({ amount: Number(amount), pin });
+    const res = await api.transferQrToMain({ amount: Number(amount), pin });
     if (!res.success) throw new Error(res.message);
     return res;
   });
@@ -49,7 +62,7 @@ export const WalletTransferScreen: React.FC = () => {
   });
 
   const hasPin = !!balances.data?.hasPin;
-  const available = balances.data?.aepsBalance ?? 0;
+  const available = balances.data?.qrBalance ?? 0;
   const numericAmount = Number(amount);
   const overBalance = numericAmount > available;
   const canTransfer = numericAmount > 0 && !overBalance && pin.length === 4 && !transfer.pending;
@@ -90,12 +103,11 @@ export const WalletTransferScreen: React.FC = () => {
       error={balances.error}
       onRetry={balances.reload}
     >
+      {/* Only the two wallets this transfer touches. The AEPS balance is not
+          movable here — it settles to bank from Withdraw — so showing it beside
+          an amount field is an invitation to type a number that cannot work. */}
       <Grid columns={2}>
-        <WalletTile
-          label="AEPS wallet"
-          amount={balances.data?.aepsBalance ?? 0}
-          icon="fingerprint"
-        />
+        <WalletTile label="QR wallet" amount={balances.data?.qrBalance ?? 0} icon="qrcode" />
         <WalletTile label="Main wallet" amount={balances.data?.mainBalance ?? 0} icon="wallet" />
       </Grid>
 
@@ -152,10 +164,10 @@ export const WalletTransferScreen: React.FC = () => {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle icon="swap-horizontal">Move AEPS balance to Main</CardTitle>
+            <CardTitle icon="swap-horizontal">Move QR balance to Main</CardTitle>
           </CardHeader>
           <CardContent style={styles.form}>
-            <Row label="Available in AEPS wallet" value={money(available)} mono last />
+            <Row label="Available in QR wallet" value={money(available)} mono last />
             <Input
               label="Amount"
               required
@@ -164,8 +176,8 @@ export const WalletTransferScreen: React.FC = () => {
               keyboardType="decimal-pad"
               placeholder="0.00"
               leftIcon="currency-inr"
-              error={overBalance ? 'Amount exceeds your AEPS balance' : undefined}
-              helperText="Only the AEPS wallet can be settled to bank"
+              error={overBalance ? 'Amount exceeds your QR wallet balance' : undefined}
+              helperText="Money collected on your UPI QR. Transfers are instant and cannot be reversed."
             />
             <Input
               label="Wallet PIN"
