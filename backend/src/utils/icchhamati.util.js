@@ -178,6 +178,34 @@ export const makeReferenceId = (prefix = 'SPP') => {
 };
 
 /**
+ * The merchant account a payout is debited from.
+ *
+ * A partner account carries more than one wallet — a Trade Wallet and a
+ * Utility Wallet — and they are not interchangeable. Recharge and BBPS spend
+ * the Utility Wallet; `beneficiary-payout` takes no `account_id`, so the
+ * gateway debits whichever account is flagged primary. With a funded Utility
+ * Wallet and an empty primary Trade Wallet every transfer is refused as
+ * "Insufficient balance for debit transaction", which reads like the
+ * retailer's own wallet and is neither.
+ *
+ * Undocumented (it backs the partner dashboard, not the partner API), so a
+ * caller must treat a null as "unknown" and carry on rather than block on it.
+ */
+export const fetchPrimaryAccountBalance = async () => {
+  try {
+    const data = await icchhamatiGet('/api/accounts/primary');
+    if (!isOk(data)) return null;
+    const account = data?.data?.account;
+    const available = Number(account?.raw_available_balance);
+    if (!Number.isFinite(available)) return null;
+    return { available, name: account?.name || 'primary account', id: account?.id ?? null };
+  } catch (error) {
+    console.error('Icchhamati primary account balance check failed:', error.message);
+    return null;
+  }
+};
+
+/**
  * Asks the provider where a money transfer ended up.
  *
  * Returns PROCESSING for anything short of a definite answer, including a
