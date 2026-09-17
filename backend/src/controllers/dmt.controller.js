@@ -6,8 +6,6 @@ import {
   isOk,
   normaliseStatus,
   providerMessage,
-  cleanProviderMessage,
-  fetchPrimaryAccountBalance,
   makeReferenceId,
 } from '../utils/icchhamati.util.js';
 import { lockFundsForTransaction, resolveTransaction } from '../utils/wallet.util.js';
@@ -27,23 +25,6 @@ import { verifyBankAccountWithProvider } from '../utils/bankAccountVerification.
  * every read is filtered to the sender mobile the retailer is working with —
  * one retailer must not be able to page through another's beneficiaries.
  */
-
-/**
- * The provider refuses a payout its own PRIMARY account cannot cover, with
- * "Insufficient balance for debit transaction". Passed through verbatim that
- * reads as the retailer's wallet being empty — which it is not; their money
- * was never sent and has already been refunded. Say whose balance it is.
- *
- * Note for whoever sees this in production: a partner account holds a Trade
- * Wallet and a Utility Wallet. Recharge and BBPS spend the Utility Wallet, but
- * a payout debits whichever is primary. Money in the Utility Wallet does not
- * fund transfers — the primary account is the one to top up.
- */
-const PROVIDER_FLOAT_MESSAGE =
-  'Money transfer is temporarily unavailable at our banking partner. Your wallet has not been charged. Please try again later.';
-
-const isProviderFloatRefusal = (data) =>
-  /insufficient\s+(balance|fund)/i.test(cleanProviderMessage(data?.message));
 
 /** The sender's mobile is the only thing tying a beneficiary to a customer. */
 const requireMobile = (mobile) => {
@@ -394,23 +375,6 @@ export const initiateTransfer = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Incorrect PIN' });
     }
 
-    // Ask the provider what its primary account can cover BEFORE the retailer's
-    // wallet is touched. A payout refused for float still debits and refunds
-    // here, which is money-safe but leaves the retailer staring at a failed
-    // transfer and a FAILED row in their ledger for something they never did.
-    //
-    // Fails open: this endpoint is undocumented, so a null (unreachable,
-    // renamed, shape changed) must not be what stops a transfer that would
-    // otherwise go through.
-    const providerFloat = await fetchPrimaryAccountBalance();
-    if (providerFloat && providerFloat.available < totalAmount) {
-      console.error(
-        `[DMT] provider ${providerFloat.name} (id ${providerFloat.id}) holds ` +
-          `${providerFloat.available}, short of ${totalAmount} — top up the PRIMARY account.`
-      );
-      return res.status(503).json({ success: false, message: PROVIDER_FLOAT_MESSAGE });
-    }
-
     const transactionId = makeReferenceId('DMT');
 
     // Lock the funds as PROCESSING. A payout is accepted before the beneficiary
@@ -439,9 +403,7 @@ export const initiateTransfer = async (req, res) => {
     let data;
     try {
       data = await icchhamatiPost('/api/v2/beneficiaries/beneficiary-payout', {
-        // Integer, as the provider documents it — their own sample sends
-        // `"beneficiary_id": 12`, not a quoted string.
-        beneficiary_id: Number(beneficiaryId),
+        beneficiary_id: String(beneficiaryId),
         amount: Math.round(totalAmount),
         transfer_mode: mode,
         transaction_id: transactionId,
@@ -461,10 +423,10 @@ export const initiateTransfer = async (req, res) => {
     // status says whether it has settled. A payout accepted but not yet settled
     // is PENDING, not SUCCESS.
     const status = isOk(data) ? normaliseStatus(data?.data?.status ?? '2') : 'FAILED';
-    const message =
-      status === 'FAILED' && isProviderFloatRefusal(data)
-        ? PROVIDER_FLOAT_MESSAGE
-        : providerMessage(data, status === 'FAILED' ? 'The transfer was not accepted.' : '');
+    const message = providerMessage(
+      data,
+      status === 'FAILED' ? 'The transfer was not accepted.' : ''
+    );
 
     await Transaction.findOneAndUpdate(
       { transactionId },
