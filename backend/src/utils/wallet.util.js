@@ -64,21 +64,26 @@ const normaliseRechargeOperator = (operator) =>
 export const getRechargeCommissionRate = (operator, mode) => {
   const value = normaliseRechargeOperator(operator);
   const type = String(mode || '').trim().toLowerCase();
+  // The provider's operator list uses full names ("BSNL TOPUP", "Reliance
+  // Jio"), so a brand is matched anywhere in the label, not only as the whole
+  // label. A bare provider code ("2") carries no brand and earns nothing until
+  // the operator name is resolved.
+  const has = (...brands) => brands.some((brand) => value.includes(normaliseRechargeOperator(brand)));
 
   if (type === 'dth') {
-    if (['airtel', 'airtel dth', 'airtel-dth', 'ad', 'airtel dth'].some((v) => value === normaliseRechargeOperator(v))) return 3.5;
-    if (['videocon', 'videocondth', 'd2h', 'vd', 'videocon dth'].some((v) => value === normaliseRechargeOperator(v))) return 3.4;
-    if (['dish', 'dishtv', 'dish tv', 'dt'].some((v) => value === normaliseRechargeOperator(v))) return 3.5;
-    if (['tata', 'tatasky', 'tata play', 'tatadth', 'ts'].some((v) => value === normaliseRechargeOperator(v))) return 2.7;
-    if (['sun', 'sundirect', 'sun direct', 'sd'].some((v) => value === normaliseRechargeOperator(v))) return 2.85;
+    if (has('airtel')) return 3.5;
+    if (has('videocon', 'd2h')) return 3.4;
+    if (has('dish')) return 3.5;
+    if (has('tatasky', 'tataplay', 'tata')) return 2.7;
+    if (has('sundirect', 'sun')) return 2.85;
     return 0;
   }
 
-  if (['airtel', 'at', 'airtelprepaid'].some((v) => value === normaliseRechargeOperator(v))) return 2.2;
-  if (['jio', 'ji', 'rj', 'reliancejio', 'jio prepaid'].some((v) => value === normaliseRechargeOperator(v))) return 0.8;
-  if (['vi', 'vodafoneidea', 'vodafone', 'idea', 'vi prepaid'].some((v) => value === normaliseRechargeOperator(v))) return 3;
-  if (['bsnl', 'bs', 'bsnl prepaid'].some((v) => value === normaliseRechargeOperator(v))) return 4;
-  if (['mtnl', 'mt', 'mtnl prepaid'].some((v) => value === normaliseRechargeOperator(v))) return 4;
+  if (has('airtel')) return 2.2;
+  if (has('jio')) return 0.8;
+  if (has('vodafone', 'idea', 'vi')) return 3;
+  if (has('bsnl')) return 4;
+  if (has('mtnl')) return 4;
   return 0;
 };
 
@@ -228,15 +233,15 @@ export const resolveTransaction = async (
           }
 
           const isRecharge = claimed.type === 'RECHARGE';
+          // The commission slab is keyed on the operator brand, and
+          // `metadata.operator` holds the provider's own code ("2"), which
+          // names no brand. The resolved operator name is what the slab reads.
+          const operatorLabel = claimed.metadata?.operatorName || claimed.metadata?.operator;
           const rate = isRecharge
-            ? getRechargeCommissionRate(claimed.metadata?.operator, claimed.metadata?.mode)
+            ? getRechargeCommissionRate(operatorLabel, claimed.metadata?.mode)
             : getBbpsCommissionRule(claimed.metadata?.mode);
           const commission = isRecharge
-            ? getRechargeCommission(
-                claimed.amount,
-                claimed.metadata?.operator,
-                claimed.metadata?.mode
-              )
+            ? getRechargeCommission(claimed.amount, operatorLabel, claimed.metadata?.mode)
             : getBbpsCommission(claimed.amount, claimed.metadata?.mode);
 
           if (commission > 0) {

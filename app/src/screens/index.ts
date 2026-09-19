@@ -15,6 +15,7 @@ export { DmtScreen } from './retailer/DmtScreen';
 export { MatmScreen } from './retailer/MatmScreen';
 export { RechargeScreen } from './retailer/RechargeScreen';
 export { BbpsScreen } from './retailer/BbpsScreen';
+export { BbpsServiceScreen } from './retailer/BbpsServiceScreen';
 export { CollectScreen } from './retailer/CollectScreen';
 export { WalletTransferScreen } from './retailer/WalletTransferScreen';
 export { DirectPayoutScreen } from './retailer/DirectPayoutScreen';

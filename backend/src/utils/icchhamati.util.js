@@ -222,10 +222,16 @@ export const fetchPayoutStatus = async (transactionId) => {
  * locked for the next run rather than refunding a transaction that may yet be
  * delivered.
  */
-export const fetchRechargeStatus = async (txnid, type) => {
+export const fetchRechargeStatus = async (txnid) => {
   try {
-    const path = isBillType(type) ? '/api/v2/bill-status' : '/api/v2/recharge-status';
-    const data = await icchhamatiPost(path, { txnid });
+    // /api/v2/bill-status answers for recharges as well as bills, and it is the
+    // only status route the gateway actually serves. The published
+    // /api/v2/recharge-status is not routed at all: a POST is refused with
+    // "The POST method is not supported for route api/v2/recharge-status", and
+    // a GET falls through to their single-page app and answers with HTML. Every
+    // recharge queried there came back PROCESSING, so the debit stayed locked
+    // and the commission was never credited.
+    const data = await icchhamatiPost('/api/v2/bill-status', { txnid });
     if (!isOk(data) && normaliseStatus(data?.status) !== 'PENDING') {
       return { finalStatus: 'PROCESSING', data };
     }

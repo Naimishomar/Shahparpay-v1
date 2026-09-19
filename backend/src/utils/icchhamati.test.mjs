@@ -136,13 +136,18 @@ await withServer(reply(laravelFault), async () => {
 process.env.ICCHHAMATI_BASE_URL = 'http://127.0.0.1:1';
 assert.equal((await fetchRechargeStatus('REC5', 'prepaid')).finalStatus, 'PROCESSING');
 
-// A bill payment is queried on the bill endpoint, not the recharge one.
-await withServer((req, res) => {
-  assert.equal(req.url, '/api/v2/bill-status');
-  reply({ status: 1, data: { status: 1 } })(req, res);
-}, async () => {
-  assert.equal((await fetchRechargeStatus('BILL1', 'electricity')).finalStatus, 'SUCCESS');
-});
+// Recharges and bills are both queried on /api/v2/bill-status. The published
+// /api/v2/recharge-status is not a routed endpoint — a POST to it is refused
+// and a GET returns the provider's SPA — so querying it left every recharge
+// PROCESSING, with the debit locked and no commission credited.
+for (const mode of ['prepaid', 'dth', 'electricity']) {
+  await withServer((req, res) => {
+    assert.equal(req.url, '/api/v2/bill-status');
+    reply({ status: 1, data: { status: 1 } })(req, res);
+  }, async () => {
+    assert.equal((await fetchRechargeStatus('BILL1', mode)).finalStatus, 'SUCCESS');
+  });
+}
 
 // --- payout status: only an exact reference match may settle money ---------
 

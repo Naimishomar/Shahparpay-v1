@@ -54,10 +54,53 @@ const GAP = 14;
  */
 const CENTRE_WIDTH = SIZE - STROKE * 2 - 20;
 
+export interface DonutArc {
+  label: string;
+  /** Distance along the circumference where this segment starts. */
+  offset: number;
+  /** Its true share of the circumference, gaps included. */
+  span: number;
+}
+
+/** Touch slack either side of the band — a fingertip is wider than the stroke. */
+const HIT_SLACK = 6;
+
+/**
+ * Which arc a touch at (x, y) landed on, or null for a miss.
+ *
+ * The arcs cannot carry their own onPress: every one of them is a full
+ * <Circle> revealed through a dash pattern, so each one's hit area is the
+ * entire ring and a tap would always report whichever was drawn last.
+ * Resolving the angle is what makes it the arc actually under the finger.
+ *
+ * Matched against `span`, not the drawn `length`, so the daylight between two
+ * arcs belongs to one of them rather than to nothing.
+ */
+export const arcAtPoint = <T extends DonutArc>(arcs: T[], x: number, y: number): T | null => {
+  const dx = x - SIZE / 2;
+  const dy = y - SIZE / 2;
+  const distance = Math.hypot(dx, dy);
+  // Only the band is a target. The hole belongs to the total printed in it,
+  // and outside the ring is not part of the chart at all.
+  if (
+    distance < RADIUS - STROKE / 2 - HIT_SLACK ||
+    distance > RADIUS + STROKE / 2 + HIT_SLACK
+  ) {
+    return null;
+  }
+  // atan2(dx, -dy) reads 0 at twelve o'clock and grows clockwise, matching the
+  // rotate(-90) the arcs are drawn under.
+  const theta = (Math.atan2(dx, -dy) + 2 * Math.PI) % (2 * Math.PI);
+  const along = (theta / (2 * Math.PI)) * CIRCUMFERENCE;
+  return arcs.find((arc) => along >= arc.offset && along < arc.offset + arc.span) ?? null;
+};
+
 export const ReportsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const [period, setPeriod] = useState<Period>('month');
+  // Which service the ring is broken out for. Null shows the period total.
+  const [selected, setSelected] = useState<string | null>(null);
 
   // Only retailers have per-service totals; the same tab serves admin and
   // distributor, whose stats come from other endpoints entirely.
@@ -92,11 +135,16 @@ export const ReportsScreen: React.FC = () => {
   const gap = segments.length > 1 ? GAP : 0;
   let walked = 0;
   const arcs = segments.map((segment) => {
-    const length = (segment.value / total) * CIRCUMFERENCE;
-    const arc = { ...segment, length: Math.max(length - gap, 2), offset: walked };
-    walked += length;
+    const span = (segment.value / total) * CIRCUMFERENCE;
+    // `span` is the segment's true share and `length` is what gets drawn; a
+    // tap is resolved against the span so the daylight between two arcs
+    // belongs to one of them rather than to nothing.
+    const arc = { ...segment, span, length: Math.max(span - gap, 2), offset: walked };
+    walked += span;
     return arc;
   });
+
+  const active = arcs.find((arc) => arc.label === selected) ?? null;
 
   const transactions: any[] = Array.isArray(recent.data)
     ? recent.data
@@ -115,6 +163,24 @@ export const ReportsScreen: React.FC = () => {
       {isRetailer && (
         <>
           <View style={styles.donutWrap}>
+            <Pressable
+              onPress={(event) => {
+                const { locationX, locationY } = event.nativeEvent;
+                const hit = arcAtPoint(arcs, locationX, locationY);
+                // Tapping the live arc again returns the ring to the total, so
+                // the break-out never becomes a state you cannot get out of.
+                setSelected((current) =>
+                  !hit ? null : current === hit.label ? null : hit.label
+                );
+              }}
+              style={styles.donutTarget}
+              accessibilityRole="adjustable"
+              accessibilityLabel={
+                active
+                  ? `${active.label}, ${money(active.value)}. Tap again for the period total`
+                  : `${money(total)} across ${segments.length} services. Tap a segment for its share`
+              }
+            >
             <Svg width={SIZE} height={SIZE}>
               {/* Track: without it an empty period renders as nothing at all. */}
               <Circle
@@ -132,7 +198,11 @@ export const ReportsScreen: React.FC = () => {
                   cy={SIZE / 2}
                   r={RADIUS}
                   stroke={arc.color}
-                  strokeWidth={STROKE}
+                  // The live arc grows into the gutter either side; the rest
+                  // dim. Colour alone would not survive a colour-blind reader,
+                  // and the centre label names it in words regardless.
+                  strokeWidth={active?.label === arc.label ? STROKE + 8 : STROKE}
+                  strokeOpacity={active && active.label !== arc.label ? 0.3 : 1}
                   strokeLinecap="butt"
                   fill="none"
                   strokeDasharray={`${arc.length} ${CIRCUMFERENCE - arc.length}`}
@@ -142,9 +212,11 @@ export const ReportsScreen: React.FC = () => {
                 />
               ))}
             </Svg>
+            {/* pointerEvents none so the centre never swallows a tap meant for
+                the ring behind it. */}
             <View style={styles.donutCentre} pointerEvents="none">
-              <Text style={styles.donutLabel}>
-                {period === 'day' ? 'Today' : `This ${period}`}
+              <Text style={styles.donutLabel} numberOfLines={1}>
+                {active ? active.label : period === 'day' ? 'Today' : `This ${period}`}
               </Text>
               <Text
                 style={styles.donutValue}
@@ -154,25 +226,51 @@ export const ReportsScreen: React.FC = () => {
                 // legend under it and stops being the thing the ring is for.
                 minimumFontScale={0.5}
               >
-                {money(total)}
+                {money(active ? active.value : total)}
               </Text>
+              {!!active && (
+                <Text style={styles.donutShare} numberOfLines={1}>
+                  {((active.value / total) * 100).toFixed(1)}% of {money(total)}
+                </Text>
+              )}
             </View>
+            </Pressable>
           </View>
 
-          <Segmented options={PERIODS} value={period} onChange={setPeriod} scroll={false} />
+          <Segmented
+            options={PERIODS}
+            value={period}
+            onChange={(next) => {
+              setSelected(null);
+              setPeriod(next);
+            }}
+            scroll={false}
+          />
 
           {!!segments.length && (
             <View style={styles.legend}>
               {segments.map((segment) => (
-                <View key={segment.label} style={styles.legendItem}>
+                <Pressable
+                  key={segment.label}
+                  onPress={() =>
+                    setSelected((current) => (current === segment.label ? null : segment.label))
+                  }
+                  style={({ pressed }) => [styles.legendItem, pressed && { opacity: 0.6 }]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: selected === segment.label }}
+                  accessibilityLabel={`${segment.label}, ${money(segment.value)}`}
+                >
                   <View style={[styles.legendDot, { backgroundColor: segment.color }]} />
-                  <Text style={styles.legendLabel} numberOfLines={1}>
+                  <Text
+                    style={[styles.legendLabel, selected === segment.label && styles.legendLabelOn]}
+                    numberOfLines={1}
+                  >
                     {segment.label}
                   </Text>
                   <Text style={styles.legendValue} numberOfLines={1}>
                     {money(segment.value)}
                   </Text>
-                </View>
+                </Pressable>
               ))}
             </View>
           )}
@@ -275,6 +373,7 @@ const styles = themed((c) => ({
     justifyContent: 'center',
     paddingVertical: space.lg,
   },
+  donutTarget: { width: SIZE, height: SIZE, alignItems: 'center', justifyContent: 'center' },
   donutCentre: {
     position: 'absolute',
     width: CENTRE_WIDTH,
@@ -282,7 +381,8 @@ const styles = themed((c) => ({
     justifyContent: 'center',
     gap: 4,
   },
-  donutLabel: { fontSize: t.small, color: c.mutedForeground },
+  donutLabel: { fontSize: t.small, color: c.mutedForeground, textAlign: 'center' },
+  donutShare: { fontSize: t.micro, color: c.mutedForeground, textAlign: 'center' },
   donutValue: {
     fontSize: 30,
     fontWeight: '800',
@@ -294,6 +394,7 @@ const styles = themed((c) => ({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   legendDot: { width: 10, height: 10, borderRadius: radius.pill },
   legendLabel: { flex: 1, minWidth: 0, fontSize: t.small, color: c.mutedForeground },
+  legendLabelOn: { color: c.foreground, fontWeight: '700' },
   legendValue: {
     fontSize: t.small,
     fontWeight: '700',

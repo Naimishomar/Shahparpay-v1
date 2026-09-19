@@ -49,7 +49,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   // sets gestureEnabled, so the Android back button and the iOS swipe-back
   // gesture still pop every screen. Nothing is unreachable without it.
 
+  // A screen opened for one item names itself through its params — the route
+  // is BbpsService for every category, so the route name cannot say which.
+  const fromParams = (route.params as any)?.title;
+
   const named =
+    (fromParams ? { title: String(fromParams), subtitle: 'Bill payment' } : null) ??
     TITLES[route.name] ??
     (() => {
       const service = SERVICE_ITEMS.find((s) => s.route === route.name);

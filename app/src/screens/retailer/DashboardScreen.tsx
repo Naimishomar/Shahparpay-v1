@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -162,6 +162,8 @@ export const bucketByDay = (
 export const DashboardScreen: React.FC = () => {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
+  // Measured, so the wallet gradient can be painted at exactly the card's size.
+  const [cardSize, setCardSize] = useState({ width: 0, height: 0 });
 
   // The endpoint defaults to *today* when no range is sent, and this block is
   // labelled "this month" — so it asks for the month it claims to show.
@@ -310,30 +312,47 @@ export const DashboardScreen: React.FC = () => {
 
       {/* Wallet. The one card that never takes the page ground: it is the
           object the whole screen is about. */}
-      <View style={styles.wallet}>
-        {/* width/height as PROPS, not only via style. absoluteFill positions
-            the host view, but react-native-svg still sizes its canvas from the
-            width/height attributes, which default to 100 — so the gradient
-            painted a 100x100 patch and stopped, leaving the card's flat
-            backgroundColor showing along the right edge and the bottom.
-            viewBox + preserveAspectRatio="none" then stretches those user
-            units to whatever the card actually measures. */}
-        <Svg
-          width="100%"
-          height="100%"
-          style={StyleSheet.absoluteFill as any}
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-        >
-          <Defs>
-            <LinearGradient id="walletSheen" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0" stopColor="#3A3A40" />
-              <Stop offset="0.5" stopColor="#1C1C20" />
-              <Stop offset="1" stopColor="#0E0E10" />
-            </LinearGradient>
-          </Defs>
-          <Rect x="0" y="0" width="100" height="100" fill="url(#walletSheen)" />
-        </Svg>
+      <View
+        style={styles.wallet}
+        onLayout={(event) => {
+          const { width, height } = event.nativeEvent.layout;
+          setCardSize((prev) =>
+            Math.abs(prev.width - width) > 0.5 || Math.abs(prev.height - height) > 0.5
+              ? { width, height }
+              : prev
+          );
+        }}
+      >
+        {/* Painted at the card's MEASURED pixel size.
+            Percentages and viewBox scaling were both tried here and both left
+            the fill short of the right edge and the bottom, showing the card's
+            flat backgroundColor as a hard seam: react-native-svg resolves a
+            percentage against its own viewport, not the parent it is
+            absolutely filling. Measuring removes the guess — there is nothing
+            left to resolve against. Skipped on the first pass, when the size
+            is still zero; the solid backgroundColor covers that frame. */}
+        {cardSize.width > 0 && (
+          <Svg
+            width={cardSize.width}
+            height={cardSize.height}
+            style={StyleSheet.absoluteFill as any}
+          >
+            <Defs>
+              <LinearGradient id="walletSheen" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0" stopColor="#3A3A40" />
+                <Stop offset="0.5" stopColor="#1C1C20" />
+                <Stop offset="1" stopColor="#0E0E10" />
+              </LinearGradient>
+            </Defs>
+            <Rect
+              x="0"
+              y="0"
+              width={cardSize.width}
+              height={cardSize.height}
+              fill="url(#walletSheen)"
+            />
+          </Svg>
+        )}
 
         <View style={styles.walletTop}>
           <Text style={styles.walletLabel}>Wallet</Text>
@@ -730,11 +749,16 @@ const styles = themed((c) => ({
     fontSize: 34,
     fontWeight: '800',
     color: '#FFFFFF',
-    marginTop: space.md,
+    marginTop: space.xs,
     fontVariant: ['tabular-nums'],
   },
   walletFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },
-  walletMeta: { fontSize: t.caption, color: 'rgba(255,255,255,0.62)', fontVariant: ['tabular-nums'] },
+  walletMeta: {
+    fontSize: t.small,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.72)',
+    fontVariant: ['tabular-nums'],
+  },
 
   duo: { flexDirection: 'row', gap: space.md },
   tile: {

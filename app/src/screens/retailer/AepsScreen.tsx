@@ -24,6 +24,8 @@ import { useAsync, useAction } from '@/hooks/useAsync';
 import { useAuth } from '@/context/AuthContext';
 import { AEPS_OTP_THRESHOLD, AEPS_MAX_WITHDRAWAL } from '@/constants';
 import { coordsPayload } from '@/services/location';
+import { LocationGate } from '@/components/aeps/LocationGate';
+import { useLocationReady } from '@/hooks/useLocationReady';
 import api from '@/services/api';
 
 type ServiceKey = 'balance' | 'statement' | 'withdrawal' | 'deposit' | 'aadhaarpay';
@@ -312,7 +314,14 @@ export const AepsScreen: React.FC = () => {
                   ? 'Take the customer\'s consent before capturing their fingerprint.'
                   : null;
 
-  const captureBlocker = guardBlocker || missingField;
+  // Location is checked BEFORE the fingerprint, not after. AEPS is geo-fenced,
+  // so a capture taken without a fix can only be thrown away — and asking a
+  // customer for their finger a second time is the part that costs the
+  // retailer their credibility.
+  const { problem: locationProblem } = useLocationReady();
+
+  const captureBlocker =
+    guardBlocker || missingField || (locationProblem ? 'Turn on location to continue' : null);
 
   // AEPS withdrawals can settle after the response comes back, so a PENDING
   // row is re-queried against PaySprint rather than left stale.
@@ -436,6 +445,10 @@ export const AepsScreen: React.FC = () => {
       error={status.error}
       onRetry={status.reload}
     >
+      {/* Ahead of the form: a geo-fence refusal arrives as an opaque provider
+          error, so the cause is surfaced while it can still be fixed. */}
+      <LocationGate />
+
       <Card>
         <CardContent>
           <Row label="AEPS wallet" value={money(balances.data?.aepsBalance)} mono />
@@ -745,6 +758,12 @@ export const AepsScreen: React.FC = () => {
             confirmMessage="Ask the CUSTOMER to place their finger on the scanner. This starts a live bank transaction."
             label="Capture customer fingerprint"
           />
+
+          {/* The receipt sheet reports whatever the provider answered, but a
+              failure BEFORE the call never reaches it — those land here. This
+              was rendered nowhere, so a blocked submit looked like a dead
+              button: the fingerprint captured, nothing happened, no reason. */}
+          {!!submit.error && <Banner tone="error" message={submit.error} />}
 
           <Button
             icon="check-decagram"

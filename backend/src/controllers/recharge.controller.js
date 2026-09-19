@@ -116,31 +116,46 @@ const toOperator = (row, type) => ({
   label: row.label || null,
 });
 
-/** Resolve legacy numeric biller IDs to the provider's actual biller code. */
-const resolveProviderOperatorCode = async (type, candidate) => {
+/** Operator/biller rows for a service, cached like the biller registry. */
+const fetchOperatorRows = async (type) => {
+  const { kind, category } = operatorSource(type);
+  if (!category) return [];
+  if (kind === 'biller') {
+    const billers = await fetchBillers(category);
+    return billers.ok ? billers.rows : [];
+  }
+
+  const key = `operator:${category}`;
+  const cached = billerCache.get(key);
+  if (cached && Date.now() - cached.at < BILLER_TTL_MS) return cached.result;
+  const data = await icchhamatiPost('/api/v2/getOperator', { category });
+  if (!isOk(data)) return [];
+  const rows = (data.operators || data.data || []).filter((row) => row.is_active !== false);
+  billerCache.set(key, { at: Date.now(), result: rows });
+  return rows;
+};
+
+/**
+ * The provider's operator/biller code for what the screen picked, together with
+ * the operator's name.
+ *
+ * The name is not decoration: the recharge commission slab is keyed on the
+ * operator brand, and the code the screens send ("2") names no brand. Resolving
+ * it here — from the provider's own registry, never from the request body —
+ * keeps the slab out of reach of the caller.
+ */
+const resolveProviderOperator = async (type, candidate) => {
   const value = String(candidate || '').trim();
-  if (!value) return value;
+  if (!value) return { code: value, name: null };
 
   try {
-    const { kind, category } = operatorSource(type);
-    if (!category) return value;
-    let rows;
-    if (kind === 'operator') {
-      const data = await icchhamatiPost('/api/v2/getOperator', { category });
-      if (!isOk(data)) return value;
-      rows = data.operators || data.data || [];
-    } else {
-      const billers = await fetchBillers(category);
-      if (!billers.ok) return value;
-      rows = billers.rows;
-    }
-
+    const rows = await fetchOperatorRows(type);
     const match = rows.find((row) => String(row.code ?? '') === value)
       || rows.find((row) => String(row.id ?? '') === value);
-    return String(match?.code ?? value);
+    return { code: String(match?.code ?? value), name: match?.name || null };
   } catch (error) {
-    console.error('Resolve BBPS provider code Error:', error?.response?.data || error?.message);
-    return value;
+    console.error('Resolve provider operator Error:', error?.response?.data || error?.message);
+    return { code: value, name: null };
   }
 };
 
@@ -232,12 +247,15 @@ export const getBillCategories = async (req, res) => {
       });
     }
 
-    const rows = (data.categories || data.data || []).filter((row) =>
-      String(row.category || '').trim()
-    );
+    // The provider names a category under any of three keys, and its own portal
+    // reads all three. Insisting on `category` alone dropped every row that
+    // carries the name under one of the others.
+    const categoryName = (row) =>
+      String(row.category || row.category_name || row.name || '').trim();
+    const rows = (data.categories || data.data || []).filter((row) => categoryName(row));
     const categories = await Promise.all(
       rows.map(async (row) => {
-        const category = String(row.category).trim();
+        const category = categoryName(row);
         const billers = await fetchBillers(category).catch(() => ({ ok: false, rows: [] }));
         return {
           id: category,
@@ -491,7 +509,7 @@ export const fetchBill = async (req, res) => {
       });
     }
 
-    const providerOperator = await resolveProviderOperatorCode(type, operator);
+    const { code: providerOperator } = await resolveProviderOperator(type, operator);
     console.info('BBPS biller routing', {
       category: String(type || ''),
       submittedOperator: String(operator),
@@ -573,9 +591,8 @@ export const doRecharge = async (req, res) => {
 
     const typeCode = rechargeTypeCode(type);
     const bill = isBillType(type);
-    const providerOperator = bill
-      ? await resolveProviderOperatorCode(type, operator)
-      : String(operator);
+    const { code: providerOperator, name: providerOperatorName } =
+      await resolveProviderOperator(type, operator);
     const providerAccountId = String(process.env.ICCHHAMATI_ACCOUNT_ID || '').trim();
     const providerMpin = String(process.env.ICCHHAMATI_MPIN || '').trim();
 
@@ -629,6 +646,7 @@ export const doRecharge = async (req, res) => {
         metadata: {
           caNumber,
           operator: providerOperator,
+          operatorName: providerOperatorName,
           mode: type,
           provider: 'ICCHHAMATI',
           customerName: customerName || billDetails?.customerName || null,
@@ -658,15 +676,16 @@ export const doRecharge = async (req, res) => {
       type: typeCode,
       transaction_id: referenceId,
       details: `${bill ? 'Bill payment' : 'Recharge'} for ${caNumber}`,
-      ...(typeCode === 1 ? { circle: String(circle), circal: String(circle) } : {}),
+      ...(typeCode === 1 ? { circle: String(circle), circal: String(circle) } : { circal: '' }),
     };
 
     let providerResponse;
     try {
-      providerResponse = await icchhamatiPost(
-        bill ? '/api/v2/bill-payment' : '/api/v2/mobile-recharge',
-        payload
-      );
+      // Bills go to /api/v2/mobile-recharge as a type 3, not to
+      // /api/v2/bill-payment. The provider's own portal pays every bill on the
+      // recharge endpoint, and their bill-payment documentation is a verbatim
+      // copy of the mobile-recharge one, request example, response and all.
+      providerResponse = await icchhamatiPost('/api/v2/mobile-recharge', payload);
     } catch (providerError) {
       // A timeout does not prove that the provider rejected the request. Keep
       // the debit locked and let reconciliation query the provider later.
@@ -690,7 +709,15 @@ export const doRecharge = async (req, res) => {
       { transactionId: referenceId },
       {
         $set: {
-          'metadata.orderId': providerResponse?.data?.orderId || providerResponse?.data?.txnid || null,
+          // The reference a later status check is queried by. The gateway
+          // returns it under any of these, and its own portal reads all three:
+          // a missed one leaves the status query asking after our own reference,
+          // which the gateway does not know.
+          'metadata.orderId':
+            providerResponse?.data?.transaction?.transaction_id
+            || providerResponse?.data?.orderId
+            || providerResponse?.data?.txnid
+            || null,
           'metadata.operatorTxnId': providerResponse?.data?.txnId || null,
           'metadata.apiResponse': providerResponse,
         },

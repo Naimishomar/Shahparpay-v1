@@ -1,318 +1,170 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
-import { themed, radius, space, type as t } from '../../theme/colors';
+import React from 'react';
+import { View, Text, Pressable } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Input, SelectField } from '@/components/ui/Input';
 import {
   Screen,
   Banner,
   EmptyState,
   ErrorBanner,
-  LoadingBlock,
+  Grid,
   Row,
-  Segmented,
   StatusPill,
-  SuccessBanner,
   money,
   shortDate,
 } from '@/components/ui/Screen';
-import { useAsync, useAction } from '@/hooks/useAsync';
+import { useAsync } from '@/hooks/useAsync';
 import api from '@/services/api';
 
-interface Biller {
-  id: string | number;
-  name: string;
-  displayname?: string;
-  // The biller's own name for the consumer identifier — "Consumer Number",
-  // "CA Number", "Vehicle Number" — so the field is labelled the way the bill is.
-  label?: string;
-  // Whether this biller can produce a bill before it is paid. A top-up cannot.
-  viewbill?: string;
+/**
+ * Category name -> glyph, matched on a keyword rather than an exact string.
+ *
+ * The categories are the provider's, not ours: they add and rename them, and
+ * they spell the same thing several ways ("Electricity", "Electricity Bill",
+ * "ELECTRICITY"). A keyword list keeps a renamed category looking right
+ * instead of silently falling back to a generic receipt, and an unmatched one
+ * still renders — just with the default.
+ *
+ * Order matters: the first match wins, so the more specific words come first.
+ */
+const CATEGORY_ICONS: [RegExp, string][] = [
+  [/fastag|toll/i, 'car'],
+  [/lpg|cylinder/i, 'gas-cylinder'],
+  [/gas/i, 'fire'],
+  [/electric|power/i, 'flash'],
+  [/water/i, 'water'],
+  [/broadband|internet|wifi/i, 'router-wireless'],
+  [/landline/i, 'phone-classic'],
+  [/dth|cable|tv|television/i, 'satellite-uplink'],
+  [/mobile|postpaid|prepaid|recharge/i, 'cellphone'],
+  [/insur/i, 'shield-check-outline'],
+  [/loan|emi|credit card/i, 'bank-outline'],
+  [/municipal|tax|housing/i, 'city'],
+  [/education|fee|school/i, 'school-outline'],
+  [/hospital|health/i, 'hospital-box-outline'],
+  [/rent/i, 'home-city-outline'],
+  [/subscription|club|association/i, 'cash-multiple'],
+];
+
+interface Category {
+  key: string;
+  label: string;
+  /** The provider lists the category but has no biller behind it yet. */
+  available: boolean;
 }
 
+export const categoryIcon = (name: string) =>
+  CATEGORY_ICONS.find(([pattern]) => pattern.test(String(name ?? '')))?.[1] ?? 'receipt';
+
+/**
+ * BBPS hub: one card per category the provider currently bills for, each
+ * opening its own screen.
+ *
+ * It used to be a single screen with every category on a horizontal strip
+ * above one shared form. With twenty-odd categories the strip scrolled past
+ * the edge, and picking one silently reset the biller, the fetched bill and
+ * the amount underneath — the form looked untouched but was not. A category is
+ * its own task, so it gets its own screen and its own back button.
+ */
 export const BbpsScreen: React.FC = () => {
-  // The categories are whatever the provider currently bills for: a category we
-  // invent here has no biller registry behind it, and one they add would be
-  // invisible until someone edited this file.
-  const categories = useAsync<any[]>(async () => {
+  const navigation = useNavigation<any>();
+
+  const categories = useAsync<Category[]>(async () => {
     const res = await api.getBillCategories();
-    // A refused list is not an empty list: swallowing it left the screen with no
-    // categories, no billers and nothing to explain why.
+    // A refused list is not an empty list: swallowing it left the screen with
+    // no categories and nothing to explain why.
     if (!res.success) throw new Error(res.message || 'Could not load bill categories.');
-    return (res.data ?? []).map((c: any) => ({
-      key: c.category || c.name || c.code,
-      label: c.name || c.category || c.code,
-    }));
+    return (res.data ?? [])
+      .map((c: any) => ({
+        key: c.id || c.category || c.name || c.code,
+        label: c.name || c.category || c.code,
+        // The backend already asked the provider for each category's billers
+        // and reports whether any came back. Dropping the flag here is what
+        // let a dead category open onto a form that could only fail.
+        available: c.available !== false,
+      }))
+      // Live services lead; the rest still show, so a retailer can see the
+      // service exists and is coming rather than assume it was dropped.
+      .sort((a: Category, b: Category) => Number(b.available) - Number(a.available));
   }, []);
-  const [category, setCategory] = useState('');
-  const [biller, setBiller] = useState<Biller | null>(null);
-  const [showBillers, setShowBillers] = useState(false);
-  const [billerQuery, setBillerQuery] = useState('');
-  const [caNumber, setCaNumber] = useState('');
-  const [customerMobile, setCustomerMobile] = useState('');
-  const [amount, setAmount] = useState('');
-  const [pin, setPin] = useState('');
-  const [showPin, setShowPin] = useState(false);
-  const [bill, setBill] = useState<any>(null);
-  const [notice, setNotice] = useState('');
-
-  const billers = useAsync<Biller[]>(async () => {
-    setBiller(null);
-    setBill(null);
-    setAmount('');
-    if (!category) return [];
-    const res = await api.getRechargeOperators(category);
-    if (!res.success) throw new Error(res.message || 'Could not load billers.');
-    return res.data ?? [];
-  }, [category]);
-
-  // The first category the provider lists, once they have loaded.
-  React.useEffect(() => {
-    if (!category && categories.data?.length) setCategory(categories.data[0].key);
-  }, [categories.data]);
 
   const history = useAsync<any[]>(async () => (await api.getRechargeHistory()).data ?? [], []);
   const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
 
-  const fetchBill = useAction(async () => {
-    const res = await api.fetchBill({
-      caNumber: caNumber.trim(),
-      operator: String(biller?.id),
-      type: category,
-      customerMobile: customerMobile || undefined,
-    });
-    if (!res.success) throw new Error(res.message);
-    return res.data;
-  });
-
-  const payBill = useAction(async () => {
-    const res = await api.doRecharge({
-      number: caNumber.trim(),
-      operator: biller?.id,
-      amount: Number(amount),
-      pin,
-      type: category,
-    });
-    if (!res.success) throw new Error(res.message);
-    return res;
-  });
-
-  const available = balances.data?.mainBalance ?? 0;
-  const overBalance = Number(amount) > available;
-  const valid =
-    !!biller && caNumber.trim().length >= 4 && Number(amount) > 0 && !overBalance && pin.length === 4;
-
-  const filteredBillers = useMemo(
-    () =>
-      (billers.data ?? []).filter((b) =>
-        (b.displayname || b.name || '').toLowerCase().includes(billerQuery.trim().toLowerCase())
-      ),
-    [billers.data, billerQuery]
-  );
-
-  const onFetchBill = async () => {
-    setNotice('');
-    const data = await fetchBill.run();
-    if (data) {
-      setBill(data);
-      // Paysprint returns the payable amount under a few different keys.
-      const due = data.amount ?? data.Amount ?? data.dueamount ?? data.billAmount;
-      if (due) setAmount(String(due));
-    }
-  };
-
-  const onPay = async () => {
-    setNotice('');
-    const res = await payBill.run();
-    if (res) {
-      setNotice(res.message || 'Bill paid successfully.');
-      setPin('');
-      setBill(null);
-      balances.reload();
-      history.reload();
-    }
-  };
+  const items = categories.data ?? [];
 
   return (
     <Screen
-      refreshing={history.refreshing}
+      loading={categories.loading}
+      refreshing={categories.refreshing || history.refreshing}
       onRefresh={() => {
+        categories.refresh();
         history.refresh();
         balances.refresh();
-        billers.refresh();
       }}
+      error={categories.error}
+      onRetry={categories.reload}
     >
       <Card>
         <CardContent>
-          <Row label="Main wallet balance" value={money(available)} mono last />
+          <Row label="Main wallet balance" value={money(balances.data?.mainBalance)} mono last />
         </CardContent>
       </Card>
 
-      {!!categories.error && (
-        <ErrorBanner message={categories.error} onRetry={categories.reload} />
-      )}
-      {!categories.loading && !categories.error && !(categories.data ?? []).length && (
+      {!categories.loading && !categories.error && !items.length && (
         <Banner
           tone="warning"
           message="No bill categories are available from the provider right now. Please try again later."
         />
       )}
-      <Segmented options={categories.data ?? []} value={category} onChange={setCategory} />
 
-      <Card>
-        <CardHeader>
-          <CardTitle icon="receipt">Bill details</CardTitle>
-        </CardHeader>
-        <CardContent style={styles.form}>
-          {!!billers.error && <ErrorBanner message={billers.error} onRetry={billers.reload} />}
-          {!billers.loading && !billers.error && !!category && !(billers.data ?? []).length && (
-            <Banner
-              tone="warning"
-              message="No billers are available for this category right now."
-            />
-          )}
-
-          <SelectField
-            label="Biller"
-            required
-            value={biller ? biller.displayname || biller.name : ''}
-            placeholder={billers.loading ? 'Loading billers…' : 'Select biller'}
-            open={showBillers}
-            onPress={() => setShowBillers(!showBillers)}
-          />
-          {showBillers && (
-            <View style={styles.picker}>
-              <Input
-                placeholder="Search biller"
-                value={billerQuery}
-                onChangeText={setBillerQuery}
-                leftIcon="magnify"
-                autoCapitalize="none"
-              />
-              {billers.loading ? (
-                <LoadingBlock />
-              ) : (
-                <ScrollView style={styles.pickerList} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-                  {filteredBillers.map((b) => (
-                    <Pressable
-                      key={String(b.id)}
-                      onPress={() => {
-                        setBiller(b);
-                        setShowBillers(false);
-                        setBillerQuery('');
-                      }}
-                      style={({ pressed }) => [styles.pickerItem, pressed && styles.pickerItemPressed]}
-                      accessibilityRole="button"
-                    >
-                      <Text style={styles.pickerText}>{b.displayname || b.name}</Text>
-                    </Pressable>
-                  ))}
-                  {!filteredBillers.length && (
-                    <Text style={styles.pickerEmpty}>No billers in this category</Text>
-                  )}
-                </ScrollView>
-              )}
-            </View>
-          )}
-
-          {/* The biller names its own identifier; a top-up like FASTag calls it a
-              vehicle number rather than a consumer number. */}
-          <Input
-            label={biller?.label || 'Consumer number'}
-            required
-            value={caNumber}
-            onChangeText={setCaNumber}
-            autoCapitalize="characters"
-            placeholder={biller?.label ? `Enter ${biller.label}` : 'As printed on your bill'}
-            leftIcon="identifier"
-          />
-
-          <Input
-            label="Customer mobile (optional)"
-            value={customerMobile}
-            onChangeText={(v) => setCustomerMobile(v.replace(/\D/g, '').slice(0, 10))}
-            keyboardType="number-pad"
-            placeholder="10-digit mobile number"
-            leftIcon="phone-outline"
-            maxLength={10}
-          />
-
-          {/* A top-up has no bill to fetch, so the step is hidden rather than
-              left to fail. */}
-          {biller?.viewbill === 'true' && (
-            <>
-              <Button
-                variant="outline"
-                icon="file-search-outline"
-                onPress={onFetchBill}
-                loading={fetchBill.pending}
-                disabled={!biller || caNumber.trim().length < 4}
-                fullWidth
+      {!!items.length && (
+        <Grid columns={2}>
+          {items.map((item) => (
+            <Pressable
+              key={item.key}
+              // Not navigable while the provider has no biller behind it: the
+              // form would load an empty picker and refuse every payment.
+              disabled={!item.available}
+              onPress={() =>
+                navigation.navigate('BbpsService', { category: item.key, title: item.label })
+              }
+              style={({ pressed }) => [
+                styles.tile,
+                !item.available && styles.tileOff,
+                pressed && styles.pressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !item.available }}
+              accessibilityLabel={
+                item.available
+                  ? `${item.label}. Pay a bill`
+                  : `${item.label}. Coming soon, not live on our BBPS provider yet`
+              }
+            >
+              <View style={[styles.tileIcon, !item.available && styles.tileIconOff]}>
+                <MaterialCommunityIcons
+                  name={categoryIcon(item.label) as any}
+                  size={22}
+                  color={item.available ? colors.accent : colors.mutedForeground}
+                />
+              </View>
+              <Text
+                style={[styles.tileLabel, !item.available && styles.tileLabelOff]}
+                numberOfLines={2}
               >
-                Fetch bill
-              </Button>
-              {!!fetchBill.error && <ErrorBanner message={fetchBill.error} />}
-            </>
-          )}
-
-          {!!bill && (
-            <View style={styles.infoBox}>
-              <Row label="Customer" value={bill.customerName || bill.name} />
-              <Row label="Account" value={bill.account || bill.accountNumber || caNumber} />
-              <Row label="Bill number" value={bill.billnumber || bill.billNumber} />
-              <Row label="Bill date" value={bill.billdate || bill.billDate} />
-              <Row label="Due date" value={bill.duedate || bill.dueDate} />
-              <Row label="Bill period" value={bill.bilperiod || bill.billPeriod} />
-              <Row
-                label="Amount due"
-                value={money(bill.amount ?? bill.Amount ?? bill.dueamount ?? bill.billAmount)}
-                mono
-              />
-              <Row label="Fetch reference" value={bill.fetchBillID || bill.fetchRefId || '—'} last />
-            </View>
-          )}
-
-          <Input
-            label="Amount"
-            required
-            value={amount}
-            onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))}
-            keyboardType="decimal-pad"
-            placeholder="0.00"
-            leftIcon="currency-inr"
-            error={overBalance ? 'Amount exceeds your main wallet balance' : undefined}
-            helperText="Auto-filled when the biller returns a due amount"
-          />
-          <Input
-            label="Wallet PIN"
-            required
-            value={pin}
-            onChangeText={(v) => setPin(v.replace(/\D/g, '').slice(0, 4))}
-            keyboardType="number-pad"
-            secureTextEntry={!showPin}
-            maxLength={4}
-            placeholder="••••"
-            leftIcon="lock-outline"
-            rightIcon={showPin ? 'eye-off-outline' : 'eye-outline'}
-            onRightIconPress={() => setShowPin(!showPin)}
-            rightIconLabel={showPin ? 'Hide PIN' : 'Show PIN'}
-          />
-
-          {!!payBill.error && <ErrorBanner message={payBill.error} />}
-          {!!notice && <SuccessBanner message={notice} />}
-          <Button
-            onPress={onPay}
-            disabled={!valid}
-            loading={payBill.pending}
-            icon="check-circle-outline"
-            size="lg"
-            fullWidth
-          >
-            Pay bill
-          </Button>
-        </CardContent>
-      </Card>
+                {item.label}
+              </Text>
+              {/* Said in words, not by dimming alone — the grey reads as a
+                  rendering glitch on its own, and not at all to a colour-blind
+                  reader. */}
+              {!item.available && <Text style={styles.tileSoon}>COMING SOON</Text>}
+            </Pressable>
+          ))}
+        </Grid>
+      )}
 
       <Card>
         <CardHeader>
@@ -340,20 +192,37 @@ export const BbpsScreen: React.FC = () => {
   );
 };
 
-const styles = themed((c) => ({
-  form: { gap: space.lg },
-  picker: { gap: space.sm, padding: space.sm, borderRadius: radius.md, backgroundColor: c.secondary },
-  pickerList: { maxHeight: 240 },
-  pickerItem: {
-    minHeight: 44,
+const styles = themed((c, isDark) => ({
+  tile: {
+    minHeight: 104,
+    padding: space.lg,
+    borderRadius: radius.lg,
+    backgroundColor: c.card,
+    borderWidth: 1,
+    borderColor: c.border,
+    gap: space.sm,
     justifyContent: 'center',
-    paddingHorizontal: space.md,
-    borderRadius: radius.sm,
   },
-  pickerItemPressed: { backgroundColor: c.surfaceAlt },
-  pickerText: { fontSize: t.small, color: c.foreground },
-  pickerEmpty: { fontSize: t.caption, color: c.mutedForeground, padding: space.md },
-  infoBox: { padding: space.md, borderRadius: radius.md, backgroundColor: c.secondary },
+  pressed: { opacity: 0.7, backgroundColor: c.accentSubtle },
+  tileOff: { backgroundColor: c.secondary, borderStyle: 'dashed' },
+  tileIconOff: { backgroundColor: c.secondary },
+  tileLabelOff: { color: c.mutedForeground },
+  tileSoon: {
+    fontSize: t.micro,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    color: c.mutedForeground,
+  },
+  tileIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.pill,
+    backgroundColor: isDark ? c.surfaceAlt : c.accentSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tileLabel: { fontSize: t.small, fontWeight: '700', color: c.foreground },
+
   item: { paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
   itemTop: {
     flexDirection: 'row',

@@ -18,6 +18,7 @@ import { DmtScreen } from '@/screens/retailer/DmtScreen';
 import { MatmScreen } from '@/screens/retailer/MatmScreen';
 import { RechargeScreen } from '@/screens/retailer/RechargeScreen';
 import { BbpsScreen } from '@/screens/retailer/BbpsScreen';
+import { BbpsServiceScreen } from '@/screens/retailer/BbpsServiceScreen';
 import { CollectScreen } from '@/screens/retailer/CollectScreen';
 import { WalletTransferScreen } from '@/screens/retailer/WalletTransferScreen';
 import { DirectPayoutScreen } from '@/screens/retailer/DirectPayoutScreen';
@@ -107,6 +108,7 @@ const RETAILER_SCREENS: [string, React.ComponentType<any>][] = [
   ['MATM', MatmScreen],
   ['Recharge', RechargeScreen],
   ['BBPS', BbpsScreen],
+  ['BbpsService', BbpsServiceScreen],
   ['Collect', CollectScreen],
   ['WalletTransfer', WalletTransferScreen],
   ['DirectPayout', DirectPayoutScreen],
