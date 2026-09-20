@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
+import { QRCodeSVG } from 'qrcode.react';
 import { QrCode, RefreshCw, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
@@ -15,7 +16,8 @@ import { useAuth } from '../context/AuthContext';
 
 type Topup = {
   transactionId: string;
-  qrImage: string;
+  /** The raw `upi://pay?...` request, rendered here as a plain QR. */
+  qrContent: string;
   amount: number;
   expiresAt: string;
 };
@@ -128,38 +130,55 @@ const AddMoney = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
+        {/* Amount stays on screen next to the QR: a retailer paying ₹5,000
+            should be able to see what they asked for without dismissing the
+            code. The fields lock while a QR is live because editing them
+            changes nothing — the QR is already minted for a fixed amount. */}
         <div className="rounded-xl border bg-card p-5">
-          {!topup ? (
-            <form onSubmit={handleGenerate} className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Amount</label>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Enter amount"
-                  min={100}
-                  max={100000}
-                  className="mt-1 w-full rounded-lg border px-3 py-2 text-lg"
-                />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Minimum ₹100, maximum ₹1,00,000 per payment.
-                </p>
-              </div>
+          <form onSubmit={handleGenerate} className="space-y-4">
+            <div>
+              <label className="text-sm font-medium" htmlFor="topup-amount">
+                Amount
+              </label>
+              <input
+                id="topup-amount"
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="Enter amount"
+                min={100}
+                max={100000}
+                disabled={!!topup}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-lg disabled:opacity-60"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Minimum ₹100, maximum ₹1,00,000 per payment.
+              </p>
+            </div>
 
-              <div className="flex flex-wrap gap-2">
-                {QUICK_AMOUNTS.map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setAmount(String(value))}
-                    className="rounded-full border px-3 py-1 text-sm hover:bg-accent"
-                  >
-                    ₹{value.toLocaleString('en-IN')}
-                  </button>
-                ))}
-              </div>
+            <div className="flex flex-wrap gap-2">
+              {QUICK_AMOUNTS.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setAmount(String(value))}
+                  disabled={!!topup}
+                  className="rounded-full border px-3 py-1 text-sm hover:bg-accent disabled:opacity-50 disabled:hover:bg-transparent"
+                >
+                  ₹{value.toLocaleString('en-IN')}
+                </button>
+              ))}
+            </div>
 
+            {topup ? (
+              <button
+                type="button"
+                onClick={reset}
+                className="w-full rounded-lg border px-4 py-2.5 text-sm font-medium"
+              >
+                {status === 'PENDING' ? 'Cancel and start over' : 'Add more money'}
+              </button>
+            ) : (
               <button
                 type="submit"
                 disabled={loading}
@@ -167,22 +186,31 @@ const AddMoney = () => {
               >
                 {loading ? 'Generating…' : 'Generate UPI QR'}
               </button>
-            </form>
+            )}
+          </form>
+        </div>
+
+        {/* The QR panel keeps its height whether or not a code is showing, so
+            generating one does not shove the page around. */}
+        <div className="flex min-h-[380px] flex-col items-center justify-center rounded-xl border bg-card p-5 text-center">
+          {!topup ? (
+            <div className="text-muted-foreground">
+              <QrCode className="mx-auto h-10 w-10 opacity-40" />
+              <p className="mt-3 text-sm">Your UPI QR will appear here</p>
+              <p className="mt-1 text-xs">Enter an amount and generate it</p>
+            </div>
           ) : (
-            <div className="space-y-4 text-center">
+            <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 Scan with any UPI app to pay ₹{topup.amount.toLocaleString('en-IN')}
               </p>
-              {/* Razorpay returns a full portrait poster, not a bare QR: its
-                  branding and app logos sit around a QR that is only a fraction
-                  of the image. Forcing it into a square box shrank that QR
-                  below what a phone camera can read, so the poster is shown at
-                  its own aspect ratio and given real width. */}
-              <img
-                src={topup.qrImage}
-                alt={`UPI QR to pay ₹${topup.amount}`}
-                className="mx-auto w-full max-w-[340px] rounded-lg border bg-white"
-              />
+              {/* Rendered from the raw UPI request rather than Razorpay's
+                  ready-made poster, so the code carries no branding but ours.
+                  The white background and quiet zone are not decoration: a
+                  scanner needs the light margin to find the code at all. */}
+              <div className="mx-auto w-fit rounded-xl bg-white p-4">
+                <QRCodeSVG value={topup.qrContent} size={240} level="M" marginSize={0} />
+              </div>
               <p className="text-xs text-muted-foreground">Ref {topup.transactionId}</p>
 
               {status === 'PENDING' && (
@@ -200,42 +228,38 @@ const AddMoney = () => {
                   <XCircle className="h-4 w-4" /> Payment failed
                 </p>
               )}
-
-              <button onClick={reset} className="w-full rounded-lg border px-4 py-2 text-sm">
-                {status === 'PENDING' ? 'Cancel' : 'Add more money'}
-              </button>
             </div>
           )}
         </div>
+      </div>
 
-        <div className="rounded-xl border bg-card p-5">
-          <h2 className="mb-3 font-medium">Recent top-ups</h2>
-          {history.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No top-ups yet.</p>
-          ) : (
-            <div className="divide-y">
-              {history.slice(0, 15).map((row) => {
-                const style = statusStyles[row.status] ?? statusStyles.PENDING;
-                const Icon = style.icon;
-                return (
-                  <div key={row._id} className="flex items-center justify-between py-2.5">
-                    <div>
-                      <p className="text-sm font-medium">₹{row.amount.toLocaleString('en-IN')}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(row.createdAt).toLocaleString('en-IN')} · {row.transactionId}
-                      </p>
-                    </div>
-                    <span
-                      className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs ${style.className}`}
-                    >
-                      <Icon className="h-3.5 w-3.5" /> {row.status}
-                    </span>
+      <div className="rounded-xl border bg-card p-5">
+        <h2 className="mb-3 font-medium">Recent top-ups</h2>
+        {history.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No top-ups yet.</p>
+        ) : (
+          <div className="divide-y">
+            {history.slice(0, 15).map((row) => {
+              const style = statusStyles[row.status] ?? statusStyles.PENDING;
+              const Icon = style.icon;
+              return (
+                <div key={row._id} className="flex items-center justify-between py-2.5">
+                  <div>
+                    <p className="text-sm font-medium">₹{row.amount.toLocaleString('en-IN')}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(row.createdAt).toLocaleString('en-IN')} · {row.transactionId}
+                    </p>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                  <span
+                    className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs ${style.className}`}
+                  >
+                    <Icon className="h-3.5 w-3.5" /> {row.status}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

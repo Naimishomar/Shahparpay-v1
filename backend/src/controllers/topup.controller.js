@@ -149,7 +149,7 @@ export const createTopupQr = async (req, res) => {
       notes: { reference: referenceId, userId: String(req.user.id) },
     });
 
-    if (!ok || !data?.id || !data?.image_url) {
+    if (!ok || !data?.id || !data?.image_content) {
       await Transaction.findOneAndUpdate(
         { _id: txn._id, status: 'PENDING' },
         { $set: { status: 'FAILED', 'metadata.apiResponse': data } }
@@ -173,13 +173,18 @@ export const createTopupQr = async (req, res) => {
       }
     );
 
+    // `image_url` is a ready-made poster carrying Razorpay's branding, the BHIM
+    // and UPI marks and the merchant name. `image_content` is the same payment
+    // request as a bare `upi://pay?...` string, which the client renders as a
+    // plain QR — our own page, our own framing, nobody else's logos.
+
     return res.status(200).json({
       success: true,
       message: 'Scan the QR with any UPI app to add money.',
       data: {
         transactionId: referenceId,
         qrCodeId: data.id,
-        qrImage: data.image_url,
+        qrContent: data.image_content,
         amount,
         expiresAt: new Date((data.close_by || 0) * 1000).toISOString(),
       },

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Image, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { themed, space, type as t, radius } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/Screen';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
+import QRCode from 'react-native-qrcode-svg';
 
 /**
  * Self-service wallet top-up over a Razorpay UPI QR.
@@ -30,7 +31,8 @@ const MIN_TOPUP = 100;
 const MAX_TOPUP = 100000;
 const QUICK_AMOUNTS = [500, 1000, 2000, 5000, 10000];
 
-type Topup = { transactionId: string; qrImage: string; amount: number };
+/** `qrContent` is the raw `upi://pay?...` request, rendered here as a plain QR. */
+type Topup = { transactionId: string; qrContent: string; amount: number };
 
 export const AddMoneyScreen: React.FC = () => {
   const [amount, setAmount] = useState('');
@@ -157,7 +159,12 @@ export const AddMoneyScreen: React.FC = () => {
               <Text style={styles.qrHint}>
                 Scan with any UPI app to pay {money(topup.amount)}
               </Text>
-              <Image source={{ uri: topup.qrImage }} style={styles.qrImage} resizeMode="contain" />
+              {/* Rendered from the raw UPI request rather than Razorpay's
+                  ready-made poster, so the code carries no branding but ours.
+                  The white padding is the scanner's quiet zone, not decoration. */}
+              <View style={styles.qrFrame}>
+                <QRCode value={topup.qrContent} size={240} ecl="M" />
+              </View>
               <Text style={styles.reference}>Ref {topup.transactionId}</Text>
 
               {status === 'PENDING' && (
@@ -221,17 +228,10 @@ const styles = themed((c) => ({
   quickText: { fontSize: t.caption, color: c.foreground, fontWeight: '600' },
   qrBlock: { gap: space.lg, alignItems: 'center' },
   qrHint: { fontSize: t.body, color: c.mutedForeground, textAlign: 'center' },
-  // Razorpay returns a portrait poster, not a bare QR: its branding and app
-  // logos surround a QR that is only a fraction of the image. A 240-square box
-  // shrank that QR below what a phone camera can read, so the poster gets the
-  // full card width and enough height to keep the code scannable.
-  qrImage: {
-    width: '100%',
-    height: 400,
+  qrFrame: {
     backgroundColor: '#fff',
+    padding: space.lg,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: c.border,
   },
   reference: { fontSize: t.caption, color: c.mutedForeground },
   waiting: { fontSize: t.caption, color: c.mutedForeground },
