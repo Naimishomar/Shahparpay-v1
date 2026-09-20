@@ -42,14 +42,27 @@ const call = async (method, path, { body, params } = {}) => {
       validateStatus: () => true,
       timeout: 30000,
     });
+    const ok = response.status >= 200 && response.status < 300;
     logIntegration('provider_response', {
       provider: 'razorpay',
       method,
       path,
       httpStatus: response.status,
       durationMs: Date.now() - startedAt,
+      // Razorpay puts the only useful part of a refusal in `error`. Logging the
+      // status alone says a call failed but never why, which is the difference
+      // between "their outage" and "this product is not enabled on the account".
+      ...(ok
+        ? {}
+        : {
+            errorCode: response.data?.error?.code ?? null,
+            errorDescription: response.data?.error?.description ?? null,
+            errorReason: response.data?.error?.reason ?? null,
+            errorSource: response.data?.error?.source ?? null,
+            errorField: response.data?.error?.field ?? null,
+          }),
     });
-    return { ok: response.status >= 200 && response.status < 300, data: response.data };
+    return { ok, data: response.data };
   } catch (error) {
     logIntegrationError('provider_request_error', error, {
       provider: 'razorpay',
