@@ -173,10 +173,15 @@ const AddMoney = () => {
               <p className="text-sm text-muted-foreground">
                 Scan with any UPI app to pay ₹{topup.amount.toLocaleString('en-IN')}
               </p>
+              {/* Razorpay returns a full portrait poster, not a bare QR: its
+                  branding and app logos sit around a QR that is only a fraction
+                  of the image. Forcing it into a square box shrank that QR
+                  below what a phone camera can read, so the poster is shown at
+                  its own aspect ratio and given real width. */}
               <img
                 src={topup.qrImage}
-                alt={`UPI QR for ₹${topup.amount}`}
-                className="mx-auto h-64 w-64 rounded-lg border bg-white object-contain p-2"
+                alt={`UPI QR to pay ₹${topup.amount}`}
+                className="mx-auto w-full max-w-[340px] rounded-lg border bg-white"
               />
               <p className="text-xs text-muted-foreground">Ref {topup.transactionId}</p>
 

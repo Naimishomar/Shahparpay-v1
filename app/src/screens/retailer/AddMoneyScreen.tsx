@@ -221,9 +221,13 @@ const styles = themed((c) => ({
   quickText: { fontSize: t.caption, color: c.foreground, fontWeight: '600' },
   qrBlock: { gap: space.lg, alignItems: 'center' },
   qrHint: { fontSize: t.body, color: c.mutedForeground, textAlign: 'center' },
+  // Razorpay returns a portrait poster, not a bare QR: its branding and app
+  // logos surround a QR that is only a fraction of the image. A 240-square box
+  // shrank that QR below what a phone camera can read, so the poster gets the
+  // full card width and enough height to keep the code scannable.
   qrImage: {
-    width: 240,
-    height: 240,
+    width: '100%',
+    height: 400,
     backgroundColor: '#fff',
     borderRadius: radius.lg,
     borderWidth: 1,

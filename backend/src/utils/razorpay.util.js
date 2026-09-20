@@ -77,9 +77,19 @@ const call = async (method, path, { body, params } = {}) => {
 export const razorpayPost = (path, body) => call('post', path, { body });
 export const razorpayGet = (path, params) => call('get', path, { params });
 
-/** The message a retailer should see for a refused Razorpay call. */
-export const razorpayMessage = (data, fallback) =>
-  String(data?.error?.description || '').trim() || fallback;
+/**
+ * The message a retailer should see for a refused Razorpay call.
+ *
+ * `SERVER_ERROR` carries Razorpay's own apology — "We are facing some trouble
+ * completing your request at the moment" — which reads to a retailer as though
+ * our app is broken, and tells them nothing they can act on. Those are logged
+ * in full and shown as the caller's fallback instead. A validation or
+ * business-rule refusal does explain itself, so that text is passed through.
+ */
+export const razorpayMessage = (data, fallback) => {
+  if (data?.error?.code === 'SERVER_ERROR') return fallback;
+  return String(data?.error?.description || '').trim() || fallback;
+};
 
 /**
  * Verifies a webhook came from Razorpay.
