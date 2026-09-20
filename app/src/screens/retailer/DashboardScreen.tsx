@@ -357,7 +357,7 @@ export const DashboardScreen: React.FC = () => {
         <View style={styles.walletTop}>
           <Text style={styles.walletLabel}>Wallet</Text>
           <Pressable
-            onPress={() => navigation.navigate('FundRequest')}
+            onPress={() => navigation.navigate('AddMoney')}
             style={({ pressed }) => [styles.walletAdd, pressed && styles.pressed]}
             accessibilityRole="button"
             accessibilityLabel="Add money"
@@ -532,7 +532,7 @@ export const DashboardScreen: React.FC = () => {
           <SquareTile
             icon="plus"
             label="Add money"
-            onPress={() => navigation.navigate('FundRequest')}
+            onPress={() => navigation.navigate('AddMoney')}
           />
         </View>
         <WideTile

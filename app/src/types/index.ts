@@ -101,6 +101,7 @@ export interface NavigationParams {
     WalletTransfer: undefined;
     DirectPayout: undefined;
     FundRequest: undefined;
+    AddMoney: undefined;
     BiometricSupport: undefined;
     PipeStatus: undefined;
     Profile: undefined;

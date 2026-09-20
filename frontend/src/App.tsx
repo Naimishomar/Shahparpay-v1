@@ -13,6 +13,7 @@ import BBPS from "./pages/BBPS"
 import UPI_Payments from "./pages/UPI_Payments"
 import Collect from "./pages/Collect"
 import FundRequest from "./pages/FundRequest"
+import AddMoney from "./pages/AddMoney"
 import BiometricSupport from "./pages/BiometricSupport"
 import LedgerReport from "./pages/LedgerReport"
 import DmtReport from "./pages/DmtReport"
@@ -101,6 +102,7 @@ function App() {
         <Route path="/reports/wallet-ledger" element={<WalletLedger/>}/>
 
         <Route path="/fund-request" element={<FundRequest/>}/>
+        <Route path="/add-money" element={<AddMoney/>}/>
         <Route path="/biometric-support" element={<BiometricSupport/>}/>
         <Route path="/profile" element={<Profile/>}/>
         <Route path="/support" element={<Support/>}/>

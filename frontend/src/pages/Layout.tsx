@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Outlet, Navigate, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import SupportWidget from "../components/SupportWidget"
+import { LocationProvider } from "../context/LocationContext"
 
 const Layout = () => {
     const { user, token } = useAuth();
@@ -19,6 +20,7 @@ const Layout = () => {
     if (user?.role === 'distributor' && !location.pathname.startsWith('/distributor') && location.pathname !== '/support') return <Navigate to="/distributor" replace />;
 
     return (
+        <LocationProvider>
         <SidebarProvider>
             <AppSidebar />
             <main className="flex-1 h-svh min-h-0 bg-background text-foreground flex flex-col overflow-hidden w-full relative">
@@ -35,6 +37,7 @@ const Layout = () => {
                 <SupportWidget />
             </main>
         </SidebarProvider>
+        </LocationProvider>
     )
 }
 

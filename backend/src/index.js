@@ -76,7 +76,10 @@ app.use(
   })
 );
 
-app.use(express.json());
+// The Razorpay webhook signature is an HMAC over the exact bytes received, so
+// the raw body has to survive parsing: re-serialising the parsed object changes
+// key order and whitespace and every genuine notification would fail to verify.
+app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
@@ -99,6 +102,7 @@ import panRouter from './routes/pan.route.js';
 import panEsevaRouter from './routes/panEseva.route.js';
 import itrRouter from './routes/itr.route.js';
 import collectRouter from './routes/collect.route.js';
+import topupRouter from './routes/topup.route.js';
 import matmRouter from './routes/matm.route.js';
 import notificationRouter from './routes/notification.route.js';
 import supportRouter from './routes/support.route.js';
@@ -120,6 +124,7 @@ app.use('/api/pan', panRouter);
 app.use('/api/pan', panEsevaRouter);
 app.use('/api/itr', itrRouter);
 app.use('/api/collect', collectRouter);
+app.use('/api/topup', topupRouter);
 app.use('/api/matm', matmRouter);
 app.use('/api/notifications', notificationRouter);
 app.use('/api/support', supportRouter);

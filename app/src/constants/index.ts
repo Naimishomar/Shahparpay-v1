@@ -159,7 +159,8 @@ export const SERVICE_ITEMS: MenuEntry[] = [
   { name: 'Recharge', route: 'Recharge', icon: 'cellphone', hint: 'Mobile & DTH', group: 'Payments' },
   { name: 'BBPS', route: 'BBPS', icon: 'receipt', hint: 'Utility bills', group: 'Payments' },
   { name: 'Collect Payments', route: 'Collect', icon: 'link-variant', hint: 'Payment links', group: 'Payments' },
-  { name: 'Fund Request', route: 'FundRequest', icon: 'hand-coin-outline', hint: 'Top up wallet', group: 'Payments' },
+  { name: 'Add Money', route: 'AddMoney', icon: 'qrcode-plus', hint: 'Top up instantly by UPI', group: 'Payments' },
+  { name: 'Fund Request', route: 'FundRequest', icon: 'hand-coin-outline', hint: 'Top up by bank transfer or cash', group: 'Payments' },
 
   { name: 'PAN Card', route: 'PAN', icon: 'card-account-details-outline', hint: 'PSA & applications', group: 'Government' },
   { name: 'ITR Filing', route: 'ITR', icon: 'file-document-outline', hint: 'Income tax returns', group: 'Government' },
@@ -305,6 +306,11 @@ export const API_ENDPOINTS = {
     verify: '/api/collect/verify',
     qr: '/api/collect/qr',
     history: '/api/collect/history',
+  },
+  topup: {
+    qr: '/api/topup/qr',
+    history: '/api/topup/history',
+    status: '/api/topup/status', // append /:transactionId
   },
   pan: {
     // Biometric PSA (PaySprint)

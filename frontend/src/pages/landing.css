@@ -1,82 +1,173 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+/*
+ * Landing page design tokens.
+ *
+ * The marque is monochrome (see assets/logo.png), so near-black carries the
+ * primary actions and headings and a single blue accent carries eyebrows, icon
+ * tiles and stat figures. Keeping the accent to those places is what stops the
+ * page reading like a template: everything structural stays black on white.
+ */
+.landing-page {
+  --lp-bg: #ffffff;
+  --lp-surface: #f7f8fa;
+  --lp-card: #ffffff;
+  --lp-fg: #0b0f19;
+  --lp-muted: #5b6474;
+  --lp-border: #e5e8ee;
+  --lp-accent: #1b4dff;
+  --lp-accent-soft: #eef2ff;
+
+  background-color: var(--lp-bg);
+  color: var(--lp-fg);
+  min-height: 100vh;
+  /* Inter is self-hosted via @fontsource-variable/inter, imported in index.css. */
+  font-family: 'Inter Variable', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+html.dark .landing-page {
+  --lp-bg: #0b0f19;
+  --lp-surface: #10151f;
+  --lp-card: #131926;
+  --lp-fg: #f4f6fa;
+  --lp-muted: #9aa4b8;
+  --lp-border: rgba(255, 255, 255, 0.09);
+  --lp-accent: #6b8bff;
+  --lp-accent-soft: rgba(107, 139, 255, 0.12);
+}
 
 html:has(.landing-page) {
-  font-size: 100%;
   scroll-behavior: smooth;
 }
 
 html:has(.landing-page) body {
-  background: #f6f7f8;
+  background: #ffffff;
 }
 
 html.dark:has(.landing-page) body {
-  background: #15171b;
+  background: #0b0f19;
 }
 
-/* Minimal, soothing design system (patterned after vibelly.fun) */
-.landing-page {
-  background-color: #f6f7f8;
-  color: #18181b;
-  min-height: 100vh;
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+/* Headings run tighter than body text at display sizes; without the negative
+   tracking a 60px line reads loose and cheap. */
+.lp-display {
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+  font-weight: 800;
 }
 
-html.dark:has(.landing-page) .landing-page {
-  background-color: #15171b;
-  color: #ffffff;
+.lp-heading {
+  letter-spacing: -0.025em;
+  line-height: 1.12;
+  font-weight: 700;
 }
 
-.landing-page .container {
-  margin-inline: auto;
-  padding-inline: 1.5rem;
+.lp-muted {
+  color: var(--lp-muted);
 }
 
-.landing-serif {
-  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
-}
-
-.landing-georgia {
-  font-family: Georgia, 'Times New Roman', serif;
-}
-
-.landing-card {
-  background-color: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+.lp-card {
+  background-color: var(--lp-card);
+  border: 1px solid var(--lp-border);
   border-radius: 1rem;
-  transition: background-color 0.25s ease;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.landing-card:hover {
-  background-color: #fafafa;
+.lp-card:hover {
+  border-color: color-mix(in srgb, var(--lp-accent) 40%, var(--lp-border));
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(11, 15, 25, 0.07);
 }
 
-html.dark:has(.landing-page) .landing-card {
-  background-color: #1a1c20;
-  border-color: rgba(255, 255, 255, 0.05);
+html.dark .lp-card:hover {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
 
-html.dark:has(.landing-page) .landing-card:hover {
-  background-color: #1c1f24;
-}
-
-.landing-icon-tile {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 9999px;
-  background: rgba(0, 0, 0, 0.05);
+.lp-icon-tile {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  background: var(--lp-accent-soft);
+  color: var(--lp-accent);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-html.dark:has(.landing-page) .landing-icon-tile {
-  background: rgba(255, 255, 255, 0.05);
+.lp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  background: var(--lp-accent-soft);
+  color: var(--lp-accent);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-/* Fixed twinkling starfield behind the landing content */
-.landing-canvas {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
+.lp-btn-primary {
+  background: var(--lp-fg);
+  color: var(--lp-bg);
+  border-radius: 0.625rem;
+  font-weight: 600;
+  transition: opacity 0.2s ease;
+}
+
+.lp-btn-primary:hover {
+  opacity: 0.88;
+}
+
+.lp-btn-secondary {
+  border: 1px solid var(--lp-border);
+  color: var(--lp-fg);
+  border-radius: 0.625rem;
+  font-weight: 600;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.lp-btn-secondary:hover {
+  border-color: var(--lp-fg);
+  background: var(--lp-surface);
+}
+
+.lp-band {
+  background: var(--lp-surface);
+  border-block: 1px solid var(--lp-border);
+}
+
+/* The service strip scrolls on its own so the row reads as a live network
+   rather than a static list. Held still for anyone who asked for less motion. */
+.lp-marquee {
+  display: flex;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.lp-marquee__track {
+  display: flex;
+  flex-shrink: 0;
+  gap: 3rem;
+  padding-right: 3rem;
+  animation: lp-scroll 32s linear infinite;
+}
+
+@keyframes lp-scroll {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-marquee__track {
+    animation: none;
+  }
+  .lp-marquee {
+    overflow-x: auto;
+  }
 }

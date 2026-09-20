@@ -668,6 +668,25 @@ class ApiService {
     return this.get(API_ENDPOINTS.collect.history);
   }
 
+  // --------------------------------------------------------------- TOP-UP
+  /** Mints a single-use Razorpay UPI QR for a wallet top-up. */
+  async createTopupQr(amount: number) {
+    return this.post(API_ENDPOINTS.topup.qr, { amount });
+  }
+
+  /**
+   * Razorpay's webhook is what actually credits the wallet; this is polled
+   * while the QR is on screen so the retailer sees the result without waiting
+   * for a refresh.
+   */
+  async getTopupStatus(transactionId: string) {
+    return this.get(`${API_ENDPOINTS.topup.status}/${transactionId}`);
+  }
+
+  async getTopupHistory() {
+    return this.get(API_ENDPOINTS.topup.history);
+  }
+
   // ----------------------------------------------------------------- PAN
   async getMyPsaStatus() {
     return this.get(API_ENDPOINTS.pan.myPsaStatus);

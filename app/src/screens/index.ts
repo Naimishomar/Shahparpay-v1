@@ -20,6 +20,7 @@ export { CollectScreen } from './retailer/CollectScreen';
 export { WalletTransferScreen } from './retailer/WalletTransferScreen';
 export { DirectPayoutScreen } from './retailer/DirectPayoutScreen';
 export { FundRequestScreen } from './retailer/FundRequestScreen';
+export { AddMoneyScreen } from './retailer/AddMoneyScreen';
 export { BiometricSupportScreen } from './retailer/BiometricSupportScreen';
 export { PipeStatusScreen } from './retailer/PipeStatusScreen';
 export { ProfileScreen } from './retailer/ProfileScreen';

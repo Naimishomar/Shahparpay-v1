@@ -43,6 +43,7 @@ const retailerProjects = [
       { name: "BBPS Reports", url: "/reports/bbps" },
     ]
   },
+  { name: "Add Money", url: "/add-money", icon: QrCode },
   { name: "Fund Request", url: "/fund-request", icon: Send },
   { name: "AEPS Pipe Status", url: "/aeps/pipes", icon: ScanFace },
   { name: "Biometric Support", url: "/biometric-support", icon: ScanFace },

@@ -23,6 +23,7 @@ import { CollectScreen } from '@/screens/retailer/CollectScreen';
 import { WalletTransferScreen } from '@/screens/retailer/WalletTransferScreen';
 import { DirectPayoutScreen } from '@/screens/retailer/DirectPayoutScreen';
 import { FundRequestScreen } from '@/screens/retailer/FundRequestScreen';
+import { AddMoneyScreen } from '@/screens/retailer/AddMoneyScreen';
 import { BiometricSupportScreen } from '@/screens/retailer/BiometricSupportScreen';
 import { PipeStatusScreen } from '@/screens/retailer/PipeStatusScreen';
 import { ProfileScreen } from '@/screens/retailer/ProfileScreen';
@@ -113,6 +114,7 @@ const RETAILER_SCREENS: [string, React.ComponentType<any>][] = [
   ['WalletTransfer', WalletTransferScreen],
   ['DirectPayout', DirectPayoutScreen],
   ['FundRequest', FundRequestScreen],
+  ['AddMoney', AddMoneyScreen],
   ['BiometricSupport', BiometricSupportScreen],
   ['PipeStatus', PipeStatusScreen],
   ['Profile', ProfileScreen],
