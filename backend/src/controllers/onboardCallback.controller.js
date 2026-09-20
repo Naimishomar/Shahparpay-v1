@@ -3,6 +3,7 @@ import Retailer from '../models/users/retailer.model.js';
 import Transaction from '../models/transaction.model.js';
 import MainWallet from '../models/mainWallet.model.js';
 import { generatePaySprintToken } from '../utils/paysprint.util.js';
+import { leadCallback } from './lead.controller.js';
 
 // PaySprint calls these endpoints server-to-server, so they cannot sit behind
 // the retailer JWT middleware. The shared secret below is the only thing
@@ -210,4 +211,31 @@ export const getOnboardSdkParams = async (req, res) => {
     console.error('[Onboard SDK Params] Error:', error);
     return res.status(500).json({ success: false, message: error.message });
   }
+};
+
+/**
+ * PaySprint's partner panel accepts exactly one callback URL for the whole
+ * account, so every event lands on this single endpoint. The handlers already
+ * discriminate on `event`; all this does is pick which one gets the request.
+ *
+ * Register with PaySprint as
+ *   https://<host>/api/paysprint/callback?key=<PAYSPRINT_CALLBACK_KEY>
+ */
+export const CALLBACK_HANDLERS = {
+  MERCHANT_ONBOARDING: onboardTransactionCallback,
+  MERCHANT_STATUS_ONBOARD: onboardStatusCallback,
+  LEAD_GENERATION_CALLBACK: leadCallback,
+};
+
+export const paysprintCallback = async (req, res) => {
+  // Checked here as well as inside the onboarding handlers, because
+  // leadCallback has no guard of its own and must not be reachable unsigned.
+  if (!isAuthorisedCallback(req)) return ack(res, 400, 'Unauthorized callback');
+
+  const handler = CALLBACK_HANDLERS[req.body?.event];
+  if (!handler) {
+    console.error('[PaySprint Callback] Unhandled event:', req.body?.event);
+    return ack(res, 400, 'Unsupported event');
+  }
+  return handler(req, res);
 };
