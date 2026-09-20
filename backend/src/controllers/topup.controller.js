@@ -91,6 +91,11 @@ const creditTopup = async (txn, { paymentId, paidPaise, method, vpa }) => {
  * Mints the QR the retailer scans.
  */
 export const createTopupQr = async (req, res) => {
+  // Held outside the try so a throw can still close the row it opened. A
+  // provider call that blows up — bad credentials, a timeout — used to leave a
+  // PENDING top-up behind that no QR was ever minted for and nothing could
+  // ever settle.
+  let txn = null;
   try {
     const amount = Number(req.body?.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -118,7 +123,7 @@ export const createTopupQr = async (req, res) => {
     // Recorded before Razorpay is called: the webhook settles against this row,
     // and a QR handed out for a top-up we have no record of could never be
     // credited.
-    const txn = await Transaction.create({
+    txn = await Transaction.create({
       transactionId: referenceId,
       userId: req.user.id,
       type: 'WALLET_TOPUP',
@@ -180,8 +185,32 @@ export const createTopupQr = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Create Topup QR Error:', error?.response?.data || error?.message);
-    return res.status(500).json({ success: false, message: 'Failed to generate the payment QR' });
+    if (txn) {
+      await Transaction.findOneAndUpdate(
+        { _id: txn._id, status: 'PENDING' },
+        { $set: { status: 'FAILED', 'metadata.failureReason': error?.message || 'QR creation failed' } }
+      ).catch(() => {});
+    }
+
+    // A missing key is an operator error, not a provider outage, and the two
+    // look identical in a log that only prints "failed". Say which it is: this
+    // is the difference between checking the server's environment and opening a
+    // ticket with Razorpay.
+    const misconfigured = String(error?.message || '').includes('are not configured');
+    if (misconfigured) {
+      console.error(
+        '[Topup] RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are missing from this server\'s environment — no QR can be minted until they are set.'
+      );
+    } else {
+      console.error('Create Topup QR Error:', error?.response?.data || error?.message);
+    }
+
+    return res.status(misconfigured ? 503 : 500).json({
+      success: false,
+      message: misconfigured
+        ? 'UPI top-up is not configured on this server yet. Please contact support.'
+        : 'Failed to generate the payment QR',
+    });
   }
 };
 
@@ -195,7 +224,21 @@ export const createTopupQr = async (req, res) => {
  * credit cannot depend on a callback arriving.
  */
 export const syncTopupTransaction = async (txn) => {
-  if (txn.status !== 'PENDING' || !txn.metadata?.qrCodeId) return txn;
+  if (txn.status !== 'PENDING') return txn;
+
+  // A pending row with no QR behind it is an attempt that died before Razorpay
+  // answered, so there is nothing to poll and nothing anyone could have paid.
+  // Closing it here keeps the list honest and sweeps up rows left by earlier
+  // failures.
+  if (!txn.metadata?.qrCodeId) {
+    return (
+      (await Transaction.findOneAndUpdate(
+        { _id: txn._id, status: 'PENDING' },
+        { $set: { status: 'FAILED', 'metadata.failureReason': 'No QR was created for this top-up' } },
+        { new: true }
+      )) || txn
+    );
+  }
 
   const { ok, data } = await razorpayGet(`/payments/qr_codes/${txn.metadata.qrCodeId}/payments`);
   const captured = ok ? (data?.items || []).find((payment) => payment.status === 'captured') : null;
