@@ -158,7 +158,7 @@ const UPI_Payments = () => {
                         {qr ? (
                             <div className="space-y-4 w-full">
                                 {qr.qrImage && (
-                                    <img src={qr.qrImage} alt="UPI QR code" className="w-56 h-56 mx-auto rounded-xl border border-border/50 bg-white p-2" />
+                                    <img src={qr.qrImage} alt="UPI QR code" className="w-56 h-auto mx-auto rounded-xl border border-border/50 bg-white p-2" />
                                 )}
                                 {qr.upiHandle && (
                                     <p className="text-sm font-medium text-foreground break-all">{qr.upiHandle}</p>

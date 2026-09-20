@@ -158,11 +158,17 @@ export const AddMoneyScreen: React.FC = () => {
               <Text style={styles.qrHint}>
                 Scan with any UPI app to pay {money(topup.amount)}
               </Text>
-              {/* Rendered from the raw UPI request rather than Razorpay's
-                  ready-made poster, so the code carries no branding but ours.
-                  The white padding is the scanner's quiet zone, not decoration. */}
+              {/* Razorpay's poster is a tall 674x1644 sheet, not a bare square
+                  code. Forced into a square box it was cropped/squashed and UPI
+                  apps read it as an invalid QR, so the box keeps the poster's
+                  shape and `contain` never distorts it. */}
               <View style={styles.qrFrame}>
-                <Image source={{ uri: topup.qrImage }} style={{ width: 240, height: 240 }} />
+                <Image
+                  source={{ uri: topup.qrImage }}
+                  style={styles.qrImage}
+                  resizeMode="contain"
+                  accessibilityLabel="UPI QR code"
+                />
               </View>
               <Text style={styles.reference}>Ref {topup.transactionId}</Text>
 
@@ -227,6 +233,7 @@ const styles = themed((c) => ({
   quickText: { fontSize: t.caption, color: c.foreground, fontWeight: '600' },
   qrBlock: { gap: space.lg, alignItems: 'center' },
   qrHint: { fontSize: t.body, color: c.mutedForeground, textAlign: 'center' },
+  qrImage: { width: 260, height: 634 },
   qrFrame: {
     backgroundColor: '#fff',
     padding: space.lg,

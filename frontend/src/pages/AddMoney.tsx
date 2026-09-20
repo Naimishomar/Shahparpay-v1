@@ -204,7 +204,7 @@ const AddMoney = () => {
                 Scan with any UPI app to pay ₹{topup.amount.toLocaleString('en-IN')}
               </p>
               <div className="mx-auto w-fit rounded-xl bg-white p-4">
-                <img src={topup.qrImage} alt="UPI QR" width={240} height={240} />
+                <img src={topup.qrImage} alt="UPI QR" className="w-64 h-auto" />
               </div>
               <p className="text-xs text-muted-foreground">Ref {topup.transactionId}</p>
 
