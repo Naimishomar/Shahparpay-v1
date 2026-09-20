@@ -319,9 +319,9 @@ const Landing: React.FC = () => {
                     scrolled ? 'bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-sm' : 'bg-white border-b border-slate-100'
                 }`}
             >
-                <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-6 px-6 py-4">
+                <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 sm:gap-6 px-4 sm:px-6 py-3.5 sm:py-4">
                     <Link to="/" aria-label="Shahparpay home" className="shrink-0">
-                        <Logo />
+                        <Logo className="h-8 sm:h-10" />
                     </Link>
 
                     {/* Desktop Navigation Links */}
@@ -459,22 +459,22 @@ const Landing: React.FC = () => {
                     </div>
 
                     {/* Right Side Action Buttons */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                         <Link
                             to="/login"
-                            className="bg-[#18181b] hover:bg-black text-white rounded-full px-6 py-2.5 text-sm font-bold transition-all shadow-sm"
+                            className="hidden sm:inline-flex bg-[#18181b] hover:bg-black text-white rounded-full px-5 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-bold transition-all shadow-sm"
                         >
                             Sign Up for Free*
                         </Link>
                         <Link
                             to="/login"
-                            className="bg-white border border-[#18181b] text-[#18181b] hover:bg-slate-50 rounded-full px-6 py-2.5 text-sm font-bold transition-all"
+                            className="bg-white border border-[#18181b] text-[#18181b] hover:bg-slate-50 rounded-full px-4 sm:px-6 py-1.5 sm:py-2.5 text-xs sm:text-sm font-bold transition-all"
                         >
                             Sign In
                         </Link>
 
                         <button
-                            className="lg:hidden p-2 text-slate-800"
+                            className="lg:hidden p-2 text-slate-800 rounded-lg hover:bg-slate-100 transition-colors"
                             onClick={() => setMenuOpen(!menuOpen)}
                             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
                         >
@@ -485,25 +485,28 @@ const Landing: React.FC = () => {
 
                 {/* Mobile Navigation Drawer */}
                 {menuOpen && (
-                    <div className="border-t border-slate-200 px-6 py-6 lg:hidden space-y-4 shadow-xl bg-white">
+                    <div className="border-t border-slate-200 px-6 py-6 lg:hidden space-y-5 shadow-2xl bg-white animate-in slide-in-from-top-2 duration-200">
                         <div className="space-y-1">
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Navigation</p>
-                            <a href="#services" onClick={() => setMenuOpen(false)} className="block py-2 text-sm font-semibold text-slate-900">
+                            <a href="#services" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
                                 Products &amp; Services
                             </a>
-                            <a href="#calculator" onClick={() => setMenuOpen(false)} className="block py-2 text-sm font-semibold text-slate-900">
-                                Earnings Calculator
+                            <a href="#developers" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
+                                Developer APIs &amp; Docs
                             </a>
-                            <a href="#developers" onClick={() => setMenuOpen(false)} className="block py-2 text-sm font-semibold text-slate-900">
-                                Developer APIs
+                            <a href="#services" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
+                                Pricing
                             </a>
-                            <a href="#contact" onClick={() => setMenuOpen(false)} className="block py-2 text-sm font-semibold text-slate-900">
+                            <a href="#contact" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
                                 Contact &amp; Support
                             </a>
                         </div>
-                        <div className="pt-4 border-t border-slate-100 flex flex-col gap-2">
-                            <Link to="/login" onClick={() => setMenuOpen(false)} className="bg-[#18181b] text-white text-center py-2.5 rounded-full text-sm font-bold">
+                        <div className="pt-2 flex flex-col gap-2.5">
+                            <Link to="/login" onClick={() => setMenuOpen(false)} className="bg-[#18181b] hover:bg-black text-white text-center py-3 rounded-full text-sm font-bold shadow-sm">
                                 Sign Up for Free*
+                            </Link>
+                            <Link to="/login" onClick={() => setMenuOpen(false)} className="bg-white border border-slate-900 text-slate-900 text-center py-3 rounded-full text-sm font-bold">
+                                Sign In
                             </Link>
                         </div>
                     </div>
@@ -511,76 +514,15 @@ const Landing: React.FC = () => {
             </nav>
 
             {/* --------------------------------------------------------- HERO SECTION (FULL SCREEN MATCH) */}
-            <section className="relative z-10 w-full pt-12 pb-16 overflow-hidden">
-                {/* Centered Hero Header Text & Offer Card */}
-                <div className="mx-auto max-w-5xl px-6 text-center flex flex-col items-center">
-                    <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 tracking-tight leading-[1.08] max-w-4xl">
-                        Get Your Business Festive Ready With India's Best Payment Gateway
-                    </h1>
-
-                    {/* Soft Lime/Yellow Offer Card matching screenshot */}
-                    <div
-                        className="my-8 rounded-3xl p-6 sm:p-8 max-w-2xl w-full border border-lime-300/50 shadow-xs text-center relative overflow-hidden"
-                        style={{
-                            background: 'linear-gradient(180deg, rgba(228, 250, 173, 0.75) 0%, rgba(254, 248, 184, 0.75) 100%)'
-                        }}
-                    >
-                        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-slate-900">
-                            <span className="text-5xl sm:text-6xl font-black tracking-tight text-[#00502b]">
-                                0%
-                            </span>
-                            <span className="text-2xl font-bold text-slate-400 line-through">
-                                1.95%
-                            </span>
-                            <span className="text-base sm:text-xl font-extrabold text-[#00502b] ml-1">
-                                Platform Fees on sales up to ₹20L*
-                            </span>
-                        </div>
-
-                        <div className="w-full h-px bg-slate-900/10 my-5" />
-
-                        {/* 3 Checkmark Features */}
-                        <div className="flex flex-wrap items-center justify-center gap-y-2 gap-x-6 text-xs sm:text-sm font-bold text-slate-800">
-                            <span className="flex items-center gap-1.5">
-                                <span className="w-4 h-4 rounded-full border border-slate-700 text-slate-800 flex items-center justify-center text-[0.6rem] font-black">✓</span> Next-day Settlement
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <span className="w-4 h-4 rounded-full border border-slate-700 text-slate-800 flex items-center justify-center text-[0.6rem] font-black">✓</span> Dedicated Account Manager
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <span className="w-4 h-4 rounded-full border border-slate-700 text-slate-800 flex items-center justify-center text-[0.6rem] font-black">✓</span> Go-live in Minutes
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Action Buttons matching Cashfree screenshot */}
-                    <div className="flex flex-row items-center justify-center gap-4 relative z-20">
-                        <Link
-                            to="/login"
-                            className="bg-[#18181b] hover:bg-black text-white font-bold px-7 py-3 rounded-full text-sm sm:text-base inline-flex items-center gap-3 shadow-sm transition-transform hover:scale-[1.01]"
-                        >
-                            <span>Sign Up for Free*</span>
-                            <span className="bg-[#a3e635] text-black w-6 h-6 rounded-md flex items-center justify-center font-black text-sm">
-                                ↗
-                            </span>
-                        </Link>
-                        <a
-                            href="#contact"
-                            className="bg-white border border-[#18181b] text-[#18181b] hover:bg-slate-50 font-bold px-7 py-3 rounded-full text-sm sm:text-base transition-colors"
-                        >
-                            Contact Sales
-                        </a>
-                    </div>
-                </div>
-
-                {/* Full Width Centered Hero MP4 Video */}
-                <div className="w-full mt-2 sm:-mt-4 overflow-hidden pointer-events-none select-none flex justify-center">
+            <section className="relative z-10 w-full min-h-0 lg:min-h-[calc(100vh-80px)] flex flex-col items-center justify-center py-8 sm:py-12 lg:py-16 px-4 sm:px-6 overflow-hidden bg-white">
+                {/* Background MP4 Video framing the content */}
+                <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none select-none flex justify-center items-end z-0">
                     <video
                         autoPlay
                         loop
                         muted
                         playsInline
-                        className="w-full max-w-[1440px] h-auto object-cover"
+                        className="w-full max-w-[1440px] h-full object-cover object-bottom opacity-90 sm:opacity-95"
                     >
                         <source
                             src="https://cashfreelogo.cashfree.com/website/hero/Homepage_Hero_Cashfree%20revamp_v4%20Mp4.mp4"
@@ -588,6 +530,82 @@ const Landing: React.FC = () => {
                         />
                         Your browser does not support the video tag.
                     </video>
+                </div>
+
+                {/* Centered Hero Header Text & Offer Card sitting OVER top of background video */}
+                <div className="relative z-10 mx-auto max-w-5xl text-center flex flex-col items-center justify-center w-full">
+                    {/* Eyebrow Pill Badge */}
+                    <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 sm:px-4 py-1.5 rounded-full text-[0.7rem] sm:text-xs font-bold mb-3 sm:mb-4 shadow-2xs">
+                        <Sparkles className="w-3.5 h-3.5 text-[#008c46]" />
+                        <span>India's #1 Payment Infrastructure</span>
+                    </div>
+
+                    <h1 className="text-3xl sm:text-5xl lg:text-7xl font-extrabold text-slate-900 tracking-tight leading-[1.12] sm:leading-[1.08] max-w-4xl text-center mx-auto">
+                        Get Your Business Festive Ready With India's Best Payment Gateway
+                    </h1>
+
+                    {/* Soft Lime/Yellow Offer Card matching screenshot */}
+                    <div
+                        className="my-4 sm:my-8 rounded-2xl sm:rounded-3xl p-4 sm:p-8 max-w-2xl w-full border border-lime-300/80 shadow-md text-center relative overflow-hidden mx-auto flex flex-col items-center justify-center backdrop-blur-xs"
+                        style={{
+                            background: 'linear-gradient(180deg, rgba(228, 250, 173, 0.94) 0%, rgba(254, 248, 184, 0.94) 100%)'
+                        }}
+                    >
+                        <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-3 text-slate-900">
+                            <span className="text-4xl sm:text-6xl font-black tracking-tight text-[#00502b]">
+                                0%
+                            </span>
+                            <span className="text-xl sm:text-2xl font-bold text-slate-400 line-through">
+                                1.95%
+                            </span>
+                            <span className="text-xs sm:text-xl font-extrabold text-[#00502b] ml-0.5 sm:ml-1">
+                                Platform Fees on sales up to ₹20L*
+                            </span>
+                        </div>
+
+                        <div className="w-full h-px bg-slate-900/10 my-3.5 sm:my-5" />
+
+                        {/* 3 Checkmark Features */}
+                        <div className="flex flex-wrap items-center justify-center gap-y-2 gap-x-3 sm:gap-x-6 text-[0.7rem] sm:text-sm font-bold text-slate-800 text-center w-full">
+                            <span className="flex items-center gap-1.5">
+                                <span className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-slate-700 text-slate-800 flex items-center justify-center text-[0.55rem] sm:text-[0.6rem] font-black shrink-0">✓</span> Next-day Settlement
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                                <span className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-slate-700 text-slate-800 flex items-center justify-center text-[0.55rem] sm:text-[0.6rem] font-black shrink-0">✓</span> Dedicated Account Manager
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                                <span className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-slate-700 text-slate-800 flex items-center justify-center text-[0.55rem] sm:text-[0.6rem] font-black shrink-0">✓</span> Go-live in Minutes
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Action Buttons matching Cashfree screenshot */}
+                    <div className="flex flex-row items-center justify-center gap-2.5 sm:gap-4 relative z-20 mx-auto w-full sm:w-auto">
+                        <Link
+                            to="/login"
+                            className="bg-[#18181b] hover:bg-black text-white font-bold px-4 sm:px-7 py-3 rounded-full text-xs sm:text-base inline-flex items-center justify-center gap-2 sm:gap-3 shadow-md transition-transform hover:scale-[1.01] flex-1 sm:flex-initial"
+                        >
+                            <span>Sign Up for Free*</span>
+                            <span className="bg-[#a3e635] text-black w-5 h-5 sm:w-6 sm:h-6 rounded-md flex items-center justify-center font-black text-xs sm:text-sm">
+                                ↗
+                            </span>
+                        </Link>
+                        <a
+                            href="#contact"
+                            className="bg-white border border-[#18181b] text-[#18181b] hover:bg-slate-50 font-bold px-4 sm:px-7 py-3 rounded-full text-xs sm:text-base text-center transition-colors shadow-sm flex-1 sm:flex-initial"
+                        >
+                            Contact Sales
+                        </a>
+                    </div>
+
+                    {/* Trust Badges Bar */}
+                    <div className="pt-4 sm:pt-6 flex flex-wrap items-center justify-center gap-y-1.5 gap-x-4 sm:gap-x-6 text-[0.68rem] sm:text-xs font-bold text-slate-600">
+                        <span className="flex items-center gap-1.2"><ShieldCheck className="w-3.5 h-3.5 text-[#008c46]" /> RBI Licensed PA</span>
+                        <span className="text-slate-300 hidden sm:inline">•</span>
+                        <span className="flex items-center gap-1.2"><Zap className="w-3.5 h-3.5 text-[#008c46]" /> 99.99% Uptime SLA</span>
+                        <span className="text-slate-300 hidden sm:inline">•</span>
+                        <span className="flex items-center gap-1.2"><CheckCircle2 className="w-3.5 h-3.5 text-[#008c46]" /> 50,000+ Merchants</span>
+                    </div>
                 </div>
             </section>
 
