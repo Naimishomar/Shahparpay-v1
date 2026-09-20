@@ -15,3 +15,24 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Issued certs live here. Without a named volume every `docker compose up`
+      # throws the cert away and re-requests it, which hits Let's Encrypt rate
+      # limits after five deploys in a week.
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend-api
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

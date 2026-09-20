@@ -10,7 +10,7 @@
       },
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "http://65.2.132.248:4000"
+        "EXPO_PUBLIC_BACKEND_URL": "https://api.shahparpay.com"
       },
       "channel": "apk"
     },
@@ -20,7 +20,7 @@
       },
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "http://65.2.132.248:4000"
+        "EXPO_PUBLIC_BACKEND_URL": "https://api.shahparpay.com"
       },
       "channel": "production"
     }

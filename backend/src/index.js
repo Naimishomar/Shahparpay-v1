@@ -49,8 +49,8 @@ app.use(
   })
 );
 
-// Enable preflight for all routes
-app.options('*', cors());
+// No explicit app.options() route: the cors() middleware above already answers
+// every OPTIONS preflight itself. Express 5 also rejects a bare '*' path.
 
 morgan.token('custom-date', () => {
   const formatter = new Intl.DateTimeFormat('en-IN', {

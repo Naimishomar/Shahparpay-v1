@@ -1,0 +1,6 @@
+# Caddy fetches and renews the Let's Encrypt cert for this name on its own,
+# which is why there is no certbot cron anywhere. Port 80 must stay open in the
+# security group or the ACME HTTP challenge fails and renewal stops silently.
+api.shahparpay.com {
+	reverse_proxy backend-api:3000
+}
