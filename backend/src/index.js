@@ -16,20 +16,40 @@ const PORT = process.env.PORT || 5000;
 // one — on every endpoint, not just reports.
 app.use(compression());
 
+const allowedOrigins = [
+  'https://shahparpay.com',
+  'https://www.shahparpay.com',
+];
+
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow frontend origins + eSevaTech server-to-server (no origin) calls
-      const allowedOrigins = ['http://localhost:5173', 'https://shahparpay-v1.vercel.app'];
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(null, true); // Allow all origins for server-to-server webhooks
+      // Allow requests with no origin (mobile apps, curl, server-to-server webhooks)
+      if (!origin) return callback(null, true);
+
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.shahparpay.com') ||
+        origin.endsWith('.vercel.app')
+      ) {
+        return callback(null, true);
       }
+
+      // Fallback: allow all origins
+      return callback(null, true);
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   })
 );
+
+// Enable preflight for all routes
+app.options('*', cors());
 
 morgan.token('custom-date', () => {
   const formatter = new Intl.DateTimeFormat('en-IN', {
