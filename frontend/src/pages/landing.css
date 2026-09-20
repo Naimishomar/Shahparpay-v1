@@ -1,57 +1,50 @@
 /*
- * Landing page design tokens.
- *
- * The marque is monochrome (see assets/logo.png), so near-black carries the
- * primary actions and headings and a single blue accent carries eyebrows, icon
- * tiles and stat figures. Keeping the accent to those places is what stops the
- * page reading like a template: everything structural stays black on white.
+ * Shahparpay Landing Page Design System & Styles
+ * Modern, high-converting Cashfree style fintech interface styling
  */
 .landing-page {
   --lp-bg: #ffffff;
-  --lp-surface: #f7f8fa;
+  --lp-surface: #f8fafc;
   --lp-card: #ffffff;
-  --lp-fg: #0b0f19;
-  --lp-muted: #5b6474;
-  --lp-border: #e5e8ee;
-  --lp-accent: #1b4dff;
-  --lp-accent-soft: #eef2ff;
+  --lp-fg: #0f172a;
+  --lp-muted: #475569;
+  --lp-border: #e2e8f0;
+  --lp-accent: #008c46;
+  --lp-accent-soft: rgba(0, 140, 70, 0.08);
+  --lp-accent-gradient: linear-gradient(135deg, #008c46 0%, #00b85c 100%);
+  --lp-emerald-glow: rgba(0, 140, 70, 0.08);
+  --lp-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
+  --lp-shadow-md: 0 12px 32px rgba(15, 23, 42, 0.07);
+  --lp-shadow-lg: 0 20px 48px rgba(15, 23, 42, 0.12);
 
-  background-color: var(--lp-bg);
-  color: var(--lp-fg);
+  background-color: #ffffff !important;
+  color: #0f172a !important;
   min-height: 100vh;
-  /* Inter is self-hosted via @fontsource-variable/inter, imported in index.css. */
   font-family: 'Inter Variable', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 html.dark .landing-page {
-  --lp-bg: #0b0f19;
-  --lp-surface: #10151f;
-  --lp-card: #131926;
-  --lp-fg: #f4f6fa;
-  --lp-muted: #9aa4b8;
-  --lp-border: rgba(255, 255, 255, 0.09);
-  --lp-accent: #6b8bff;
-  --lp-accent-soft: rgba(107, 139, 255, 0.12);
-}
+  --lp-bg: #ffffff;
+  --lp-surface: #f8fafc;
+  --lp-card: #ffffff;
+  --lp-fg: #0f172a;
+  --lp-muted: #475569;
+  --lp-border: #e2e8f0;
 
-html:has(.landing-page) {
-  scroll-behavior: smooth;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
 }
 
 html:has(.landing-page) body {
-  background: #ffffff;
+  background: #ffffff !important;
+  color: #0f172a !important;
 }
 
-html.dark:has(.landing-page) body {
-  background: #0b0f19;
-}
-
-/* Headings run tighter than body text at display sizes; without the negative
-   tracking a 60px line reads loose and cheap. */
+/* Typography */
 .lp-display {
   letter-spacing: -0.035em;
-  line-height: 1.04;
+  line-height: 1.05;
   font-weight: 800;
 }
 
@@ -65,70 +58,148 @@ html.dark:has(.landing-page) body {
   color: var(--lp-muted);
 }
 
+/* Cards & Containers */
 .lp-card {
   background-color: var(--lp-card);
   border: 1px solid var(--lp-border);
-  border-radius: 1rem;
-  transition:
-    border-color 0.2s ease,
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  border-radius: 1.25rem;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .lp-card:hover {
-  border-color: color-mix(in srgb, var(--lp-accent) 40%, var(--lp-border));
-  transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(11, 15, 25, 0.07);
-}
-
-html.dark .lp-card:hover {
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  border-color: color-mix(in srgb, var(--lp-accent) 45%, var(--lp-border));
+  transform: translateY(-3px);
+  box-shadow: var(--lp-shadow-md);
 }
 
 .lp-icon-tile {
   width: 2.75rem;
   height: 2.75rem;
-  border-radius: 0.75rem;
+  border-radius: 0.875rem;
   background: var(--lp-accent-soft);
   color: var(--lp-accent);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.lp-card:hover .lp-icon-tile {
+  transform: scale(1.08);
 }
 
 .lp-eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.375rem 0.75rem;
+  padding: 0.4rem 0.875rem;
   border-radius: 9999px;
   background: var(--lp-accent-soft);
   color: var(--lp-accent);
   font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: -0.01em;
+  border: 1px solid color-mix(in srgb, var(--lp-accent) 20%, transparent);
 }
 
+/* Glassmorphism & Decorative Backdrops */
+.lp-glass {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--lp-border);
+}
+
+html.dark .lp-glass {
+  background: rgba(15, 20, 34, 0.8);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.lp-gradient-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Mega Menu Popup & Dropdown Styling */
+.mega-menu-content {
+  animation: megaMenuFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top center;
+}
+
+@keyframes megaMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.mega-menu-item-link {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: 0.875rem;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.mega-menu-item-link:hover {
+  background-color: var(--lp-accent-soft);
+  transform: translateX(2px);
+}
+
+.mega-menu-item-link:hover .mega-icon {
+  color: var(--lp-accent);
+  transform: scale(1.1);
+}
+
+.mega-icon {
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+/* Buttons */
 .lp-btn-primary {
   background: var(--lp-fg);
   color: var(--lp-bg);
-  border-radius: 0.625rem;
+  border-radius: 0.75rem;
   font-weight: 600;
-  transition: opacity 0.2s ease;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
 }
 
 .lp-btn-primary:hover {
-  opacity: 0.88;
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+
+.lp-btn-accent {
+  background: var(--lp-accent-gradient);
+  color: #ffffff;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px var(--lp-emerald-glow);
+}
+
+.lp-btn-accent:hover {
+  opacity: 0.94;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px var(--lp-emerald-glow);
 }
 
 .lp-btn-secondary {
   border: 1px solid var(--lp-border);
   color: var(--lp-fg);
-  border-radius: 0.625rem;
+  border-radius: 0.75rem;
   font-weight: 600;
-  transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .lp-btn-secondary:hover {
@@ -141,8 +212,7 @@ html.dark .lp-card:hover {
   border-block: 1px solid var(--lp-border);
 }
 
-/* The service strip scrolls on its own so the row reads as a live network
-   rather than a static list. Held still for anyone who asked for less motion. */
+/* Marquee infinite scroll */
 .lp-marquee {
   display: flex;
   overflow: hidden;
@@ -152,8 +222,8 @@ html.dark .lp-card:hover {
 .lp-marquee__track {
   display: flex;
   flex-shrink: 0;
-  gap: 3rem;
-  padding-right: 3rem;
+  gap: 3.5rem;
+  padding-right: 3.5rem;
   animation: lp-scroll 32s linear infinite;
 }
 
@@ -161,6 +231,18 @@ html.dark .lp-card:hover {
   to {
     transform: translateX(-100%);
   }
+}
+
+/* Code Sandbox Syntax Highlight Box */
+.code-sandbox-bg {
+  background-color: #0d1117;
+  color: #e6edf3;
+  font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Range slider custom styling */
+input[type='range'] {
+  accent-color: var(--lp-accent);
 }
 
 @media (prefers-reduced-motion: reduce) {
