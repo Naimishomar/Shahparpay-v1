@@ -4,6 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
+import mongoose from 'mongoose';
 import { connectDB } from './config/db.js';
 
 const app = express();
@@ -107,6 +108,19 @@ app.get('/', (req, res) => {
   return res.send('Shahparpay never goes down🚀');
 });
 
+// Auto-connect database for serverless invocations
+app.use(async (req, res, next) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+    next();
+  } catch (error) {
+    console.error('Database connection failed on request:', error.message);
+    next();
+  }
+});
+
 import aepsRoutes from './routes/aeps.route.js';
 import rechargeRoutes from './routes/recharge.route.js';
 import authRoutes from './routes/auth.route.js';
@@ -166,3 +180,5 @@ const startServer = async () => {
 };
 
 startServer();
+
+export default app;
