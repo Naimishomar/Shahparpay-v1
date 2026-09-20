@@ -149,7 +149,7 @@ export const createTopupQr = async (req, res) => {
       notes: { reference: referenceId, userId: String(req.user.id) },
     });
 
-    if (!ok || !data?.id || !data?.image_content) {
+    if (!ok || !data?.id || !data?.image_url) {
       await Transaction.findOneAndUpdate(
         { _id: txn._id, status: 'PENDING' },
         { $set: { status: 'FAILED', 'metadata.apiResponse': data } }
@@ -173,10 +173,9 @@ export const createTopupQr = async (req, res) => {
       }
     );
 
-    // `image_url` is a ready-made poster carrying Razorpay's branding, the BHIM
-    // and UPI marks and the merchant name. `image_content` is the same payment
-    // request as a bare `upi://pay?...` string, which the client renders as a
-    // plain QR — our own page, our own framing, nobody else's logos.
+    // Razorpay's QR create response carries no raw `upi://pay?...` string —
+    // `image_url` is the only thing that can be scanned, a hosted poster with
+    // its branding on it. The client shows that image as-is.
 
     return res.status(200).json({
       success: true,
@@ -184,7 +183,7 @@ export const createTopupQr = async (req, res) => {
       data: {
         transactionId: referenceId,
         qrCodeId: data.id,
-        qrContent: data.image_content,
+        qrImage: data.image_url,
         amount,
         expiresAt: new Date((data.close_by || 0) * 1000).toISOString(),
       },

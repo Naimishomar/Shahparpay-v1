@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, Image } from 'react-native';
 import { themed, space, type as t, radius } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/Screen';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
-import QRCode from 'react-native-qrcode-svg';
 
 /**
  * Self-service wallet top-up over a Razorpay UPI QR.
@@ -31,8 +30,8 @@ const MIN_TOPUP = 100;
 const MAX_TOPUP = 100000;
 const QUICK_AMOUNTS = [500, 1000, 2000, 5000, 10000];
 
-/** `qrContent` is the raw `upi://pay?...` request, rendered here as a plain QR. */
-type Topup = { transactionId: string; qrContent: string; amount: number };
+/** `qrImage` is Razorpay's hosted QR poster; the API returns no raw UPI string. */
+type Topup = { transactionId: string; qrImage: string; amount: number };
 
 export const AddMoneyScreen: React.FC = () => {
   const [amount, setAmount] = useState('');
@@ -163,7 +162,7 @@ export const AddMoneyScreen: React.FC = () => {
                   ready-made poster, so the code carries no branding but ours.
                   The white padding is the scanner's quiet zone, not decoration. */}
               <View style={styles.qrFrame}>
-                <QRCode value={topup.qrContent} size={240} ecl="M" />
+                <Image source={{ uri: topup.qrImage }} style={{ width: 240, height: 240 }} />
               </View>
               <Text style={styles.reference}>Ref {topup.transactionId}</Text>
 

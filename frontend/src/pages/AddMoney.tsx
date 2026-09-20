@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { QRCodeSVG } from 'qrcode.react';
 import { QrCode, RefreshCw, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
@@ -16,8 +15,8 @@ import { useAuth } from '../context/AuthContext';
 
 type Topup = {
   transactionId: string;
-  /** The raw `upi://pay?...` request, rendered here as a plain QR. */
-  qrContent: string;
+  /** Razorpay's hosted QR poster; the API returns no raw UPI string. */
+  qrImage: string;
   amount: number;
   expiresAt: string;
 };
@@ -204,12 +203,8 @@ const AddMoney = () => {
               <p className="text-sm text-muted-foreground">
                 Scan with any UPI app to pay ₹{topup.amount.toLocaleString('en-IN')}
               </p>
-              {/* Rendered from the raw UPI request rather than Razorpay's
-                  ready-made poster, so the code carries no branding but ours.
-                  The white background and quiet zone are not decoration: a
-                  scanner needs the light margin to find the code at all. */}
               <div className="mx-auto w-fit rounded-xl bg-white p-4">
-                <QRCodeSVG value={topup.qrContent} size={240} level="M" marginSize={0} />
+                <img src={topup.qrImage} alt="UPI QR" width={240} height={240} />
               </div>
               <p className="text-xs text-muted-foreground">Ref {topup.transactionId}</p>
 
