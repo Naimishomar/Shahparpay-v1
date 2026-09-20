@@ -141,6 +141,7 @@ import matmRouter from './routes/matm.route.js';
 import notificationRouter from './routes/notification.route.js';
 import supportRouter from './routes/support.route.js';
 import paysprintRouter from './routes/paysprint.route.js';
+import icchhamatiRouter from './routes/icchhamati.route.js';
 import { checkAgentWallet } from './controllers/itr.controller.js';
 import { startReconciliationWorker } from './workers/reconciliation.worker.js';
 
@@ -165,6 +166,8 @@ app.use('/api/notifications', notificationRouter);
 app.use('/api/support', supportRouter);
 // One URL for every PaySprint event — their panel accepts only a single callback.
 app.use('/api/paysprint', paysprintRouter);
+// Same story for Icchhamati: one callback URL in their panel for every event.
+app.use('/api/icchhamati', icchhamatiRouter);
 
 // eSevaTech may call /api/check-agent-wallet at root level by convention
 app.all('/api/check-agent-wallet', checkAgentWallet);
