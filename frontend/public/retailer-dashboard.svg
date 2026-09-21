@@ -1,0 +1,136 @@
+<!--
+  Placeholder screen for the MacbookScroll section on the landing page.
+  Swap this file for a real screenshot of the retailer dashboard when you have
+  one: keep the 4:3 ratio, since the laptop screen crops from the top left.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" width="1600" height="1200" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+  <rect width="1600" height="1200" fill="#f1f5f9"/>
+
+  <!-- sidebar -->
+  <rect x="0" y="0" width="300" height="1200" fill="#0c120e"/>
+  <rect x="32" y="36" width="34" height="34" rx="9" fill="#008c46"/>
+  <text x="78" y="61" fill="#ffffff" font-size="23" font-weight="700">Shahparpay</text>
+
+  <text x="32" y="126" fill="#5c6b61" font-size="14" font-weight="700" letter-spacing="1.4">BANKING</text>
+  <rect x="20" y="144" width="260" height="46" rx="11" fill="#008c46"/>
+  <text x="44" y="174" fill="#ffffff" font-size="19" font-weight="600">AEPS Withdrawal</text>
+  <text x="44" y="228" fill="#c7d2cb" font-size="19">Micro ATM</text>
+  <text x="44" y="278" fill="#c7d2cb" font-size="19">Money Transfer</text>
+  <text x="44" y="328" fill="#c7d2cb" font-size="19">UPI QR Collection</text>
+
+  <text x="32" y="396" fill="#5c6b61" font-size="14" font-weight="700" letter-spacing="1.4">BILLS</text>
+  <text x="44" y="440" fill="#c7d2cb" font-size="19">Recharge</text>
+  <text x="44" y="490" fill="#c7d2cb" font-size="19">BBPS Bill Payment</text>
+  <text x="44" y="540" fill="#c7d2cb" font-size="19">FASTag</text>
+
+  <text x="32" y="608" fill="#5c6b61" font-size="14" font-weight="700" letter-spacing="1.4">DOCUMENTS</text>
+  <text x="44" y="652" fill="#c7d2cb" font-size="19">PAN Card</text>
+  <text x="44" y="702" fill="#c7d2cb" font-size="19">ITR Filing</text>
+
+  <text x="32" y="770" fill="#5c6b61" font-size="14" font-weight="700" letter-spacing="1.4">ACCOUNT</text>
+  <text x="44" y="814" fill="#c7d2cb" font-size="19">Wallet</text>
+  <text x="44" y="864" fill="#c7d2cb" font-size="19">Reports</text>
+
+  <!-- top bar -->
+  <rect x="300" y="0" width="1300" height="92" fill="#ffffff"/>
+  <line x1="300" y1="92" x2="1600" y2="92" stroke="#e2e8f0" stroke-width="2"/>
+  <text x="344" y="57" fill="#0f172a" font-size="26" font-weight="700">Dashboard</text>
+  <rect x="1090" y="26" width="230" height="42" rx="11" fill="#ecfdf5" stroke="#bbf7d0" stroke-width="2"/>
+  <text x="1110" y="53" fill="#047857" font-size="17" font-weight="600">Wallet</text>
+  <text x="1180" y="53" fill="#047857" font-size="17" font-weight="700">₹ 48,250.00</text>
+  <circle cx="1400" cy="47" r="20" fill="#008c46"/>
+  <text x="1400" y="54" fill="#ffffff" font-size="17" font-weight="700" text-anchor="middle">SD</text>
+  <text x="1434" y="53" fill="#334155" font-size="17" font-weight="600">Sunita Devi</text>
+
+  <!-- stat tiles -->
+  <g>
+    <rect x="344" y="134" width="284" height="150" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+    <text x="372" y="176" fill="#64748b" font-size="16">Today's transactions</text>
+    <text x="372" y="230" fill="#0f172a" font-size="42" font-weight="800">86</text>
+    <text x="372" y="262" fill="#059669" font-size="15" font-weight="600">AEPS 41 · Recharge 24 · Bills 21</text>
+  </g>
+  <g>
+    <rect x="652" y="134" width="284" height="150" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+    <text x="680" y="176" fill="#64748b" font-size="16">Commission earned</text>
+    <text x="680" y="230" fill="#0f172a" font-size="42" font-weight="800">₹ 1,240</text>
+    <text x="680" y="262" fill="#059669" font-size="15" font-weight="600">Credited to wallet</text>
+  </g>
+  <g>
+    <rect x="960" y="134" width="284" height="150" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+    <text x="988" y="176" fill="#64748b" font-size="16">Cash disbursed</text>
+    <text x="988" y="230" fill="#0f172a" font-size="42" font-weight="800">₹ 94,500</text>
+    <text x="988" y="262" fill="#64748b" font-size="15" font-weight="600">Across 41 withdrawals</text>
+  </g>
+  <g>
+    <rect x="1268" y="134" width="284" height="150" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+    <text x="1296" y="176" fill="#64748b" font-size="16">Settled to bank</text>
+    <text x="1296" y="230" fill="#0f172a" font-size="42" font-weight="800">₹ 25,000</text>
+    <text x="1296" y="262" fill="#64748b" font-size="15" font-weight="600">Today, 11:04 AM</text>
+  </g>
+
+  <!-- chart -->
+  <rect x="344" y="320" width="592" height="330" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+  <text x="372" y="362" fill="#0f172a" font-size="20" font-weight="700">Earnings this week</text>
+  <path d="M380 596 L 460 552 L 540 568 L 620 500 L 700 516 L 780 452 L 860 418 L 900 400 L 900 616 L 380 616 Z" fill="#008c46" fill-opacity="0.12"/>
+  <path d="M380 596 L 460 552 L 540 568 L 620 500 L 700 516 L 780 452 L 860 418 L 900 400" fill="none" stroke="#008c46" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+  <line x1="380" y1="616" x2="900" y2="616" stroke="#e2e8f0" stroke-width="2"/>
+  <g fill="#94a3b8" font-size="14">
+    <text x="372" y="642">Mon</text><text x="452" y="642">Tue</text><text x="532" y="642">Wed</text>
+    <text x="612" y="642">Thu</text><text x="692" y="642">Fri</text><text x="772" y="642">Sat</text><text x="852" y="642">Sun</text>
+  </g>
+
+  <!-- quick actions -->
+  <rect x="960" y="320" width="592" height="330" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+  <text x="988" y="362" fill="#0f172a" font-size="20" font-weight="700">Quick actions</text>
+  <g>
+    <rect x="988" y="390" width="256" height="112" rx="13" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="2"/>
+    <text x="1012" y="432" fill="#047857" font-size="19" font-weight="700">Cash Withdrawal</text>
+    <text x="1012" y="464" fill="#059669" font-size="15">Aadhaar + fingerprint</text>
+  </g>
+  <g>
+    <rect x="1268" y="390" width="256" height="112" rx="13" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2"/>
+    <text x="1292" y="432" fill="#0f172a" font-size="19" font-weight="700">Money Transfer</text>
+    <text x="1292" y="464" fill="#64748b" font-size="15">IMPS to any bank</text>
+  </g>
+  <g>
+    <rect x="988" y="518" width="256" height="112" rx="13" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2"/>
+    <text x="1012" y="560" fill="#0f172a" font-size="19" font-weight="700">Recharge</text>
+    <text x="1012" y="592" fill="#64748b" font-size="15">Mobile, DTH, FASTag</text>
+  </g>
+  <g>
+    <rect x="1268" y="518" width="256" height="112" rx="13" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2"/>
+    <text x="1292" y="560" fill="#0f172a" font-size="19" font-weight="700">Pay a Bill</text>
+    <text x="1292" y="592" fill="#64748b" font-size="15">Electricity, gas, water</text>
+  </g>
+
+  <!-- recent transactions -->
+  <rect x="344" y="686" width="1208" height="442" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+  <text x="372" y="728" fill="#0f172a" font-size="20" font-weight="700">Recent transactions</text>
+  <line x1="372" y1="756" x2="1524" y2="756" stroke="#e2e8f0" stroke-width="2"/>
+  <g fill="#94a3b8" font-size="15" font-weight="600">
+    <text x="372" y="788">SERVICE</text><text x="700" y="788">CUSTOMER</text>
+    <text x="1010" y="788">AMOUNT</text><text x="1210" y="788">COMMISSION</text><text x="1420" y="788">STATUS</text>
+  </g>
+
+  <g font-size="17" fill="#334155">
+    <text x="372" y="840">AEPS Withdrawal</text><text x="700" y="840">XXXX XXXX 4821</text>
+    <text x="1010" y="840" fill="#0f172a" font-weight="600">₹ 2,000</text><text x="1210" y="840" fill="#059669" font-weight="600">₹ 14.00</text>
+    <rect x="1420" y="822" width="88" height="26" rx="13" fill="#dcfce7"/><text x="1436" y="841" fill="#15803d" font-size="14" font-weight="700">Success</text>
+
+    <text x="372" y="898">Money Transfer</text><text x="700" y="898">Ramesh Kumar</text>
+    <text x="1010" y="898" fill="#0f172a" font-weight="600">₹ 5,000</text><text x="1210" y="898" fill="#059669" font-weight="600">₹ 25.00</text>
+    <rect x="1420" y="880" width="88" height="26" rx="13" fill="#dcfce7"/><text x="1436" y="899" fill="#15803d" font-size="14" font-weight="700">Success</text>
+
+    <text x="372" y="956">Electricity Bill</text><text x="700" y="956">WBSEDCL · 30291746</text>
+    <text x="1010" y="956" fill="#0f172a" font-weight="600">₹ 1,180</text><text x="1210" y="956" fill="#059669" font-weight="600">₹ 8.50</text>
+    <rect x="1420" y="938" width="88" height="26" rx="13" fill="#dcfce7"/><text x="1436" y="957" fill="#15803d" font-size="14" font-weight="700">Success</text>
+
+    <text x="372" y="1014">Mobile Recharge</text><text x="700" y="1014">98XXXXXX21 · Jio</text>
+    <text x="1010" y="1014" fill="#0f172a" font-weight="600">₹ 239</text><text x="1210" y="1014" fill="#059669" font-weight="600">₹ 4.80</text>
+    <rect x="1420" y="996" width="88" height="26" rx="13" fill="#dcfce7"/><text x="1436" y="1015" fill="#15803d" font-size="14" font-weight="700">Success</text>
+
+    <text x="372" y="1072">PAN Card (New)</text><text x="700" y="1072">Anjali Das</text>
+    <text x="1010" y="1072" fill="#0f172a" font-weight="600">₹ 107</text><text x="1210" y="1072" fill="#059669" font-weight="600">₹ 32.00</text>
+    <rect x="1420" y="1054" width="92" height="26" rx="13" fill="#fef9c3"/><text x="1436" y="1073" fill="#a16207" font-size="14" font-weight="700">Pending</text>
+  </g>
+</svg>

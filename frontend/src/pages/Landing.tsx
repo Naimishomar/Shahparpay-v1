@@ -51,122 +51,123 @@ import { useTheme } from 'next-themes';
 import logo from '../assets/logo.png';
 import whiteLogo from '../assets/shahparpay-white-logo.png';
 import './landing.css';
+import MacbookScrollDemo from '@/components/macbook-scroll-demo';
 
 // --- DATA STRUCTURES FOR CASHFREE-MATCHED MEGA MENUS ---
 const PRODUCT_MENU_CATEGORIES = [
     {
-        title: 'ACCEPT PAYMENTS',
+        title: 'BANKING SERVICES',
         items: [
             {
-                title: 'Payment Gateway',
-                desc: '180+ payment modes on web and app',
-                icon: CreditCard,
+                title: 'AEPS Cash Withdrawal',
+                desc: 'Aadhaar and fingerprint, no card needed',
+                icon: Fingerprint,
                 link: '#products'
             },
             {
-                title: 'Shahparpay Checkout',
-                desc: 'Conversion-optimised hosted checkout',
-                icon: Layers,
-                link: '#products'
-            },
-            {
-                title: 'Payment Links',
-                desc: 'Collect via SMS, email, WhatsApp',
-                icon: Send,
-                link: '#products'
-            },
-            {
-                title: 'Payment Forms',
-                desc: 'Custom forms with payment collection',
+                title: 'Balance & Mini Statement',
+                desc: 'Instant account balance for any customer',
                 icon: FileText,
                 link: '#products'
             },
             {
-                title: 'Subscriptions',
-                desc: 'Recurring payments with auto-debit',
-                icon: RefreshCw,
+                title: 'Micro ATM',
+                desc: 'Debit card withdrawal at your counter',
+                icon: CreditCard,
                 link: '#products'
             },
             {
-                title: 'UPI Stack',
-                desc: "India's most used payment rail",
+                title: 'Money Transfer (DMT)',
+                desc: 'Cash in hand to any bank account',
+                icon: Send,
+                link: '#products'
+            },
+            {
+                title: 'UPI QR Collection',
+                desc: 'Your own QR, money lands in your wallet',
                 icon: QrCode,
                 link: '#products'
             },
             {
-                title: 'Card Stack',
-                desc: 'Full-stack card issuing and acceptance',
-                icon: CreditCard,
+                title: 'Aadhaar Pay',
+                desc: 'Customers pay you by fingerprint',
+                icon: Shield,
                 link: '#products'
             },
             {
-                title: 'Instant Settlements',
-                desc: 'On-demand faster settlement T+0',
+                title: 'Daily Settlement',
+                desc: 'Move earnings to your bank account',
                 icon: Zap,
+                link: '#products'
+            },
+            {
+                title: 'Payout to Bank',
+                desc: 'Send money out 24x7, including holidays',
+                icon: Banknote,
                 link: '#products'
             }
         ]
     },
     {
-        title: 'PAYOUTS & SETTLEMENTS',
+        title: 'BILLS & RECHARGE',
         items: [
             {
-                title: 'Payouts',
-                desc: 'Send money 24/7 to any bank account',
-                icon: Banknote,
-                link: '#payouts'
-            },
-            {
-                title: 'Vendor Payouts',
-                desc: 'Automate vendor and marketplace payments',
-                icon: Building,
-                link: '#payouts'
-            },
-            {
-                title: 'AEPS & Micro ATM',
-                desc: 'Aadhaar biometric cash withdrawal',
-                icon: Fingerprint,
-                link: '#payouts'
-            },
-            {
-                title: 'Domestic Money Transfer',
-                desc: 'Instant cash-to-account transfer network',
-                icon: Send,
+                title: 'Mobile & DTH Recharge',
+                desc: 'Every prepaid operator and DTH provider',
+                icon: RefreshCw,
                 link: '#payouts'
             },
             {
                 title: 'BBPS Bill Payments',
-                desc: 'Utility bills, DTH, FASTag, & insurance',
+                desc: 'Electricity, water, gas, broadband, LPG',
                 icon: Receipt,
+                link: '#payouts'
+            },
+            {
+                title: 'FASTag Recharge',
+                desc: 'Top up FASTag for walk-in customers',
+                icon: Zap,
+                link: '#payouts'
+            },
+            {
+                title: 'Insurance Premium',
+                desc: 'Collect LIC and general insurance premiums',
+                icon: ShieldCheck,
+                link: '#payouts'
+            },
+            {
+                title: 'Credit Card Bills',
+                desc: 'Pay any bank credit card bill over BBPS',
+                icon: CreditCard,
                 link: '#payouts'
             }
         ]
     },
     {
-        title: 'IDENTITY & RISK',
+        title: 'DOCUMENTS & EARNINGS',
         items: [
             {
-                title: 'SecureID KYC',
-                desc: 'Automated KYC and user onboarding',
-                icon: ShieldCheck,
-                link: '#identity'
-            },
-            {
-                title: 'Bank Account Verification',
-                desc: 'Real-time bank a/c and UPI VPA checks',
-                icon: CheckCircle2,
-                link: '#identity'
-            },
-            {
-                title: 'RiskShield AI',
-                desc: 'ML-based fraud detection & prevention',
-                icon: Shield,
-                link: '#identity'
-            },
-            {
-                title: 'PAN & ITR Verification',
-                desc: 'Instant NSDL PAN check & tax filing',
+                title: 'PAN Card Services',
+                desc: 'New PAN, corrections and reprints',
                 icon: FileText,
+                link: '#identity'
+            },
+            {
+                title: 'ITR Filing',
+                desc: 'File income tax returns for your customers',
+                icon: FileCode,
+                link: '#identity'
+            },
+            {
+                title: 'Lead Generation',
+                desc: 'Earn on loan and insurance referrals',
+                icon: Building,
+                link: '#identity'
+            },
+            {
+                title: 'Wallet & Reports',
+                desc: 'Every transaction and commission, itemised',
+                icon: Layers,
                 link: '#identity'
             }
         ]
@@ -175,78 +176,50 @@ const PRODUCT_MENU_CATEGORIES = [
 
 const MEGA_FEATURED_CARDS = [
     {
-        tag: 'D2C CHECKOUT',
-        title: 'Checkout360',
-        desc: 'Purpose-built one-click checkout for e-commerce',
+        tag: 'MOST USED',
+        title: 'AEPS Banking',
+        desc: 'Cash withdrawal, balance and mini statement on a fingerprint',
         badge: 'Popular',
         gradient: 'from-emerald-500/20 to-teal-500/20'
     },
     {
-        tag: 'SHAHPARPAY AI',
-        title: 'Agentic Payments',
-        desc: 'Payments built for the AI era. In-app and in-chat checkout',
-        badge: 'New AI',
+        tag: 'EVERYDAY FOOTFALL',
+        title: 'Bills & Recharge',
+        desc: 'The reason customers come back to your shop every month',
+        badge: 'High volume',
         gradient: 'from-emerald-600/20 to-green-400/20'
     },
     {
-        tag: 'RECONCILIATION',
-        title: 'Shahparpay Relay',
-        desc: 'Build and run AI agents for automated reconciliation',
-        badge: 'Enterprise',
+        tag: 'HIGHER TICKET',
+        title: 'PAN & ITR',
+        desc: 'Document services that earn more per customer',
+        badge: 'Good margin',
         gradient: 'from-teal-600/20 to-cyan-500/20'
     }
 ];
 
-const DEVELOPER_MENU_ITEMS = [
+const RESOURCE_MENU_ITEMS = [
     {
-        title: 'Payment APIs',
-        desc: 'Gateway, checkout, links, subscriptions',
+        title: 'Getting Started',
+        desc: 'Documents, KYC and going live',
         icon: Code2
     },
     {
-        title: 'Payouts APIs',
-        desc: 'Disbursals, beneficiary management',
+        title: 'Commission Rates',
+        desc: 'What you earn on every service',
         icon: Terminal
     },
     {
-        title: 'SecureID APIs',
-        desc: 'KYC, verification, identity checks',
+        title: 'Guides & Training',
+        desc: 'Step-by-step help for each service',
         icon: FileCode
     },
     {
-        title: 'SDKs & Plugins',
-        desc: 'Shopify, WooCommerce, React Native, Flutter',
+        title: 'Device Support',
+        desc: 'Supported fingerprint scanners and Micro ATMs',
         icon: ExternalLink
     }
 ];
-
-const CLIENT_LOGOS = [
-    'Zomato',
-    'Swiggy',
-    'Nykaa',
-    'BigBasket',
-    'CRED',
-    'EaseMyTrip',
-    'Dunzo',
-    'Shell',
-    'Acko',
-    'Delhivery'
-];
-
-const MARQUEE_RAILS = [
-    'UPI 2.0 & AutoPay',
-    'RuPay Credit Card on UPI',
-    'AEPS Aadhaar Cash',
-    'IMPS 24x7 Instant',
-    'BBPS Bharat BillPay',
-    'Visa & Mastercard',
-    'Netbanking (50+ Banks)',
-    'FASTag & Utility Bills',
-    'NSDL PAN & ITR',
-    'Apple Pay & Google Pay'
-];
-
-
 
 function Reveal({ children, delay = 0, className = '' }: { children: React.ReactNode; delay?: number; className?: string }) {
     const ref = useRef<HTMLDivElement>(null);
@@ -299,66 +272,86 @@ const Logo = ({ className = 'h-11' }: { className?: string }) => (
 const FAQ_DATA = {
     support: [
         {
-            q: "I am evaluating different PGs and have some questions. How can I get in touch?",
-            a: "You can reach out directly to our merchant onboarding specialists via phone at 033 68200828, email us at shahparpay@gmail.com, or click 'Contact Sales' to schedule a call."
+            q: "How much can I actually earn from this?",
+            a: "You earn a commission on every transaction — AEPS withdrawals, money transfers, recharges, bill payments, PAN applications and ITR filings each carry their own rate. Your dashboard shows the exact commission on every transaction, and the full rate card is shared before you sign up."
         },
         {
-            q: "I'm having some issue with my existing PG account. How do I get in touch?",
-            a: "Our 24/7 dedicated merchant support team is available via email at shahparpay@gmail.com, WhatsApp chat, or through your dedicated account manager assigned in the dashboard."
+            q: "How do I get my earnings out?",
+            a: "Commissions land in your wallet as each transaction completes. Settle to your own bank account from the dashboard whenever you like — there is no minimum holding period and no waiting for month-end."
         },
         {
-            q: "Do you have a mobile app for businesses?",
-            a: "Yes, Shahparpay offers native iOS and Android apps for merchants to monitor live sales, generate payment links, process instant refunds, and manage settlements on the go."
+            q: "What if a transaction fails but the customer's money is debited?",
+            a: "Raise a ticket from the Support section with the transaction ID. Failed AEPS and DMT transactions are reconciled automatically against the bank, and refunds are credited back once the bank confirms. You can track the status of every dispute in your reports."
         },
         {
-            q: "Do you support multi-user logins and accounts?",
-            a: "Yes! You can invite your finance, operations, and developer team members with granular role-based permissions (Admin, Accountant, Support, Developer)."
+            q: "Is there someone I can call when I am stuck at the counter?",
+            a: "Yes. Call 033 68200828 during business hours, message us on WhatsApp, or raise a ticket from inside the dashboard. Most counter issues are resolved on the same call."
         },
         {
-            q: "Is Shahparpay the Best Payment Gateway for Small Businesses in India?",
-            a: "Shahparpay offers 0% platform fees on sales up to ₹20L, instant T+0 settlements, 180+ payment modes, and instant setup without hidden costs, making it ideal for growing Indian businesses."
+            q: "Do I need to be a registered business to join?",
+            a: "No. Individual shop owners can sign up. You need your own PAN and Aadhaar, a bank account in your name, and a shop or counter where you serve customers."
         },
         {
-            q: "How Quickly Can a Small Business Go Live Using Shahparpay?",
-            a: "With digital paperless KYC verification, most small businesses and startups go live and start accepting payments within a few minutes."
+            q: "Can I offer these services from more than one shop?",
+            a: "Each counter needs its own retailer login, because commissions, reports and settlements are tracked per retailer. If you run several outlets, ask about a distributor account instead — it lets you manage all of them from one place."
         },
         {
-            q: "Will One Setup Allow a Small Business To Accept Payments Via UPI, Cards And Global Payments?",
-            a: "Yes! A single integration enables UPI (Google Pay, PhonePe, Paytm), Credit/Debit Cards (Visa, Mastercard, RuPay), NetBanking (50+ banks), Wallets, and international cards."
+            q: "Is there a mobile app?",
+            a: "Yes. The Android app covers the same services as the web dashboard, so you can complete transactions and check your wallet without being at the computer."
         }
     ],
     getting_started: [
         {
-            q: "What documents are required for merchant onboarding?",
-            a: "You will need a Business PAN, Proprietor/Director PAN and Aadhaar, Business Registration Proof (GST/MSME/Incorporation certificate), and a cancelled cheque."
+            q: "What documents do I need to sign up?",
+            a: "Your PAN card, Aadhaar card, a cancelled cheque or bank passbook page, a photograph, and a photo of your shop. If your shop is registered, keep the GST or Udyam certificate handy as well."
         },
         {
-            q: "Are there any setup fees or annual maintenance charges?",
-            a: "No! Shahparpay has zero setup fees, zero hidden maintenance charges, and 0% platform fee on festive sales volume up to ₹20L."
+            q: "How long before I can start taking transactions?",
+            a: "Basic services such as recharge and bill payments open as soon as your account is verified. AEPS takes longer because the bank runs its own Aadhaar KYC on you first — that step is done through a fingerprint scanner and is usually cleared within a working day."
         },
         {
-            q: "How does paperless digital KYC work?",
-            a: "Simply upload your business details and PAN in the merchant portal. Our SecureID engine verifies your details automatically in real-time."
+            q: "Is there a joining fee?",
+            a: "Signing up is free. You only need working balance in your wallet to start transacting, and a fingerprint scanner if you plan to offer AEPS."
+        },
+        {
+            q: "How do I put money into my wallet?",
+            a: "Top up by UPI or netbanking from the Add Money page, or raise a fund request to your distributor and upload the payment receipt. Approved top-ups reflect in your wallet immediately."
         }
     ],
     integration: [
         {
-            q: "Which e-commerce platforms and plugins do you support?",
-            a: "We provide official plug-and-play plugins for Shopify, WooCommerce, Magento, OpenCart, Wix, along with SDKs for Android, iOS, React Native, Flutter, Python, and Node.js."
+            q: "Which fingerprint scanner do I need for AEPS?",
+            a: "Any RD-service certified scanner works — Mantra MFS100, Morpho MSO 1300 E3, Startek FM220U and Evolute are the ones our retailers use most. The device must be registered and its RD service installed before your first AEPS transaction."
         },
         {
-            q: "How long does developer integration take?",
-            a: "Using our pre-built Checkout SDKs or hosted Payment Links, integration typically takes less than 30 minutes using our sandbox APIs."
+            q: "Can I use AEPS from my phone?",
+            a: "Yes, with an OTG-compatible scanner connected to an Android phone, using the app. Most retailers keep a laptop or desktop at the counter for higher daily volumes."
+        },
+        {
+            q: "What do I need for Micro ATM?",
+            a: "A Micro ATM device, which reads the customer's debit card and PIN. It is a separate device from the fingerprint scanner and is usually arranged through your distributor."
+        },
+        {
+            q: "Do I need a fast internet connection?",
+            a: "An ordinary broadband or 4G connection is enough. AEPS and DMT are small requests — what matters is that the connection is steady, since a drop mid-transaction means waiting for reconciliation."
         }
     ],
     security: [
         {
-            q: "Is Shahparpay RBI compliant and secure?",
-            a: "Yes! Shahparpay operates under strict RBI Payment Aggregator guidelines with 256-bit SSL encryption, ISO 27001, and PCI-DSS Level 1 certification."
+            q: "Is the customer's Aadhaar data safe?",
+            a: "Fingerprints are captured by the certified RD service on your device and encrypted before they ever leave it. Neither you nor we can see or store the biometric. Aadhaar numbers are masked everywhere in the dashboard and in reports."
         },
         {
-            q: "How fast are settlements credited to my bank account?",
-            a: "We support standard T+1 settlements as well as Instant T+0 and On-Demand Settlements 24/7 (including bank holidays and weekends)."
+            q: "Who actually moves the money?",
+            a: "Transactions run over NPCI rails — AEPS, IMPS and BBPS — through our licensed banking partners. Shahparpay is the platform you work on; the settlement itself sits with the bank and the network."
+        },
+        {
+            q: "What happens if someone gets into my account?",
+            a: "Logins are protected by a password and an OTP on your registered mobile, and AEPS additionally requires your own fingerprint for the daily authentication the bank mandates. If you suspect anything, call support and your account is frozen immediately."
+        },
+        {
+            q: "Can I see a record of everything I have done?",
+            a: "Yes. Every service has its own report, and the wallet ledger shows every credit and debit with the running balance. Reports can be filtered by date and exported."
         }
     ]
 };
@@ -382,7 +375,7 @@ const Landing: React.FC = () => {
     }, []);
 
     return (
-        <div id="top" className="landing-page relative overflow-x-hidden bg-white text-slate-900">
+        <div id="top" className="landing-page relative overflow-x-clip bg-white text-slate-900">
             {/* ---------------------------------------------------------- NAVBAR (EXACT CASHFREE TOP MATCH) */}
             <nav
                 className={`sticky top-0 z-50 transition-all duration-200 ${
@@ -483,7 +476,7 @@ const Landing: React.FC = () => {
                             onMouseLeave={() => setActiveDropdown(null)}
                         >
                             <button className="text-slate-600 hover:text-black inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors">
-                                Developers
+                                Help
                                 <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${activeDropdown === 'developers' ? 'rotate-180 text-[#008c46]' : ''}`} />
                             </button>
 
@@ -491,10 +484,10 @@ const Landing: React.FC = () => {
                                 <div className="absolute left-0 top-full pt-2 w-[520px] -translate-x-16 z-50 mega-menu-content">
                                     <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-2xl space-y-3">
                                         <div className="text-[0.65rem] font-bold tracking-wider text-slate-400 uppercase border-b border-slate-100 pb-2">
-                                            DOCUMENTATION &amp; APIS
+                                            HELP &amp; RESOURCES
                                         </div>
                                         <div className="grid grid-cols-2 gap-2">
-                                            {DEVELOPER_MENU_ITEMS.map((item) => (
+                                            {RESOURCE_MENU_ITEMS.map((item) => (
                                                 <a
                                                     key={item.title}
                                                     href="#developers"
@@ -521,7 +514,7 @@ const Landing: React.FC = () => {
                         </div>
 
                         <a href="#services" className="text-slate-600 hover:text-black rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors">
-                            Pricing
+                            Commission
                         </a>
                         <a href="#calculator" className="text-slate-600 hover:text-black rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors">
                             Resources
@@ -562,7 +555,7 @@ const Landing: React.FC = () => {
                                 Products &amp; Services
                             </a>
                             <a href="#developers" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
-                                Developer APIs &amp; Docs
+                                Help &amp; Resources
                             </a>
                             <a href="#services" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
                                 Pricing
@@ -607,11 +600,11 @@ const Landing: React.FC = () => {
                     {/* Eyebrow Pill Badge */}
                     <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 sm:px-4 py-1.5 rounded-full text-[0.7rem] sm:text-xs font-bold mb-3 sm:mb-4 shadow-2xs">
                         <Sparkles className="w-3.5 h-3.5 text-[#008c46]" />
-                        <span>India's #1 Payment Infrastructure</span>
+                        <span>Digital banking services for your shop</span>
                     </div>
 
                     <h1 className="text-3xl sm:text-5xl lg:text-7xl font-extrabold text-slate-900 tracking-tight leading-[1.12] sm:leading-[1.08] max-w-4xl text-center mx-auto">
-                        Get Your Business Festive Ready With India's Best Payment Gateway
+                        Turn Your Shop Into A Banking Point For Your Neighbourhood
                     </h1>
 
                     {/* Soft Lime/Yellow Offer Card matching screenshot */}
@@ -623,13 +616,10 @@ const Landing: React.FC = () => {
                     >
                         <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-3 text-slate-900">
                             <span className="text-4xl sm:text-6xl font-black tracking-tight text-[#00502b]">
-                                0%
-                            </span>
-                            <span className="text-xl sm:text-2xl font-bold text-slate-400 line-through">
-                                1.95%
+                                ₹0
                             </span>
                             <span className="text-xs sm:text-xl font-extrabold text-[#00502b] ml-0.5 sm:ml-1">
-                                Platform Fees on sales up to ₹20L*
+                                to join. You earn a commission on every transaction.
                             </span>
                         </div>
 
@@ -638,13 +628,10 @@ const Landing: React.FC = () => {
                         {/* 3 Checkmark Features */}
                         <div className="flex flex-wrap items-center justify-center gap-y-2 gap-x-3 sm:gap-x-6 text-[0.7rem] sm:text-sm font-bold text-slate-800 text-center w-full">
                             <span className="flex items-center gap-1.5">
-                                <span className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-slate-700 text-slate-800 flex items-center justify-center text-[0.55rem] sm:text-[0.6rem] font-black shrink-0">✓</span> Next-day Settlement
+                                <span className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-slate-700 text-slate-800 flex items-center justify-center text-[0.55rem] sm:text-[0.6rem] font-black shrink-0">✓</span> Settle to your bank daily
                             </span>
                             <span className="flex items-center gap-1.5">
-                                <span className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-slate-700 text-slate-800 flex items-center justify-center text-[0.55rem] sm:text-[0.6rem] font-black shrink-0">✓</span> Dedicated Account Manager
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <span className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-slate-700 text-slate-800 flex items-center justify-center text-[0.55rem] sm:text-[0.6rem] font-black shrink-0">✓</span> Go-live in Minutes
+                                <span className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-slate-700 text-slate-800 flex items-center justify-center text-[0.55rem] sm:text-[0.6rem] font-black shrink-0">✓</span> Commission on every service
                             </span>
                         </div>
                     </div>
@@ -655,7 +642,7 @@ const Landing: React.FC = () => {
                             to="/login"
                             className="bg-[#18181b] hover:bg-black text-white font-bold px-4 sm:px-7 py-3 rounded-full text-xs sm:text-base inline-flex items-center justify-center gap-2 sm:gap-3 shadow-md transition-transform hover:scale-[1.01] flex-1 sm:flex-initial"
                         >
-                            <span>Sign Up for Free*</span>
+                            <span>Become a Retailer</span>
                             <span className="bg-[#a3e635] text-black w-5 h-5 sm:w-6 sm:h-6 rounded-md flex items-center justify-center font-black text-xs sm:text-sm">
                                 ↗
                             </span>
@@ -664,20 +651,23 @@ const Landing: React.FC = () => {
                             href="#contact"
                             className="bg-white border border-[#18181b] text-[#18181b] hover:bg-slate-50 font-bold px-4 sm:px-7 py-3 rounded-full text-xs sm:text-base text-center transition-colors shadow-sm flex-1 sm:flex-initial"
                         >
-                            Contact Sales
+                            Talk to Us
                         </a>
                     </div>
 
                     {/* Trust Badges Bar */}
                     <div className="pt-4 sm:pt-6 flex flex-wrap items-center justify-center gap-y-1.5 gap-x-4 sm:gap-x-6 text-[0.68rem] sm:text-xs font-bold text-slate-600">
-                        <span className="flex items-center gap-1.2"><ShieldCheck className="w-3.5 h-3.5 text-[#008c46]" /> RBI Licensed PA</span>
+                        <span className="flex items-center gap-1.2"><ShieldCheck className="w-3.5 h-3.5 text-[#008c46]" /> Aadhaar data never stored</span>
                         <span className="text-slate-300 hidden sm:inline">•</span>
-                        <span className="flex items-center gap-1.2"><Zap className="w-3.5 h-3.5 text-[#008c46]" /> 99.99% Uptime SLA</span>
+                        <span className="flex items-center gap-1.2"><Zap className="w-3.5 h-3.5 text-[#008c46]" /> Runs on NPCI rails</span>
                         <span className="text-slate-300 hidden sm:inline">•</span>
-                        <span className="flex items-center gap-1.2"><CheckCircle2 className="w-3.5 h-3.5 text-[#008c46]" /> 50,000+ Merchants</span>
+                        <span className="flex items-center gap-1.2"><CheckCircle2 className="w-3.5 h-3.5 text-[#008c46]" /> Retailers across West Bengal</span>
                     </div>
                 </div>
             </section>
+
+            {/* --------------------------------------------------- DASHBOARD ON A LAPTOP (SCROLL-DRIVEN) */}
+            <MacbookScrollDemo />
 
             {/* FLOATING CASHFREE-STYLE GREEN CHAT BUBBLE BUTTON IN BOTTOM RIGHT */}
             <a
@@ -722,12 +712,12 @@ const Landing: React.FC = () => {
                                     {/* Dual Wave Mountain Chart Graphic */}
                                     <svg className="w-full h-12 overflow-visible" viewBox="0 0 200 45">
                                         <defs>
-                                            <linearGradient id="cashfreeChartGrad" x1="0" y1="0" x2="0" y2="1">
+                                            <linearGradient id="walletChartGrad" x1="0" y1="0" x2="0" y2="1">
                                                 <stop offset="0%" stopColor="#10b981" stopOpacity="0.45" />
                                                 <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
                                             </linearGradient>
                                         </defs>
-                                        <path d="M0,35 Q40,10 80,28 T160,12 T200,30 L200,45 L0,45 Z" fill="url(#cashfreeChartGrad)" />
+                                        <path d="M0,35 Q40,10 80,28 T160,12 T200,30 L200,45 L0,45 Z" fill="url(#walletChartGrad)" />
                                         <path d="M0,35 Q40,10 80,28 T160,12 T200,30" fill="none" stroke="#059669" strokeWidth="3.5" strokeLinecap="round" />
                                         <circle cx="160" cy="12" r="4.5" fill="#047857" className="animate-ping" />
                                         <circle cx="160" cy="12" r="3.5" fill="#a3e635" />
@@ -757,7 +747,7 @@ const Landing: React.FC = () => {
                         <div className="lg:col-span-4 flex flex-col items-center text-center justify-center space-y-12">
                             {/* Centered H2 Title */}
                             <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.08] max-w-md">
-                                The whole payments stack, on one platform.
+                                Every service your customers ask for, on one login.
                             </h2>
 
                             {/* Bottom Center: Instant Disbursal & Global Remittance Card */}
@@ -768,7 +758,7 @@ const Landing: React.FC = () => {
                                     </div>
                                     <div className="text-left">
                                         <p className="text-xs font-extrabold text-white">Abhishek Verma</p>
-                                        <p className="text-[0.6rem] text-emerald-300">Merchant A/C Verified</p>
+                                        <p className="text-[0.6rem] text-emerald-300">Retailer KYC verified</p>
                                     </div>
                                     <span className="ml-auto text-sm font-black text-emerald-400">₹11,000.00</span>
                                 </div>
@@ -793,7 +783,7 @@ const Landing: React.FC = () => {
                             <div className="relative rounded-3xl overflow-hidden border border-slate-200 shadow-xl w-full max-w-xs h-64 transform rotate-2 hover:rotate-0 transition-transform group">
                                 <img
                                     src="https://images.unsplash.com/photo-1556740758-90de374c12ad?auto=format&fit=crop&w=600&q=80"
-                                    alt="Merchant Accepting Payments"
+                                    alt="Retailer serving a customer"
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-transparent to-transparent" />
@@ -817,7 +807,7 @@ const Landing: React.FC = () => {
                                 <h4 className="text-2xl font-black tracking-tight mb-2">No Hidden</h4>
                                 <div className="my-2 mx-auto w-32 h-20 rounded-2xl bg-white/20 backdrop-blur-md border border-white/40 p-1.5 flex items-center justify-center">
                                     <div className="w-full h-full rounded-xl bg-gradient-to-br from-lime-300 via-emerald-300 to-emerald-400 flex items-center justify-center text-slate-900 font-extrabold text-xs shadow-inner">
-                                        0% Setup Fee
+                                        ₹0 to join
                                     </div>
                                 </div>
                                 <h4 className="text-2xl font-black tracking-tight mt-2">Charges</h4>
@@ -833,7 +823,7 @@ const Landing: React.FC = () => {
                     {/* Centered Main Title */}
                     <div className="text-center max-w-4xl mx-auto mb-14">
                         <h2 className="text-4xl sm:text-5xl lg:text-[52px] font-extrabold text-slate-900 tracking-tight leading-[1.15]">
-                            Every way your customer wants to pay. Online, in-store, on WhatsApp.
+                            Cash withdrawal, money transfer, bills, recharge. All from your counter.
                         </h2>
                     </div>
 
@@ -844,17 +834,17 @@ const Landing: React.FC = () => {
                             {/* Top Text */}
                             <div className="relative z-10 max-w-sm pr-12">
                                 <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                                    Shahparpay Checkout
+                                    AEPS Cash Withdrawal
                                 </h3>
                                 <p className="mt-3 text-sm sm:text-base text-slate-800 leading-relaxed font-medium">
-                                    Loads in under 200ms, converts up to 10% more buyers, and lets returning customers pay in ten seconds flat.
+                                    Your customer puts a finger on the scanner and walks out with cash. No card, no passbook, no trip to a bank branch. You earn on every withdrawal.
                                 </p>
                             </div>
 
                             {/* Top Right Arrow Circle Button */}
                             <a
                                 href="#products"
-                                aria-label="Explore Shahparpay Checkout"
+                                aria-label="Explore AEPS cash withdrawal"
                                 className="absolute top-8 right-8 z-20 w-11 h-11 rounded-full bg-[#18181b] text-white flex items-center justify-center hover:bg-black transition-all duration-200 hover:scale-110 shadow-lg"
                             >
                                 <ArrowUpRight className="w-5 h-5" />
@@ -865,18 +855,18 @@ const Landing: React.FC = () => {
                                 <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
                                     <ShoppingCart className="w-3.5 h-3.5 text-white" />
                                 </div>
-                                <span>Faster checkout</span>
+                                <span>Cash paid out</span>
                             </div>
 
                             {/* Floating Dark Glass Badge: Conversion Rate */}
                             <div className="absolute left-8 bottom-8 z-20 bg-[#18181b]/95 text-white p-4 sm:p-5 rounded-2xl shadow-2xl border border-white/10 w-56 backdrop-blur-md">
                                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
                                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                    Conversion Rate
+                                    Commission earned today
                                 </div>
                                 <div className="mt-1 flex items-baseline justify-between">
                                     <span className="text-2xl font-black text-white tracking-tight flex items-center gap-1">
-                                        <span className="text-emerald-400 text-lg">↑</span> 68.4%
+                                        <span className="text-emerald-400 text-lg">↑</span> ₹1,240
                                     </span>
                                 </div>
                                 {/* Wave chart graphic */}
@@ -915,7 +905,7 @@ const Landing: React.FC = () => {
                                         {/* URL Bar */}
                                         <div className="bg-slate-200/80 text-slate-700 rounded-full px-3 py-1 text-[10px] text-center font-semibold flex items-center justify-center gap-1 mx-auto max-w-[150px]">
                                             <Lock className="w-2.5 h-2.5 text-slate-500" />
-                                            <span>merchant.in</span>
+                                            <span>shahparpay.in</span>
                                         </div>
 
                                         {/* Merchant Store Header */}
@@ -923,26 +913,26 @@ const Landing: React.FC = () => {
                                             <div>
                                                 <div className="flex items-center gap-1">
                                                     <span className="text-xs">☕</span>
-                                                    <span className="text-xs font-bold text-slate-900">Copper Kettle Co.</span>
+                                                    <span className="text-xs font-bold text-slate-900">Sunita Devi</span>
                                                 </div>
                                                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold inline-block mt-0.5 border border-emerald-200">
-                                                    Trusted by Shahparpay
+                                                    Aadhaar verified
                                                 </span>
                                             </div>
                                             <div className="text-right">
-                                                <span className="text-[10px] text-slate-400 line-through">₹1,990</span>
-                                                <div className="text-sm font-black text-slate-900">₹1,530</div>
+                                                <span className="text-[10px] text-slate-400">Withdrawing</span>
+                                                <div className="text-sm font-black text-slate-900">₹2,000</div>
                                             </div>
                                         </div>
 
                                         {/* Coupon Card */}
                                         <div className="bg-[#008c46] text-white rounded-xl p-2.5 flex items-center justify-between text-xs shadow-sm">
                                             <div>
-                                                <div className="font-black text-xs">15% OFF</div>
-                                                <div className="text-[9px] text-emerald-100">See Details</div>
+                                                <div className="font-black text-xs">Your commission ₹14</div>
+                                                <div className="text-[9px] text-emerald-100">Credited to wallet</div>
                                             </div>
                                             <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">
-                                                Applied
+                                                Paid
                                             </span>
                                         </div>
 
@@ -952,35 +942,35 @@ const Landing: React.FC = () => {
                                                 🥣
                                             </div>
                                             <div className="flex-1">
-                                                <p className="text-[10px] font-bold text-slate-900">Coaster Set</p>
-                                                <p className="text-[9px] text-slate-500">₹230 / set</p>
+                                                <p className="text-[10px] font-bold text-slate-900">Mobile recharge</p>
+                                                <p className="text-[9px] text-slate-500">₹239 / 28 days</p>
                                             </div>
                                             <button className="bg-[#008c46] text-white text-[9px] font-bold px-2.5 py-1 rounded">
-                                                ADD
+                                                PAY
                                             </button>
                                         </div>
 
                                         {/* Payment Methods */}
                                         <div className="bg-white rounded-xl p-2.5 border border-slate-200/80 shadow-sm space-y-1.5">
-                                            <p className="text-[9px] font-bold text-slate-400">Pre-selected for you</p>
+                                            <p className="text-[9px] font-bold text-slate-400">Bank chosen automatically</p>
                                             <div className="flex items-center justify-between text-[10px] font-bold text-slate-800 py-1 border-b border-slate-100">
                                                 <div className="flex items-center gap-1.5">
                                                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                                                    <span>Google Pay</span>
+                                                    <span>State Bank of India</span>
                                                 </div>
                                                 <ChevronRight className="w-3 h-3 text-slate-400" />
                                             </div>
                                             <div className="flex items-center justify-between text-[10px] font-bold text-slate-800 py-1 border-b border-slate-100">
                                                 <div className="flex items-center gap-1.5">
                                                     <span className="w-2 h-2 rounded-full bg-purple-500" />
-                                                    <span>PhonePe</span>
+                                                    <span>Bank of Baroda</span>
                                                 </div>
                                                 <ChevronRight className="w-3 h-3 text-slate-400" />
                                             </div>
                                             <div className="flex items-center justify-between text-[10px] font-bold text-slate-800 py-1">
                                                 <div className="flex items-center gap-1.5">
                                                     <span className="w-2 h-2 rounded-full bg-amber-500" />
-                                                    <span>Cash on Delivery</span>
+                                                    <span>Punjab National Bank</span>
                                                 </div>
                                                 <ChevronRight className="w-3 h-3 text-slate-400" />
                                             </div>
@@ -995,10 +985,10 @@ const Landing: React.FC = () => {
                             {/* Top Text */}
                             <div className="relative z-10 max-w-md pr-6">
                                 <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                                    Payment Gateway
+                                    Money Transfer & Bills
                                 </h3>
                                 <p className="mt-3 text-sm sm:text-base text-slate-800 leading-relaxed font-medium">
-                                    180+ ways to pay across UPI, cards, EMI, netbanking and wallets. Built on payment infrastructure we run ourselves, so more of your payments go through. Never lose a sale to a missing option.
+                                    Send cash to any bank account over IMPS, pay an electricity or gas bill, recharge a phone or a FASTag. The errands that bring the same customers back to your shop every month.
                                 </p>
                             </div>
 
@@ -1104,17 +1094,17 @@ const Landing: React.FC = () => {
                             {/* Top Text */}
                             <div className="relative z-10 max-w-sm pr-12">
                                 <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                                    Payment Forms (no-code)
+                                    PAN Card & ITR Filing
                                 </h3>
                                 <p className="mt-3 text-sm sm:text-base text-slate-700 leading-relaxed font-medium">
-                                    Custom branded forms that collect payments and customer details, with eSign and pay built in. No code.
+                                    Apply for a new PAN card, file a correction, or file an income tax return for a customer. Higher value work than a recharge, and nobody in the area is offering it.
                                 </p>
                             </div>
 
                             {/* Top Right Arrow Circle Button */}
                             <a
                                 href="#products"
-                                aria-label="Explore Payment Forms"
+                                aria-label="Explore PAN and ITR services"
                                 className="absolute top-8 right-8 z-20 w-11 h-11 rounded-full bg-[#18181b] text-white flex items-center justify-center hover:bg-black transition-all duration-200 hover:scale-110 shadow-lg"
                             >
                                 <ArrowUpRight className="w-5 h-5" />
@@ -1206,17 +1196,17 @@ const Landing: React.FC = () => {
                             {/* Top Text */}
                             <div className="relative z-10 max-w-md pr-12">
                                 <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                                    Instant Settlements
+                                    Daily Settlement
                                 </h3>
                                 <p className="mt-3 text-sm sm:text-base text-slate-700 leading-relaxed font-medium">
-                                    Your sales money in your account in minutes, not T+2 days. <a href="#products" className="underline font-bold text-slate-900 hover:text-[#008c46]">Learn more</a>
+                                    Move the day's earnings from your wallet to your own bank account, on your schedule. <a href="#products" className="underline font-bold text-slate-900 hover:text-[#008c46]">Learn more</a>
                                 </p>
                             </div>
 
                             {/* Top Right Arrow Circle Button */}
                             <a
                                 href="#products"
-                                aria-label="Learn more about Instant Settlements"
+                                aria-label="Learn more about daily settlement"
                                 className="absolute top-8 right-8 z-20 w-11 h-11 rounded-full bg-[#18181b] text-white flex items-center justify-center hover:bg-black transition-all duration-200 hover:scale-110 shadow-lg"
                             >
                                 <ArrowUpRight className="w-5 h-5" />
@@ -1228,7 +1218,7 @@ const Landing: React.FC = () => {
                                 <div className="bg-gradient-to-br from-[#1b3a2b] via-[#122b1f] to-[#0c1f16] text-white p-5 rounded-2xl shadow-2xl border border-emerald-800/80 w-full sm:w-64 transform -rotate-2 group-hover:rotate-0 transition-transform duration-500 z-10">
                                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold">
                                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                        <span>Payment received</span>
+                                        <span>Settled to your bank</span>
                                     </div>
                                     <div className="text-3xl font-black text-white tracking-tight my-2">
                                         ₹2,450
@@ -1238,7 +1228,7 @@ const Landing: React.FC = () => {
                                     </div>
                                     <div className="pt-2 border-t border-emerald-800/60 flex items-center gap-1.5 text-[11px] font-bold text-emerald-100">
                                         <span>🏛️</span>
-                                        <span>HDFC Savings •••• 4771</span>
+                                        <span>Your account •••• 4771</span>
                                     </div>
                                 </div>
 
@@ -1250,7 +1240,7 @@ const Landing: React.FC = () => {
                                             <span className="text-base">💸</span>
                                             <div>
                                                 <p className="text-slate-900 font-extrabold text-xs">₹2,450</p>
-                                                <p className="text-[9px] text-slate-400 font-medium">priya@okhdfcbank</p>
+                                                <p className="text-[9px] text-slate-400 font-medium">AEPS withdrawal</p>
                                             </div>
                                         </div>
                                         <span className="bg-[#008c46] text-white px-2.5 py-1 rounded-full text-[9px] font-extrabold shadow-sm">
@@ -1301,7 +1291,7 @@ const Landing: React.FC = () => {
                                         : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                                 }`}
                             >
-                                Collect
+                                Banking
                             </button>
                             <button
                                 onClick={() => setBentoTab('global')}
@@ -1311,7 +1301,7 @@ const Landing: React.FC = () => {
                                         : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                                 }`}
                             >
-                                Go Global
+                                Bills & Recharge
                             </button>
                             <button
                                 onClick={() => setBentoTab('identity')}
@@ -1321,7 +1311,7 @@ const Landing: React.FC = () => {
                                         : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                                 }`}
                             >
-                                Identity & Risk
+                                Documents
                             </button>
                             <button
                                 onClick={() => setBentoTab('ai')}
@@ -1331,7 +1321,7 @@ const Landing: React.FC = () => {
                                         : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                                 }`}
                             >
-                                Built for AI
+                                Earnings
                             </button>
                             <button
                                 onClick={() => setBentoTab('disburse')}
@@ -1341,7 +1331,7 @@ const Landing: React.FC = () => {
                                         : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                                 }`}
                             >
-                                Disburse
+                                Payouts
                             </button>
                         </div>
                     </div>
@@ -1365,7 +1355,7 @@ const Landing: React.FC = () => {
                     {/* Section Title */}
                     <div className="text-center max-w-3xl mx-auto mb-16">
                         <h2 className="text-4xl sm:text-5xl lg:text-[52px] font-extrabold text-slate-900 tracking-tight leading-[1.15]">
-                            Go global, both ways.
+                            Two more reasons they walk in.
                         </h2>
                     </div>
 
@@ -1377,7 +1367,7 @@ const Landing: React.FC = () => {
                             <div className="w-full flex justify-center">
                                 <img
                                     src="https://cdn.prod.website-files.com/6a60525e5f4d2e4f1faed952/6a9a6b3d5840c0321cae2e62_4322444dda0a1a831988285622c076a6_IPG-1.webp"
-                                    alt="International Payment Gateway"
+                                    alt="BBPS bill payments"
                                     className="w-full max-w-[280px] sm:max-w-[320px] lg:max-w-[340px] h-auto object-contain"
                                 />
                             </div>
@@ -1385,10 +1375,10 @@ const Landing: React.FC = () => {
                             {/* Description & Link */}
                             <div className="max-w-sm space-y-2.5">
                                 <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                                    International Payment Gateway
+                                    BBPS Bill Payments
                                 </h3>
                                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-                                    Accept payments from 170+ markets in 140+ currencies, settled in INR. Apple Pay and PayPal switched on from the dashboard.
+                                    Electricity, water, gas, broadband, LPG, FASTag, insurance premiums and credit card bills — all on the Bharat BillPay network, with an instant receipt for the customer.
                                 </p>
                                 <a
                                     href="#products"
@@ -1406,7 +1396,7 @@ const Landing: React.FC = () => {
                             <div className="w-full flex justify-center">
                                 <img
                                     src="https://cdn.prod.website-files.com/6a60525e5f4d2e4f1faed952/6a93f884e4d791d307c3ae4b_828c5caa8cbe5480e59d6489339c4a03_imports.png"
-                                    alt="Sell into India"
+                                    alt="Mobile and DTH recharge"
                                     className="w-full max-w-[280px] sm:max-w-[320px] lg:max-w-[340px] h-auto object-contain"
                                 />
                             </div>
@@ -1414,10 +1404,10 @@ const Landing: React.FC = () => {
                             {/* Description & Link */}
                             <div className="max-w-sm space-y-2.5">
                                 <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                                    Sell into India
+                                    Mobile & DTH Recharge
                                 </h3>
                                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-                                    Foreign businesses collect from Indian customers in local methods like UPI, RuPay and cards, with 80%+ success rates, settling to an overseas account in 100+ currencies at 0% FX, with no Indian entity.
+                                    Every prepaid operator and DTH provider, with current plans listed in the dashboard so you are not hunting for a pack while a customer waits. Small tickets, steady footfall, commission on each one.
                                 </p>
                                 <a
                                     href="#products"
@@ -1438,10 +1428,10 @@ const Landing: React.FC = () => {
                     {/* Section Header */}
                     <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
                         <h2 className="text-4xl sm:text-5xl lg:text-[52px] font-extrabold text-slate-900 tracking-tight leading-[1.15]">
-                            Payments, built for AI
+                            Know exactly what you earned
                         </h2>
                         <p className="text-base sm:text-lg text-slate-700 font-medium leading-relaxed max-w-2xl mx-auto">
-                            Two ways AI is moving money for Indian businesses: taking payments inside AI, and running payment operations with agents.
+                            Every transaction, every commission and every settlement is on record, so the day's takings are never a guess.
                         </p>
                     </div>
 
@@ -1450,16 +1440,16 @@ const Landing: React.FC = () => {
                         {/* Left Column: Eyebrow + Shahparpay Here Title */}
                         <div className="lg:col-span-4 flex flex-col items-center lg:items-start text-center lg:text-left space-y-4">
                             <span className="inline-block bg-[#fef08a]/80 text-[#854d0e] font-extrabold text-[11px] tracking-wider uppercase px-3.5 py-1 rounded-full border border-amber-300/60 shadow-xs">
-                                AGENTIC PAYMENTS
+                                WALLET & REPORTS
                             </span>
                             <h3 className="text-3xl sm:text-4xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
-                                Shahparpay Here
+                                Your ledger, live
                             </h3>
                             <a
                                 href="#products"
                                 className="inline-flex items-center gap-1.5 text-sm sm:text-base font-bold text-[#008c46] hover:text-[#006e37] transition-colors group pt-2"
                             >
-                                <span>Explore Shahparpay Here</span>
+                                <span>See what you can track</span>
                                 <ArrowRight className="w-4.5 h-4.5 group-hover:translate-x-1 transition-transform" />
                             </a>
                         </div>
@@ -1494,7 +1484,7 @@ const Landing: React.FC = () => {
                             />
 
                             <p className="text-sm sm:text-base text-slate-700 leading-relaxed font-medium">
-                                Let customers pay with UPI, cards, QR or netbanking right inside AI chats like ChatGPT and Claude, with no payment details ever exposed to the AI. India's first in-chat payments, built on the MCP Apps standard with Mastercard and Swiggy.
+                                One wallet across every service, with a running balance and a line for each credit and debit. Separate reports for AEPS, money transfer, recharge, bills, PAN and ITR, filterable by date and exportable whenever your accountant asks.
                             </p>
                         </div>
                     </div>
@@ -1510,7 +1500,7 @@ const Landing: React.FC = () => {
                             {/* Left Column Content */}
                             <div className="lg:col-span-7 space-y-6 text-left">
                                 <h2 className="text-3xl sm:text-4xl lg:text-[46px] font-extrabold text-white tracking-tight leading-[1.12] max-w-xl">
-                                    Your business is one of a kind. Build payments to match.
+                                    Your shop is already busy. Give people one more reason to come in.
                                 </h2>
 
                                 {/* CTA Buttons */}
@@ -1519,7 +1509,7 @@ const Landing: React.FC = () => {
                                         to="/register"
                                         className="bg-[#18181b] hover:bg-black text-white pl-6 pr-2 py-2.5 rounded-full font-extrabold text-sm shadow-2xl flex items-center gap-3 transition-all hover:scale-105 group"
                                     >
-                                        <span>Sign Up For Free*</span>
+                                        <span>Become a Retailer</span>
                                         <div className="w-8 h-8 rounded-full bg-[#ccf788] text-slate-900 flex items-center justify-center font-black group-hover:rotate-45 transition-transform">
                                             ↗
                                         </div>
@@ -1529,24 +1519,26 @@ const Landing: React.FC = () => {
                                         href="#developers"
                                         className="border border-white/80 hover:bg-white/10 text-white px-6 py-3 rounded-full font-bold text-sm transition-all shadow-md"
                                     >
-                                        View Integration Docs
+                                        Talk to Us
                                     </a>
                                 </div>
 
                                 {/* Offer Subtext */}
                                 <p className="text-xs sm:text-sm text-emerald-100/90 font-medium max-w-lg leading-relaxed pt-2">
-                                    0% platform fees on sales up to ₹20L* (standard rate 1.95%). No setup fee, no maintenance fee, no hidden fees. Pay only when you get paid.
+                                    Nothing to pay to join and nothing to pay monthly. You keep a commission on every transaction, and you settle your wallet to your own bank account whenever you want.
                                 </p>
 
                                 {/* Certifications Row */}
                                 <div className="pt-4 border-t border-emerald-600/40 flex items-center gap-3 text-xs font-bold text-emerald-100 flex-wrap">
-                                    <span>RBI Licensed PA</span>
+                                    <span>AEPS</span>
                                     <span className="text-emerald-300/60">■</span>
-                                    <span>PCI DSS</span>
+                                    <span>Micro ATM</span>
                                     <span className="text-emerald-300/60">■</span>
-                                    <span>ISO 27001</span>
+                                    <span>BBPS</span>
                                     <span className="text-emerald-300/60">■</span>
-                                    <span>SOC 2</span>
+                                    <span>DMT</span>
+                                    <span className="text-emerald-300/60">■</span>
+                                    <span>PAN &amp; ITR</span>
                                 </div>
                             </div>
 
@@ -1598,7 +1590,7 @@ const Landing: React.FC = () => {
                             Frequently <span className="text-[#008c46]">asked questions</span>
                         </h2>
                         <p className="text-sm sm:text-base text-slate-600 font-medium max-w-xl mx-auto">
-                            Everything you need to know about accepting payments, payouts, security, and getting started with Shahparpay.
+                            Earnings, onboarding, devices and security — the things retailers ask before they sign up.
                         </p>
                     </div>
 
@@ -1624,7 +1616,7 @@ const Landing: React.FC = () => {
                                     : 'bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80'
                             }`}
                         >
-                            Integration &amp; Setup
+                            Devices &amp; Setup
                         </button>
                         <button
                             type="button"
@@ -1635,7 +1627,7 @@ const Landing: React.FC = () => {
                                     : 'bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80'
                             }`}
                         >
-                            Payments &amp; Security
+                            Safety &amp; Trust
                         </button>
                         <button
                             type="button"
@@ -1646,7 +1638,7 @@ const Landing: React.FC = () => {
                                     : 'bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80'
                             }`}
                         >
-                            Support &amp; Small Business
+                            Earnings &amp; Support
                         </button>
                     </div>
 
@@ -1710,36 +1702,36 @@ const Landing: React.FC = () => {
                                 <span className="text-xl font-extrabold text-white tracking-tight">Shahparpay</span>
                             </div>
                             <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
-                                Shahparpay Solutions Private Limited is a leading digital payment &amp; financial infrastructure provider enabling seamless transactions across India.
+                                Shahparpay Solutions Private Limited equips shop owners across India to offer banking, bill payment and document services to their customers, and to earn on every transaction.
                             </p>
                             <div className="pt-2 text-xs font-semibold text-[#a3e635] flex items-center gap-2">
-                                <CheckCircle2 className="h-4 w-4" /> RBI Authorized Payment Aggregator Ecosystem
+                                <CheckCircle2 className="h-4 w-4" /> Services delivered over NPCI rails through licensed banking partners
                             </div>
                         </div>
 
                         {/* Column 2: Products */}
                         <div className="space-y-3">
-                            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Accept Payments</h4>
+                            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Banking Services</h4>
                             <ul className="space-y-2 text-xs font-medium text-slate-400">
-                                <li><a href="#products" className="hover:text-white transition-colors">Payment Gateway</a></li>
-                                <li><a href="#products" className="hover:text-white transition-colors">Shahparpay Checkout</a></li>
-                                <li><a href="#products" className="hover:text-white transition-colors">Payment Links</a></li>
-                                <li><a href="#products" className="hover:text-white transition-colors">Payment Forms</a></li>
-                                <li><a href="#products" className="hover:text-white transition-colors">Subscriptions &amp; AutoPay</a></li>
-                                <li><a href="#products" className="hover:text-white transition-colors">UPI Stack</a></li>
+                                <li><a href="#products" className="hover:text-white transition-colors">AEPS Cash Withdrawal</a></li>
+                                <li><a href="#products" className="hover:text-white transition-colors">Balance &amp; Mini Statement</a></li>
+                                <li><a href="#products" className="hover:text-white transition-colors">Micro ATM</a></li>
+                                <li><a href="#products" className="hover:text-white transition-colors">Money Transfer (DMT)</a></li>
+                                <li><a href="#products" className="hover:text-white transition-colors">UPI QR Collection</a></li>
+                                <li><a href="#products" className="hover:text-white transition-colors">Aadhaar Pay</a></li>
                             </ul>
                         </div>
 
                         {/* Column 3: Payouts & Verification */}
                         <div className="space-y-3">
-                            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Payouts &amp; Identity</h4>
+                            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Bills &amp; Documents</h4>
                             <ul className="space-y-2 text-xs font-medium text-slate-400">
-                                <li><a href="#payouts" className="hover:text-white transition-colors">Instant Payouts 24/7</a></li>
-                                <li><a href="#payouts" className="hover:text-white transition-colors">AEPS Cash Withdrawal</a></li>
-                                <li><a href="#payouts" className="hover:text-white transition-colors">Domestic Money Transfer</a></li>
-                                <li><a href="#identity" className="hover:text-white transition-colors">Bank Account Verification</a></li>
-                                <li><a href="#identity" className="hover:text-white transition-colors">SecureID Aadhaar KYC</a></li>
-                                <li><a href="#identity" className="hover:text-white transition-colors">RiskShield AI</a></li>
+                                <li><a href="#payouts" className="hover:text-white transition-colors">Mobile &amp; DTH Recharge</a></li>
+                                <li><a href="#payouts" className="hover:text-white transition-colors">BBPS Bill Payments</a></li>
+                                <li><a href="#payouts" className="hover:text-white transition-colors">FASTag Recharge</a></li>
+                                <li><a href="#identity" className="hover:text-white transition-colors">PAN Card Services</a></li>
+                                <li><a href="#identity" className="hover:text-white transition-colors">ITR Filing</a></li>
+                                <li><a href="#identity" className="hover:text-white transition-colors">Lead Generation</a></li>
                             </ul>
                         </div>
 
