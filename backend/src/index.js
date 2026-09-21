@@ -17,7 +17,12 @@ const PORT = process.env.PORT || 5000;
 // one — on every endpoint, not just reports.
 app.use(compression());
 
+// The portal lives on shahparpay.in; shahparpay.com serves the older,
+// separate portal. The API stays on api.shahparpay.com for both, so that
+// domain is not retired here.
 const allowedOrigins = [
+  'https://shahparpay.in',
+  'https://www.shahparpay.in',
   'https://shahparpay.com',
   'https://www.shahparpay.com',
 ];
@@ -34,6 +39,7 @@ app.use(
 
       if (
         allowedOrigins.includes(origin) ||
+        origin.endsWith('.shahparpay.in') ||
         origin.endsWith('.shahparpay.com') ||
         origin.endsWith('.vercel.app')
       ) {
