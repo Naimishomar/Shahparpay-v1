@@ -49,6 +49,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import logo from '../assets/logo.png';
+import whiteLogo from '../assets/shahparpay-white-logo.png';
 import './landing.css';
 
 // --- DATA STRUCTURES FOR CASHFREE-MATCHED MEGA MENUS ---
@@ -295,6 +296,73 @@ const Logo = ({ className = 'h-11' }: { className?: string }) => (
     </div>
 );
 
+const FAQ_DATA = {
+    support: [
+        {
+            q: "I am evaluating different PGs and have some questions. How can I get in touch?",
+            a: "You can reach out directly to our merchant onboarding specialists via phone at 033 68200828, email us at shahparpay@gmail.com, or click 'Contact Sales' to schedule a call."
+        },
+        {
+            q: "I'm having some issue with my existing PG account. How do I get in touch?",
+            a: "Our 24/7 dedicated merchant support team is available via email at shahparpay@gmail.com, WhatsApp chat, or through your dedicated account manager assigned in the dashboard."
+        },
+        {
+            q: "Do you have a mobile app for businesses?",
+            a: "Yes, Shahparpay offers native iOS and Android apps for merchants to monitor live sales, generate payment links, process instant refunds, and manage settlements on the go."
+        },
+        {
+            q: "Do you support multi-user logins and accounts?",
+            a: "Yes! You can invite your finance, operations, and developer team members with granular role-based permissions (Admin, Accountant, Support, Developer)."
+        },
+        {
+            q: "Is Shahparpay the Best Payment Gateway for Small Businesses in India?",
+            a: "Shahparpay offers 0% platform fees on sales up to ₹20L, instant T+0 settlements, 180+ payment modes, and instant setup without hidden costs, making it ideal for growing Indian businesses."
+        },
+        {
+            q: "How Quickly Can a Small Business Go Live Using Shahparpay?",
+            a: "With digital paperless KYC verification, most small businesses and startups go live and start accepting payments within a few minutes."
+        },
+        {
+            q: "Will One Setup Allow a Small Business To Accept Payments Via UPI, Cards And Global Payments?",
+            a: "Yes! A single integration enables UPI (Google Pay, PhonePe, Paytm), Credit/Debit Cards (Visa, Mastercard, RuPay), NetBanking (50+ banks), Wallets, and international cards."
+        }
+    ],
+    getting_started: [
+        {
+            q: "What documents are required for merchant onboarding?",
+            a: "You will need a Business PAN, Proprietor/Director PAN and Aadhaar, Business Registration Proof (GST/MSME/Incorporation certificate), and a cancelled cheque."
+        },
+        {
+            q: "Are there any setup fees or annual maintenance charges?",
+            a: "No! Shahparpay has zero setup fees, zero hidden maintenance charges, and 0% platform fee on festive sales volume up to ₹20L."
+        },
+        {
+            q: "How does paperless digital KYC work?",
+            a: "Simply upload your business details and PAN in the merchant portal. Our SecureID engine verifies your details automatically in real-time."
+        }
+    ],
+    integration: [
+        {
+            q: "Which e-commerce platforms and plugins do you support?",
+            a: "We provide official plug-and-play plugins for Shopify, WooCommerce, Magento, OpenCart, Wix, along with SDKs for Android, iOS, React Native, Flutter, Python, and Node.js."
+        },
+        {
+            q: "How long does developer integration take?",
+            a: "Using our pre-built Checkout SDKs or hosted Payment Links, integration typically takes less than 30 minutes using our sandbox APIs."
+        }
+    ],
+    security: [
+        {
+            q: "Is Shahparpay RBI compliant and secure?",
+            a: "Yes! Shahparpay operates under strict RBI Payment Aggregator guidelines with 256-bit SSL encryption, ISO 27001, and PCI-DSS Level 1 certification."
+        },
+        {
+            q: "How fast are settlements credited to my bank account?",
+            a: "We support standard T+1 settlements as well as Instant T+0 and On-Demand Settlements 24/7 (including bank holidays and weekends)."
+        }
+    ]
+};
+
 const Landing: React.FC = () => {
     const [menuOpen, setMenuOpen] = useState(false);
     const [activeDropdown, setActiveDropdown] = useState<'products' | 'developers' | null>(null);
@@ -303,6 +371,8 @@ const Landing: React.FC = () => {
 
     // Active Tab State
     const [bentoTab, setBentoTab] = useState<'collect' | 'global' | 'identity' | 'ai' | 'disburse'>('collect');
+    const [faqCategory, setFaqCategory] = useState<'support' | 'getting_started' | 'integration' | 'security'>('support');
+    const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 8);
@@ -1506,73 +1576,232 @@ const Landing: React.FC = () => {
 
 
 
-            {/* -------------------------------------------------------- FOOTER */}
-            <footer id="contact" className="scroll-mt-20 border-t" style={{ borderColor: 'var(--lp-border)', backgroundColor: 'var(--lp-surface)' }}>
+            {/* --------------------------------------------------- FREQUENTLY ASKED QUESTIONS (CASHFREE MATCH) */}
+            <section 
+                id="faq" 
+                className="relative py-20 sm:py-28 px-4 sm:px-6 overflow-hidden bg-white select-none bg-cover bg-center"
+                style={{
+                    backgroundImage: "url('https://cdn.prod.website-files.com/6a60525e5f4d2e4f1faed952/6a69ce5408c89730990868d8_865afa08fb2d072c7efed594006c6ffc_faq-bg-gradient.webp')"
+                }}
+            >
+                {/* Official Cashfree FAQ Background Gradient Texture */}
+                <img
+                    src="https://cdn.prod.website-files.com/6a60525e5f4d2e4f1faed952/6a69ce5408c89730990868d8_865afa08fb2d072c7efed594006c6ffc_faq-bg-gradient.webp"
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none opacity-100 select-none z-0"
+                />
+
+                <div className="relative z-10 max-w-5xl mx-auto space-y-8 sm:space-y-10">
+                    {/* Centered Heading */}
+                    <div className="text-center space-y-3">
+                        <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                            Frequently <span className="text-[#008c46]">asked questions</span>
+                        </h2>
+                        <p className="text-sm sm:text-base text-slate-600 font-medium max-w-xl mx-auto">
+                            Everything you need to know about accepting payments, payouts, security, and getting started with Shahparpay.
+                        </p>
+                    </div>
+
+                    {/* Category Pill Tabs */}
+                    <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 max-w-3xl mx-auto">
+                        <button
+                            type="button"
+                            onClick={() => { setFaqCategory('getting_started'); setOpenFaqIndex(0); }}
+                            className={`px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                                faqCategory === 'getting_started'
+                                    ? 'bg-[#ccf788] text-slate-900 border border-[#a3e635] shadow-xs scale-[1.02]'
+                                    : 'bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80'
+                            }`}
+                        >
+                            Getting Started
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setFaqCategory('integration'); setOpenFaqIndex(0); }}
+                            className={`px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                                faqCategory === 'integration'
+                                    ? 'bg-[#ccf788] text-slate-900 border border-[#a3e635] shadow-xs scale-[1.02]'
+                                    : 'bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80'
+                            }`}
+                        >
+                            Integration &amp; Setup
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setFaqCategory('security'); setOpenFaqIndex(0); }}
+                            className={`px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                                faqCategory === 'security'
+                                    ? 'bg-[#ccf788] text-slate-900 border border-[#a3e635] shadow-xs scale-[1.02]'
+                                    : 'bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80'
+                            }`}
+                        >
+                            Payments &amp; Security
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setFaqCategory('support'); setOpenFaqIndex(0); }}
+                            className={`px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                                faqCategory === 'support'
+                                    ? 'bg-[#ccf788] text-slate-900 border border-[#a3e635] shadow-xs scale-[1.02]'
+                                    : 'bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80'
+                            }`}
+                        >
+                            Support &amp; Small Business
+                        </button>
+                    </div>
+
+                    {/* FAQ Items Grid (2 Column Responsive Layout matching Cashfree screenshot) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start pt-2">
+                        {FAQ_DATA[faqCategory].map((item, index) => {
+                            const isOpen = openFaqIndex === index;
+                            return (
+                                <div
+                                    key={index}
+                                    onClick={() => setOpenFaqIndex(isOpen ? null : index)}
+                                    className={`bg-white/90 backdrop-blur-md rounded-2xl border p-5 sm:p-6 transition-all duration-200 shadow-2xs cursor-pointer ${
+                                        isOpen ? 'border-emerald-400/90 shadow-md bg-white' : 'border-slate-200/80 hover:border-emerald-300/80'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between gap-4">
+                                        <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
+                                            {item.q}
+                                        </h3>
+                                        <div
+                                            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-base shrink-0 transition-transform ${
+                                                isOpen ? 'bg-[#008c46] text-white rotate-45' : 'bg-slate-100 text-slate-700'
+                                            }`}
+                                        >
+                                            +
+                                        </div>
+                                    </div>
+
+                                    {isOpen && (
+                                        <div className="mt-4 pt-4 border-t border-slate-100 text-xs sm:text-sm text-slate-600 font-medium leading-relaxed animate-in fade-in duration-200">
+                                            {item.a}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </section>
+
+            {/* Floating WhatsApp Action Button */}
+            <a
+                href="https://wa.me/919876543210"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Chat on WhatsApp"
+                className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-[#00a859] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform duration-200 border-2 border-white cursor-pointer"
+            >
+                <MessageCircle className="w-7 h-7 fill-current" />
+            </a>
+
+            {/* -------------------------------------------------------- FOOTER WITH GIANT BRAND LOGO BANNER */}
+            <footer id="contact" className="scroll-mt-20 bg-[#0c120e] text-slate-300 border-t border-slate-800 relative z-10 overflow-hidden">
                 <div className="mx-auto w-full max-w-7xl px-6 py-16">
+                    {/* Top 4 Navigation Columns */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
                         {/* Column 1: Brand Info */}
                         <div className="lg:col-span-2 space-y-4">
-                            <Logo className="h-9" />
-                            <p className="lp-muted text-sm leading-relaxed max-w-sm">
+                            <div className="flex items-center gap-3">
+                                <img src={whiteLogo} alt="Shahparpay Logo" className="h-9 w-auto object-contain" />
+                                <span className="text-xl font-extrabold text-white tracking-tight">Shahparpay</span>
+                            </div>
+                            <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
                                 Shahparpay Solutions Private Limited is a leading digital payment &amp; financial infrastructure provider enabling seamless transactions across India.
                             </p>
-                            <div className="pt-2 text-xs font-semibold text-[var(--lp-accent)] flex items-center gap-2">
-                                <CheckCircle2 className="h-4 w-4" /> Certified Banking &amp; Financial Partner
+                            <div className="pt-2 text-xs font-semibold text-[#a3e635] flex items-center gap-2">
+                                <CheckCircle2 className="h-4 w-4" /> RBI Authorized Payment Aggregator Ecosystem
                             </div>
                         </div>
 
                         {/* Column 2: Products */}
                         <div className="space-y-3">
-                            <h4 className="text-sm font-bold text-[var(--lp-fg)]">Accept Payments</h4>
-                            <ul className="space-y-2 text-xs font-medium text-[var(--lp-muted)]">
-                                <li><a href="#products" className="hover:text-[var(--lp-fg)] transition-colors">Payment Gateway</a></li>
-                                <li><a href="#products" className="hover:text-[var(--lp-fg)] transition-colors">Shahparpay Checkout</a></li>
-                                <li><a href="#products" className="hover:text-[var(--lp-fg)] transition-colors">Payment Links</a></li>
-                                <li><a href="#products" className="hover:text-[var(--lp-fg)] transition-colors">Payment Forms</a></li>
-                                <li><a href="#products" className="hover:text-[var(--lp-fg)] transition-colors">Subscriptions &amp; AutoPay</a></li>
-                                <li><a href="#products" className="hover:text-[var(--lp-fg)] transition-colors">UPI Stack</a></li>
+                            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Accept Payments</h4>
+                            <ul className="space-y-2 text-xs font-medium text-slate-400">
+                                <li><a href="#products" className="hover:text-white transition-colors">Payment Gateway</a></li>
+                                <li><a href="#products" className="hover:text-white transition-colors">Shahparpay Checkout</a></li>
+                                <li><a href="#products" className="hover:text-white transition-colors">Payment Links</a></li>
+                                <li><a href="#products" className="hover:text-white transition-colors">Payment Forms</a></li>
+                                <li><a href="#products" className="hover:text-white transition-colors">Subscriptions &amp; AutoPay</a></li>
+                                <li><a href="#products" className="hover:text-white transition-colors">UPI Stack</a></li>
                             </ul>
                         </div>
 
                         {/* Column 3: Payouts & Verification */}
                         <div className="space-y-3">
-                            <h4 className="text-sm font-bold text-[var(--lp-fg)]">Payouts &amp; Identity</h4>
-                            <ul className="space-y-2 text-xs font-medium text-[var(--lp-muted)]">
-                                <li><a href="#payouts" className="hover:text-[var(--lp-fg)] transition-colors">Instant Payouts 24/7</a></li>
-                                <li><a href="#payouts" className="hover:text-[var(--lp-fg)] transition-colors">AEPS Cash Withdrawal</a></li>
-                                <li><a href="#payouts" className="hover:text-[var(--lp-fg)] transition-colors">Domestic Money Transfer</a></li>
-                                <li><a href="#identity" className="hover:text-[var(--lp-fg)] transition-colors">Bank Account Verification</a></li>
-                                <li><a href="#identity" className="hover:text-[var(--lp-fg)] transition-colors">SecureID Aadhaar KYC</a></li>
-                                <li><a href="#identity" className="hover:text-[var(--lp-fg)] transition-colors">RiskShield AI</a></li>
+                            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Payouts &amp; Identity</h4>
+                            <ul className="space-y-2 text-xs font-medium text-slate-400">
+                                <li><a href="#payouts" className="hover:text-white transition-colors">Instant Payouts 24/7</a></li>
+                                <li><a href="#payouts" className="hover:text-white transition-colors">AEPS Cash Withdrawal</a></li>
+                                <li><a href="#payouts" className="hover:text-white transition-colors">Domestic Money Transfer</a></li>
+                                <li><a href="#identity" className="hover:text-white transition-colors">Bank Account Verification</a></li>
+                                <li><a href="#identity" className="hover:text-white transition-colors">SecureID Aadhaar KYC</a></li>
+                                <li><a href="#identity" className="hover:text-white transition-colors">RiskShield AI</a></li>
                             </ul>
                         </div>
 
                         {/* Column 4: Official Contact */}
                         <div className="space-y-3">
-                            <h4 className="text-sm font-bold text-[var(--lp-fg)]">Official Contact</h4>
-                            <ul className="space-y-3 text-xs text-[var(--lp-muted)] font-medium">
+                            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Official Contact</h4>
+                            <ul className="space-y-3 text-xs text-slate-400 font-medium">
                                 <li className="flex items-center gap-2.5">
-                                    <Phone className="h-4 w-4 text-[var(--lp-accent)] shrink-0" />
-                                    <a href="tel:03368200828" className="hover:text-[var(--lp-fg)] transition-colors font-bold">033 68200828</a>
+                                    <Phone className="h-4 w-4 text-[#a3e635] shrink-0" />
+                                    <a href="tel:03368200828" className="hover:text-white transition-colors font-bold">033 68200828</a>
                                 </li>
                                 <li className="flex items-center gap-2.5">
-                                    <Mail className="h-4 w-4 text-[var(--lp-accent)] shrink-0" />
-                                    <a href="mailto:shahparpay@gmail.com" className="hover:text-[var(--lp-fg)] transition-colors">shahparpay@gmail.com</a>
+                                    <Mail className="h-4 w-4 text-[#a3e635] shrink-0" />
+                                    <a href="mailto:shahparpay@gmail.com" className="hover:text-white transition-colors">shahparpay@gmail.com</a>
                                 </li>
                                 <li className="flex items-start gap-2.5">
-                                    <MapPin className="h-4 w-4 text-[var(--lp-accent)] shrink-0 mt-0.5" />
+                                    <MapPin className="h-4 w-4 text-[#a3e635] shrink-0 mt-0.5" />
                                     <span>4/1 Victoria Lane, Telinipara, Bhadreswar, Hooghly, West Bengal - 712125</span>
                                 </li>
                             </ul>
                         </div>
                     </div>
 
-                    <div className="mt-14 pt-8 border-t flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[var(--lp-muted)] font-medium" style={{ borderColor: 'var(--lp-border)' }}>
-                        <p>© {new Date().getFullYear()} Shahparpay Solutions Private Limited. All rights reserved.</p>
-                        <div className="flex items-center gap-6">
-                            <a href="#top" className="hover:text-[var(--lp-fg)] transition-colors">Privacy Policy</a>
-                            <a href="#top" className="hover:text-[var(--lp-fg)] transition-colors">Terms of Service</a>
-                            <a href="#top" className="hover:text-[var(--lp-fg)] transition-colors">Refund Policy</a>
+                    {/* GIANT FULL-WIDTH BRAND LOGO BANNER (MATCHING CASHFREE FOOTER SCREENSHOT) */}
+                    <div className="w-full pt-12 sm:pt-16 pb-8 border-t border-slate-800/80 my-8 sm:my-12 flex items-center justify-center overflow-hidden">
+                        <div className="w-full flex items-center justify-center gap-2 sm:gap-4 md:gap-2 select-none group cursor-pointer">
+                            {/* <img
+                                src={whiteLogo}
+                                alt="Shahparpay"
+                                className="h-[8.5vw] max-h-40 min-h-10 w-auto object-contain transition-transform group-hover:scale-105 duration-300 shrink-0"
+                            /> */}
+                            <h2 className="text-[11.5vw] sm:text-[13vw] xl:text-[13.5vw] font-black text-white tracking-tighter leading-none text-center transition-colors group-hover:text-[#ccf788] whitespace-nowrap">
+                                Shahparpay
+                            </h2>
+                        </div>
+                    </div>
+
+                    {/* BOTTOM BAR WITH SOCIAL ICONS AND COPYRIGHT */}
+                    <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-6 text-xs text-slate-400 font-medium">
+                        {/* Social Links Row */}
+                        <div className="flex items-center gap-3">
+                            <a href="#contact" aria-label="WhatsApp Support" className="w-9 h-9 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
+                                <MessageCircle className="w-4 h-4" />
+                            </a>
+                            <a href="#contact" aria-label="Email Support" className="w-9 h-9 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
+                                <Mail className="w-4 h-4" />
+                            </a>
+                            <a href="#contact" aria-label="Official Phone" className="w-9 h-9 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
+                                <Phone className="w-4 h-4" />
+                            </a>
+                            <a href="#contact" aria-label="Location" className="w-9 h-9 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
+                                <Globe className="w-4 h-4" />
+                            </a>
+                        </div>
+
+                        {/* Copyright & Legal Links */}
+                        <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-6 text-slate-400 text-xs font-semibold">
+                            <a href="#top" className="hover:text-white transition-colors">Term</a>
+                            <span>•</span>
+                            <span>© {new Date().getFullYear()} Shahparpay Solutions Private Limited</span>
+                            <span>•</span>
+                            <a href="#top" className="hover:text-white transition-colors">Privacy</a>
                         </div>
                     </div>
                 </div>
