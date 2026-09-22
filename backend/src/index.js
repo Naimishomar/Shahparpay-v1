@@ -11,6 +11,10 @@ const app = express();
 dotenv.config({ quiet: true });
 const PORT = process.env.PORT || 5000;
 
+// Caddy sits in front and sets X-Forwarded-For. One hop, so trust exactly one:
+// without this req.ip is the proxy's address for every caller.
+app.set('trust proxy', 1);
+
 // Report payloads are mostly repeated keys and status strings: the 780-row
 // AEPS report measures 477 KB raw and 46 KB gzipped. Retailers are on mobile
 // data, so this is the difference between a multi-second wait and an instant
@@ -148,6 +152,8 @@ import notificationRouter from './routes/notification.route.js';
 import supportRouter from './routes/support.route.js';
 import paysprintRouter from './routes/paysprint.route.js';
 import icchhamatiRouter from './routes/icchhamati.route.js';
+import contactRouter from './routes/contact.route.js';
+import commissionRouter from './routes/commission.route.js';
 import { checkAgentWallet } from './controllers/itr.controller.js';
 import { startReconciliationWorker } from './workers/reconciliation.worker.js';
 
@@ -174,6 +180,8 @@ app.use('/api/support', supportRouter);
 app.use('/api/paysprint', paysprintRouter);
 // Same story for Icchhamati: one callback URL in their panel for every event.
 app.use('/api/icchhamati', icchhamatiRouter);
+app.use('/api/contact', contactRouter);
+app.use('/api/commission', commissionRouter);
 
 // eSevaTech may call /api/check-agent-wallet at root level by convention
 app.all('/api/check-agent-wallet', checkAgentWallet);

@@ -53,3 +53,62 @@ export const sendEmailOTP = async (toEmail, toName, otp) => {
     return false;
   }
 };
+
+/**
+ * Forwards a public contact-form enquiry to whoever answers them.
+ *
+ * `replyTo` is the enquirer, so hitting reply in the inbox answers the person
+ * rather than the app's own mailbox. The send is best-effort: the enquiry is
+ * already stored before this runs, so a mail outage loses the notification but
+ * never the enquiry itself.
+ */
+// The enquiry is whatever a stranger typed into a public form, so it is escaped
+// before going anywhere near the notification's markup.
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+export const sendContactEnquiryEmail = async (enquiry) => {
+  try {
+    const to = process.env.CONTACT_RECIPIENT_EMAIL || process.env.ETHEREAL_USERNAME;
+    if (!to) {
+      console.error('[Contact] No CONTACT_RECIPIENT_EMAIL or ETHEREAL_USERNAME set — not notifying.');
+      return false;
+    }
+
+    const row = (label, value) =>
+      value
+        ? `<tr><td style="padding:6px 12px 6px 0;color:#64748b;font-size:14px;">${label}</td><td style="padding:6px 0;color:#0f172a;font-size:14px;font-weight:600;">${escapeHtml(value)}</td></tr>`
+        : '';
+
+    await getTransporter().sendMail({
+      from: `"${process.env.EMAIL_SENDER_NAME || 'ShahparPay'}" <${process.env.ETHEREAL_USERNAME}>`,
+      to,
+      replyTo: enquiry.email || undefined,
+      // Newlines in a header are how header injection starts; the name is a
+      // free-text field, so it is flattened to a single line first.
+      subject: `New enquiry from ${String(enquiry.name).replace(/[\r\n]+/g, ' ').slice(0, 80)}`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:10px;">
+          <h2 style="color:#0f172a;margin:0 0 16px;">New contact enquiry</h2>
+          <table style="border-collapse:collapse;width:100%;">
+            ${row('Name', enquiry.name)}
+            ${row('Mobile', enquiry.mobile)}
+            ${row('Email', enquiry.email)}
+            ${row('City', enquiry.city)}
+          </table>
+          <p style="color:#64748b;font-size:14px;margin:20px 0 6px;">Message</p>
+          <div style="white-space:pre-wrap;color:#0f172a;font-size:15px;line-height:1.6;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;">${escapeHtml(enquiry.message)}</div>
+        </div>
+      `,
+    });
+    return true;
+  } catch (error) {
+    console.error('[Contact] Could not send enquiry notification:', error.message);
+    return false;
+  }
+};
