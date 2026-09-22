@@ -34,6 +34,8 @@ import Login from "./pages/Login"
 import AdminPortal from "./pages/AdminPortal"
 import DistributorPortal from "./pages/DistributorPortal"
 import KycStatus from "./pages/KycStatus"
+import Contact from "./pages/Contact"
+import Commission from "./pages/Commission"
 import Profile from "./pages/Profile"
 import MATM from "./pages/MATM"
 import Support from "./pages/Support"
@@ -61,6 +63,8 @@ function App() {
       <Route path="/" element={<LandingRoute />} />
       <Route path="/login" element={<LoginRoute />} />
       <Route path="/kyc-status" element={<KycStatus />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/commission" element={<Commission />} />
       <Route element={<Layout/>}>
         {/* Retailer Dashboard */}
         <Route path="/dashboard" element={<Dashboard/>}/>

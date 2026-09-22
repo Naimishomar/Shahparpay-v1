@@ -8,24 +8,18 @@ import {
     Building,
     Check,
     CheckCircle2,
-    ChevronDown,
     ChevronRight,
     Clock,
-    Code2,
     Copy,
     CreditCard,
-    ExternalLink,
-    FileCode,
     FileText,
     Fingerprint,
-    Globe,
     Headset,
     HelpCircle,
     Layers,
     Lock,
     Mail,
     MapPin,
-    Menu,
     MessageCircle,
     Moon,
     Phone,
@@ -40,7 +34,6 @@ import {
     Sparkles,
     Star,
     Sun,
-    Terminal,
     TrendingUp,
     Users,
     Wallet,
@@ -48,179 +41,12 @@ import {
     Zap
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import logo from '../assets/logo.png';
-import whiteLogo from '../assets/shahparpay-white-logo.png';
 import './landing.css';
 import MacbookScrollDemo from '@/components/macbook-scroll-demo';
+import LandingNav from '@/components/landing/LandingNav';
+import LandingFooter from '@/components/landing/LandingFooter';
 
 // --- DATA STRUCTURES FOR CASHFREE-MATCHED MEGA MENUS ---
-const PRODUCT_MENU_CATEGORIES = [
-    {
-        title: 'BANKING SERVICES',
-        items: [
-            {
-                title: 'AEPS Cash Withdrawal',
-                desc: 'Aadhaar and fingerprint, no card needed',
-                icon: Fingerprint,
-                link: '#products'
-            },
-            {
-                title: 'Balance & Mini Statement',
-                desc: 'Instant account balance for any customer',
-                icon: FileText,
-                link: '#products'
-            },
-            {
-                title: 'Micro ATM',
-                desc: 'Debit card withdrawal at your counter',
-                icon: CreditCard,
-                link: '#products'
-            },
-            {
-                title: 'Money Transfer (DMT)',
-                desc: 'Cash in hand to any bank account',
-                icon: Send,
-                link: '#products'
-            },
-            {
-                title: 'UPI QR Collection',
-                desc: 'Your own QR, money lands in your wallet',
-                icon: QrCode,
-                link: '#products'
-            },
-            {
-                title: 'Aadhaar Pay',
-                desc: 'Customers pay you by fingerprint',
-                icon: Shield,
-                link: '#products'
-            },
-            {
-                title: 'Daily Settlement',
-                desc: 'Move earnings to your bank account',
-                icon: Zap,
-                link: '#products'
-            },
-            {
-                title: 'Payout to Bank',
-                desc: 'Send money out 24x7, including holidays',
-                icon: Banknote,
-                link: '#products'
-            }
-        ]
-    },
-    {
-        title: 'BILLS & RECHARGE',
-        items: [
-            {
-                title: 'Mobile & DTH Recharge',
-                desc: 'Every prepaid operator and DTH provider',
-                icon: RefreshCw,
-                link: '#payouts'
-            },
-            {
-                title: 'BBPS Bill Payments',
-                desc: 'Electricity, water, gas, broadband, LPG',
-                icon: Receipt,
-                link: '#payouts'
-            },
-            {
-                title: 'FASTag Recharge',
-                desc: 'Top up FASTag for walk-in customers',
-                icon: Zap,
-                link: '#payouts'
-            },
-            {
-                title: 'Insurance Premium',
-                desc: 'Collect LIC and general insurance premiums',
-                icon: ShieldCheck,
-                link: '#payouts'
-            },
-            {
-                title: 'Credit Card Bills',
-                desc: 'Pay any bank credit card bill over BBPS',
-                icon: CreditCard,
-                link: '#payouts'
-            }
-        ]
-    },
-    {
-        title: 'DOCUMENTS & EARNINGS',
-        items: [
-            {
-                title: 'PAN Card Services',
-                desc: 'New PAN, corrections and reprints',
-                icon: FileText,
-                link: '#identity'
-            },
-            {
-                title: 'ITR Filing',
-                desc: 'File income tax returns for your customers',
-                icon: FileCode,
-                link: '#identity'
-            },
-            {
-                title: 'Lead Generation',
-                desc: 'Earn on loan and insurance referrals',
-                icon: Building,
-                link: '#identity'
-            },
-            {
-                title: 'Wallet & Reports',
-                desc: 'Every transaction and commission, itemised',
-                icon: Layers,
-                link: '#identity'
-            }
-        ]
-    }
-];
-
-const MEGA_FEATURED_CARDS = [
-    {
-        tag: 'MOST USED',
-        title: 'AEPS Banking',
-        desc: 'Cash withdrawal, balance and mini statement on a fingerprint',
-        badge: 'Popular',
-        gradient: 'from-emerald-500/20 to-teal-500/20'
-    },
-    {
-        tag: 'EVERYDAY FOOTFALL',
-        title: 'Bills & Recharge',
-        desc: 'The reason customers come back to your shop every month',
-        badge: 'High volume',
-        gradient: 'from-emerald-600/20 to-green-400/20'
-    },
-    {
-        tag: 'HIGHER TICKET',
-        title: 'PAN & ITR',
-        desc: 'Document services that earn more per customer',
-        badge: 'Good margin',
-        gradient: 'from-teal-600/20 to-cyan-500/20'
-    }
-];
-
-const RESOURCE_MENU_ITEMS = [
-    {
-        title: 'Getting Started',
-        desc: 'Documents, KYC and going live',
-        icon: Code2
-    },
-    {
-        title: 'Commission Rates',
-        desc: 'What you earn on every service',
-        icon: Terminal
-    },
-    {
-        title: 'Guides & Training',
-        desc: 'Step-by-step help for each service',
-        icon: FileCode
-    },
-    {
-        title: 'Device Support',
-        desc: 'Supported fingerprint scanners and Micro ATMs',
-        icon: ExternalLink
-    }
-];
-
 function Reveal({ children, delay = 0, className = '' }: { children: React.ReactNode; delay?: number; className?: string }) {
     const ref = useRef<HTMLDivElement>(null);
     const [visible, setVisible] = useState(false);
@@ -256,18 +82,7 @@ function Reveal({ children, delay = 0, className = '' }: { children: React.React
     );
 }
 
-const Logo = ({ className = 'h-11' }: { className?: string }) => (
-    <div className="flex items-center gap-2.5">
-        <img
-            src={logo}
-            alt="Shahparpay Solutions"
-            className={`${className} w-auto object-contain`}
-            onError={(e) => {
-                e.currentTarget.style.display = 'none';
-            }}
-        />
-    </div>
-);
+
 
 const FAQ_DATA = {
     support: [
@@ -285,7 +100,7 @@ const FAQ_DATA = {
         },
         {
             q: "Is there someone I can call when I am stuck at the counter?",
-            a: "Yes. Call 033 68200828 during business hours, message us on WhatsApp, or raise a ticket from inside the dashboard. Most counter issues are resolved on the same call."
+            a: "Yes. Call +91 8240039776 during business hours, message us on WhatsApp, or raise a ticket from inside the dashboard. Most counter issues are resolved on the same call."
         },
         {
             q: "Do I need to be a registered business to join?",
@@ -357,224 +172,19 @@ const FAQ_DATA = {
 };
 
 const Landing: React.FC = () => {
-    const [menuOpen, setMenuOpen] = useState(false);
-    const [activeDropdown, setActiveDropdown] = useState<'products' | 'developers' | null>(null);
-    const [scrolled, setScrolled] = useState(false);
     const { resolvedTheme, setTheme } = useTheme();
+
 
     // Active Tab State
     const [bentoTab, setBentoTab] = useState<'collect' | 'global' | 'identity' | 'ai' | 'disburse'>('collect');
     const [faqCategory, setFaqCategory] = useState<'support' | 'getting_started' | 'integration' | 'security'>('support');
     const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
-    useEffect(() => {
-        const onScroll = () => setScrolled(window.scrollY > 8);
-        onScroll();
-        window.addEventListener('scroll', onScroll);
-        return () => window.removeEventListener('scroll', onScroll);
-    }, []);
 
     return (
         <div id="top" className="landing-page relative overflow-x-clip bg-white text-slate-900">
             {/* ---------------------------------------------------------- NAVBAR (EXACT CASHFREE TOP MATCH) */}
-            <nav
-                className={`sticky top-0 z-50 transition-all duration-200 ${
-                    scrolled ? 'bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-sm' : 'bg-white border-b border-slate-100'
-                }`}
-            >
-                <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 sm:gap-6 px-4 sm:px-6 py-3.5 sm:py-4">
-                    <Link to="/" aria-label="Shahparpay home" className="shrink-0">
-                        <Logo className="h-8 sm:h-10" />
-                    </Link>
-
-                    {/* Desktop Navigation Links */}
-                    <div className="hidden items-center gap-2 lg:flex">
-                        {/* PRODUCTS DROPDOWN */}
-                        <div
-                            className="relative"
-                            onMouseEnter={() => setActiveDropdown('products')}
-                            onMouseLeave={() => setActiveDropdown(null)}
-                        >
-                            <button className="text-slate-600 hover:text-black inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors">
-                                Products
-                                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${activeDropdown === 'products' ? 'rotate-180 text-[#008c46]' : ''}`} />
-                            </button>
-
-                            {activeDropdown === 'products' && (
-                                <div className="absolute left-0 top-full pt-2 w-[920px] -translate-x-16 z-50 mega-menu-content">
-                                    <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-2xl grid grid-cols-12 gap-6">
-                                        <div className="col-span-8 grid grid-cols-3 gap-6">
-                                            {PRODUCT_MENU_CATEGORIES.map((cat) => (
-                                                <div key={cat.title} className="space-y-3">
-                                                    <h4 className="text-[0.65rem] font-bold tracking-wider text-slate-400 uppercase border-b border-slate-100 pb-2">
-                                                        {cat.title}
-                                                    </h4>
-                                                    <div className="space-y-1">
-                                                        {cat.items.map((item) => (
-                                                            <a
-                                                                key={item.title}
-                                                                href={item.link}
-                                                                onClick={() => setActiveDropdown(null)}
-                                                                className="mega-menu-item-link group flex items-start gap-2.5 p-2 rounded-xl hover:bg-slate-50 transition-colors"
-                                                            >
-                                                                <div className="lp-icon-tile shrink-0 w-7 h-7 rounded-lg">
-                                                                    <item.icon className="mega-icon h-3.5 w-3.5" />
-                                                                </div>
-                                                                <div>
-                                                                    <div className="text-xs font-bold text-slate-900 group-hover:text-[#008c46] transition-colors">
-                                                                        {item.title}
-                                                                    </div>
-                                                                    <p className="text-[0.7rem] text-slate-500 line-clamp-1 mt-0.5">
-                                                                        {item.desc}
-                                                                    </p>
-                                                                </div>
-                                                            </a>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Right Side Featured Product Cards */}
-                                        <div className="col-span-4 border-l border-slate-100 pl-6 space-y-3">
-                                            <p className="text-[0.65rem] font-bold tracking-wider text-slate-400 uppercase">
-                                                FEATURED SOLUTIONS
-                                            </p>
-                                            {MEGA_FEATURED_CARDS.map((card) => (
-                                                <a
-                                                    key={card.title}
-                                                    href="#services"
-                                                    onClick={() => setActiveDropdown(null)}
-                                                    className={`block p-3 rounded-xl border border-slate-200 bg-slate-50 hover:border-[#008c46] transition-all group`}
-                                                >
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <span className="text-[0.6rem] font-bold tracking-wider uppercase text-[#008c46]">
-                                                            {card.tag}
-                                                        </span>
-                                                        <span className="text-[0.6rem] font-bold px-1.5 py-0.5 rounded bg-[#008c46] text-white">
-                                                            {card.badge}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-xs font-extrabold text-slate-900 group-hover:text-[#008c46] transition-colors">
-                                                        {card.title}
-                                                    </div>
-                                                    <p className="text-[0.7rem] text-slate-500 mt-0.5">
-                                                        {card.desc}
-                                                    </p>
-                                                </a>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* DEVELOPERS DROPDOWN */}
-                        <div
-                            className="relative"
-                            onMouseEnter={() => setActiveDropdown('developers')}
-                            onMouseLeave={() => setActiveDropdown(null)}
-                        >
-                            <button className="text-slate-600 hover:text-black inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors">
-                                Help
-                                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${activeDropdown === 'developers' ? 'rotate-180 text-[#008c46]' : ''}`} />
-                            </button>
-
-                            {activeDropdown === 'developers' && (
-                                <div className="absolute left-0 top-full pt-2 w-[520px] -translate-x-16 z-50 mega-menu-content">
-                                    <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-2xl space-y-3">
-                                        <div className="text-[0.65rem] font-bold tracking-wider text-slate-400 uppercase border-b border-slate-100 pb-2">
-                                            HELP &amp; RESOURCES
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {RESOURCE_MENU_ITEMS.map((item) => (
-                                                <a
-                                                    key={item.title}
-                                                    href="#developers"
-                                                    onClick={() => setActiveDropdown(null)}
-                                                    className="mega-menu-item-link group flex items-start gap-2.5 p-2 rounded-xl hover:bg-slate-50 transition-colors"
-                                                >
-                                                    <div className="lp-icon-tile shrink-0 w-8 h-8 rounded-lg">
-                                                        <item.icon className="mega-icon h-4 w-4" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-xs font-bold text-slate-900 group-hover:text-[#008c46] transition-colors">
-                                                            {item.title}
-                                                        </div>
-                                                        <p className="text-[0.7rem] text-slate-500 mt-0.5">
-                                                            {item.desc}
-                                                        </p>
-                                                    </div>
-                                                </a>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <a href="#services" className="text-slate-600 hover:text-black rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors">
-                            Commission
-                        </a>
-                        <a href="#calculator" className="text-slate-600 hover:text-black rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors">
-                            Resources
-                        </a>
-                    </div>
-
-                    {/* Right Side Action Buttons */}
-                    <div className="flex items-center gap-2 sm:gap-3">
-                        <Link
-                            to="/login"
-                            className="hidden sm:inline-flex bg-[#18181b] hover:bg-black text-white rounded-full px-5 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-bold transition-all shadow-sm"
-                        >
-                            Sign Up for Free*
-                        </Link>
-                        <Link
-                            to="/login"
-                            className="bg-white border border-[#18181b] text-[#18181b] hover:bg-slate-50 rounded-full px-4 sm:px-6 py-1.5 sm:py-2.5 text-xs sm:text-sm font-bold transition-all"
-                        >
-                            Sign In
-                        </Link>
-
-                        <button
-                            className="lg:hidden p-2 text-slate-800 rounded-lg hover:bg-slate-100 transition-colors"
-                            onClick={() => setMenuOpen(!menuOpen)}
-                            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-                        >
-                            {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Mobile Navigation Drawer */}
-                {menuOpen && (
-                    <div className="border-t border-slate-200 px-6 py-6 lg:hidden space-y-5 shadow-2xl bg-white animate-in slide-in-from-top-2 duration-200">
-                        <div className="space-y-1">
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Navigation</p>
-                            <a href="#services" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
-                                Products &amp; Services
-                            </a>
-                            <a href="#developers" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
-                                Help &amp; Resources
-                            </a>
-                            <a href="#services" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
-                                Pricing
-                            </a>
-                            <a href="#contact" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
-                                Contact &amp; Support
-                            </a>
-                        </div>
-                        <div className="pt-2 flex flex-col gap-2.5">
-                            <Link to="/login" onClick={() => setMenuOpen(false)} className="bg-[#18181b] hover:bg-black text-white text-center py-3 rounded-full text-sm font-bold shadow-sm">
-                                Sign Up for Free*
-                            </Link>
-                            <Link to="/login" onClick={() => setMenuOpen(false)} className="bg-white border border-slate-900 text-slate-900 text-center py-3 rounded-full text-sm font-bold">
-                                Sign In
-                            </Link>
-                        </div>
-                    </div>
-                )}
-            </nav>
+            <LandingNav />
 
             {/* --------------------------------------------------------- HERO SECTION (FULL SCREEN MATCH) */}
             <section className="relative z-10 w-full min-h-0 lg:min-h-[calc(100vh-80px)] flex flex-col items-center justify-center py-8 sm:py-12 lg:py-16 px-4 sm:px-6 overflow-hidden bg-white">
@@ -585,7 +195,7 @@ const Landing: React.FC = () => {
                         loop
                         muted
                         playsInline
-                        className="w-full max-w-[1440px] h-full object-cover object-bottom opacity-90 sm:opacity-95"
+                        className="w-full h-full object-cover object-bottom opacity-90 sm:opacity-95"
                     >
                         <source
                             src="https://cashfreelogo.cashfree.com/website/hero/Homepage_Hero_Cashfree%20revamp_v4%20Mp4.mp4"
@@ -596,20 +206,20 @@ const Landing: React.FC = () => {
                 </div>
 
                 {/* Centered Hero Header Text & Offer Card sitting OVER top of background video */}
-                <div className="relative z-10 mx-auto max-w-5xl text-center flex flex-col items-center justify-center w-full">
+                <div className="relative z-10 mx-auto max-w-5xl 2xl:max-w-6xl text-center flex flex-col items-center justify-center w-full">
                     {/* Eyebrow Pill Badge */}
                     <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 sm:px-4 py-1.5 rounded-full text-[0.7rem] sm:text-xs font-bold mb-3 sm:mb-4 shadow-2xs">
                         <Sparkles className="w-3.5 h-3.5 text-[#008c46]" />
                         <span>Digital banking services for your shop</span>
                     </div>
 
-                    <h1 className="text-3xl sm:text-5xl lg:text-7xl font-extrabold text-slate-900 tracking-tight leading-[1.12] sm:leading-[1.08] max-w-4xl text-center mx-auto">
+                    <h1 className="text-3xl sm:text-5xl lg:text-7xl 2xl:text-8xl font-extrabold text-slate-900 tracking-tight leading-[1.12] sm:leading-[1.08] max-w-4xl 2xl:max-w-5xl text-center mx-auto">
                         Turn Your Shop Into A Banking Point For Your Neighbourhood
                     </h1>
 
                     {/* Soft Lime/Yellow Offer Card matching screenshot */}
                     <div
-                        className="my-4 sm:my-8 rounded-2xl sm:rounded-3xl p-4 sm:p-8 max-w-2xl w-full border border-lime-300/80 shadow-md text-center relative overflow-hidden mx-auto flex flex-col items-center justify-center backdrop-blur-xs"
+                        className="my-4 sm:my-8 2xl:my-10 rounded-2xl sm:rounded-3xl p-4 sm:p-8 2xl:p-10 max-w-2xl 2xl:max-w-3xl w-full border border-lime-300/80 shadow-md text-center relative overflow-hidden mx-auto flex flex-col items-center justify-center backdrop-blur-xs"
                         style={{
                             background: 'linear-gradient(180deg, rgba(228, 250, 173, 0.94) 0%, rgba(254, 248, 184, 0.94) 100%)'
                         }}
@@ -642,17 +252,17 @@ const Landing: React.FC = () => {
                             to="/login"
                             className="bg-[#18181b] hover:bg-black text-white font-bold px-4 sm:px-7 py-3 rounded-full text-xs sm:text-base inline-flex items-center justify-center gap-2 sm:gap-3 shadow-md transition-transform hover:scale-[1.01] flex-1 sm:flex-initial"
                         >
-                            <span>Become a Retailer</span>
+                            <span>Sign In</span>
                             <span className="bg-[#a3e635] text-black w-5 h-5 sm:w-6 sm:h-6 rounded-md flex items-center justify-center font-black text-xs sm:text-sm">
                                 ↗
                             </span>
                         </Link>
-                        <a
-                            href="#contact"
+                        <Link
+                            to="/contact"
                             className="bg-white border border-[#18181b] text-[#18181b] hover:bg-slate-50 font-bold px-4 sm:px-7 py-3 rounded-full text-xs sm:text-base text-center transition-colors shadow-sm flex-1 sm:flex-initial"
                         >
                             Talk to Us
-                        </a>
+                        </Link>
                     </div>
 
                     {/* Trust Badges Bar */}
@@ -1506,21 +1116,21 @@ const Landing: React.FC = () => {
                                 {/* CTA Buttons */}
                                 <div className="flex items-center gap-4 flex-wrap pt-2">
                                     <Link
-                                        to="/register"
+                                        to="/login"
                                         className="bg-[#18181b] hover:bg-black text-white pl-6 pr-2 py-2.5 rounded-full font-extrabold text-sm shadow-2xl flex items-center gap-3 transition-all hover:scale-105 group"
                                     >
-                                        <span>Become a Retailer</span>
+                                        <span>Sign In</span>
                                         <div className="w-8 h-8 rounded-full bg-[#ccf788] text-slate-900 flex items-center justify-center font-black group-hover:rotate-45 transition-transform">
                                             ↗
                                         </div>
                                     </Link>
 
-                                    <a
-                                        href="#developers"
+                                    <Link
+                                        to="/contact"
                                         className="border border-white/80 hover:bg-white/10 text-white px-6 py-3 rounded-full font-bold text-sm transition-all shadow-md"
                                     >
                                         Talk to Us
-                                    </a>
+                                    </Link>
                                 </div>
 
                                 {/* Offer Subtext */}
@@ -1691,113 +1301,7 @@ const Landing: React.FC = () => {
             </a>
 
             {/* -------------------------------------------------------- FOOTER WITH GIANT BRAND LOGO BANNER */}
-            <footer id="contact" className="scroll-mt-20 bg-[#0c120e] text-slate-300 border-t border-slate-800 relative z-10 overflow-hidden">
-                <div className="mx-auto w-full max-w-7xl px-6 py-16">
-                    {/* Top 4 Navigation Columns */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
-                        {/* Column 1: Brand Info */}
-                        <div className="lg:col-span-2 space-y-4">
-                            <div className="flex items-center gap-3">
-                                <img src={whiteLogo} alt="Shahparpay Logo" className="h-9 w-auto object-contain" />
-                                <span className="text-xl font-extrabold text-white tracking-tight">Shahparpay</span>
-                            </div>
-                            <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
-                                Shahparpay Solutions Private Limited equips shop owners across India to offer banking, bill payment and document services to their customers, and to earn on every transaction.
-                            </p>
-                            <div className="pt-2 text-xs font-semibold text-[#a3e635] flex items-center gap-2">
-                                <CheckCircle2 className="h-4 w-4" /> Services delivered over NPCI rails through licensed banking partners
-                            </div>
-                        </div>
-
-                        {/* Column 2: Products */}
-                        <div className="space-y-3">
-                            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Banking Services</h4>
-                            <ul className="space-y-2 text-xs font-medium text-slate-400">
-                                <li><a href="#products" className="hover:text-white transition-colors">AEPS Cash Withdrawal</a></li>
-                                <li><a href="#products" className="hover:text-white transition-colors">Balance &amp; Mini Statement</a></li>
-                                <li><a href="#products" className="hover:text-white transition-colors">Micro ATM</a></li>
-                                <li><a href="#products" className="hover:text-white transition-colors">Money Transfer (DMT)</a></li>
-                                <li><a href="#products" className="hover:text-white transition-colors">UPI QR Collection</a></li>
-                                <li><a href="#products" className="hover:text-white transition-colors">Aadhaar Pay</a></li>
-                            </ul>
-                        </div>
-
-                        {/* Column 3: Payouts & Verification */}
-                        <div className="space-y-3">
-                            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Bills &amp; Documents</h4>
-                            <ul className="space-y-2 text-xs font-medium text-slate-400">
-                                <li><a href="#payouts" className="hover:text-white transition-colors">Mobile &amp; DTH Recharge</a></li>
-                                <li><a href="#payouts" className="hover:text-white transition-colors">BBPS Bill Payments</a></li>
-                                <li><a href="#payouts" className="hover:text-white transition-colors">FASTag Recharge</a></li>
-                                <li><a href="#identity" className="hover:text-white transition-colors">PAN Card Services</a></li>
-                                <li><a href="#identity" className="hover:text-white transition-colors">ITR Filing</a></li>
-                                <li><a href="#identity" className="hover:text-white transition-colors">Lead Generation</a></li>
-                            </ul>
-                        </div>
-
-                        {/* Column 4: Official Contact */}
-                        <div className="space-y-3">
-                            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Official Contact</h4>
-                            <ul className="space-y-3 text-xs text-slate-400 font-medium">
-                                <li className="flex items-center gap-2.5">
-                                    <Phone className="h-4 w-4 text-[#a3e635] shrink-0" />
-                                    <a href="tel:03368200828" className="hover:text-white transition-colors font-bold">033 68200828</a>
-                                </li>
-                                <li className="flex items-center gap-2.5">
-                                    <Mail className="h-4 w-4 text-[#a3e635] shrink-0" />
-                                    <a href="mailto:shahparpay@gmail.com" className="hover:text-white transition-colors">shahparpay@gmail.com</a>
-                                </li>
-                                <li className="flex items-start gap-2.5">
-                                    <MapPin className="h-4 w-4 text-[#a3e635] shrink-0 mt-0.5" />
-                                    <span>4/1 Victoria Lane, Telinipara, Bhadreswar, Hooghly, West Bengal - 712125</span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    {/* GIANT FULL-WIDTH BRAND LOGO BANNER (MATCHING CASHFREE FOOTER SCREENSHOT) */}
-                    <div className="w-full pt-12 sm:pt-16 pb-8 border-t border-slate-800/80 my-8 sm:my-12 flex items-center justify-center overflow-hidden">
-                        <div className="w-full flex items-center justify-center gap-2 sm:gap-4 md:gap-2 select-none group cursor-pointer">
-                            {/* <img
-                                src={whiteLogo}
-                                alt="Shahparpay"
-                                className="h-[8.5vw] max-h-40 min-h-10 w-auto object-contain transition-transform group-hover:scale-105 duration-300 shrink-0"
-                            /> */}
-                            <h2 className="text-[11.5vw] sm:text-[13vw] xl:text-[13.5vw] font-black text-white tracking-tighter leading-none text-center transition-colors group-hover:text-[#ccf788] whitespace-nowrap">
-                                Shahparpay
-                            </h2>
-                        </div>
-                    </div>
-
-                    {/* BOTTOM BAR WITH SOCIAL ICONS AND COPYRIGHT */}
-                    <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-6 text-xs text-slate-400 font-medium">
-                        {/* Social Links Row */}
-                        <div className="flex items-center gap-3">
-                            <a href="#contact" aria-label="WhatsApp Support" className="w-9 h-9 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
-                                <MessageCircle className="w-4 h-4" />
-                            </a>
-                            <a href="#contact" aria-label="Email Support" className="w-9 h-9 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
-                                <Mail className="w-4 h-4" />
-                            </a>
-                            <a href="#contact" aria-label="Official Phone" className="w-9 h-9 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
-                                <Phone className="w-4 h-4" />
-                            </a>
-                            <a href="#contact" aria-label="Location" className="w-9 h-9 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
-                                <Globe className="w-4 h-4" />
-                            </a>
-                        </div>
-
-                        {/* Copyright & Legal Links */}
-                        <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-6 text-slate-400 text-xs font-semibold">
-                            <a href="#top" className="hover:text-white transition-colors">Term</a>
-                            <span>•</span>
-                            <span>© {new Date().getFullYear()} Shahparpay Solutions Private Limited</span>
-                            <span>•</span>
-                            <a href="#top" className="hover:text-white transition-colors">Privacy</a>
-                        </div>
-                    </div>
-                </div>
-            </footer>
+            <LandingFooter />
         </div>
     );
 };
