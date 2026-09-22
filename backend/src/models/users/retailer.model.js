@@ -139,6 +139,21 @@ const retailerSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // PaySprint's registered base location for AEPS geo-fencing, and the audit
+    // trail behind it. PaySprint caps base-location changes at three per
+    // merchant per calendar year and silently no-ops past that, so every
+    // successful change is counted here — otherwise a retailer burns the quota
+    // without anyone knowing and every later attempt appears to work while
+    // changing nothing.
+    aepsBaseLocation: {
+      lat: { type: Number, default: null },
+      long: { type: Number, default: null },
+      updatedAt: { type: Date, default: null },
+      // Reset when the calendar year in `countYear` no longer matches today's.
+      countYear: { type: Number, default: null },
+      countThisYear: { type: Number, default: 0 },
+    },
+
     // The virtual account behind this retailer's collection QR. Standing, not
     // per-payment, so it is kept rather than regenerated on every visit.
     collectionQr: {

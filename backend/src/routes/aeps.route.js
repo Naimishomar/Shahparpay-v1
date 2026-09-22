@@ -23,6 +23,7 @@ import {
   onboardStatusCallback,
   getOnboardSdkParams,
 } from '../controllers/onboardCallback.controller.js';
+import { getBaseLocation, updateBaseLocation } from '../controllers/aepsLocation.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
@@ -55,5 +56,10 @@ router.post('/kyc/resend-otp', authMiddlewares, resendMerchantOtp);
 router.post('/kyc/verify-otp', authMiddlewares, verifyMerchantOtp);
 router.post('/kyc/activate-merchant', authMiddlewares, activateMerchant);
 router.post('/daily-auth', authMiddlewares, dailyAuth);
+
+// Shop location registered with PaySprint for geo-fencing. Capped by the
+// provider at three changes per calendar year, so the GET reports what is left.
+router.get('/base-location', authMiddlewares, getBaseLocation);
+router.post('/base-location', authMiddlewares, updateBaseLocation);
 
 export default router;

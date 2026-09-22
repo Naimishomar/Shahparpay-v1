@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useLocationContext } from "../context/LocationContext";
 import { z } from "zod";
 import { captureBiometric, DEVICE_LABELS, type DeviceBrand } from "../utils/rdService";
+import ShopLocationCard from '../components/ShopLocationCard';
 
 const banks = [
     { name: 'SBI', displayName: 'State Bank of India (SBI)', logo: 'https://www.google.com/s2/favicons?domain=onlinesbi.sbi&sz=128' },
@@ -841,6 +842,10 @@ const AEPS = () => {
                         </div>
 
                     </div>
+
+                    {/* Geo-fencing is the most common reason a withdrawal is declined
+                        outright, and the retailer can fix it themselves from here. */}
+                    <ShopLocationCard />
 
                     {/* Popular Banks Selection */}
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
