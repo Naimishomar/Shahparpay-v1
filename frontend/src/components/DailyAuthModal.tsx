@@ -6,13 +6,15 @@ import { useNavigate } from 'react-router-dom';
 import { captureBiometric } from '../utils/rdService';
 
 interface DailyAuthModalProps {
-    onClose: () => void;
+    // Called with the pipe 2FA succeeded on, so the page transacts on it.
+    onClose: (authedPipe?: string) => void;
     activePipes?: string[];
+    pipe?: string;
     latitude?: string;
     longitude?: string;
 }
 
-const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = [], latitude, longitude }) => {
+const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = [], pipe, latitude, longitude }) => {
     const navigate = useNavigate();
     const { user, token } = useAuth();
     const actualMerchantCode = user?.retailerId || user?.distributorId || user?.adminId || "";
@@ -42,7 +44,8 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = 
                     mobileNumber: "9999999999", // Could be dynamic from profile
                     pidData: capturedData,
                     latitude: latitude || "28.7041",
-                    longitude: longitude || "77.1025"
+                    longitude: longitude || "77.1025",
+                    pipe
                 })
             });
             
@@ -50,10 +53,10 @@ const DailyAuthModal: React.FC<DailyAuthModalProps> = ({ onClose, activePipes = 
             
             if (result.success && result.data?.response_code === 1) {
                 toast.error("Daily 2FA Authentication Successful! You can now perform transactions.");
-                onClose();
+                onClose(result.pipe);
             } else if (result.data?.response_code === 1 && result.data?.errorcode === 2) {
                 toast.error("Authentication Already Completed for today.");
-                onClose();
+                onClose(result.pipe);
             } else {
                 const errorMsg = result.data?.message || result.message;
                 if (errorMsg.includes('Registration Successful')) {

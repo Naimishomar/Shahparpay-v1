@@ -13,6 +13,7 @@ import { getTwoFactorEndpoints, classifyTwoFactorResponse } from '../utils/aepsT
 import Retailer from '../models/users/retailer.model.js';
 import Distributor from '../models/users/distributor.model.js';
 import Transaction from '../models/transaction.model.js';
+import MainWallet from '../models/mainWallet.model.js';
 import {
   applyAepsWithdrawalSuccess,
   applyAepsDepositSuccess,
@@ -1380,22 +1381,31 @@ export const verifyMerchantOtp = async (req, res) => {
 
 // Charges ₹1 (configurable via DAILY_AUTH_CHARGE_AMOUNT env) from the merchant's
 // MAIN wallet once per day after a successful daily 2FA auth. Set amount to 0 to disable.
+const DAILY_AUTH_CHARGE = Number(process.env.DAILY_AUTH_CHARGE_AMOUNT || 1);
+
+// Once per IST day, regardless of pipe re-auth. The server runs in UTC, so a
+// plain setHours(0) would start the day at 5:30 AM IST.
+const alreadyChargedToday = (retailer) => {
+  const istMidnight = new Date(
+    `${new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })}T00:00:00+05:30`
+  );
+  return Transaction.exists({
+    userId: retailer._id,
+    type: 'DAILY_AUTH_CHARGE',
+    createdAt: { $gte: istMidnight },
+  });
+};
+
 const deductDailyAuthCharge = async (merchantcode, pipe) => {
-  const amount = Number(process.env.DAILY_AUTH_CHARGE_AMOUNT || 1);
+  const amount = DAILY_AUTH_CHARGE;
   if (!amount || amount <= 0) return { status: 'DISABLED', amount: 0 };
 
   const retailer = await Retailer.findOne({ retailerId: merchantcode });
   if (!retailer) return { status: 'SKIPPED', amount, message: 'Retailer not found' };
 
-  // Idempotency: only charge once per day (regardless of pipe re-auth)
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const alreadyCharged = await Transaction.findOne({
-    userId: retailer._id,
-    type: 'DAILY_AUTH_CHARGE',
-    createdAt: { $gte: todayStart },
-  });
-  if (alreadyCharged) return { status: 'SKIPPED', amount, message: 'Already charged today' };
+  if (await alreadyChargedToday(retailer)) {
+    return { status: 'SKIPPED', amount, message: 'Already charged today' };
+  }
 
   const { updateWalletAtomically } = await import('../utils/wallet.util.js');
   const chargeTxnId = `AUTHCHG${Date.now()}${Math.floor(Math.random() * 1000)}`;
@@ -1501,6 +1511,20 @@ export const dailyAuth = async (req, res) => {
     }
 
     const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
+
+    // Checked before PaySprint is called: once the provider accepts the login
+    // the retailer can transact, so a charge that fails afterwards is lost.
+    const payer = DAILY_AUTH_CHARGE > 0 && (await Retailer.findOne({ retailerId: merchantcode }));
+    if (payer && !(await alreadyChargedToday(payer))) {
+      const wallet = await MainWallet.findOne({ userId: payer._id }).select('balance');
+      if ((wallet?.balance || 0) < DAILY_AUTH_CHARGE) {
+        return res.status(400).json({
+          success: false,
+          insufficientBalance: true,
+          message: `Insufficient wallet balance. Daily 2FA login costs ₹${DAILY_AUTH_CHARGE}. Please add money to your main wallet.`,
+        });
+      }
+    }
 
     let actualMobile = mobileNumber;
     if (!mobileNumber || mobileNumber === '9999999999') {
@@ -1702,8 +1726,6 @@ export const getMerchantStatus = async (req, res) => {
       });
     }
 
-    // Check if daily auth was done today for the specific pipe
-    const today = new Date();
     let isDailyAuthDoneToday = false;
 
     let activePipes = retailer.activeAepsPipes || [];
@@ -1714,20 +1736,14 @@ export const getMerchantStatus = async (req, res) => {
     }
 
     const pipeToCheck = req.query.pipe || (activePipes.length > 0 ? activePipes[0] : null);
-    let lastAuth = null;
+    // PaySprint's 2FA is per pipe, so a login on bank3 says nothing about
+    // bank2. Falling back to lastDailyAuthDate reported "done" for a pipe that
+    // was never logged into, and the transaction then failed with code 23.
+    const lastAuth = pipeToCheck ? retailer.dailyAuthDates?.get(pipeToCheck) : null;
 
-    if (pipeToCheck && retailer.dailyAuthDates && retailer.dailyAuthDates.get(pipeToCheck)) {
-      lastAuth = retailer.dailyAuthDates.get(pipeToCheck);
-    } else {
-      lastAuth = retailer.lastDailyAuthDate; // Fallback
-    }
-
-    if (lastAuth) {
-      isDailyAuthDoneToday =
-        lastAuth.getDate() === today.getDate() &&
-        lastAuth.getMonth() === today.getMonth() &&
-        lastAuth.getFullYear() === today.getFullYear();
-    }
+    // The provider's day rolls over at IST midnight; the server runs in UTC.
+    const istDay = (d) => new Date(d).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    if (lastAuth) isDailyAuthDoneToday = istDay(lastAuth) === istDay(Date.now());
 
     return res.status(200).json({
       success: true,

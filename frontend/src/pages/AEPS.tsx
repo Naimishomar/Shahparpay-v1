@@ -407,6 +407,13 @@ const AEPS = () => {
             const config = { headers: { Authorization: `Bearer ${token}` } };
 
             if (activeTab === 'balance_enquiry') {
+                // PaySprint rejects BE without today's 2FA too (response_code 23).
+                if (!merchantStatus.isDailyAuthDoneToday) {
+                    toast.error("Daily Biometric Authentication is required. Please complete it now.");
+                    setShowDailyAuthModal(true);
+                    setLoading(false);
+                    return;
+                }
                 res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/balance-enquiry`, apiPayload, config);
             } else if (activeTab === 'cash_withdrawal') {
                 // Intercept logic for DB tracker
@@ -1192,10 +1199,14 @@ const AEPS = () => {
             {showDailyAuthModal && (
                 <DailyAuthModal 
                     activePipes={merchantStatus.activePipes || []}
+                    pipe={selectedPipe}
                     latitude={location?.latitude?.toString()}
                     longitude={location?.longitude?.toString()}
-                    onClose={() => {
+                    onClose={(authedPipe) => {
                         setShowDailyAuthModal(false);
+                        // daily-auth falls through to the next pipe when one is
+                        // unusable; transact on the pipe that actually logged in.
+                        if (authedPipe) setSelectedPipe(authedPipe);
                         // Force refresh status
                         setMerchantCode(prev => prev + " ");
                         setTimeout(() => setMerchantCode(prev => prev.trim()), 100);
