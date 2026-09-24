@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import axios from 'axios';
+import Retailer from '../models/users/retailer.model.js';
 
 // PaySprint AEPS/eKYC docs: "For Android use the accessmode APP else SITE".
 // The mobile app tags every request with `X-Client: APP`; the web dashboard
@@ -137,6 +138,45 @@ export const isGeoFenceDecline = (data) => {
 // base location so geo-fencing compares against the real shop coordinates.
 // NOTE: PaySprint allows a max of 3 location updates per merchant per calendar
 // year, so this must only be called when actually needed (geo-fence decline).
+// PaySprint's own wording when the three-per-year cap is spent. It answers
+// response_code 0 / status false, so it is distinguishable from a transient
+// failure only by the message.
+export const isLocationLimitReached = (result) =>
+  String(result?.message || '').toLowerCase().includes('count reached the limit');
+
+const MAX_LOCATION_UPDATES_PER_YEAR = 3;
+
+/**
+ * Mirrors the provider's verdict onto the retailer.
+ *
+ * Without this the quota is invisible: three automatic recoveries spend it, the
+ * provider starts refusing, and every later decline still costs an API call
+ * that cannot possibly succeed.
+ */
+const recordLocationUpdate = async (merchantcode, { accepted, limitReached, lat, long }) => {
+  try {
+    const year = new Date().getFullYear();
+    const retailer = await Retailer.findOne({ retailerId: merchantcode }).select('aepsBaseLocation');
+    if (!retailer) return;
+
+    const stored = retailer.aepsBaseLocation || {};
+    const used = stored.countYear === year ? stored.countThisYear || 0 : 0;
+
+    retailer.aepsBaseLocation = {
+      lat: accepted ? Number(lat) : stored.lat ?? null,
+      long: accepted ? Number(long) : stored.long ?? null,
+      updatedAt: accepted ? new Date() : stored.updatedAt ?? null,
+      countYear: year,
+      // A refusal for "limit reached" is the provider telling us the true count,
+      // which may be higher than ours if updates happened before we counted.
+      countThisYear: limitReached ? MAX_LOCATION_UPDATES_PER_YEAR : accepted ? used + 1 : used,
+    };
+    await retailer.save();
+  } catch (error) {
+    console.error('[Merchant Location Update] could not record the attempt:', error.message);
+  }
+};
+
 export const updateMerchantLocation = async ({
   merchantcode,
   mobile,
@@ -173,7 +213,16 @@ export const updateMerchantLocation = async ({
 
     console.log('[Merchant Location Update] Response:', JSON.stringify(response.data, null, 2));
 
-    return response.data;
+    const result = response.data;
+    const accepted = Boolean(result && (result.status === true || String(result.response_code) === '1'));
+    await recordLocationUpdate(merchantcode, {
+      accepted,
+      limitReached: isLocationLimitReached(result),
+      lat,
+      long,
+    });
+
+    return result;
   } catch (error) {
     console.error('Merchant Location Update error:', error?.response?.data || error.message);
     return null;
@@ -191,6 +240,9 @@ export const postAepsTransactionWithGeoRecovery = async ({
   pipe,
   logLabel = 'AEPS Transaction',
   hideData = false,
+  // Only for read-only calls (balance enquiry, statement). Money-moving calls
+  // must not set it: giving up early does not stop the bank debiting.
+  timeout = 0,
 }) => {
   const attempt = async (retryPayload) => {
     const activePayload = retryPayload || payload;
@@ -205,11 +257,23 @@ export const postAepsTransactionWithGeoRecovery = async ({
     const loggedPayload = hideData ? { ...activePayload, data: 'HIDDEN_PID_DATA' } : activePayload;
     console.log(`[${logLabel} Request] Payload:`, JSON.stringify(loggedPayload, null, 2));
 
-    const response = await axios.post(
-      url,
-      { body: encryptedData },
-      { headers, validateStatus: () => true }
-    );
+    let response;
+    try {
+      response = await axios.post(
+        url,
+        { body: encryptedData },
+        { headers, validateStatus: () => true, timeout }
+      );
+    } catch (error) {
+      if (!timeout || !['ECONNABORTED', 'ETIMEDOUT'].includes(error.code)) throw error;
+      console.error(`[${logLabel}] PaySprint did not answer within ${timeout}ms`);
+      return {
+        status: false,
+        response_code: 0,
+        message: 'Bank server is not responding. Please try again after some time.',
+        http_status: 504,
+      };
+    }
 
     console.log(
       `[${logLabel} Response] HTTP ${response.status}`,
@@ -226,12 +290,39 @@ export const postAepsTransactionWithGeoRecovery = async ({
         http_status: response.status,
       };
     }
+    // Their gateway answers 502/503/504 with an Apache HTML page, not JSON.
+    if (typeof response.data === 'string') {
+      return {
+        status: false,
+        response_code: 0,
+        message:
+          response.status >= 502 && response.status <= 504
+            ? 'Bank server is not responding. Please try again after some time.'
+            : `PaySprint returned an unexpected response (HTTP ${response.status})`,
+        http_status: response.status,
+      };
+    }
     return response.data;
   };
 
   let data = await attempt();
 
   if (isGeoFenceDecline(data)) {
+    // Once the yearly cap is spent the update endpoint can only refuse, so the
+    // decline is returned as-is rather than spending a round trip to be told so
+    // again on every single transaction.
+    const year = new Date().getFullYear();
+    const retailer = await Retailer.findOne({ retailerId: merchantcode })
+      .select('aepsBaseLocation')
+      .catch(() => null);
+    const quota = retailer?.aepsBaseLocation;
+    if (quota?.countYear === year && (quota.countThisYear || 0) >= MAX_LOCATION_UPDATES_PER_YEAR) {
+      console.error(
+        `[${logLabel}] Geo-fencing decline, but ${merchantcode} has used all ${MAX_LOCATION_UPDATES_PER_YEAR} base-location updates for ${year}. PaySprint must reset it.`
+      );
+      return data;
+    }
+
     console.log(
       `[${logLabel}] Geo-fencing decline detected (errorcode 1061). Re-mapping merchant base location...`
     );

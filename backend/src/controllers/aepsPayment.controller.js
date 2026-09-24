@@ -155,6 +155,7 @@ export const balanceEnquiry = async (req, res) => {
       pipe: payload.pipe,
       logLabel: 'Balance Enquiry',
       hideData: true,
+      timeout: 60000,
     });
 
     if (responseData && responseData.status) {
