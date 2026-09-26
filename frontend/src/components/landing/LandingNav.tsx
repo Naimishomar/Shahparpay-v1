@@ -5,9 +5,7 @@ import {
     Banknote,
     Building,
     ChevronDown,
-    Code2,
     CreditCard,
-    ExternalLink,
     FileCode,
     FileText,
     Fingerprint,
@@ -19,7 +17,6 @@ import {
     Send,
     Shield,
     ShieldCheck,
-    Terminal,
     Zap,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -170,32 +167,7 @@ const MEGA_FEATURED_CARDS = [
     }
 ];
 
-const RESOURCE_MENU_ITEMS = [
-    {
-        title: 'Getting Started',
-        desc: 'Documents, KYC and going live',
-        icon: Code2,
-        link: '/about'
-    },
-    {
-        title: 'Commission Rates',
-        desc: 'What you earn on every service',
-        icon: Terminal,
-        link: '/commission'
-    },
-    {
-        title: 'Guides & Training',
-        desc: 'Step-by-step help for each service',
-        icon: FileCode,
-        link: '/contact'
-    },
-    {
-        title: 'Device Support',
-        desc: 'Supported fingerprint scanners and Micro ATMs',
-        icon: ExternalLink,
-        link: '/contact'
-    }
-];
+
 
 const Logo = ({ className = 'h-11' }: { className?: string }) => (
     <div className="flex items-center gap-2.5">
@@ -217,7 +189,7 @@ const Logo = ({ className = 'h-11' }: { className?: string }) => (
  */
 const LandingNav: React.FC = () => {
     const [menuOpen, setMenuOpen] = useState(false);
-    const [activeDropdown, setActiveDropdown] = useState<'products' | 'developers' | null>(null);
+    const [activeDropdown, setActiveDropdown] = useState<'products' | null>(null);
     const [scrolled, setScrolled] = useState(false);
     const { token } = useAuth();
 
@@ -326,49 +298,7 @@ const LandingNav: React.FC = () => {
                     )}
                 </div>
 
-                {/* DEVELOPERS DROPDOWN */}
-                <div
-                    className="relative"
-                    onMouseEnter={() => setActiveDropdown('developers')}
-                    onMouseLeave={() => setActiveDropdown(null)}
-                >
-                    <button className="text-slate-600 hover:text-black inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors">
-                        Help
-                        <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${activeDropdown === 'developers' ? 'rotate-180 text-[#008c46]' : ''}`} />
-                    </button>
 
-                    {activeDropdown === 'developers' && (
-                        <div className="absolute left-0 top-full pt-2 w-[520px] max-w-[calc(100vw-2rem)] -translate-x-16 z-50 mega-menu-content">
-                            <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-2xl space-y-3">
-                                <div className="text-[0.65rem] font-bold tracking-wider text-slate-400 uppercase border-b border-slate-100 pb-2">
-                                    HELP &amp; RESOURCES
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {RESOURCE_MENU_ITEMS.map((item) => (
-                                        <Link
-                                            key={item.title}
-                                            to={item.link}
-                                            onClick={() => setActiveDropdown(null)}
-                                            className="mega-menu-item-link group flex items-start gap-2.5 p-2 rounded-xl hover:bg-slate-50 transition-colors"
-                                        >
-                                            <div className="lp-icon-tile shrink-0 w-8 h-8 rounded-lg">
-                                                <item.icon className="mega-icon h-4 w-4" />
-                                            </div>
-                                            <div>
-                                                <div className="text-xs font-bold text-slate-900 group-hover:text-[#008c46] transition-colors">
-                                                    {item.title}
-                                                </div>
-                                                <p className="text-[0.7rem] text-slate-500 mt-0.5">
-                                                    {item.desc}
-                                                </p>
-                                            </div>
-                                        </Link>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
 
                 <Link to="/commission" className="text-slate-600 hover:text-black rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors">
                     Commission
