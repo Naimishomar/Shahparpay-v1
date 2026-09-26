@@ -28,7 +28,7 @@ const res = () => {
 
 assert.deepStrictEqual(
   Object.keys(CALLBACK_HANDLERS).sort(),
-  ['LEAD_GENERATION_CALLBACK', 'MERCHANT_ONBOARDING', 'MERCHANT_STATUS_ONBOARD'],
+  ['LEAD_GENERATION_CALLBACK', 'MATM', 'MATMBE', 'MERCHANT_ONBOARDING', 'MERCHANT_STATUS_ONBOARD'],
   'every PaySprint event we handle must stay routable from the single callback URL'
 );
 

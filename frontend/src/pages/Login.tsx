@@ -30,7 +30,20 @@ const Login: React.FC = () => {
     const [otp, setOtp] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(true);
+    const [acceptTerms, setAcceptTerms] = useState(false);
     const [isOtpStep, setIsOtpStep] = useState(false);
+
+    // Forgot Password State
+    const [isForgotMode, setIsForgotMode] = useState(false);
+    const [forgotStep, setForgotStep] = useState<1 | 2>(1);
+    const [forgotIdentifier, setForgotIdentifier] = useState('');
+    const [forgotEmail, setForgotEmail] = useState('');
+    const [forgotMaskedEmail, setForgotMaskedEmail] = useState('');
+    const [forgotOtp, setForgotOtp] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showNewPassword, setShowNewPassword] = useState(false);
+
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -43,6 +56,80 @@ const Login: React.FC = () => {
         }
         return () => clearTimeout(timer);
     }, [countdown]);
+
+    const handleSendResetOtp = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        setError('');
+        setMessage('');
+        setIsLoading(true);
+
+        try {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/forgot-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ identifier: forgotIdentifier.trim() })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                setForgotEmail(data.email);
+                setForgotMaskedEmail(data.maskedEmail);
+                setMessage(data.message);
+                setForgotStep(2);
+                setCountdown(60);
+            } else {
+                setError(data.message || 'Could not find registered user with these details.');
+            }
+        } catch {
+            setError('Connection error. Please check your network connection.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setMessage('');
+
+        if (newPassword.length < 6) {
+            setError('New password must be at least 6 characters long.');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            setError('Passwords do not match. Please verify.');
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/reset-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: forgotEmail,
+                    otp: forgotOtp.trim(),
+                    newPassword
+                })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                setMessage('Password reset successfully! Please sign in with your new password.');
+                setIsForgotMode(false);
+                setForgotStep(1);
+                setIdentifier(forgotIdentifier);
+                setPassword('');
+            } else {
+                setError(data.message || 'Password reset failed. Please check the OTP.');
+            }
+        } catch {
+            setError('Connection error. Please check your network connection.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleSubmit = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -291,10 +378,20 @@ const Login: React.FC = () => {
                     {/* Header Heading */}
                     <div className="space-y-2 text-left">
                         <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                            {isOtpStep ? 'Security Verification' : 'Sign in to Account'}
+                            {isForgotMode
+                                ? forgotStep === 1
+                                    ? 'Reset Password'
+                                    : 'Set New Password'
+                                : isOtpStep
+                                ? 'Security Verification'
+                                : 'Sign in to Account'}
                         </h2>
                         <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                            {isOtpStep
+                            {isForgotMode
+                                ? forgotStep === 1
+                                    ? 'Enter your registered User ID, Email, or Mobile to receive a password reset OTP.'
+                                    : `Enter the 6-digit OTP sent to ${forgotMaskedEmail || 'your registered email'} and enter your new password.`
+                                : isOtpStep
                                 ? 'Enter the 6-digit verification code sent to your registered contact.'
                                 : 'Enter your registered credentials to access your merchant dashboard.'}
                         </p>
@@ -314,8 +411,165 @@ const Login: React.FC = () => {
                         </div>
                     )}
 
-                    {/* STEP 1: CREDENTIALS FORM */}
-                    {!isOtpStep ? (
+                    {/* FORGOT PASSWORD FLOW vs NORMAL LOGIN FLOW */}
+                    {isForgotMode ? (
+                        forgotStep === 1 ? (
+                            /* FORGOT PASSWORD STEP 1: REQUEST OTP */
+                            <form onSubmit={handleSendResetOtp} className="space-y-5">
+                                <div className="space-y-2">
+                                    <label className="text-[0.7rem] font-extrabold text-slate-700 uppercase tracking-wider block">
+                                        User ID / Email / Phone Number
+                                    </label>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#008c46] transition-colors">
+                                            <User className="h-5 w-5" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={forgotIdentifier}
+                                            onChange={(e) => setForgotIdentifier(e.target.value)}
+                                            placeholder="Enter registered User ID, Email, or Phone"
+                                            className="w-full pl-12 pr-4 py-3.5 sm:py-4 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-sm sm:text-base font-semibold focus:border-[#008c46] focus:bg-white focus:ring-4 focus:ring-[#008c46]/10 outline-none transition-all placeholder:text-slate-400"
+                                            required
+                                            disabled={isLoading}
+                                        />
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={isLoading || !forgotIdentifier.trim()}
+                                    className="w-full py-4 px-6 bg-[#008c46] hover:bg-[#007038] text-white font-extrabold text-base rounded-full shadow-lg shadow-emerald-900/10 hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-3 cursor-pointer"
+                                >
+                                    {isLoading ? (
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <span>Send Reset OTP</span>
+                                    )}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsForgotMode(false);
+                                        setError('');
+                                        setMessage('');
+                                    }}
+                                    className="w-full text-center text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors pt-2 block"
+                                >
+                                    ← Return to Sign In
+                                </button>
+                            </form>
+                        ) : (
+                            /* FORGOT PASSWORD STEP 2: VERIFY OTP & RESET PASSWORD */
+                            <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-[0.7rem] font-extrabold text-slate-700 uppercase tracking-wider block">
+                                        Verification Code (OTP)
+                                    </label>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#008c46] transition-colors">
+                                            <KeyRound className="h-5 w-5" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={forgotOtp}
+                                            onChange={(e) => setForgotOtp(e.target.value)}
+                                            placeholder="••••••"
+                                            className="w-full pl-12 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-center tracking-[0.3em] font-mono text-xl font-bold focus:border-[#008c46] focus:bg-white focus:ring-4 focus:ring-[#008c46]/10 outline-none transition-all placeholder:text-slate-300"
+                                            required
+                                            maxLength={6}
+                                            disabled={isLoading}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[0.7rem] font-extrabold text-slate-700 uppercase tracking-wider block">
+                                        New Password
+                                    </label>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#008c46] transition-colors">
+                                            <Lock className="h-5 w-5" />
+                                        </div>
+                                        <input
+                                            type={showNewPassword ? 'text' : 'password'}
+                                            value={newPassword}
+                                            onChange={(e) => setNewPassword(e.target.value)}
+                                            placeholder="At least 6 characters"
+                                            className="w-full pl-12 pr-12 py-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-sm font-semibold focus:border-[#008c46] focus:bg-white focus:ring-4 focus:ring-[#008c46]/10 outline-none transition-all placeholder:text-slate-400"
+                                            required
+                                            minLength={6}
+                                            disabled={isLoading}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowNewPassword(!showNewPassword)}
+                                            className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-700 transition-colors"
+                                            tabIndex={-1}
+                                        >
+                                            {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[0.7rem] font-extrabold text-slate-700 uppercase tracking-wider block">
+                                        Confirm New Password
+                                    </label>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#008c46] transition-colors">
+                                            <Lock className="h-5 w-5" />
+                                        </div>
+                                        <input
+                                            type={showNewPassword ? 'text' : 'password'}
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            placeholder="Re-enter new password"
+                                            className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-sm font-semibold focus:border-[#008c46] focus:bg-white focus:ring-4 focus:ring-[#008c46]/10 outline-none transition-all placeholder:text-slate-400"
+                                            required
+                                            disabled={isLoading}
+                                        />
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={isLoading || forgotOtp.length < 6 || !newPassword || !confirmPassword}
+                                    className="w-full py-4 px-6 bg-[#008c46] hover:bg-[#007038] text-white font-extrabold text-base rounded-full shadow-lg shadow-emerald-900/10 hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-2 cursor-pointer mt-2"
+                                >
+                                    {isLoading ? (
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <span>Reset &amp; Update Password</span>
+                                    )}
+                                </button>
+
+                                <div className="flex items-center justify-between text-xs pt-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsForgotMode(false);
+                                            setForgotStep(1);
+                                            setError('');
+                                            setMessage('');
+                                        }}
+                                        className="text-slate-500 hover:text-slate-900 font-bold transition-colors"
+                                    >
+                                        ← Cancel &amp; Back to Login
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSendResetOtp()}
+                                        disabled={countdown > 0 || isLoading}
+                                        className="text-[#008c46] font-extrabold hover:underline disabled:text-slate-400 disabled:no-underline"
+                                    >
+                                        {countdown > 0 ? `Resend OTP in ${countdown}s` : 'Resend OTP'}
+                                    </button>
+                                </div>
+                            </form>
+                        )
+                    ) : !isOtpStep ? (
                         <form onSubmit={handleSubmit} className="space-y-5">
                             {/* Identifier Input */}
                             <div className="space-y-2">
@@ -340,9 +594,24 @@ const Login: React.FC = () => {
 
                             {/* Password Input */}
                             <div className="space-y-2">
-                                <label className="text-[0.7rem] font-extrabold text-slate-700 uppercase tracking-wider block">
-                                    Password
-                                </label>
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[0.7rem] font-extrabold text-slate-700 uppercase tracking-wider block">
+                                        Password
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsForgotMode(true);
+                                            setForgotStep(1);
+                                            setForgotIdentifier(identifier);
+                                            setError('');
+                                            setMessage('');
+                                        }}
+                                        className="text-xs font-bold text-[#008c46] hover:underline cursor-pointer"
+                                    >
+                                        Forgot password?
+                                    </button>
+                                </div>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#008c46] transition-colors">
                                         <Lock className="h-5 w-5" />
@@ -367,8 +636,8 @@ const Login: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Remember Me Row */}
-                            <div className="flex items-center justify-between pt-1">
+                            {/* Remember Me Row & Terms Acceptance */}
+                            <div className="space-y-3 pt-1">
                                 <label className="flex items-center gap-2.5 cursor-pointer select-none">
                                     <div
                                         onClick={() => setRememberMe(!rememberMe)}
@@ -382,12 +651,35 @@ const Login: React.FC = () => {
                                     </div>
                                     <span className="text-xs font-bold text-slate-600">Remember this device</span>
                                 </label>
+
+                                <label className="flex items-start gap-2.5 cursor-pointer select-none p-3 rounded-2xl bg-slate-50 border border-slate-200/90 hover:border-[#008c46]/40 transition-colors">
+                                    <div
+                                        onClick={() => setAcceptTerms(!acceptTerms)}
+                                        className={`w-4.5 h-4.5 mt-0.5 rounded-md border transition-all flex items-center justify-center shrink-0 ${
+                                            acceptTerms
+                                                ? 'bg-[#008c46] border-[#008c46] text-white'
+                                                : 'bg-white border-slate-300'
+                                        }`}
+                                    >
+                                        {acceptTerms && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                                    </div>
+                                    <span className="text-xs font-semibold text-slate-700 leading-relaxed">
+                                        I accept &amp; agree to Shahparpay's{' '}
+                                        <Link to="/terms" target="_blank" className="text-[#008c46] font-bold hover:underline">
+                                            Terms &amp; Conditions
+                                        </Link>{' '}
+                                        and{' '}
+                                        <Link to="/privacy-policy" target="_blank" className="text-[#008c46] font-bold hover:underline">
+                                            Privacy Policy
+                                        </Link>.
+                                    </span>
+                                </label>
                             </div>
 
                             {/* Submit Button */}
                             <button
                                 type="submit"
-                                disabled={isLoading || !identifier.trim() || !password}
+                                disabled={isLoading || !identifier.trim() || !password || !acceptTerms}
                                 className="w-full py-4 px-6 bg-[#18181b] hover:bg-black text-white font-extrabold text-base rounded-full shadow-lg shadow-slate-900/10 hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-3 cursor-pointer group mt-4"
                             >
                                 {isLoading ? (
@@ -477,9 +769,9 @@ const Login: React.FC = () => {
                 {/* Footer Notes */}
                 <div className="w-full text-center text-xs font-semibold text-slate-400">
                     <span>By signing in, you agree to Shahparpay's </span>
-                    <a href="#terms" className="hover:underline text-slate-500 font-bold">Terms of Service</a>
+                    <Link to="/terms" target="_blank" className="hover:underline text-[#008c46] font-bold">Terms of Service</Link>
                     <span> &amp; </span>
-                    <a href="#privacy" className="hover:underline text-slate-500 font-bold">Privacy Policy</a>
+                    <Link to="/privacy-policy" target="_blank" className="hover:underline text-[#008c46] font-bold">Privacy Policy</Link>
                 </div>
             </div>
         </div>

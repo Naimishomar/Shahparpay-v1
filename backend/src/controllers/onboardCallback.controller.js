@@ -2,7 +2,8 @@ import jwt from 'jsonwebtoken';
 import Retailer from '../models/users/retailer.model.js';
 import Transaction from '../models/transaction.model.js';
 import MainWallet from '../models/mainWallet.model.js';
-import { generatePaySprintToken } from '../utils/paysprint.util.js';
+import AepsWallet from '../models/aepsWallet.model.js';
+import { generatePaySprintToken, paySprintMatmThreeWay } from '../utils/paysprint.util.js';
 import { leadCallback } from './lead.controller.js';
 
 // PaySprint calls these endpoints server-to-server, so they cannot sit behind
@@ -213,6 +214,59 @@ export const getOnboardSdkParams = async (req, res) => {
   }
 };
 
+export const matmCallback = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const param = authoritativeParam(body) || body.param || {};
+    const event = String(body.event || '').toUpperCase();
+    const ref = param.ackno || param.txnrefrenceNo;
+    const txnStatus = Number(param.txnstatus); // 1 = success, 3 = failed
+    const amount = Number(param.amount || 0);
+
+    if (!ref) {
+      return ack(res, 400, 'Invalid MATM callback parameters');
+    }
+
+    const transaction = await Transaction.findOne({
+      $or: [
+        { transactionId: String(ref) },
+        { 'metadata.ackNo': String(ref) },
+        { 'metadata.fpTransactionId': String(ref) },
+      ],
+      type: 'MATM',
+    });
+
+    if (transaction) {
+      if (txnStatus === 1) {
+        if (transaction.status !== 'SUCCESS') {
+          transaction.status = 'SUCCESS';
+          await transaction.save();
+
+          if (event === 'MATM' && amount > 0) {
+            await AepsWallet.findOneAndUpdate(
+              { userId: transaction.userId },
+              { $inc: { balance: amount } },
+              { upsert: true, new: true }
+            );
+          }
+        }
+        await paySprintMatmThreeWay({ reference: transaction.transactionId, status: 'success' });
+      } else if (txnStatus === 3) {
+        if (transaction.status !== 'FAILED') {
+          transaction.status = 'FAILED';
+          await transaction.save();
+        }
+        await paySprintMatmThreeWay({ reference: transaction.transactionId, status: 'failed' });
+      }
+    }
+
+    return ack(res, 200, 'MATM callback processed');
+  } catch (error) {
+    console.error('[MATM Callback] Error:', error.message);
+    return ack(res, 500, 'Internal server error');
+  }
+};
+
 /**
  * PaySprint's partner panel accepts exactly one callback URL for the whole
  * account, so every event lands on this single endpoint. The handlers already
@@ -225,6 +279,8 @@ export const CALLBACK_HANDLERS = {
   MERCHANT_ONBOARDING: onboardTransactionCallback,
   MERCHANT_STATUS_ONBOARD: onboardStatusCallback,
   LEAD_GENERATION_CALLBACK: leadCallback,
+  MATM: matmCallback,
+  MATMBE: matmCallback,
 };
 
 export const paysprintCallback = async (req, res) => {
@@ -239,3 +295,4 @@ export const paysprintCallback = async (req, res) => {
   }
   return handler(req, res);
 };
+

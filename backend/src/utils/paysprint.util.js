@@ -824,3 +824,78 @@ export const checkLeadStatus = async (refid) => {
     return { success: false, message: 'System error while fetching Lead Status.' };
   }
 };
+
+/**
+ * PaySprint MATM Three-Way Recon API.
+ * Mandatory for settling MATM transactions into the partner wallet.
+ */
+export const paySprintMatmThreeWay = async ({ reference, status }) => {
+  try {
+    const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/service-api/api/v1';
+    const cleanBase = baseUrl.replace(/\/$/, '');
+    const url = cleanBase.includes('/service')
+      ? `${cleanBase}/matm/threeway/update`
+      : `${cleanBase}/service/matm/threeway/update`;
+
+    const token = generatePaySprintToken();
+    const headers = {
+      Token: token,
+      Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
+      'Content-Type': 'application/json',
+    };
+
+    const rawBody = JSON.stringify({ reference: String(reference), status: String(status) });
+    const encryptedBody = encryptPayload(rawBody);
+
+    console.log('[PaySprint MATM ThreeWay] Request reference:', reference, 'status:', status);
+    const response = await axios.post(
+      url,
+      { body: encryptedBody },
+      { headers, validateStatus: () => true, timeout: 15000 }
+    );
+
+    console.log('[PaySprint MATM ThreeWay] Response:', JSON.stringify(response.data));
+    return response.data;
+  } catch (error) {
+    console.error('[PaySprint MATM ThreeWay] Error:', error?.response?.data || error.message);
+    return null;
+  }
+};
+
+/**
+ * PaySprint MATM Withdraw Status Query API.
+ * Queries status of a MATM withdrawal when pending or timed out.
+ */
+export const paySprintMatmStatusQuery = async ({ reference }) => {
+  try {
+    const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/service-api/api/v1';
+    const cleanBase = baseUrl.replace(/\/$/, '');
+    const url = cleanBase.includes('/service')
+      ? `${cleanBase}/matm/matmquery/query`
+      : `${cleanBase}/service/matm/matmquery/query`;
+
+    const token = generatePaySprintToken();
+    const headers = {
+      Token: token,
+      Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
+      'Content-Type': 'application/json',
+    };
+
+    const rawBody = JSON.stringify({ reference: String(reference) });
+    const encryptedBody = encryptPayload(rawBody);
+
+    console.log('[PaySprint MATM StatusQuery] Request reference:', reference);
+    const response = await axios.post(
+      url,
+      { body: encryptedBody },
+      { headers, validateStatus: () => true, timeout: 15000 }
+    );
+
+    console.log('[PaySprint MATM StatusQuery] Response:', JSON.stringify(response.data));
+    return response.data;
+  } catch (error) {
+    console.error('[PaySprint MATM StatusQuery] Error:', error?.response?.data || error.message);
+    return null;
+  }
+};
+

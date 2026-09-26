@@ -174,22 +174,26 @@ const RESOURCE_MENU_ITEMS = [
     {
         title: 'Getting Started',
         desc: 'Documents, KYC and going live',
-        icon: Code2
+        icon: Code2,
+        link: '/about'
     },
     {
         title: 'Commission Rates',
         desc: 'What you earn on every service',
-        icon: Terminal
+        icon: Terminal,
+        link: '/commission'
     },
     {
         title: 'Guides & Training',
         desc: 'Step-by-step help for each service',
-        icon: FileCode
+        icon: FileCode,
+        link: '/contact'
     },
     {
         title: 'Device Support',
         desc: 'Supported fingerprint scanners and Micro ATMs',
-        icon: ExternalLink
+        icon: ExternalLink,
+        link: '/contact'
     }
 ];
 
@@ -341,9 +345,9 @@ const LandingNav: React.FC = () => {
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
                                     {RESOURCE_MENU_ITEMS.map((item) => (
-                                        <a
+                                        <Link
                                             key={item.title}
-                                            href="#contact"
+                                            to={item.link}
                                             onClick={() => setActiveDropdown(null)}
                                             className="mega-menu-item-link group flex items-start gap-2.5 p-2 rounded-xl hover:bg-slate-50 transition-colors"
                                         >
@@ -358,7 +362,7 @@ const LandingNav: React.FC = () => {
                                                     {item.desc}
                                                 </p>
                                             </div>
-                                        </a>
+                                        </Link>
                                     ))}
                                 </div>
                             </div>
@@ -371,6 +375,9 @@ const LandingNav: React.FC = () => {
                 </Link>
                 <Link to="/contact" className="text-slate-600 hover:text-black rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors">
                     Contact Us
+                </Link>
+                <Link to="/about" className="text-slate-600 hover:text-black rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors">
+                    About Us
                 </Link>
             </div>
 
@@ -410,9 +417,12 @@ const LandingNav: React.FC = () => {
                     <Link to="/commission" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
                         Commission Rates
                     </Link>
-                    <a href="#contact" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
-                        Address &amp; Details
-                    </a>
+                    <Link to="/about" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
+                        About Us
+                    </Link>
+                    <Link to="/contact" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
+                        Contact &amp; Details
+                    </Link>
                 </div>
                 <div className="pt-2 flex flex-col gap-2.5">
                     <Link

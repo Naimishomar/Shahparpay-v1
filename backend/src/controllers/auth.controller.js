@@ -1228,3 +1228,88 @@ export const changePassword = async (req, res) => {
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { identifier } = req.body;
+    if (!identifier) {
+      return res.status(400).json({ success: false, message: 'Please provide your User ID, Email, or Contact Number.' });
+    }
+
+    const trimmed = identifier.trim();
+    let user = await Retailer.findOne({
+      $or: [{ email: trimmed.toLowerCase() }, { contactNumber: trimmed }, { retailerId: trimmed }]
+    });
+
+    if (!user) {
+      user = await Distributor.findOne({
+        $or: [{ email: trimmed.toLowerCase() }, { contactNumber: trimmed }, { distributorId: trimmed }]
+      });
+    }
+
+    if (!user) {
+      user = await Admin.findOne({
+        $or: [{ email: trimmed.toLowerCase() }, { contactNumber: trimmed }, { username: trimmed }]
+      });
+    }
+
+    if (!user || !user.email) {
+      return res.status(404).json({ success: false, message: 'No registered account found with these details.' });
+    }
+
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    await Otp.findOneAndUpdate(
+      { email: user.email },
+      { otp: otpCode, createdAt: Date.now() },
+      { upsert: true, returnDocument: 'after' }
+    );
+
+    await sendEmailOTP(user.email, user.name || user.ownerName || 'Merchant', otpCode);
+
+    const parts = user.email.split('@');
+    const maskedEmail = parts[0].substring(0, 2) + '***' + (parts[0].length > 4 ? parts[0].slice(-1) : '') + '@' + parts[1];
+
+    return res.status(200).json({
+      success: true,
+      message: `Password reset OTP has been sent to your registered email (${maskedEmail}).`,
+      email: user.email,
+      maskedEmail
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Email, OTP, and new password are required.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters long.' });
+    }
+
+    if (!(await Otp.consume(email, otp))) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP code.' });
+    }
+
+    let user = await Retailer.findOne({ email });
+    if (!user) user = await Distributor.findOne({ email });
+    if (!user) user = await Admin.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Account not found.' });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    return res.status(200).json({ success: true, message: 'Password has been reset successfully! You can now log in.' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error.' });
+  }
+};

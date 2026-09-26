@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { CheckCircle2, Globe, Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
 import whiteLogo from '../../assets/shahparpay-white-logo.png';
 
@@ -105,12 +106,20 @@ const LandingFooter: React.FC = () => {
                 </div>
 
                 {/* Copyright & Legal Links */}
-                <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-6 text-slate-400 text-xs font-semibold">
-                    <a href="#top" className="hover:text-white transition-colors">Term</a>
+                <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-4 text-slate-400 text-xs font-semibold">
+                    <Link to="/about" className="hover:text-white transition-colors">About Us</Link>
+                    <span>•</span>
+                    <Link to="/terms" className="hover:text-white transition-colors">General Terms</Link>
+                    <span>•</span>
+                    <Link to="/retailer-terms" className="hover:text-white transition-colors">Retailer Terms</Link>
+                    <span>•</span>
+                    <Link to="/aeps-terms" className="hover:text-white transition-colors">AEPS Terms</Link>
+                    <span>•</span>
+                    <Link to="/aeps-permission" className="hover:text-white transition-colors">AEPS Declaration</Link>
+                    <span>•</span>
+                    <Link to="/refund-policy" className="hover:text-white transition-colors">Refund Policy</Link>
                     <span>•</span>
                     <span>© {new Date().getFullYear()} Shahparpay Solutions Private Limited</span>
-                    <span>•</span>
-                    <a href="#top" className="hover:text-white transition-colors">Privacy</a>
                 </div>
             </div>
         </div>

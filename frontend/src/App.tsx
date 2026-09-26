@@ -36,13 +36,30 @@ import DistributorPortal from "./pages/DistributorPortal"
 import KycStatus from "./pages/KycStatus"
 import Contact from "./pages/Contact"
 import Commission from "./pages/Commission"
+import About from "./pages/About"
+import Terms from "./pages/Terms"
+import AepsPermission from "./pages/AepsPermission"
+import AepsTerms from "./pages/AepsTerms"
+import RefundPolicy from "./pages/RefundPolicy"
+import RetailerTerms from "./pages/RetailerTerms"
 import Profile from "./pages/Profile"
 import MATM from "./pages/MATM"
 import Support from "./pages/Support"
 
+import { useEffect } from 'react'
 import { Toaster } from 'sonner'
 import { useAuth } from './context/AuthContext'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation, Outlet } from 'react-router-dom'
+
+function ScrollToTopWrapper() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [pathname])
+
+  return <Outlet />
+}
 
 function LandingRoute() {
   const { token } = useAuth()
@@ -59,12 +76,20 @@ function LoginRoute() {
 function App() {
   const router = createBrowserRouter(
     createRoutesFromElements(
-      <>
+      <Route element={<ScrollToTopWrapper />}>
       <Route path="/" element={<LandingRoute />} />
       <Route path="/login" element={<LoginRoute />} />
       <Route path="/kyc-status" element={<KycStatus />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/commission" element={<Commission />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/terms-and-conditions" element={<Terms />} />
+      <Route path="/retailer-terms" element={<RetailerTerms />} />
+      <Route path="/aeps-terms" element={<AepsTerms />} />
+      <Route path="/aeps-permission" element={<AepsPermission />} />
+      <Route path="/refund-policy" element={<RefundPolicy />} />
+      <Route path="/privacy-policy" element={<Terms defaultTab="grievance" />} />
       <Route element={<Layout/>}>
         {/* Retailer Dashboard */}
         <Route path="/dashboard" element={<Dashboard/>}/>
@@ -111,7 +136,7 @@ function App() {
         <Route path="/profile" element={<Profile/>}/>
         <Route path="/support" element={<Support/>}/>
       </Route>
-      </>
+      </Route>
     )
   )
   return (

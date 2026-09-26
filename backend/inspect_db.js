@@ -8,7 +8,7 @@ import Distributor from './src/models/users/distributor.model.js';
 
 async function run() {
     await mongoose.connect(process.env.MONGO_URI);
-    const retailer = await Retailer.find({ email: 'sameype@gmail.com' });
+    const retailer = await Retailer.find({ email: 'shahanw9@gmail.com' });
     if(!retailer){
         console.log("User not found");
         return; 
@@ -18,7 +18,7 @@ async function run() {
         console.log("Main wallet not found");
         return;
     }
-    Mainwallet.balance = 2000;
+    Mainwallet.balance = 500;
     await Mainwallet.save();
     console.log("Main wallet updated", Mainwallet);
     console.log("New balance", Mainwallet.balance);

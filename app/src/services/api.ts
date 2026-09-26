@@ -881,13 +881,17 @@ class ApiService {
   }
 
   // ---------------------------------------------------------------- MATM
-  /** Initialises the provider's terminal session; must run before a request. */
+  /** Initialises PaySprint MATM session and parameters for mobile SDK/Intent initiation. */
   async getMatmConfig() {
     return this.post(API_ENDPOINTS.matm.config);
   }
 
   async processMatm(data: { mobile: string; data: Record<string, any> }) {
     return this.post(API_ENDPOINTS.matm.request, data);
+  }
+
+  async checkMatmStatus(transactionId: string) {
+    return this.post(API_ENDPOINTS.matm.status, { transactionId });
   }
 
   async getMatmHistory() {

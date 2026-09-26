@@ -356,6 +356,7 @@ export const API_ENDPOINTS = {
   matm: {
     config: '/api/matm/config',
     request: '/api/matm/request',
+    status: '/api/matm/status',
     history: '/api/matm/history',
   },
   notifications: {

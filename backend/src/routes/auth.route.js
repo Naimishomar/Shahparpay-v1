@@ -16,6 +16,8 @@ import {
   updateKycStatus,
   updateProfile,
   changePassword,
+  forgotPassword,
+  resetPassword,
 } from '../controllers/auth.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 import { upload } from '../middlewares/multer.middleware.js';
@@ -24,6 +26,8 @@ const router = Router();
 
 router.post('/login', loginUser);
 router.post('/verify-login-otp', verifyLoginOtp);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 router.post('/send-verification-otp', sendVerificationOtp);
 router.post('/send-password-otp', authMiddlewares, sendPasswordOtp);
 router.post('/verify-email-otp', verifyEmailOtp);
