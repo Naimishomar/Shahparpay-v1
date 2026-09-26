@@ -35,6 +35,7 @@ import { ServicesScreen } from '@/screens/ServicesScreen';
 import { SupportScreen } from '@/screens/SupportScreen';
 import { NotificationsScreen } from '@/screens/NotificationsScreen';
 import { ReportsScreen } from '@/screens/ReportsScreen';
+import { AppSplashScreen } from '@/screens/AppSplashScreen';
 import {
   AepsReport,
   DmtReport,
@@ -160,9 +161,14 @@ const buildNavigator = (screens: [string, React.ComponentType<any>][], backgroun
 );
 
 export const AppNavigator: React.FC = () => {
+  const [showSplash, setShowSplash] = React.useState(true);
   const { user, token, isInitializing } = useAuth();
   const { resolvedTheme } = useTheme();
   const palette = palettes[resolvedTheme];
+
+  if (showSplash) {
+    return <AppSplashScreen onFinish={() => setShowSplash(false)} />;
+  }
 
   const navTheme = {
     ...(resolvedTheme === 'dark' ? DarkTheme : DefaultTheme),

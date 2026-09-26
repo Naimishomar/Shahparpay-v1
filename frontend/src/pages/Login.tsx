@@ -30,7 +30,7 @@ const Login: React.FC = () => {
     const [otp, setOtp] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(true);
-    const [acceptTerms, setAcceptTerms] = useState(false);
+    const [acceptTerms, setAcceptTerms] = useState(true);
     const [isOtpStep, setIsOtpStep] = useState(false);
 
     // Forgot Password State
