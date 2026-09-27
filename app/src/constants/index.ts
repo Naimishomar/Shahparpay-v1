@@ -167,8 +167,6 @@ export const SERVICE_ITEMS: MenuEntry[] = [
   { name: 'Lead Generation', route: 'LeadGeneration', icon: 'account-plus-outline', hint: 'Loans & cards', group: 'Government' },
 
   { name: 'KYC Status', route: 'KycStatus', icon: 'shield-check-outline', hint: 'Verification', group: 'Account' },
-  { name: 'Pipe Status', route: 'PipeStatus', icon: 'pipe', hint: 'Bank connectivity', group: 'Account' },
-  { name: 'Biometric', route: 'BiometricSupport', icon: 'fingerprint-off', hint: 'Device help', group: 'Account' },
   { name: 'Support Center', route: 'Support', icon: 'headset', hint: 'Raise an issue', group: 'Account' },
 ];
 

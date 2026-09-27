@@ -45,8 +45,6 @@ const retailerProjects = [
   },
   { name: "Add Money", url: "/add-money", icon: QrCode },
   { name: "Fund Request", url: "/fund-request", icon: Send },
-  { name: "AEPS Pipe Status", url: "/aeps/pipes", icon: ScanFace },
-  { name: "Biometric Support", url: "/biometric-support", icon: ScanFace },
   { name: "Support Center", url: "/support", icon: Headset },
 ]
 

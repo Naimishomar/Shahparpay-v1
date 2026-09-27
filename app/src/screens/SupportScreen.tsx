@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, Image, ScrollView } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, radius, space, type as t } from '../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -43,6 +44,7 @@ const RECIPIENTS = [
  * behind it — a reply refreshes both without a navigation round trip.
  */
 export const SupportScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const { user } = useAuth();
   const isRetailer = user?.role === 'retailer' || (!!user && !user.role);
   const canSetStatus = user?.role === 'distributor' || user?.role === 'admin';
@@ -121,6 +123,16 @@ export const SupportScreen: React.FC = () => {
             Raise an issue with a screenshot and track every reply here. Include the transaction
             reference whenever the problem is about one.
           </Text>
+          {isRetailer && (
+            <>
+              <Button onPress={() => navigation.navigate('PipeStatus')} variant="outline" icon="pipe" fullWidth>
+                AEPS pipe status
+              </Button>
+              <Button onPress={() => navigation.navigate('BiometricSupport')} variant="outline" icon="fingerprint-off" fullWidth>
+                Biometric support
+              </Button>
+            </>
+          )}
           <Button onPress={() => setComposing(true)} icon="message-plus-outline" fullWidth>
             New request
           </Button>
