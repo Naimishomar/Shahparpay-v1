@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
-import { XCircle, Clock, Smartphone, Tv, Search } from "lucide-react";
+import { XCircle, Clock, Smartphone, Tv, Search, Lock, Loader2, Zap, ListFilter, Radio, MapPin, Hash, ReceiptText } from "lucide-react";
 import axios from "axios";
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
 import { toast } from 'sonner';
+
+// Same black (light) / silver (dark) language as the dashboard.
+const ACTIVE_BUTTON = 'bg-zinc-900 text-white shadow-md shadow-black/20 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:shadow-white/10';
+const SILVER_TILE = 'bg-gradient-to-br from-zinc-100 to-zinc-300 text-zinc-700 ring-1 ring-zinc-400/40 dark:from-zinc-600 dark:to-zinc-800 dark:text-zinc-100 dark:ring-zinc-400/30';
+const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500';
 
 const Recharge = () => {
     // UI State
@@ -241,327 +246,307 @@ const Recharge = () => {
         }
     };
 
+    const statusPill = (status?: string) =>
+        status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20'
+            : status === 'PENDING' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-amber-500/20'
+                : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 ring-rose-500/20';
+
+    const amountAndPin = (type: 'prepaid' | 'dth') => {
+        const amount = type === 'prepaid' ? prepaidAmount : dthAmount;
+        const setAmount = type === 'prepaid' ? setPrepaidAmount : setDthAmount;
+        const pin = type === 'prepaid' ? prepaidPin : dthPin;
+        const setPin = type === 'prepaid' ? setPrepaidPin : setDthPin;
+        return (
+            <section className="rounded-2xl border bg-card p-6 shadow-sm">
+                <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Payment</h3>
+                <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium text-foreground">Amount</label>
+                        <div className="relative">
+                            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 font-semibold text-muted-foreground">₹</span>
+                            <input
+                                type="number"
+                                min="10"
+                                step="1"
+                                inputMode="numeric"
+                                value={amount}
+                                onChange={e => setAmount(e.target.value)}
+                                onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                placeholder="0"
+                                className={`${INPUT} pl-8 text-lg font-semibold tabular-nums`}
+                            />
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium text-foreground">Transaction PIN</label>
+                        <div className="relative">
+                            <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <input
+                                type="password"
+                                inputMode="numeric"
+                                maxLength={4}
+                                value={pin}
+                                onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                placeholder="••••"
+                                className={`${INPUT} pl-10 text-lg tracking-[0.5em]`}
+                            />
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => handleRechargeSubmit(type)}
+                        disabled={loading}
+                        className={`flex items-center justify-center gap-2 rounded-xl px-8 py-3 font-bold disabled:opacity-50 disabled:shadow-none ${ACTIVE_BUTTON}`}
+                    >
+                        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Zap className="h-5 w-5" />}
+                        Recharge{Number(amount) > 0 ? ` ₹${amount}` : ''}
+                    </button>
+                </div>
+            </section>
+        );
+    };
+
     return (
-        <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto p-2 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            {/* Top Header Section */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <div className="flex flex-col gap-1">
-                        <h1 className="text-2xl font-bold text-glow flex items-center gap-2">
-                            <Smartphone className="text-primary" size={28} />
-                            Recharge Transaction
-                        </h1>
-                        <p className="text-sm text-muted-foreground hidden md:block">
-                            Instant Prepaid Mobile and DTH recharges.
-                        </p>
+        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Hero */}
+            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
+                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 h-80 w-80 rounded-full bg-slate-200/70 dark:bg-slate-400/10 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-20 [background-image:radial-gradient(currentColor_1px,transparent_1px)] [background-size:22px_22px] text-black/10 dark:text-white/10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+                <div className="relative flex flex-col gap-6">
+                    <div className="flex items-center gap-4">
+                        <div className={`rounded-2xl p-3 ${SILVER_TILE}`}>
+                            <Smartphone className="h-7 w-7" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Recharge</h1>
+                            <p className="text-sm text-muted-foreground">Instant prepaid mobile and DTH recharges.</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-1 overflow-x-auto no-scrollbar rounded-2xl border bg-background/60 backdrop-blur p-1.5 w-full md:w-max">
+                        {([
+                            ['prepaid', 'Prepaid', Smartphone],
+                            ['dth', 'DTH', Tv],
+                            ['history', 'History', Clock],
+                        ] as const).map(([key, label, Icon]) => (
+                            <button
+                                key={key}
+                                onClick={() => setActiveTab(key)}
+                                className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-5 py-2 text-sm font-medium transition-all ${activeTab === key ? ACTIVE_BUTTON : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
+                            >
+                                <Icon className="h-4 w-4" />
+                                {label}
+                            </button>
+                        ))}
                     </div>
                 </div>
-            </div>
+            </section>
 
-            {/* Main Container */}
-            <div className="flex flex-col glass-card rounded-2xl relative overflow-hidden group border border-border">
-                {/* Background Glow */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-50 pointer-events-none"></div>
+            {/* PREPAID TAB */}
+            {activeTab === 'prepaid' && (
+                <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+                    <section className="rounded-2xl border bg-card p-6 shadow-sm">
+                        <h3 className="mb-4 text-lg font-semibold">Mobile Prepaid Recharge</h3>
+                        <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-sm font-medium text-foreground">Mobile Number</label>
+                                <div className="relative">
+                                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">+91</span>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        maxLength={10}
+                                        placeholder="10-digit mobile number"
+                                        value={mobileNumber}
+                                        onChange={e => {
+                                            const val = e.target.value.replace(/\D/g, '');
+                                            if (val.length > 10) {
+                                                toast.error("Mobile number cannot exceed 10 digits");
+                                                return;
+                                            }
+                                            setMobileNumber(val);
+                                            setResolvedOperator("");
+                                            setResolvedCircle("");
+                                        }}
+                                        className={`${INPUT} pl-12 text-lg font-semibold tracking-wider tabular-nums`}
+                                    />
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleBrowsePlan}
+                                disabled={loading || !/^[6-9]\d{9}$/.test(mobileNumber)}
+                                className="flex items-center justify-center gap-2 rounded-xl border bg-background px-6 py-3 font-semibold hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50"
+                            >
+                                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ListFilter className="h-4 w-4" />}
+                                Browse Plans
+                            </button>
+                        </div>
 
-                {/* Tabs Header */}
-                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center p-6 pb-0 border-b border-border/50 gap-4">
-                    <h2 className="text-xl font-bold text-foreground mb-4 md:mb-0">All Recharge</h2>
-                    
-                    <div className="flex items-center gap-2 md:gap-6 border-b border-transparent w-full md:w-auto overflow-x-auto">
-                        <button 
-                            onClick={() => setActiveTab('prepaid')}
-                            className={`pb-4 px-2 font-semibold transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'prepaid' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                        >
-                            <Smartphone size={18} />
-                            Prepaid
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('dth')}
-                            className={`pb-4 px-2 font-semibold transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'dth' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                        >
-                            <Tv size={18} />
-                            DTH
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('history')}
-                            className={`pb-4 px-2 font-semibold transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'history' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                        >
-                            <Clock size={18} />
-                            History
-                        </button>
+                        {resolvedOperator && resolvedCircle && (
+                            <div className="mt-4 grid grid-cols-2 gap-3">
+                                {([
+                                    ['Detected operator', resolvedOperator, Radio],
+                                    ['Customer circle', resolvedCircle, MapPin],
+                                ] as const).map(([label, value, Icon]) => (
+                                    <div key={label} className="flex items-center gap-3 rounded-xl border bg-background/50 p-3">
+                                        <div className={`rounded-lg p-2 ${SILVER_TILE}`}><Icon className="h-4 w-4" /></div>
+                                        <div className="min-w-0">
+                                            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</p>
+                                            <p className="truncate text-sm font-semibold">{value}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+                    {amountAndPin('prepaid')}
+                </div>
+            )}
+
+            {/* DTH TAB */}
+            {activeTab === 'dth' && (
+                <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+                    <section className="rounded-2xl border bg-card p-6 shadow-sm">
+                        <h3 className="mb-4 text-lg font-semibold">DTH Recharge</h3>
+                        <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-sm font-medium text-foreground">DTH Number</label>
+                                <div className="relative">
+                                    <Hash className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    <input
+                                        type="text"
+                                        inputMode="text"
+                                        maxLength={20}
+                                        placeholder="Enter DTH Number"
+                                        value={dthNumber}
+                                        onChange={e => setDthNumber(e.target.value)}
+                                        className={`${INPUT} pl-10 font-semibold tracking-wider`}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-sm font-medium text-foreground">DTH Operator</label>
+                                <div className="relative">
+                                    <Tv className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    <select
+                                        value={dthOperator}
+                                        onChange={e => setDthOperator(e.target.value)}
+                                        className={`${INPUT} pl-10`}
+                                    >
+                                        <option value="">Select DTH Operator</option>
+                                        {dthOperators.map((op: any) => (
+                                            <option key={op.id} value={op.id}>{op.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleFetchDthInfo}
+                                disabled={loading}
+                                className="flex items-center justify-center gap-2 rounded-xl border bg-background px-6 py-3 font-semibold hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50"
+                            >
+                                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                Fetch Details
+                            </button>
+                        </div>
+
+                        {dthInfo && (
+                            <div className="mt-5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                                {[
+                                    ['Name', dthInfo.customerName || '-'],
+                                    ['Balance', `₹ ${dthInfo.Balance || 0}`],
+                                    ['Plan', dthInfo.planName || '-'],
+                                    ['Next Recharge', dthInfo.NextRechargeDate || '-'],
+                                    ['Status', dthInfo.status || 'Active'],
+                                    ['Monthly', `₹ ${dthInfo.MonthlyRecharge || 0}`],
+                                ].map(([label, value]) => (
+                                    <div key={label} className="rounded-xl border bg-background/50 p-3">
+                                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</p>
+                                        <p className={`truncate text-sm font-semibold ${label === 'Status' ? 'text-emerald-600 dark:text-emerald-400' : ''}`}>{value}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+                    {amountAndPin('dth')}
+                </div>
+            )}
+
+            {/* HISTORY TAB */}
+            {activeTab === 'history' && (
+                <section className="rounded-2xl border bg-card p-6 shadow-sm animate-in fade-in duration-300">
+                    <h3 className="mb-4 text-lg font-semibold">Recharge History</h3>
+                    <div className="w-full overflow-x-auto rounded-xl border">
+                        <table className="w-full text-sm text-left">
+                            <thead className="text-[11px] uppercase tracking-wider text-muted-foreground bg-black/[0.03] dark:bg-white/[0.04]">
+                                <tr>
+                                    <th className="px-4 py-3 font-semibold">No.</th>
+                                    <th className="px-4 py-3 font-semibold">Date Time</th>
+                                    <th className="px-4 py-3 font-semibold">Mobile</th>
+                                    <th className="px-4 py-3 font-semibold">Operator</th>
+                                    <th className="px-4 py-3 font-semibold">Reference Id</th>
+                                    <th className="px-4 py-3 font-semibold">Amount</th>
+                                    <th className="px-4 py-3 font-semibold">Discount</th>
+                                    <th className="px-4 py-3 font-semibold">Status</th>
+                                    <th className="px-4 py-3 font-semibold">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y">
+                                {history.length > 0 ? history.map((item: any, idx) => (
+                                    <tr key={item._id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors">
+                                        <td className="px-4 py-3 text-muted-foreground">{idx + 1}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap">{new Date(item.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}</td>
+                                        <td className="px-4 py-3 font-medium tabular-nums">{item.metadata?.number}</td>
+                                        <td className="px-4 py-3">{item.metadata?.operator}</td>
+                                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{item.transactionId}</td>
+                                        <td className="px-4 py-3 font-semibold tabular-nums">₹ {item.amount}</td>
+                                        <td className="px-4 py-3 text-muted-foreground">0</td>
+                                        <td className="px-4 py-3">
+                                            <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${statusPill(item.status)}`}>
+                                                {item.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <button
+                                                onClick={() => {
+                                                    setReceiptData({
+                                                        transactionId: item.transactionId,
+                                                        status: item.status,
+                                                        operatorRef: item.metadata?.operatorRef,
+                                                        date: item.createdAt,
+                                                        amount: item.amount,
+                                                        number: item.metadata?.number,
+                                                        operator: item.metadata?.operator,
+                                                        type: item.metadata?.rechargeType?.toLowerCase() === 'dth' ? 'dth' : 'prepaid'
+                                                    });
+                                                    setShowReceiptModal(true);
+                                                }}
+                                                className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-black/5 dark:hover:bg-white/5"
+                                            >
+                                                <ReceiptText className="h-3.5 w-3.5" />
+                                                Receipt
+                                            </button>
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan={9} className="px-4 py-10 text-center text-muted-foreground">
+                                            No recharge transaction found
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
-                </div>
-
-                <div className="relative z-10 p-6 flex flex-col gap-6">
-                    {/* PREPAID TAB */}
-                    {activeTab === 'prepaid' && (
-                        <div className="flex flex-col gap-6 animate-in fade-in duration-300">
-                            {/* Top Bar */}
-                            <div className="flex flex-col gap-4 bg-primary/5 p-5 border border-primary/20 rounded-lg border-l-4 border-l-primary">
-                                <h3 className="text-lg font-bold text-foreground border-b border-border/50 pb-2">Mobile Prepaid Recharge</h3>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full mt-2">
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-sm font-medium text-foreground">Mobile Number</label>
-                                        <input 
-                                            type="text" 
-                                            inputMode="numeric"
-                                            maxLength={10}
-                                            placeholder="Enter 10-digit mobile number"
-                                            value={mobileNumber}
-                                            onChange={e => {
-                                                const val = e.target.value.replace(/\D/g, '');
-                                                if (val.length > 10) {
-                                                    toast.error("Mobile number cannot exceed 10 digits");
-                                                    return;
-                                                }
-                                                setMobileNumber(val);
-                                                setResolvedOperator("");
-                                                setResolvedCircle("");
-                                            }}
-                                            className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
-                                        />
-                                    </div>
-                                    <div className="flex items-end">
-                                        <button 
-                                            onClick={handleBrowsePlan}
-                                            disabled={loading || !/^[6-9]\d{9}$/.test(mobileNumber)}
-                                            className="w-full px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-md shadow-sm transition-all disabled:opacity-50"
-                                        >
-                                            {loading ? "Loading..." : "Browse Plan"}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {resolvedOperator && resolvedCircle && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-background border border-border rounded-lg p-4 text-sm">
-                                    <div><span className="text-muted-foreground">Detected operator</span><p className="font-semibold text-foreground">{resolvedOperator}</p></div>
-                                    <div><span className="text-muted-foreground">Customer circle</span><p className="font-semibold text-foreground">{resolvedCircle}</p></div>
-                                </div>
-                            )}
-                            {/* Bottom Inputs */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end mt-2">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-sm font-medium text-foreground">Amount</label>
-                                    <input 
-                                        type="number" 
-                                        min="10"
-                                        step="1"
-                                        inputMode="numeric"
-                                        value={prepaidAmount}
-                                        onChange={e => setPrepaidAmount(e.target.value)}
-                                        className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-sm font-medium text-foreground">Transaction PIN</label>
-                                    <input 
-                                        type="password" 
-                                        inputMode="numeric"
-                                        maxLength={4}
-                                        value={prepaidPin}
-                                        onChange={e => setPrepaidPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                                        className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
-                                    />
-                                </div>
-                                <button 
-                                    onClick={() => handleRechargeSubmit('prepaid')}
-                                    disabled={loading}
-                                    className="w-full py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-md shadow-md hover:shadow-lg transition-all"
-                                >
-                                    Submit
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* DTH TAB */}
-                    {activeTab === 'dth' && (
-                        <div className="flex flex-col gap-6 animate-in fade-in duration-300">
-                            {/* Top Bar */}
-                            <div className="flex flex-col gap-4 bg-primary/5 p-5 border border-primary/20 rounded-lg border-l-4 border-l-primary">
-                                <h3 className="text-lg font-bold text-foreground border-b border-border/50 pb-2">DTH Recharge</h3>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full mt-2">
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-sm font-medium text-foreground">DTH Number</label>
-                                        <input 
-                                            type="text" 
-                                            inputMode="text"
-                                            maxLength={20}
-                                            placeholder="Enter DTH Number"
-                                            value={dthNumber}
-                                            onChange={e => setDthNumber(e.target.value)}
-                                            className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
-                                        />
-                                    </div>
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-sm font-medium text-foreground">DTH Operator</label>
-                                        <select 
-                                            value={dthOperator}
-                                            onChange={e => setDthOperator(e.target.value)}
-                                            className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
-                                        >
-                                            <option value="">Select DTH Operator</option>
-                                            {dthOperators.map((op: any) => (
-                                                <option key={op.id} value={op.id}>{op.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="flex items-end">
-                                        <button 
-                                            onClick={handleFetchDthInfo}
-                                            disabled={loading}
-                                            className="w-full px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-md shadow-sm transition-all"
-                                        >
-                                            {loading ? "Loading..." : "Browse DTH Plan"}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* DTH Info Table */}
-                            {dthInfo && (
-                                <div className="w-full overflow-x-auto border border-border rounded-lg bg-background">
-                                    <table className="w-full text-sm text-left">
-                                        <thead className="text-xs text-muted-foreground bg-muted/30 border-b border-border">
-                                            <tr>
-                                                <th className="px-4 py-3 font-semibold">Name</th>
-                                                <th className="px-4 py-3 font-semibold">Balance</th>
-                                                <th className="px-4 py-3 font-semibold">Plan</th>
-                                                <th className="px-4 py-3 font-semibold">Next Recharge Date</th>
-                                                <th className="px-4 py-3 font-semibold">Status</th>
-                                                <th className="px-4 py-3 font-semibold">Monthly Recharge</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr className="border-b border-border/50 hover:bg-muted/10 font-medium">
-                                                <td className="px-4 py-4">{dthInfo.customerName || '-'}</td>
-                                                <td className="px-4 py-4 text-primary">₹ {dthInfo.Balance || 0}</td>
-                                                <td className="px-4 py-4">{dthInfo.planName || '-'}</td>
-                                                <td className="px-4 py-4">{dthInfo.NextRechargeDate || '-'}</td>
-                                                <td className="px-4 py-4 text-emerald-500">{dthInfo.status || 'Active'}</td>
-                                                <td className="px-4 py-4">₹ {dthInfo.MonthlyRecharge || 0}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-
-                            {/* Bottom Inputs */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end mt-2">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-sm font-medium text-foreground">Amount</label>
-                                    <input 
-                                        type="number" 
-                                        min="10"
-                                        step="1"
-                                        inputMode="numeric"
-                                        value={dthAmount}
-                                        onChange={e => setDthAmount(e.target.value)}
-                                        className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-sm font-medium text-foreground">Transaction PIN</label>
-                                    <input 
-                                        type="password" 
-                                        inputMode="numeric"
-                                        maxLength={4}
-                                        value={dthPin}
-                                        onChange={e => setDthPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                                        className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
-                                    />
-                                </div>
-                                <button 
-                                    onClick={() => handleRechargeSubmit('dth')}
-                                    disabled={loading}
-                                    className="w-full py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-md shadow-md hover:shadow-lg transition-all"
-                                >
-                                    Submit
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* HISTORY TAB */}
-                    {activeTab === 'history' && (
-                        <div className="flex flex-col gap-4 animate-in fade-in duration-300">
-                            <h3 className="text-base font-bold text-foreground">Recharge History</h3>
-                            <div className="w-full overflow-x-auto border border-border rounded-lg bg-background">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="text-xs text-muted-foreground bg-muted/30 border-b border-border">
-                                        <tr>
-                                            <th className="px-4 py-3 font-semibold">No.</th>
-                                            <th className="px-4 py-3 font-semibold">Date Time</th>
-                                            <th className="px-4 py-3 font-semibold">Mobile</th>
-                                            <th className="px-4 py-3 font-semibold">Operator</th>
-                                            <th className="px-4 py-3 font-semibold">Reference Id</th>
-                                            <th className="px-4 py-3 font-semibold">Amount</th>
-                                            <th className="px-4 py-3 font-semibold">Discount</th>
-                                            <th className="px-4 py-3 font-semibold">Status</th>
-                                            <th className="px-4 py-3 font-semibold">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {history.length > 0 ? history.map((item: any, idx) => (
-                                            <tr key={item._id} className="border-b border-border/50 hover:bg-muted/10 font-medium transition-colors">
-                                                <td className="px-4 py-3">{idx + 1}</td>
-                                                <td className="px-4 py-3 whitespace-nowrap">{new Date(item.createdAt).toLocaleString()}</td>
-                                                <td className="px-4 py-3">{item.metadata?.number}</td>
-                                                <td className="px-4 py-3 text-primary">{item.metadata?.operator}</td>
-                                                <td className="px-4 py-3">{item.transactionId}</td>
-                                                <td className="px-4 py-3 text-foreground font-bold">₹ {item.amount}</td>
-                                                <td className="px-4 py-3">0</td>
-                                                <td className="px-4 py-3">
-                                                    <span className={`px-2 py-1 rounded text-xs ${item.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' : item.status === 'PENDING' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-red-500/10 text-red-500'}`}>
-                                                        {item.status}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <button 
-                                                        onClick={() => {
-                                                            setReceiptData({
-                                                                transactionId: item.transactionId,
-                                                                status: item.status,
-                                                                operatorRef: item.metadata?.operatorRef,
-                                                                date: item.createdAt,
-                                                                amount: item.amount,
-                                                                number: item.metadata?.number,
-                                                                operator: item.metadata?.operator,
-                                                                type: item.metadata?.rechargeType?.toLowerCase() === 'dth' ? 'dth' : 'prepaid'
-                                                            });
-                                                            setShowReceiptModal(true);
-                                                        }}
-                                                        className="text-primary hover:underline text-xs"
-                                                    >
-                                                        View Receipt
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        )) : (
-                                            <tr>
-                                                <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground font-semibold">
-                                                    No recharge transaction found
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
+                </section>
+            )}
 
             {/* Plans Modal */}
             {showPlansModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-4 border-b border-border flex justify-between items-center bg-muted/30">
+                    <div className="bg-card border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-5 border-b flex justify-between items-center">
                             <div className="flex items-center gap-3 min-w-0">
-                                {planMeta?.logo ? <img src={planMeta.logo} alt={planMeta.operatorName || 'Operator'} className="w-10 h-10 rounded-full object-contain bg-white border border-border p-1" /> : <Smartphone className="text-primary" />}
+                                {planMeta?.logo ? <img src={planMeta.logo} alt={planMeta.operatorName || 'Operator'} className="w-10 h-10 rounded-full object-contain bg-white border border-border p-1" /> : <div className={`rounded-xl p-2 ${SILVER_TILE}`}><Smartphone className="h-5 w-5" /></div>}
                                 <div className="min-w-0">
                                     <h3 className="font-bold text-lg truncate">Available Plans for {mobileNumber}</h3>
                                     <p className="text-xs text-muted-foreground truncate">{planMeta?.operatorName || 'Operator'} {planMeta?.circleName ? `· ${planMeta.circleName}` : ''}</p>
@@ -573,13 +558,13 @@ const Recharge = () => {
                         </div>
                         <div className="px-4 pt-4">
                             <div className="relative">
-                                <Search className="absolute left-3 top-2.5 text-muted-foreground" size={18} />
+                                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <input 
                                     type="text" 
                                     placeholder="Search by amount or validity (e.g., 299 or 28 Days)" 
                                     value={planSearch}
                                     onChange={(e) => setPlanSearch(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm"
+                                    className={`${INPUT} pl-10`}
                                 />
                             </div>
                         </div>
@@ -588,12 +573,12 @@ const Recharge = () => {
                                 (p.amount && p.amount.toString().toLowerCase().includes(planSearch.toLowerCase())) || 
                                 (p.validity && p.validity.toString().toLowerCase().includes(planSearch.toLowerCase()))
                             ).map((plan: any, idx) => (
-                                <div key={idx} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border border-border rounded-lg hover:border-primary/50 hover:bg-primary/5 transition-all gap-4">
+                                <div key={idx} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-xl bg-background/50 hover:border-zinc-400 dark:hover:border-zinc-600 hover:shadow-md transition-all gap-4">
                                     <div className="flex flex-col gap-1">
                                         <span className="text-2xl font-black text-foreground">₹ {plan.amount}</span>
                                         <div className="flex gap-2">
-                                            <span className="text-xs font-bold px-2 py-0.5 bg-primary/20 text-primary rounded">{plan.category || 'Plan'}</span>
-                                            <span className="text-sm font-semibold text-emerald-500">Validity: {plan.validity}</span>
+                                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full border text-muted-foreground">{plan.category || 'Plan'}</span>
+                                            <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Validity: {plan.validity}</span>
                                         </div>
                                     </div>
                                     <div className="flex-1 text-sm text-muted-foreground">
@@ -604,7 +589,7 @@ const Recharge = () => {
                                             setPrepaidAmount(plan.amount);
                                             setShowPlansModal(false);
                                         }}
-                                        className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground font-bold rounded-md transition-colors whitespace-nowrap"
+                                        className={`px-5 py-2 rounded-xl font-semibold whitespace-nowrap ${ACTIVE_BUTTON}`}
                                     >
                                         Select
                                     </button>
@@ -618,7 +603,7 @@ const Recharge = () => {
             {/* Receipt Modal */}
             {showReceiptModal && receiptData && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-card border rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="p-4 border-b border-border flex justify-between items-center bg-muted/30">
                             <h3 className="font-bold text-lg flex items-center gap-2">
                                 Transaction Receipt
@@ -671,13 +656,13 @@ const Recharge = () => {
                         <div className="p-4 border-t border-border bg-muted/30 flex gap-4">
                             <button 
                                 onClick={() => setShowReceiptModal(false)}
-                                className="flex-1 py-2 rounded-lg border border-border bg-background hover:bg-muted font-semibold transition-colors"
+                                className="flex-1 py-2.5 rounded-xl border bg-background hover:bg-black/5 dark:hover:bg-white/5 font-semibold transition-colors"
                             >
                                 Close
                             </button>
                             <button 
                                 onClick={downloadReceipt}
-                                className="flex-1 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all"
+                                className={`flex-1 py-2.5 rounded-xl font-semibold ${ACTIVE_BUTTON}`}
                             >
                                 Download PDF
                             </button>

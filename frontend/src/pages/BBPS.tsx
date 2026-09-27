@@ -6,6 +6,11 @@ import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
 import { toast } from "sonner";
 
+// Same black (light) / silver (dark) language as the dashboard.
+const ACTIVE_BUTTON = 'bg-zinc-900 text-white shadow-md shadow-black/20 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:shadow-white/10';
+const SILVER_TILE = 'bg-gradient-to-br from-zinc-100 to-zinc-300 text-zinc-700 ring-zinc-400/40 dark:from-zinc-600 dark:to-zinc-800 dark:text-zinc-100 dark:ring-zinc-400/30';
+const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-3 text-sm text-foreground shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500 read-only:bg-black/[0.03] dark:read-only:bg-white/[0.04]';
+
 /**
  * The tiles are whatever the provider currently bills for, not a list of our
  * own: a category we invent has no biller registry behind it, and a category
@@ -13,22 +18,22 @@ import { toast } from "sonner";
  * decided here, matched on the category name with a plain fallback.
  */
 const CATEGORY_STYLE: { match: RegExp; icon: any; color: string; border: string }[] = [
-    { match: /electric/i, icon: Zap, color: "text-yellow-500", border: "border-yellow-500/20" },
-    { match: /fastag/i, icon: Car, color: "text-emerald-500", border: "border-emerald-500/20" },
-    { match: /lpg/i, icon: Flame, color: "text-red-500", border: "border-red-500/20" },
-    { match: /gas/i, icon: Flame, color: "text-orange-500", border: "border-orange-500/20" },
-    { match: /water/i, icon: Droplet, color: "text-cyan-400", border: "border-cyan-400/20" },
-    { match: /insur/i, icon: Shield, color: "text-red-400", border: "border-red-400/20" },
-    { match: /loan|emi|credit/i, icon: CreditCard, color: "text-blue-500", border: "border-blue-500/20" },
-    { match: /broadband|internet|wifi/i, icon: Wifi, color: "text-sky-400", border: "border-sky-400/20" },
-    { match: /dth|cable|tv/i, icon: Tv, color: "text-violet-400", border: "border-violet-400/20" },
-    { match: /postpaid|mobile|landline/i, icon: Smartphone, color: "text-primary", border: "border-primary/20" },
-    { match: /mun[i]?cipal|tax|housing/i, icon: Building2, color: "text-amber-500", border: "border-amber-500/20" },
+    { match: /electric/i, icon: Zap, color: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 ring-yellow-500/20", border: "hover:border-yellow-500/40" },
+    { match: /fastag/i, icon: Car, color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-emerald-500/20", border: "hover:border-emerald-500/40" },
+    { match: /lpg/i, icon: Flame, color: "bg-red-500/10 text-red-600 dark:text-red-400 ring-red-500/20", border: "hover:border-red-500/40" },
+    { match: /gas/i, icon: Flame, color: "bg-orange-500/10 text-orange-600 dark:text-orange-400 ring-orange-500/20", border: "hover:border-orange-500/40" },
+    { match: /water/i, icon: Droplet, color: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 ring-cyan-500/20", border: "hover:border-cyan-500/40" },
+    { match: /insur/i, icon: Shield, color: "bg-rose-500/10 text-rose-600 dark:text-rose-400 ring-rose-500/20", border: "hover:border-rose-500/40" },
+    { match: /loan|emi|credit/i, icon: CreditCard, color: "bg-blue-500/10 text-blue-600 dark:text-blue-400 ring-blue-500/20", border: "hover:border-blue-500/40" },
+    { match: /broadband|internet|wifi/i, icon: Wifi, color: "bg-sky-500/10 text-sky-600 dark:text-sky-400 ring-sky-500/20", border: "hover:border-sky-500/40" },
+    { match: /dth|cable|tv/i, icon: Tv, color: "bg-teal-500/10 text-teal-600 dark:text-teal-400 ring-teal-500/20", border: "hover:border-teal-500/40" },
+    { match: /postpaid|mobile|landline/i, icon: Smartphone, color: SILVER_TILE, border: "hover:border-zinc-400" },
+    { match: /mun[i]?cipal|tax|housing/i, icon: Building2, color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-amber-500/20", border: "hover:border-amber-500/40" },
 ];
 
 const styleFor = (name: string) =>
     CATEGORY_STYLE.find((s) => s.match.test(name)) ||
-    { icon: ReceiptText, color: "text-muted-foreground", border: "border-border" };
+    { icon: ReceiptText, color: SILVER_TILE, border: "hover:border-zinc-400" };
 
 const BBPS = () => {
     const [bbpsServices, setBbpsServices] = useState<any[]>([]);
@@ -250,74 +255,77 @@ const BBPS = () => {
     const receiptBill = receiptData?.billDetails || {};
 
     return (
-        <div className="flex flex-col gap-6 w-full p-2 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            {/* Top Header Section */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <div className="flex flex-col gap-1">
-                        <h1 className="text-2xl font-bold text-glow flex items-center gap-2">
-                            <ReceiptText className="text-primary" size={28} />
-                            BBPS Transaction
-                        </h1>
-                        <p className="text-sm text-muted-foreground hidden md:block">
-                            Bharat Bill Payment System for instant bill payments.
-                        </p>
+        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Hero */}
+            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
+                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 h-80 w-80 rounded-full bg-slate-200/70 dark:bg-slate-400/10 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-20 [background-image:radial-gradient(currentColor_1px,transparent_1px)] [background-size:22px_22px] text-black/10 dark:text-white/10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+                <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className={`rounded-2xl p-3 ring-1 ${SILVER_TILE}`}>
+                            <ReceiptText className="h-7 w-7" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Bill Payments</h1>
+                            <p className="text-sm text-muted-foreground">Bharat Bill Payment System for instant bill payments.</p>
+                        </div>
                     </div>
+                    {bbpsServices.length > 0 && (
+                        <span className="flex items-center gap-2 self-start sm:self-auto rounded-full bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/20">
+                            <span className="relative flex h-2 w-2">
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+                                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                            </span>
+                            {bbpsServices.filter((sv) => sv.available).length} services live
+                        </span>
+                    )}
                 </div>
-            </div>
+            </section>
 
-            {/* Main Container */}
-            <div className="flex flex-col glass-card rounded-2xl relative overflow-hidden group border border-border pb-12">
-                {/* Background Glow */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-50 pointer-events-none"></div>
-
-                <div className="relative z-10 p-6">
-                    <div className="flex items-center justify-between border-b border-border/50 pb-4 mb-8">
-                        <h2 className="text-xl font-bold text-foreground">BBPS Services</h2>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                        {bbpsServices.map((service) => (
-                            <div 
-                                key={service.id}
-                                onClick={() => handleServiceClick(service)}
-                                title={service.available ? undefined : `${service.name} is not live on our BBPS provider yet`}
-                                className={`relative flex flex-col items-center justify-center aspect-square border ${service.border} rounded-2xl transition-all bg-background/50 backdrop-blur-sm group/card ${
-                                    service.available
-                                        ? 'cursor-pointer hover:border-primary/50 hover:bg-primary/5 hover:scale-105 hover:shadow-[0_0_15px_rgba(var(--primary),0.2)]'
-                                        : 'cursor-not-allowed opacity-40 grayscale'
-                                }`}
-                            >
-                                <div className={`p-4 rounded-full bg-background mb-3 shadow-inner ${service.available ? 'group-hover/card:scale-110 transition-transform' : ''} ${service.color}`}>
-                                    <service.icon className="w-8 h-8" />
-                                </div>
-                                <span className="text-sm font-semibold capitalize text-foreground text-center px-1">{service.name}</span>
-                                {!service.available && (
-                                    <span className="absolute bottom-2 text-[10px] uppercase tracking-wide text-muted-foreground">Coming soon</span>
-                                )}
+            {/* Categories */}
+            <section className="rounded-2xl border bg-card p-6 shadow-sm">
+                <h2 className="mb-5 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Choose a category</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-4">
+                    {bbpsServices.map((service) => (
+                        <div
+                            key={service.id}
+                            onClick={() => handleServiceClick(service)}
+                            title={service.available ? undefined : `${service.name} is not live on our BBPS provider yet`}
+                            className={`group/card relative flex flex-col items-center justify-center gap-3 rounded-2xl border bg-background/50 p-5 text-center transition-all ${
+                                service.available
+                                    ? `cursor-pointer hover:-translate-y-0.5 hover:shadow-lg ${service.border}`
+                                    : 'cursor-not-allowed opacity-40 grayscale'
+                            }`}
+                        >
+                            <div className={`rounded-2xl p-3.5 ring-1 ${service.color} ${service.available ? 'group-hover/card:scale-110 transition-transform' : ''}`}>
+                                <service.icon className="h-7 w-7" />
                             </div>
-                        ))}
-                    </div>
+                            <span className="text-sm font-semibold capitalize leading-tight text-foreground">{service.name}</span>
+                            {!service.available && (
+                                <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Coming soon</span>
+                            )}
+                        </div>
+                    ))}
+                    {bbpsServices.length === 0 && [0, 1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="aspect-square animate-pulse rounded-2xl bg-black/5 dark:bg-white/10" />
+                    ))}
                 </div>
-                
-                {/* Footer Logo Removed */}
-            </div>
+            </section>
 
             {/* Service Form Modal */}
             {selectedService && (
-                <div className="fixed inset-0 bg-background/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-                    <div className="glass-card p-6 rounded-2xl w-full max-w-md border border-border shadow-2xl relative">
-                        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50 pointer-events-none rounded-2xl"></div>
-                        
-                        <div className="relative z-10">
-                            <div className="flex justify-between items-center mb-6 border-b border-border/50 pb-4">
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div>
+                            <div className="flex justify-between items-center mb-6 border-b pb-4">
                                 <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-lg bg-background shadow-inner ${selectedService.color}`}>
+                                    <div className={`p-2.5 rounded-xl ring-1 ${selectedService.color}`}>
                                         <selectedService.icon className="w-6 h-6" />
                                     </div>
-                                    <h2 className="text-xl font-bold capitalize text-foreground">{selectedService.name} Payment</h2>
+                                    <h2 className="text-lg font-semibold capitalize text-foreground">{selectedService.name} Payment</h2>
                                 </div>
-                                <button onClick={() => setSelectedService(null)} className="text-muted-foreground hover:text-destructive transition-colors bg-background/50 p-2 rounded-full hover:bg-destructive/10">
+                                <button onClick={() => setSelectedService(null)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5">
                                     <XCircle className="w-5 h-5" />
                                 </button>
                             </div>
@@ -326,7 +334,7 @@ const BBPS = () => {
                                 <div className="space-y-1.5">
                                     <label className="text-sm font-medium text-foreground">Operator / Biller</label>
                                     <select 
-                                        className="w-full bg-background border border-border rounded-xl p-3.5 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all appearance-none"
+                                        className={INPUT}
                                         value={operatorId}
                                         onChange={(e) => {
                                             setOperatorId(e.target.value);
@@ -349,7 +357,7 @@ const BBPS = () => {
                                     </label>
                                     <input 
                                         type="text"
-                                        className="w-full bg-background border border-border rounded-xl p-3.5 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                                        className={INPUT}
                                         placeholder={selectedOperator?.label ? `Enter ${selectedOperator.label}` : "Enter number"}
                                         value={consumerNumber}
                                         onChange={(e) => setConsumerNumber(e.target.value.slice(0, 40))}
@@ -363,7 +371,7 @@ const BBPS = () => {
                                         type="tel"
                                         inputMode="numeric"
                                         maxLength={10}
-                                        className="w-full bg-background border border-border rounded-xl p-3.5 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                                        className={INPUT}
                                         placeholder="10-digit mobile number"
                                         value={customerMobile}
                                         onChange={(e) => setCustomerMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
@@ -375,11 +383,11 @@ const BBPS = () => {
                                     <button 
                                         onClick={handleFetchBill}
                                         disabled={fetchingBill}
-                                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.3)] transition-all hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed mt-2"
+                                        className={`w-full font-bold py-3.5 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2 ${ACTIVE_BUTTON}`}
                                     >
                                         {fetchingBill ? (
                                             <div className="flex items-center justify-center gap-2">
-                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                                <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                                                 Fetching...
                                             </div>
                                         ) : (
@@ -388,16 +396,24 @@ const BBPS = () => {
                                     </button>
                                 ) : (
                                     <>
-                                        {fetchedBill && <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 space-y-2 mb-4">
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                <p className="text-sm text-foreground/80"><strong>Customer:</strong> {fetchedBill.customerName || 'N/A'}</p>
-                                                <p className="text-sm text-foreground/80"><strong>Account:</strong> {fetchedBill.account || consumerNumber}</p>
-                                                <p className="text-sm text-foreground/80"><strong>Bill number:</strong> {fetchedBill.billNumber || 'N/A'}</p>
-                                                <p className="text-sm text-foreground/80"><strong>Bill date:</strong> {fetchedBill.billDate || 'N/A'}</p>
-                                                <p className="text-sm text-foreground/80"><strong>Due date:</strong> {fetchedBill.dueDate || 'N/A'}</p>
-                                                <p className="text-sm text-foreground/80"><strong>Bill period:</strong> {fetchedBill.billPeriod || 'N/A'}</p>
-                                                <p className="text-sm text-foreground/80"><strong>Amount due:</strong> ₹{fetchedBill.dueAmount ?? fetchedBill.amount ?? amount}</p>
-                                                <p className="text-sm text-foreground/80"><strong>Fetch reference:</strong> {fetchedBill.fetchRefId || fetchedBill.fetchBillId || 'N/A'}</p>
+                                        {fetchedBill && <div className="mb-2 grid grid-cols-2 gap-2">
+                                            {[
+                                                ['Customer', fetchedBill.customerName || 'N/A'],
+                                                ['Account', fetchedBill.account || consumerNumber],
+                                                ['Bill number', fetchedBill.billNumber || 'N/A'],
+                                                ['Bill date', fetchedBill.billDate || 'N/A'],
+                                                ['Due date', fetchedBill.dueDate || 'N/A'],
+                                                ['Bill period', fetchedBill.billPeriod || 'N/A'],
+                                                ['Fetch reference', fetchedBill.fetchRefId || fetchedBill.fetchBillId || 'N/A'],
+                                            ].map(([label, value]) => (
+                                                <div key={label} className="rounded-xl border bg-background/50 px-3 py-2">
+                                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+                                                    <p className="truncate text-sm font-medium">{String(value)}</p>
+                                                </div>
+                                            ))}
+                                            <div className="col-span-2 flex items-center justify-between rounded-xl bg-gradient-to-br from-zinc-800 via-zinc-900 to-black px-4 py-3 text-white dark:from-zinc-200 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900">
+                                                <span className="text-xs uppercase tracking-wider opacity-70">Amount due</span>
+                                                <span className="text-xl font-bold tabular-nums">₹{fetchedBill.dueAmount ?? fetchedBill.amount ?? amount}</span>
                                             </div>
                                         </div>}
 
@@ -410,7 +426,7 @@ const BBPS = () => {
                                                     min="10"
                                                     step="1"
                                                     inputMode="numeric"
-                                                    className="w-full bg-background border border-border rounded-xl py-3.5 pl-8 pr-4 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                                                    className={`${INPUT} pl-8 text-lg font-semibold tabular-nums`}
                                                     placeholder="0.00"
                                                     value={amount}
                                                     onChange={(e) => setAmount(e.target.value)}
@@ -423,7 +439,7 @@ const BBPS = () => {
                                             <label className="text-sm font-medium text-foreground">T-PIN</label>
                                             <input 
                                                 type="password"
-                                                className="w-full bg-background border border-border rounded-xl p-3.5 text-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all tracking-widest"
+                                                className={`${INPUT} text-center text-lg tracking-[0.5em]`}
                                                 placeholder="••••"
                                                 value={pin}
                                                 onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
@@ -434,11 +450,11 @@ const BBPS = () => {
                                         <button 
                                             onClick={handlePayment}
                                             disabled={loading}
-                                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed mt-2"
+                                            className={`w-full font-bold py-3.5 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2 ${ACTIVE_BUTTON}`}
                                         >
                                             {loading ? (
                                                 <div className="flex items-center justify-center gap-2">
-                                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                                                     Processing...
                                                 </div>
                                             ) : (
@@ -448,7 +464,7 @@ const BBPS = () => {
                                         
                                         {!!fetchedBill && <button 
                                             onClick={() => setFetchedBill(null)}
-                                            className="w-full bg-transparent hover:bg-muted text-muted-foreground font-medium py-2 rounded-xl transition-all mt-2 text-sm"
+                                            className="w-full bg-transparent hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground font-medium py-2 rounded-xl transition-all mt-2 text-sm"
                                         >
                                             Fetch Different Bill
                                         </button>}
@@ -462,8 +478,8 @@ const BBPS = () => {
 
             {/* Receipt Modal */}
             {showReceiptModal && receiptData && (
-                <div className="fixed inset-0 bg-background/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in zoom-in-95 duration-300">
-                    <div className="glass-card rounded-2xl w-full max-w-md p-6 border border-border shadow-2xl">
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className={`text-xl font-bold flex items-center gap-2 ${receiptIsPending ? 'text-amber-500' : receiptIsSuccess ? 'text-emerald-500' : 'text-destructive'}`}>
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${receiptIsPending ? 'bg-amber-500/20' : receiptIsSuccess ? 'bg-emerald-500/20' : 'bg-destructive/20'}`}>
@@ -471,7 +487,7 @@ const BBPS = () => {
                                 </div>
                                 {receiptIsPending ? 'Payment Pending' : receiptIsSuccess ? 'Payment Successful!' : 'Payment Failed!'}
                             </h3>
-                            <button onClick={() => setShowReceiptModal(false)} className="text-muted-foreground hover:text-destructive transition-colors bg-background/50 p-2 rounded-full">
+                            <button onClick={() => setShowReceiptModal(false)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5">
                                 <XCircle className="w-5 h-5" />
                             </button>
                         </div>
@@ -556,7 +572,7 @@ const BBPS = () => {
 
                         <button 
                             onClick={downloadReceipt}
-                            className="w-full bg-secondary hover:bg-secondary/80 text-secondary-foreground font-bold py-4 rounded-xl transition-all border border-border flex items-center justify-center gap-2"
+                            className={`w-full font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 ${ACTIVE_BUTTON}`}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                             Download PDF Receipt

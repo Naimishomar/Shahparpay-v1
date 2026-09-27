@@ -12,7 +12,8 @@ const PanCard: React.FC = () => {
     // Biometric PSA and Standard Web PSA are temporarily disabled in the UI.
     // Their components, handlers, and backend APIs are intentionally retained
     // so the tabs can be restored later without reimplementing the flows.
-    const [activeTab, setActiveTab] = useState<'BIOMETRIC' | 'STANDARD' | 'ESEVATECH'>('ESEVATECH');
+    // Re-add the setter (and the tab bar) when the other flows come back.
+    const [activeTab] = useState<'BIOMETRIC' | 'STANDARD' | 'ESEVATECH'>('ESEVATECH');
     
     const [fetchingStatus, setFetchingStatus] = useState(true);
     const [hasPsa, setHasPsa] = useState(false);
@@ -192,42 +193,11 @@ const PanCard: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background p-4 lg:p-8">
-            <div className="max-w-6xl mx-auto space-y-6">
-                
-                {/* Header Section */}
-                <div className="flex flex-col gap-2">
-                    <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-                        <CreditCard className="w-8 h-8 text-primary" />
-                        UTI PAN Card Services
-                    </h1>
-                    <p className="text-muted-foreground">Become a UTI Agent, purchase application tokens, or apply via eSevaTech.</p>
-                </div>
-
-                {/* Tabs Navigation */}
-                <div className="flex bg-muted/50 p-1 rounded-xl w-full max-w-md border border-border/50">
-                    {/* Temporarily disabled — retain these buttons/components for later re-enable.
-                    <button
-                        onClick={() => setActiveTab('BIOMETRIC')}
-                        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'BIOMETRIC' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                        Biometric PSA
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('STANDARD')}
-                        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'STANDARD' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                        Standard Web PSA
-                    </button>
-                    */}
-                    <button
-                        onClick={() => setActiveTab('ESEVATECH')}
-                        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'ESEVATECH' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                        eSevaTech PAN
-                    </button>
-                </div>
-
+        <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="space-y-6">
+                {/* The page tab bar (Biometric PSA / Standard Web PSA / eSevaTech) is hidden
+                    while only eSevaTech is enabled; the hero title stands in for it. The
+                    other flows stay below, kept for re-enabling later. */}
                 {activeTab === 'STANDARD' ? (
                     <StandardPsaTab />
                 ) : activeTab === 'ESEVATECH' ? (

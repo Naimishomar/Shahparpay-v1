@@ -42,7 +42,7 @@ const NotificationCenter = () => {
     const Icon = (kind: string) => kind === 'urgent' || kind === 'warning' ? TriangleAlert : Info;
 
     return <div className="relative" ref={ref}>
-        <button onClick={() => { setOpen((value) => !value); if (!open) load(); }} aria-label="Notifications" className="relative p-2 rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+        <button onClick={() => { setOpen((value) => !value); if (!open) load(); }} aria-label="Notifications" className="relative flex h-10 w-10 items-center justify-center rounded-full border bg-card/70 shadow-sm hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
             <Bell className="h-5 w-5 text-foreground" />
             {unread > 0 && <span className="absolute -right-1 -top-1 min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{unread > 99 ? '99+' : unread}</span>}
         </button>

@@ -17,30 +17,18 @@ export const getRetailerStats = async (req, res) => {
     const userId = req.user.id;
     const { startDate, endDate } = req.query;
 
-    let dateFilter = {};
-    if (startDate && endDate) {
-      // Include entire end date by setting time to 23:59:59.999
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      dateFilter = {
-        createdAt: {
-          $gte: new Date(startDate),
-          $lte: end,
-        },
-      };
-    } else {
-      // Default to today
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(today);
-      endOfDay.setHours(23, 59, 59, 999);
-      dateFilter = {
-        createdAt: {
-          $gte: today,
-          $lte: endOfDay,
-        },
-      };
-    }
+    // Range bounds are IST midnights whatever timezone the server runs in, or
+    // "Today" and the chart's buckets drift 5½ hours on a UTC host.
+    const istDay = () => new Date().toLocaleDateString('en-CA', { timeZone: IST });
+    const isYmd = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
+    const from = isYmd(startDate) && isYmd(endDate) ? startDate : istDay();
+    const to = isYmd(startDate) && isYmd(endDate) ? endDate : istDay();
+    const dateFilter = {
+      createdAt: {
+        $gte: new Date(`${from}T00:00:00.000+05:30`),
+        $lte: new Date(`${to}T23:59:59.999+05:30`),
+      },
+    };
 
     const transactions = await Transaction.find({
       userId,
@@ -58,6 +46,7 @@ export const getRetailerStats = async (req, res) => {
       BILL_PAYMENT: 0,
       WALLET_TOPUP: 0, // UPI is sometimes wallet topup
       TotalCommission: 0,
+      TotalGrossCommission: 0,
       TotalCustomers: 0,
       TotalTransactionsAmount: 0,
     };
@@ -66,8 +55,8 @@ export const getRetailerStats = async (req, res) => {
     let uniqueCustomers = new Set();
     let recentSales = [];
 
-    const startTime = (dateFilter.createdAt?.$gte || new Date(0)).getTime();
-    const endTime = (dateFilter.createdAt?.$lte || new Date()).getTime();
+    const startTime = dateFilter.createdAt.$gte.getTime();
+    const endTime = dateFilter.createdAt.$lte.getTime();
     const binSize = Math.max((endTime - startTime) / 12, 1);
     const graphData = new Array(12).fill(0);
 
@@ -81,6 +70,7 @@ export const getRetailerStats = async (req, res) => {
         // Net of TDS: retailerEarned is the gross figure, and the wallet is
         // credited net, so reporting the gross overstates what was earned.
         stats.TotalCommission += retailerNetCommission(txn);
+        stats.TotalGrossCommission += Number(txn.commissions?.retailerEarned) || 0;
         totalTransactionsAmount += txn.amount;
 
         // Group graph data
@@ -141,9 +131,12 @@ export const getRetailerStats = async (req, res) => {
     });
 
     stats.TotalCommission = Math.round(stats.TotalCommission * 100) / 100;
+    stats.TotalGrossCommission = Math.round(stats.TotalGrossCommission * 100) / 100;
     stats.TotalCustomers = uniqueCustomers.size;
     stats.TotalTransactionsAmount = totalTransactionsAmount;
     stats.graphData = graphData;
+    // The bounds the buckets were cut from, so the chart labels them exactly.
+    stats.graphRange = { start: dateFilter.createdAt.$gte, end: dateFilter.createdAt.$lte };
 
     return res.status(200).json({
       success: true,

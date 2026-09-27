@@ -11,9 +11,12 @@ const languages = [
     ['ml', 'മലയാളം'], ['pa', 'ਪੰਜਾਬੀ'], ['or', 'ଓଡ଼ିଆ'],
 ];
 
-const LanguageSelector = () => {
-    const [language, setLanguage] = useState(() => localStorage.getItem('app-language') || 'en');
-
+/**
+ * Google Translate's hidden widget. Kept mounted for the whole session (in the
+ * header) so the picker can live in a dropdown that unmounts when closed —
+ * the picker drives this widget's `.goog-te-combo`.
+ */
+export const TranslateHost = () => {
     useEffect(() => {
         const loadGoogleTranslate = () => {
             if (window.google?.translate?.TranslateElement) {
@@ -32,6 +35,12 @@ const LanguageSelector = () => {
         loadGoogleTranslate();
     }, []);
 
+    return <div id="google_translate_element" className="hidden" />;
+};
+
+const LanguageSelector = () => {
+    const [language, setLanguage] = useState(() => localStorage.getItem('app-language') || 'en');
+
     const changeLanguage = (value: string) => {
         setLanguage(value);
         localStorage.setItem('app-language', value);
@@ -41,13 +50,13 @@ const LanguageSelector = () => {
         select.dispatchEvent(new Event('change'));
     };
 
-    return <div className="flex items-center gap-2">
+    return <label className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer">
         <Languages className="w-4 h-4 text-muted-foreground" />
-        <select aria-label="Translate application" value={language} onChange={(e) => changeLanguage(e.target.value)} className="max-w-[110px] bg-transparent text-sm text-foreground outline-none cursor-pointer">
+        <span className="text-sm font-medium text-foreground">Language</span>
+        <select aria-label="Translate application" value={language} onChange={(e) => changeLanguage(e.target.value)} className="ml-auto rounded-lg border bg-background px-2 py-1 text-sm text-foreground outline-none cursor-pointer">
             {languages.map(([code, label]) => <option key={code} value={code} className="bg-background text-foreground">{label}</option>)}
         </select>
-        <div id="google_translate_element" className="hidden" />
-    </div>;
+    </label>;
 };
 
 export default LanguageSelector;

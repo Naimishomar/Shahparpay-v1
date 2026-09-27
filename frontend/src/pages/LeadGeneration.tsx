@@ -1,8 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
-import { CreditCard, UserPlus } from 'lucide-react';
+import { CreditCard, UserPlus, Wallet, Briefcase, Zap, PiggyBank, User, Phone, Mail, MapPin, Map as MapIcon, Link2, Loader2, CheckCircle2 } from 'lucide-react';
 import { INDIAN_STATES } from '../constants';
+
+// Same black (light) / silver (dark) language as the dashboard.
+const ACTIVE_BUTTON = 'bg-zinc-900 text-white shadow-md shadow-black/20 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:shadow-white/10';
+const SILVER_TILE = 'bg-gradient-to-br from-zinc-100 to-zinc-300 text-zinc-700 ring-1 ring-zinc-400/40 dark:from-zinc-600 dark:to-zinc-800 dark:text-zinc-100 dark:ring-zinc-400/30';
+const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500';
+
+const PRODUCTS = [
+    { id: 'CC', name: 'Credit Card', hint: 'Cards from top banks', icon: CreditCard },
+    { id: 'PL', name: 'Personal Loan', hint: 'For personal needs', icon: Wallet },
+    { id: 'BL', name: 'Business Loan', hint: 'Grow a business', icon: Briefcase },
+    { id: 'IL', name: 'Instant Loan', hint: 'Quick disbursal', icon: Zap },
+    { id: 'SA', name: 'Savings Account', hint: 'Open an account', icon: PiggyBank },
+];
 
 const LeadGeneration = () => {
     const { token } = useAuth();
@@ -18,13 +31,6 @@ const LeadGeneration = () => {
         state: ''
     });
 
-    const products = [
-        { id: 'CC', name: 'Credit Card' },
-        { id: 'PL', name: 'Personal Loan' },
-        { id: 'BL', name: 'Business Loan' },
-        { id: 'IL', name: 'Instant Loan' },
-        { id: 'SA', name: 'Savings Account' }
-    ];
 
     useEffect(() => {
         fetchHistory();
@@ -126,117 +132,116 @@ const LeadGeneration = () => {
         }
     };
 
-    const handleStatusCheck = async (refid: string) => {
-        try {
-            toast.info(`Checking status for ${refid}...`);
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/lead/status/${refid}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                toast.success(`Status updated: ${data.data.executive_status || 'Pending'}`);
-                fetchHistory(); // Refresh table to show new status
-            } else {
-                toast.error(data.message || "Failed to fetch status.");
-            }
-        } catch (error) {
-            console.error(error);
-            toast.error("An error occurred while checking status.");
-        }
+    const statusPill = (status?: string) => {
+        const s = String(status || 'PENDING').toUpperCase();
+        if (s.includes('APPROV') || s.includes('SUCCESS') || s.includes('DISBURS')) return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20';
+        if (s.includes('REJECT') || s.includes('NOT_INTERESTED') || s.includes('FAIL')) return 'bg-rose-500/10 text-rose-700 dark:text-rose-400 ring-rose-500/20';
+        return 'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-amber-500/20';
     };
+    const approvedCount = leads.filter((l) => statusPill(l.executive_status).startsWith('bg-emerald')).length;
+    const pendingCount = leads.filter((l) => statusPill(l.executive_status).startsWith('bg-amber')).length;
+    const productName = (id: string) => PRODUCTS.find((p) => p.id === id)?.name || id;
 
     return (
-        <div className="flex flex-col gap-4 w-full p-2 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-bold text-glow flex items-center gap-2">
-                    <UserPlus className="text-primary" size={28} />
-                    Lead Generation
-                </h1>
-                <p className="text-sm text-muted-foreground hidden md:block">Generate leads for Credit Cards and Loans, and track their application status.</p>
-            </div>
+        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Hero */}
+            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
+                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 h-80 w-80 rounded-full bg-slate-200/70 dark:bg-slate-400/10 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-20 [background-image:radial-gradient(currentColor_1px,transparent_1px)] [background-size:22px_22px] text-black/10 dark:text-white/10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
 
-            <div className="grid grid-cols-1 gap-8">
-                {/* Form Section */}
-                <div>
-                    <div className="glass-card p-6 rounded-2xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl -z-10 translate-x-1/2 -translate-y-1/2"></div>
-
-                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                            <UserPlus className="w-5 h-5 text-primary" />
-                            New Lead
-                        </h2>
-
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Customer Name *</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    placeholder="Enter full name"
-                                />
+                <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                    <div className="flex items-center gap-4">
+                        <div className={`rounded-2xl p-3 ${SILVER_TILE}`}>
+                            <UserPlus className="h-7 w-7" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Lead Generation</h1>
+                            <p className="text-sm text-muted-foreground">Generate leads for credit cards, loans and accounts, and track their status.</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                        {[
+                            { label: 'Total leads', value: leads.length, dot: 'bg-zinc-400' },
+                            { label: 'Approved', value: approvedCount, dot: 'bg-emerald-500' },
+                            { label: 'In progress', value: pendingCount, dot: 'bg-amber-500' },
+                        ].map((stat) => (
+                            <div key={stat.label} className="rounded-xl border bg-background/70 backdrop-blur px-4 py-2.5">
+                                <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                                    <span className={`h-1.5 w-1.5 rounded-full ${stat.dot}`} />{stat.label}
+                                </p>
+                                <p className="text-xl font-bold tabular-nums">{loading ? '…' : stat.value}</p>
                             </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
 
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Mobile Number *</label>
-                                <input
-                                    type="tel"
-                                    required
-                                    maxLength={10}
-                                    value={formData.mobile_no}
-                                    onChange={e => setFormData({ ...formData, mobile_no: e.target.value.replace(/\D/g, '') })}
-                                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    placeholder="Enter 10 digit mobile"
-                                />
+            <div className="grid gap-6">
+                {/* New lead */}
+                <section className="rounded-2xl border bg-card p-6 shadow-sm">
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm font-medium text-foreground">Choose a product *</label>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                                {PRODUCTS.map(({ id, name, hint, icon: Icon }) => {
+                                    const active = formData.product === id;
+                                    return (
+                                        <button
+                                            key={id}
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, product: id })}
+                                            className={`relative flex flex-col items-start gap-3 rounded-xl border p-4 text-left transition-all ${active ? 'border-zinc-900 ring-2 ring-zinc-900/10 dark:border-zinc-300 dark:ring-zinc-300/20 shadow-md' : 'bg-background/50 hover:border-zinc-400 dark:hover:border-zinc-600 hover:-translate-y-0.5'}`}
+                                        >
+                                            {active && <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-emerald-500" />}
+                                            <div className={`rounded-xl p-2.5 ${active ? ACTIVE_BUTTON : SILVER_TILE}`}>
+                                                <Icon className="h-5 w-5" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold">{name}</p>
+                                                <p className="text-xs text-muted-foreground">{hint}</p>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
                             </div>
+                        </div>
 
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Email ID *</label>
-                                <input
-                                    type="email"
-                                    required
-                                    value={formData.email}
-                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    placeholder="Enter email address"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Select Product *</label>
-                                <select
-                                    required
-                                    value={formData.product}
-                                    onChange={e => setFormData({ ...formData, product: e.target.value })}
-                                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none"
-                                >
-                                    {products.map(p => (
-                                        <option key={p.id} value={p.id} className="bg-background text-foreground">{p.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Pincode</label>
-                                    <input
-                                        type="text"
-                                        maxLength={6}
-                                        value={formData.pincode}
-                                        onChange={e => setFormData({ ...formData, pincode: e.target.value.replace(/\D/g, '') })}
-                                        className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                        placeholder="Pincode"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">State</label>
+                        <div className="flex flex-col gap-4 border-t pt-6">
+                            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Customer details</h2>
+                            {[
+                                { key: 'name', label: 'Customer Name *', type: 'text', icon: User, placeholder: 'Enter full name', required: true, clean: (v: string) => v },
+                                { key: 'mobile_no', label: 'Mobile Number *', type: 'tel', icon: Phone, placeholder: 'Enter 10 digit mobile', required: true, maxLength: 10, clean: (v: string) => v.replace(/\D/g, '') },
+                                { key: 'email', label: 'Email ID *', type: 'email', icon: Mail, placeholder: 'Enter email address', required: true, clean: (v: string) => v },
+                                { key: 'pincode', label: 'Pincode', type: 'text', icon: MapPin, placeholder: '6 digit pincode', required: false, maxLength: 6, clean: (v: string) => v.replace(/\D/g, '') },
+                            ].map((f) => {
+                                const Icon = f.icon;
+                                return (
+                                    <div key={f.key} className="flex flex-col gap-1.5">
+                                        <label className="text-sm font-medium text-foreground">{f.label}</label>
+                                        <div className="relative">
+                                            <Icon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                            <input
+                                                type={f.type}
+                                                required={f.required}
+                                                maxLength={f.maxLength}
+                                                value={formData[f.key as keyof typeof formData]}
+                                                onChange={(e) => setFormData({ ...formData, [f.key]: f.clean(e.target.value) })}
+                                                className={`${INPUT} pl-10`}
+                                                placeholder={f.placeholder}
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-sm font-medium text-foreground">State</label>
+                                <div className="relative">
+                                    <MapIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                     <select
                                         value={formData.state}
                                         onChange={e => setFormData({ ...formData, state: e.target.value })}
-                                        className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                        className={`${INPUT} pl-10`}
                                     >
                                         <option value="" disabled className="bg-background text-foreground">Select State</option>
                                         {INDIAN_STATES.map((state) => (
@@ -245,24 +250,24 @@ const LeadGeneration = () => {
                                     </select>
                                 </div>
                             </div>
+                        </div>
 
-                            <button
-                                type="submit"
-                                disabled={submitting}
-                                className="w-full btn-primary py-3 rounded-xl font-medium mt-4 flex items-center justify-center gap-2 dark:bg-white dark:text-black dark:hover:bg-gray-200"
-                            >
-                                {submitting ? (
-                                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                                ) : (
-                                    <>
-                                        <CreditCard className="w-5 h-5" />
-                                        Generate Application Link
-                                    </>
-                                )}
-                            </button>
-                        </form>
-                    </div>
-                </div>
+                        <button
+                            type="submit"
+                            disabled={submitting}
+                            className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold disabled:opacity-50 ${ACTIVE_BUTTON}`}
+                        >
+                            {submitting ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                <>
+                                    <Link2 className="w-5 h-5" />
+                                    Generate {productName(formData.product)} Link
+                                </>
+                            )}
+                        </button>
+                    </form>
+                </section>
 
             </div>
         </div>

@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import PipeOnboardingModal from '../components/PipeOnboardingModal';
+import ShopLocationCard from '../components/ShopLocationCard';
 
 type PipeStatus = 'ACCEPTED' | 'PENDING' | 'REJECTED' | 'NOT_ONBOARDED' | 'ERROR' | 'UNKNOWN';
 
@@ -240,6 +241,10 @@ const PipeStatusPage = () => {
                     )}
                 </div>
             </div>
+
+            {/* Geo-fencing is the most common reason a withdrawal is declined
+                outright, and the retailer can fix it themselves from here. */}
+            <ShopLocationCard />
 
             {/* Info note */}
             <div className="p-5 bg-primary/5 border border-primary/20 rounded-2xl flex items-start gap-4">

@@ -38,20 +38,23 @@ interface StatusData {
     updated_at?: string;
 }
 
+// Same black (light) / silver (dark) language as the dashboard and AEPS pages.
+const ACTIVE_BUTTON = 'bg-zinc-900 text-white shadow-md shadow-black/20 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:shadow-white/10';
+const SILVER_TILE = 'bg-gradient-to-br from-zinc-100 to-zinc-300 text-zinc-700 ring-1 ring-zinc-400/40 dark:from-zinc-600 dark:to-zinc-800 dark:text-zinc-100 dark:ring-zinc-400/30';
+
 const statusChipClass = (status?: string) => {
-    if (!status) return 'bg-gray-500/10 text-gray-500 border-gray-500/30';
+    const neutral = 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-300 ring-1 ring-zinc-500/20';
+    if (!status) return neutral;
     const s = status.toUpperCase();
-    if (s.includes('COMPLET') || s.includes('SUCCESS') || s.includes('APPROV')) return 'bg-green-500/10 text-green-500 border-green-500/30';
-    if (s.includes('REJECT')) return 'bg-red-500/10 text-red-500 border-red-500/30';
-    if (s.includes('PROCESS') || s.includes('SUBMIT')) return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30';
-    return 'bg-gray-500/10 text-gray-500 border-gray-500/30';
+    if (s.includes('COMPLET') || s.includes('SUCCESS') || s.includes('APPROV')) return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/20';
+    if (s.includes('REJECT')) return 'bg-rose-500/10 text-rose-700 dark:text-rose-400 ring-1 ring-rose-500/20';
+    if (s.includes('PROCESS') || s.includes('SUBMIT')) return 'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-1 ring-amber-500/20';
+    return neutral;
 };
 
 const EsevaPanTab: React.FC = () => {
     const { token } = useAuth();
     const [activeSubTab, setActiveSubTab] = useState<SubTab>('SERVICE');
-
-    const [mainBalance, setMainBalance] = useState<number | null>(null);
 
     const [serviceForm, setServiceForm] = useState({
         pan_number: '',
@@ -93,19 +96,6 @@ const EsevaPanTab: React.FC = () => {
         setStates(sortedStates);
     }, []);
 
-    const fetchWalletBalance = async () => {
-        try {
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/wallet/balance`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.data.success) {
-                setMainBalance(res.data.data.mainBalance);
-            }
-        } catch (error) {
-            console.error("Failed to fetch wallet balance:", error);
-        }
-    };
-
     const fetchHistory = async () => {
         setHistoryLoading(true);
         try {
@@ -142,7 +132,6 @@ const EsevaPanTab: React.FC = () => {
 
     useEffect(() => {
         if (token) {
-            fetchWalletBalance();
             fetchHistory();
             fetchMyPsaId();
         }
@@ -180,8 +169,7 @@ const EsevaPanTab: React.FC = () => {
             if (res.data.success) {
                 setServiceResult(res.data);
                 toast.success(res.data.message || "PAN Service application submitted successfully!");
-                fetchWalletBalance();
-                fetchHistory();
+                    fetchHistory();
             } else {
                 toast.error(res.data.message || "Failed to submit PAN Service application.");
             }
@@ -217,8 +205,7 @@ const EsevaPanTab: React.FC = () => {
             if (res.data.success) {
                 setCouponResult(res.data);
                 toast.success(res.data.message || "PAN Coupon request submitted successfully!");
-                fetchWalletBalance();
-                fetchHistory();
+                    fetchHistory();
             } else {
                 toast.error(res.data.message || "Failed to submit PAN Coupon request.");
             }
@@ -273,7 +260,7 @@ const EsevaPanTab: React.FC = () => {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                 <div className="p-3 bg-card border border-border/40 rounded-xl">
                     <p className="text-xs text-muted-foreground uppercase font-bold mb-1">Application No.</p>
-                    <p className="font-black text-primary text-lg">#{result.application_number}</p>
+                    <p className="font-black text-foreground text-lg">#{result.application_number}</p>
                 </div>
                 <div className="p-3 bg-card border border-border/40 rounded-xl">
                     <p className="text-xs text-muted-foreground uppercase font-bold mb-1">Admin Fee</p>
@@ -306,13 +293,13 @@ const EsevaPanTab: React.FC = () => {
             {result.psa_id && (
                 <div className="p-3 bg-card border border-border/40 rounded-xl flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">PSA ID</span>
-                    <span className="font-bold text-primary font-mono">{result.psa_id}</span>
+                    <span className="font-bold text-foreground font-mono">{result.psa_id}</span>
                 </div>
             )}
 
             <div className="flex items-center justify-between p-3 bg-card border border-border/40 rounded-xl text-sm">
                 <span className="text-muted-foreground">New Wallet Balance</span>
-                <span className="font-bold text-primary">{formatINR(result.new_wallet_balance)}</span>
+                <span className="font-bold text-foreground">{formatINR(result.new_wallet_balance)}</span>
             </div>
 
             {result.warning && (
@@ -325,7 +312,7 @@ const EsevaPanTab: React.FC = () => {
             <button
                 onClick={() => handleCheckStatus(type, result.application_number)}
                 disabled={statusLoading !== null}
-                className="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className={`w-full px-4 py-2.5 ${ACTIVE_BUTTON} rounded-xl text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2`}
             >
                 {statusLoading === type ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                 Check Live Status
@@ -335,30 +322,52 @@ const EsevaPanTab: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            {/* Sub-tabs Navigation */}
-            <div className="flex bg-muted/50 p-1 rounded-xl w-full max-w-md border border-border/50">
-                <button
-                    onClick={() => setActiveSubTab('SERVICE')}
-                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${activeSubTab === 'SERVICE' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                    <FileText className="w-4 h-4" />
-                    PAN Service
-                </button>
-                <button
-                    onClick={() => setActiveSubTab('COUPON')}
-                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${activeSubTab === 'COUPON' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                    <ShoppingBag className="w-4 h-4" />
-                    PAN Coupon
-                </button>
-                <button
-                    onClick={() => setActiveSubTab('STATUS')}
-                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${activeSubTab === 'STATUS' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                    <History className="w-4 h-4" />
-                    Status & History
-                </button>
-            </div>
+            {/* Hero */}
+            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
+                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 h-80 w-80 rounded-full bg-slate-200/70 dark:bg-slate-400/10 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-20 [background-image:radial-gradient(currentColor_1px,transparent_1px)] [background-size:22px_22px] text-black/10 dark:text-white/10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+
+                <div className="relative flex flex-col gap-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className={`rounded-2xl p-3 ${SILVER_TILE}`}>
+                                <CreditCard className="h-7 w-7" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">PAN Card Services</h1>
+                                <p className="text-sm text-muted-foreground">Get your PSA ID, buy UTI PAN coupons and track applications.</p>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                            {myPsaId && (
+                                <div className="flex items-center gap-2 rounded-xl border bg-background/70 backdrop-blur px-3 py-2">
+                                    <KeyRound className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground">PSA ID</span>
+                                    <span className="font-mono text-sm font-semibold">{myPsaId}</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex gap-1 overflow-x-auto no-scrollbar rounded-2xl border bg-background/60 backdrop-blur p-1.5 w-full md:w-max">
+                        {([
+                            ['SERVICE', 'PAN Service', FileText],
+                            ['COUPON', 'PAN Coupon', ShoppingBag],
+                            ['STATUS', 'Status & History', History],
+                        ] as const).map(([key, label, Icon]) => (
+                            <button
+                                key={key}
+                                onClick={() => setActiveSubTab(key)}
+                                className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition-all ${activeSubTab === key ? ACTIVE_BUTTON : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
+                            >
+                                <Icon className="w-4 h-4" />
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </section>
 
             {activeSubTab === 'SERVICE' && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -367,21 +376,21 @@ const EsevaPanTab: React.FC = () => {
                             <h2 className="text-lg font-bold text-foreground mb-4">PAN Service</h2>
                             <div className="space-y-4">
                                 <div className="flex items-start gap-3">
-                                    <div className="min-w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">1</div>
+                                    <div className={`min-w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${SILVER_TILE}`}>1</div>
                                     <div>
                                         <p className="text-sm font-medium text-foreground">Submit Application</p>
                                         <p className="text-xs text-muted-foreground">Apply for PAN Service for your shop / agent.</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
-                                    <div className="min-w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">2</div>
+                                    <div className={`min-w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${SILVER_TILE}`}>2</div>
                                     <div>
                                         <p className="text-sm font-medium text-foreground">Auto Wallet Debit</p>
                                         <p className="text-xs text-muted-foreground">Admin Fee + 18% GST debited instantly.</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
-                                    <div className="min-w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">3</div>
+                                    <div className={`min-w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${SILVER_TILE}`}>3</div>
                                     <div>
                                         <p className="text-sm font-medium text-foreground">PSA ID on Approval</p>
                                         <p className="text-xs text-muted-foreground">After admin approval, PSA ID is assigned and you can apply for PAN Coupons.</p>
@@ -395,7 +404,7 @@ const EsevaPanTab: React.FC = () => {
                         <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-xl font-bold text-foreground">PAN Service Application Form</h2>
-                                <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">eSevaTech</div>
+                                <div className="px-3 py-1 rounded-full border bg-background/60 text-xs font-semibold text-muted-foreground">eSevaTech</div>
                             </div>
 
                             {hasPsaId ? (
@@ -405,19 +414,19 @@ const EsevaPanTab: React.FC = () => {
                                         <span>PSA ID Already Generated</span>
                                     </div>
                                     <p className="text-sm text-muted-foreground leading-relaxed">
-                                        Your PSA ID <strong className="font-mono text-primary">#{myPsaId}</strong> has already
+                                        Your PSA ID <strong className="font-mono text-foreground">#{myPsaId}</strong> has already
                                         been generated and approved. There is no need to apply for the PAN Service again — you
                                         can directly purchase PAN coupons using your PSA ID.
                                     </p>
                                     {myPsaId && (
                                         <div className="p-3 bg-card border border-border/40 rounded-xl flex items-center justify-between text-sm">
                                             <span className="text-muted-foreground">Your PSA ID</span>
-                                            <span className="font-bold text-primary font-mono">{myPsaId}</span>
+                                            <span className="font-bold text-foreground font-mono">{myPsaId}</span>
                                         </div>
                                     )}
                                     <button
                                         onClick={() => setActiveSubTab('COUPON')}
-                                        className="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+                                        className={`w-full px-4 py-2.5 ${ACTIVE_BUTTON} rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2`}
                                     >
                                         <ShoppingBag className="w-4 h-4" />
                                         Go to PAN Coupon
@@ -438,7 +447,7 @@ const EsevaPanTab: React.FC = () => {
                                                 name="shop_name"
                                                 value={serviceForm.shop_name}
                                                 onChange={handleServiceChange}
-                                                className="w-full pl-10 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                                                className="w-full pl-10 pr-4 py-2.5 bg-background border rounded-xl shadow-sm outline-none focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500 text-foreground transition-all"
                                                 placeholder="Enter shop / business name"
                                                 required
                                             />
@@ -457,7 +466,7 @@ const EsevaPanTab: React.FC = () => {
                                             name="pan_number"
                                             value={serviceForm.pan_number}
                                             onChange={(e) => setServiceForm({ ...serviceForm, pan_number: e.target.value.toUpperCase() })}
-                                            className="w-full pl-10 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all uppercase"
+                                            className="w-full pl-10 pr-4 py-2.5 bg-background border rounded-xl shadow-sm outline-none focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500 text-foreground transition-all uppercase"
                                             placeholder="10-character PAN (e.g. ABCDE1234F)"
                                             maxLength={10}
                                             required
@@ -476,7 +485,7 @@ const EsevaPanTab: React.FC = () => {
                                             name="shop_address"
                                             value={serviceForm.shop_address}
                                             onChange={handleServiceChange}
-                                            className="w-full pl-10 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                                            className="w-full pl-10 pr-4 py-2.5 bg-background border rounded-xl shadow-sm outline-none focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500 text-foreground transition-all"
                                             placeholder="Shop No., Market, Road, Near landmark"
                                             required
                                         />
@@ -490,7 +499,7 @@ const EsevaPanTab: React.FC = () => {
                                             name="state_name"
                                             value={serviceForm.state_name}
                                             onChange={handleServiceChange}
-                                            className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                                            className="w-full px-4 py-2.5 bg-background border rounded-xl shadow-sm outline-none focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500 text-foreground transition-all"
                                             required
                                         >
                                             <option value="">Select State</option>
@@ -503,7 +512,7 @@ const EsevaPanTab: React.FC = () => {
                                             name="district_name"
                                             value={serviceForm.district_name}
                                             onChange={handleServiceChange}
-                                            className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                                            className="w-full px-4 py-2.5 bg-background border rounded-xl shadow-sm outline-none focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500 text-foreground transition-all"
                                             required
                                             disabled={!serviceForm.state_name}
                                         >
@@ -525,7 +534,7 @@ const EsevaPanTab: React.FC = () => {
                                                     const val = e.target.value.replace(/\D/g, '');
                                                     if (val.length <= 6) setServiceForm({ ...serviceForm, pincode: val });
                                                 }}
-                                                className="w-full pl-10 pr-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                                                className="w-full pl-10 pr-4 py-2.5 bg-background border rounded-xl shadow-sm outline-none focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500 text-foreground transition-all"
                                                 placeholder="6-digit pincode"
                                                 maxLength={6}
                                                 required
@@ -538,7 +547,7 @@ const EsevaPanTab: React.FC = () => {
                                     <button
                                         type="submit"
                                         disabled={serviceLoading}
-                                        className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                        className={`w-full py-3 ${ACTIVE_BUTTON} rounded-xl font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2`}
                                     >
                                         {serviceLoading ? (
                                             <>
@@ -562,98 +571,163 @@ const EsevaPanTab: React.FC = () => {
                     </div>
                 </div>
             )}
-            {activeSubTab === 'COUPON' && (
-                <div className="max-w-2xl mx-auto">
-                    <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-                                    <ShoppingBag className="w-6 h-6 text-primary" />
-                                    Apply PAN Coupons
-                                </h2>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Only for agents whose PAN Service is Approved and PSA ID is assigned.
-                                </p>
+            {activeSubTab === 'COUPON' && (() => {
+                const count = Math.max(0, Number(couponForm.number_of_coupons) || 0);
+                const setCount = (n: number) => setCouponForm(prev => ({ ...prev, number_of_coupons: String(Math.max(1, n)) }));
+                const psaVerified = !!myPsaId && couponForm.psa_id.trim() === myPsaId;
+                return (
+                <div>
+                <form onSubmit={handleApplyCoupon} className="grid gap-6 xl:grid-cols-[1fr_380px]">
+                    <section className="rounded-2xl border bg-card p-6 shadow-sm">
+                        <div className="mb-6 flex items-start gap-4 border-b pb-5">
+                            <div className={`rounded-2xl p-3 ${SILVER_TILE}`}>
+                                <ShoppingBag className="h-6 w-6" />
                             </div>
-                            <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">UTIITSL</div>
+                            <div className="min-w-0 flex-1">
+                                <h2 className="text-lg font-semibold">Apply PAN Coupons</h2>
+                                <p className="text-sm text-muted-foreground">Only for agents whose PAN Service is approved and PSA ID is assigned.</p>
+                            </div>
                         </div>
 
-                        <form onSubmit={handleApplyCoupon} className="space-y-5">
-                            <div>
-                                <label className="text-sm font-medium text-foreground mb-1.5 block">PSA ID</label>
-                                <input
-                                    type="text"
-                                    name="psa_id"
-                                    value={couponForm.psa_id}
-                                    onChange={handleCouponChange}
-                                    className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all font-mono"
-                                    placeholder="Enter approved PSA ID"
-                                    required
-                                />
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    {couponForm.psa_id ? 'PSA ID auto-filled from your approved PAN Service. You can still edit it.' : 'PSA ID is auto-filled once your PAN Service is approved.'}
+                        <div className="flex flex-col gap-6">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-sm font-medium text-foreground">PSA ID</label>
+                                <div className="relative">
+                                    <KeyRound className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    <input
+                                        type="text"
+                                        name="psa_id"
+                                        value={couponForm.psa_id}
+                                        onChange={handleCouponChange}
+                                        className="w-full pl-10 pr-28 py-2.5 bg-background border rounded-xl shadow-sm outline-none focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500 text-foreground transition-all font-mono tracking-wide"
+                                        placeholder="Enter approved PSA ID"
+                                        required
+                                    />
+                                    {psaVerified && (
+                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/20">
+                                            <CheckCircle2 className="h-3.5 w-3.5" /> Verified
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    {couponForm.psa_id ? 'Auto-filled from your approved PAN Service. You can still edit it.' : 'Auto-filled once your PAN Service is approved.'}
                                 </p>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-sm font-medium text-foreground mb-1.5 block">Number of Coupons</label>
+                            <div className="flex flex-col gap-2">
+                                <label className="text-sm font-medium text-foreground">Number of Coupons</label>
+                                <div className="flex items-stretch gap-2">
+                                    <button type="button" onClick={() => setCount(count - 1)} disabled={count <= 1} className="w-12 rounded-xl border text-xl font-semibold hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40" aria-label="Fewer coupons">−</button>
                                     <input
                                         type="number"
                                         name="number_of_coupons"
                                         min="1"
                                         value={couponForm.number_of_coupons}
                                         onChange={handleCouponChange}
-                                        className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all font-semibold"
-                                        placeholder="Minimum 1"
+                                        onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                        className="flex-1 min-w-0 py-2.5 bg-background border rounded-xl shadow-sm outline-none focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500 text-foreground transition-all text-center text-2xl font-bold tabular-nums"
+                                        placeholder="1"
                                         required
                                     />
+                                    <button type="button" onClick={() => setCount(count + 1)} className="w-12 rounded-xl border text-xl font-semibold hover:bg-black/5 dark:hover:bg-white/5" aria-label="More coupons">+</button>
                                 </div>
-                                <div>
-                                    <label className="text-sm font-medium text-foreground mb-1.5 block">PAN Agency</label>
-                                    <select
-                                        name="pan_agency_name"
-                                        value={couponForm.pan_agency_name}
-                                        onChange={handleCouponChange}
-                                        className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                                    >
-                                        <option value="UTIITSL">UTIITSL</option>
-                                    </select>
+                                <div className="flex flex-wrap gap-2">
+                                    {[1, 5, 10, 25].map((n) => (
+                                        <button
+                                            key={n}
+                                            type="button"
+                                            onClick={() => setCount(n)}
+                                            className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold tabular-nums transition-all ${count === n ? ACTIVE_BUTTON + ' border-transparent' : 'bg-background hover:bg-black/5 dark:hover:bg-white/5'}`}
+                                        >
+                                            {n} {n === 1 ? 'coupon' : 'coupons'}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 
-                            <div className="pt-4 border-t border-border/30">
-                                <button
-                                    type="submit"
-                                    disabled={couponLoading}
-                                    className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    {couponLoading ? (
-                                        <>
-                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                            Submitting Coupon Request...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <ChevronRight className="w-5 h-5" />
-                                            Submit PAN Coupon Request
-                                        </>
-                                    )}
-                                </button>
+                            <div className="flex flex-col gap-2">
+                                <label className="text-sm font-medium text-foreground">PAN Agency</label>
+                                {/* One agency today, so it is shown as the chosen option rather than a one-item dropdown. */}
+                                <label className="flex items-center gap-3 rounded-xl border-2 border-zinc-900 dark:border-zinc-300 bg-background/50 p-4 cursor-pointer">
+                                    <input type="radio" name="pan_agency_name" value="UTIITSL" checked={couponForm.pan_agency_name === 'UTIITSL'} onChange={handleCouponChange} className="sr-only" />
+                                    <div className={`rounded-xl p-2.5 ${SILVER_TILE}`}>
+                                        <CreditCard className="h-5 w-5" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-semibold">UTIITSL</p>
+                                        <p className="text-xs text-muted-foreground">UTI Infrastructure Technology and Services Ltd.</p>
+                                    </div>
+                                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                                </label>
                             </div>
-                        </form>
+                        </div>
+                    </section>
 
-                        {couponResult && renderResult(couponResult, 'COUPON')}
-                    </div>
+                    {/* Coupon ticket summary */}
+                    <section className="flex flex-col gap-5 rounded-2xl border bg-card p-6 shadow-sm xl:sticky xl:top-4 xl:self-start">
+                        <h2 className="text-lg font-semibold">Summary</h2>
+
+                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-800 via-zinc-900 to-black p-5 text-white shadow-lg dark:from-zinc-200 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900">
+                            <div aria-hidden className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-white/10 blur-2xl dark:bg-white/40" />
+                            {/* Ticket notches */}
+                            <span aria-hidden className="absolute left-0 top-[62%] h-5 w-5 -translate-x-1/2 rounded-full bg-card" />
+                            <span aria-hidden className="absolute right-0 top-[62%] h-5 w-5 translate-x-1/2 rounded-full bg-card" />
+                            <div className="relative">
+                                <div className="flex items-center justify-between text-xs uppercase tracking-wider opacity-70">
+                                    <span>PAN Coupon</span>
+                                    <span>{couponForm.pan_agency_name}</span>
+                                </div>
+                                <p className="mt-3 text-5xl font-bold tabular-nums">×{count || 0}</p>
+                                <p className="text-sm opacity-70">{count === 1 ? 'application token' : 'application tokens'}</p>
+                                <div className="my-4 border-t border-dashed border-white/25 dark:border-black/20" />
+                                <div className="flex items-end justify-between gap-3 text-xs">
+                                    <div className="min-w-0">
+                                        <p className="uppercase tracking-wider opacity-60">PSA ID</p>
+                                        <p className="truncate font-mono text-sm font-semibold">{couponForm.psa_id || '—'}</p>
+                                    </div>
+                                    <ShoppingBag className="h-6 w-6 opacity-60" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="rounded-2xl border bg-background/50 p-4 text-sm">
+                            <p className="flex gap-2 text-xs text-muted-foreground">
+                                <Wallet className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                                Coupon charges are calculated by Shahparpay and debited from your Main Wallet on submission.
+                            </p>
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={couponLoading}
+                            className={`w-full py-3 ${ACTIVE_BUTTON} rounded-xl font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2`}
+                        >
+                            {couponLoading ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    Submitting Coupon Request...
+                                </>
+                            ) : (
+                                <>
+                                    <ChevronRight className="w-5 h-5" />
+                                    Submit PAN Coupon Request
+                                </>
+                            )}
+                        </button>
+                    </section>
+                </form>
+
+                {couponResult && renderResult(couponResult, 'COUPON')}
                 </div>
-            )}
+                );
+            })()}
 
             {activeSubTab === 'STATUS' && (
                 <div className="space-y-6">
                     {/* Manual Status Check */}
                     <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
                         <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
-                            <Search className="w-5 h-5 text-primary" />
+                            <Search className="w-5 h-5 text-muted-foreground" />
                             Check Application Status
                         </h2>
                         <p className="text-xs text-muted-foreground mb-5">Enter the application number returned at submission time.</p>
@@ -663,14 +737,14 @@ const EsevaPanTab: React.FC = () => {
                                 type="number"
                                 value={statusForm.application_number}
                                 onChange={(e) => setStatusForm({ application_number: e.target.value })}
-                                className="flex-1 px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all font-mono"
+                                className="flex-1 px-4 py-2.5 bg-background border rounded-xl shadow-sm outline-none focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500 text-foreground transition-all font-mono"
                                 placeholder="Application Number (e.g. 2001)"
                             />
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => handleCheckStatus('SERVICE')}
                                     disabled={statusLoading !== null}
-                                    className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+                                    className={`px-5 py-2.5 ${ACTIVE_BUTTON} rounded-xl text-sm font-semibold transition-all disabled:opacity-50 flex items-center gap-2`}
                                 >
                                     {statusLoading === 'SERVICE' ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
                                     PAN Service
@@ -678,7 +752,7 @@ const EsevaPanTab: React.FC = () => {
                                 <button
                                     onClick={() => handleCheckStatus('COUPON')}
                                     disabled={statusLoading !== null}
-                                    className="px-5 py-2.5 bg-secondary text-secondary-foreground border border-border/50 rounded-xl text-sm font-medium hover:bg-secondary/80 transition-colors disabled:opacity-50 flex items-center gap-2"
+                                    className="px-5 py-2.5 bg-background border rounded-xl text-sm font-semibold hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50 flex items-center gap-2"
                                 >
                                     {statusLoading === 'COUPON' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingBag className="w-4 h-4" />}
                                     PAN Coupon
@@ -690,12 +764,12 @@ const EsevaPanTab: React.FC = () => {
                             <div className="mt-6 p-5 bg-card border border-border/50 rounded-2xl space-y-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase border ${statusChipClass(statusResult.status)}`}>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${statusChipClass(statusResult.status)}`}>
                                             {statusResult.status || 'N/A'}
                                         </span>
                                         <span className="text-xs text-muted-foreground uppercase font-bold">{statusResult.service_type || ''}</span>
                                     </div>
-                                    <span className="text-sm font-black text-primary">#{statusResult.application_number}</span>
+                                    <span className="text-sm font-black text-foreground">#{statusResult.application_number}</span>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
@@ -707,7 +781,7 @@ const EsevaPanTab: React.FC = () => {
                                         {statusResult.psa_id !== undefined && (
                                             <div className="p-3 bg-muted/40 border border-border/40 rounded-xl flex items-center justify-between">
                                                 <span className="text-xs text-muted-foreground">PSA ID</span>
-                                                <span className="font-bold text-primary font-mono">{statusResult.psa_id || 'Not assigned'}</span>
+                                                <span className="font-bold text-foreground font-mono">{statusResult.psa_id || 'Not assigned'}</span>
                                             </div>
                                         )}
                                         {statusResult.pan_number && (
@@ -746,13 +820,13 @@ const EsevaPanTab: React.FC = () => {
                     {/* History */}
                     <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
                         <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-4">
-                            <History className="w-5 h-5 text-primary" />
+                            <History className="w-5 h-5 text-muted-foreground" />
                             Application History
                         </h2>
 
                         {historyLoading ? (
                             <div className="flex items-center justify-center p-8">
-                                <Loader2 className="w-6 h-6 animate-spin text-primary mr-3" />
+                                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground mr-3" />
                                 <span className="text-sm text-muted-foreground">Loading applications...</span>
                             </div>
                         ) : history.length === 0 ? (
@@ -760,45 +834,45 @@ const EsevaPanTab: React.FC = () => {
                                 No eSevaTech PAN applications yet. Submit a PAN Service or PAN Coupon request to get started.
                             </div>
                         ) : (
-                            <div className="overflow-x-auto">
+                            <div className="overflow-x-auto rounded-xl border">
                                 <table className="w-full text-sm">
                                     <thead>
-                                        <tr className="border-b border-border/50 text-left text-xs text-muted-foreground uppercase tracking-wider">
-                                            <th className="py-3 pr-4 font-semibold">Type</th>
-                                            <th className="py-3 pr-4 font-semibold">Application No.</th>
-                                            <th className="py-3 pr-4 font-semibold">Date</th>
-                                            <th className="py-3 pr-4 font-semibold">Amount</th>
-                                            <th className="py-3 pr-4 font-semibold">Status</th>
-                                            <th className="py-3 font-semibold text-right">Action</th>
+                                        <tr className="border-b text-left text-[11px] text-muted-foreground uppercase tracking-wider bg-black/[0.03] dark:bg-white/[0.04]">
+                                            <th className="py-3 px-4 font-semibold">Type</th>
+                                            <th className="py-3 px-4 font-semibold">Application No.</th>
+                                            <th className="py-3 px-4 font-semibold">Date</th>
+                                            <th className="py-3 px-4 font-semibold">Amount</th>
+                                            <th className="py-3 px-4 font-semibold">Status</th>
+                                            <th className="py-3 px-4 font-semibold text-right">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {history.map((tx, idx) => (
-                                            <tr key={idx} className="border-b border-border/30 hover:bg-muted/40 transition-colors">
-                                                <td className="py-3 pr-4">
+                                            <tr key={idx} className="border-b last:border-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors">
+                                                <td className="py-3 px-4">
                                                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
-                                                        tx.type === 'PAN_SERVICE' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' : 'bg-purple-500/10 text-purple-500 border-purple-500/30'
+                                                        tx.type === 'PAN_SERVICE' ? 'bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/30' : 'bg-zinc-500/10 text-zinc-700 dark:text-zinc-300 border-zinc-500/30'
                                                     }`}>
                                                         {tx.type === 'PAN_SERVICE' ? 'PAN Service' : 'PAN Coupon'}
                                                     </span>
                                                 </td>
-                                                <td className="py-3 pr-4 font-mono font-medium text-foreground">
+                                                <td className="py-3 px-4 font-mono font-medium text-foreground">
                                                     #{tx.metadata?.application_number ?? '—'}
                                                 </td>
-                                                <td className="py-3 pr-4 text-muted-foreground">
-                                                    {new Date(tx.createdAt).toLocaleString()}
+                                                <td className="py-3 px-4 text-muted-foreground">
+                                                    {new Date(tx.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}
                                                 </td>
-                                                <td className="py-3 pr-4 font-semibold text-foreground">{formatINR(tx.amount)}</td>
-                                                <td className="py-3 pr-4">
-                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${statusChipClass(tx.metadata?.eseva_status || tx.status)}`}>
+                                                <td className="py-3 px-4 font-semibold text-foreground">{formatINR(tx.amount)}</td>
+                                                <td className="py-3 px-4">
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusChipClass(tx.metadata?.eseva_status || tx.status)}`}>
                                                         {tx.metadata?.eseva_status || tx.status || 'PENDING'}
                                                     </span>
                                                 </td>
-                                                <td className="py-3 text-right">
+                                                <td className="py-3 px-4 text-right">
                                                     <button
                                                         onClick={() => handleCheckStatus(tx.type === 'PAN_SERVICE' ? 'SERVICE' : 'COUPON', tx.metadata?.application_number)}
                                                         disabled={statusLoading !== null}
-                                                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-medium hover:bg-primary/20 transition-colors disabled:opacity-50"
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 border rounded-lg text-xs font-medium hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
                                                     >
                                                         {statusLoading !== null ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
                                                         Check Status

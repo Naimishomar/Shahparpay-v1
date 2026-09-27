@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Fingerprint, Clock, CheckCircle2, XCircle, RefreshCcw, ShieldCheck, KeyRound, Wallet, FileText, IndianRupee, CreditCard, Loader2, Store, Phone, Printer } from "lucide-react";
+import { Fingerprint, Clock, CheckCircle2, XCircle, RefreshCcw, ShieldCheck, KeyRound, Wallet, FileText, IndianRupee, CreditCard, Loader2, Store, Phone, Printer, User, IdCard, Landmark } from "lucide-react";
 import logo from "../assets/logo.png";
 import MerchantKycModal from "../components/MerchantKycModal";
 import DailyAuthModal from "../components/DailyAuthModal";
@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { useLocationContext } from "../context/LocationContext";
 import { z } from "zod";
 import { captureBiometric, DEVICE_LABELS, type DeviceBrand } from "../utils/rdService";
-import ShopLocationCard from '../components/ShopLocationCard';
 
 const banks = [
     { name: 'SBI', displayName: 'State Bank of India (SBI)', logo: 'https://www.google.com/s2/favicons?domain=onlinesbi.sbi&sz=128' },
@@ -26,6 +25,18 @@ const banks = [
 // AEPS transaction OTP is required only when the withdrawal amount is >= this
 // threshold. Below it, no OTP is needed.
 const AEPS_OTP_THRESHOLD = 5000;
+
+// Same black (light) / silver (dark) treatment as the active sidebar item and dashboard.
+const ACTIVE_BUTTON = 'bg-zinc-900 text-white shadow-md shadow-black/20 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:shadow-white/10';
+const SILVER_TILE = 'bg-gradient-to-br from-zinc-100 to-zinc-300 text-zinc-700 ring-zinc-400/40 dark:from-zinc-600 dark:to-zinc-800 dark:text-zinc-100 dark:ring-zinc-400/30';
+const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500';
+const AEPS_TABS = [
+    { key: 'balance_enquiry', label: 'Balance Enquiry', icon: Wallet, hint: "Check the balance in the customer's Aadhaar-linked bank account." },
+    { key: 'mini_statement', label: 'Mini Statement', icon: FileText, hint: "Show the customer's last few transactions from their bank." },
+    { key: 'cash_withdrawal', label: 'Cash Withdrawal', icon: IndianRupee, hint: "Withdraw cash from the customer's bank account using Aadhaar." },
+    { key: 'cash_deposit', label: 'Cash Deposit', icon: CreditCard, hint: "Deposit cash into the customer's Aadhaar-linked bank account." },
+    // { key: 'aadhaar_pay', label: 'Aadhaar Pay', icon: CreditCard },
+] as const;
 
 const numberToWords = (num: string | number) => {
     const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
@@ -536,142 +547,147 @@ const AEPS = () => {
     };
 
     return (
-        <div className="flex flex-col gap-6 w-full p-2 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            {/* Top Header Section */}
-            <div className="flex flex-col gap-4">
-                {/* Title and Tabs Row */}
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-8">
-                    <h1 className="text-2xl font-bold text-glow flex items-center gap-2">
-                        <Fingerprint className="text-primary" size={28} />
-                        AEPS
-                    </h1>
-                    <div className="flex items-center gap-6 border-b border-border hidden md:flex">
-                        <button 
-                            onClick={() => { invalidateOtp(); setActiveTab('balance_enquiry'); }}
-                            className={`pb-2 px-2 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'balance_enquiry' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                        >
-                            <Wallet size={16} />
-                            Balance Enquiry
-                        </button>
-                        <button 
-                            onClick={() => { invalidateOtp(); setActiveTab('mini_statement'); }}
-                            className={`pb-2 px-2 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'mini_statement' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                        >
-                            <FileText size={16} />
-                            Mini Statement
-                        </button>
-                        <button 
-                            onClick={() => { invalidateOtp(); setActiveTab('cash_withdrawal'); }}
-                            className={`pb-2 px-2 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'cash_withdrawal' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                        >
-                            <IndianRupee size={16} />
-                            Cash Withdrawal
-                        </button>
-                        <button 
-                            onClick={() => { invalidateOtp(); setActiveTab('cash_deposit'); }}
-                            className={`pb-2 px-2 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'cash_deposit' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                        >
-                            <CreditCard size={16} />
-                            Cash Deposit
-                        </button>
-                        {/* <button 
-                            onClick={() => setActiveTab('aadhaar_pay')}
-                            className={`pb-2 px-2 font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'aadhaar_pay' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                        >
-                            <CreditCard size={16} />
-                            Aadhaar Pay
-                        </button> */}
-                    </div>
-                </div>
+        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Hero: title, daily auth status, service tabs */}
+            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
+                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 h-80 w-80 rounded-full bg-slate-200/70 dark:bg-slate-400/10 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-20 [background-image:radial-gradient(currentColor_1px,transparent_1px)] [background-size:22px_22px] text-black/10 dark:text-white/10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
 
-                {/* Action Buttons Row */}
-                <div className="flex flex-wrap items-center justify-end w-full gap-3">
-                    <div className="flex flex-wrap gap-2">
-                        {/* Tracker UI logic: Hides KYC if complete, changes Daily Auth appearance if done */}
+                <div className="relative flex flex-col gap-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className={`rounded-2xl p-3 ring-1 ${SILVER_TILE}`}>
+                                <Fingerprint className="h-7 w-7" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">AEPS</h1>
+                                <p className="text-sm text-muted-foreground">Aadhaar Enabled Payment System</p>
+                            </div>
+                        </div>
+
                         {isLoadingStatus ? (
-                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 text-gray-400 border border-gray-200 text-sm font-semibold shadow-sm animate-pulse">
+                            <div className="flex items-center gap-2 self-start sm:self-auto rounded-full border bg-background/70 backdrop-blur px-4 py-2 text-sm font-medium text-muted-foreground">
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                Loading Status...
+                                Loading status...
+                            </div>
+                        ) : merchantStatus.isDailyAuthDoneToday ? (
+                            <div className="flex items-center gap-2 self-start sm:self-auto rounded-full bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/20">
+                                <ShieldCheck className="w-4 h-4" />
+                                Daily auth done
                             </div>
                         ) : (
-                            <>
-                                {!merchantStatus.isDailyAuthDoneToday && (
-                                    <button 
-                                        onClick={() => setShowDailyAuthModal(true)} 
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 transition-all text-sm font-semibold shadow-sm animate-pulse"
-                                        title="Daily 2FA Authentication Needed"
-                                    >
-                                        <KeyRound size={16} />
-                                        Pending Daily Auth
-                                    </button>
-                                )}
-                            </>
+                            <button
+                                onClick={() => setShowDailyAuthModal(true)}
+                                className="flex items-center gap-2 self-start sm:self-auto rounded-full bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-700 dark:text-amber-400 ring-1 ring-amber-500/30 hover:bg-amber-500/20"
+                                title="Daily 2FA Authentication Needed"
+                            >
+                                <span className="relative flex h-2 w-2">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-75" />
+                                    <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                                </span>
+                                <KeyRound size={16} />
+                                Pending Daily Auth
+                            </button>
                         )}
                     </div>
-                </div>
-            </div>
-            {/* Main Form Container */}
-            <div className="flex flex-col gap-6 glass-card p-6 rounded-2xl relative overflow-hidden group">
-                {/* Background Glow */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-50 pointer-events-none"></div>
 
-                <div className="relative z-10 flex flex-col gap-6">
-                    
-                    <div className="flex flex-col xl:flex-row justify-between gap-6 w-full">
-{/* Inputs Row */}
-                    <div className="flex flex-col gap-4 bg-primary/5 p-5 border-l-4 border-primary rounded-lg flex-1">
-                        <h2 className="text-lg font-bold text-foreground border-b border-border/50 pb-2">
-                            {activeTab === 'balance_enquiry' ? 'Balance Enquiry' : activeTab === 'mini_statement' ? 'Mini Statement' : activeTab === 'cash_deposit' ? 'Cash Deposit' : activeTab === 'aadhaar_pay' ? 'Aadhaar Pay' : 'Cash Withdrawal'}
-                        </h2>
-                        
-                        <div className="flex flex-col gap-4 mt-2">
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-medium text-foreground">Customer Name</label>
-                                <input 
-                                    type="text" 
+                    <div className="flex gap-1 overflow-x-auto no-scrollbar rounded-2xl border bg-background/60 backdrop-blur p-1.5 w-full md:w-max">
+                        {AEPS_TABS.map(({ key, label, icon: Icon }) => (
+                            <button
+                                key={key}
+                                onClick={() => { invalidateOtp(); setActiveTab(key); }}
+                                className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition-all ${activeTab === key ? ACTIVE_BUTTON : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
+                            >
+                                <Icon size={16} />
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            <div className="grid gap-6 xl:grid-cols-[1fr_400px]">
+                {/* Customer details */}
+                <section className="flex flex-col rounded-2xl border bg-card p-6 shadow-sm">
+                    {(() => {
+                        const tab = AEPS_TABS.find((t) => t.key === activeTab) || AEPS_TABS[0];
+                        const TabIcon = tab.icon;
+                        return (
+                            <div className="mb-6 flex items-start gap-4 border-b pb-5">
+                                <div className={`rounded-2xl p-3 ring-1 ${SILVER_TILE}`}>
+                                    <TabIcon className="h-6 w-6" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <h2 className="text-lg font-semibold">{tab.label}</h2>
+                                        <span className="hidden sm:inline text-xs font-medium uppercase tracking-wider text-muted-foreground">Customer details</span>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">{tab.hint}</p>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm font-medium text-foreground">Customer Name</label>
+                            <div className="relative">
+                                <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <input
+                                    type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    placeholder="Enter customer name" 
-                                    className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors" 
+                                    placeholder="Enter customer name"
+                                    className={`${INPUT} pl-10`}
                                 />
                             </div>
+                        </div>
 
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-medium text-foreground">Aadhaar Number</label>
-                                <input 
-                                    type="text" 
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm font-medium text-foreground">Aadhaar Number</label>
+                            <div className="relative">
+                                <IdCard className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <input
+                                    type="text"
                                     value={aadhaarNo}
                                     onChange={(e) => setAadhaarNo(e.target.value)}
-                                    placeholder="Enter your aadhaar number" 
-                                    className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors" 
+                                    placeholder="Enter your aadhaar number"
+                                    className={`${INPUT} pl-10 tracking-wider`}
                                 />
                             </div>
+                        </div>
 
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-medium text-foreground">Customer Bank Name</label>
-                                <select 
-                                    value={bankName}
-                                    onChange={(e) => setBankName(e.target.value)}
-                                    className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors"
-                                >
-                                    <option value="">Choose Your Bank</option>
-                                    {(dynamicBanks.length > 0 ? dynamicBanks : banks).map((b: any) => {
-                                        const bName = b.displayName || b.name || b.bankName || b.bank_name;
-                                        const optionValue = b.name || b.bankName || b.bank_name || bName;
-                                        return (
-                                            <option key={optionValue} value={optionValue}>
-                                                {bName}
-                                            </option>
-                                        );
-                                    })}
-                                </select>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm font-medium text-foreground">Customer Bank Name</label>
+                            <div className="relative">
+                            <Landmark className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <select
+                                value={bankName}
+                                onChange={(e) => setBankName(e.target.value)}
+                                className={`${INPUT} pl-10`}
+                            >
+                                <option value="">Choose Your Bank</option>
+                                {(dynamicBanks.length > 0 ? dynamicBanks : banks).map((b: any) => {
+                                    const bName = b.displayName || b.name || b.bankName || b.bank_name;
+                                    const optionValue = b.name || b.bankName || b.bank_name || bName;
+                                    return (
+                                        <option key={optionValue} value={optionValue}>
+                                            {bName}
+                                        </option>
+                                    );
+                                })}
+                            </select>
                             </div>
+                        </div>
 
-                            {activeTab !== 'balance_enquiry' && (
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-sm font-medium text-foreground">Mobile Number</label>
-                                    <input 
-                                        type="text" 
+                        {activeTab !== 'balance_enquiry' && (
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-sm font-medium text-foreground">Mobile Number</label>
+                                <div className="relative">
+                                    <Phone className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    <input
+                                        type="text"
                                         value={mobileNo}
                                         onChange={(e) => {
                                             const val = e.target.value.replace(/\D/g, ''); // Ensure only digits
@@ -681,310 +697,335 @@ const AEPS = () => {
                                             }
                                             setMobileNo(val);
                                         }}
-                                        placeholder="Enter your mobile number" 
-                                        className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors" 
+                                        placeholder="Enter your mobile number"
+                                        className={`${INPUT} pl-10`}
                                     />
                                 </div>
-                            )}
+                            </div>
+                        )}
 
-                            {(activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit' || activeTab === 'aadhaar_pay') && (
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-sm font-medium text-foreground">Amount</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                                            <span className="text-muted-foreground font-semibold">₹</span>
-                                        </div>
-                                        <input 
-                                            type="number" 
-                                            value={amount}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                if (otpSent && val !== amount) {
-                                                    invalidateOtp();
-                                                }
-                                                setAmount(val);
-                                            }}
-                                            onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                                            placeholder="Enter amount" 
-                                            className="w-full pl-8 p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors" 
-                                        />
+                        {(activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit' || activeTab === 'aadhaar_pay') && (
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-sm font-medium text-foreground">Amount</label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                        <span className="text-muted-foreground font-semibold">₹</span>
                                     </div>
-                                    {amount && Number(amount) > 0 && (
-                                        <span className="text-xs font-semibold text-emerald-600 mt-0.5 ml-1 animate-in fade-in slide-in-from-top-1">
-                                            {numberToWords(amount)}
-                                        </span>
-                                    )}
+                                    <input
+                                        type="number"
+                                        value={amount}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (otpSent && val !== amount) {
+                                                invalidateOtp();
+                                            }
+                                            setAmount(val);
+                                        }}
+                                        onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                        placeholder="Enter amount"
+                                        className={`${INPUT} pl-8 text-lg font-semibold tabular-nums`}
+                                    />
+                                </div>
+                                {amount && Number(amount) > 0 && (
+                                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5 ml-1 animate-in fade-in slide-in-from-top-1">
+                                        {numberToWords(amount)}
+                                    </span>
+                                )}
 
-                                    {/* Quick Amount Buttons */}
-                                    <div className="flex flex-wrap gap-2 mt-2">
-                                        {[100, 200, 500, 1000, 2000, 3000, 5000, 10000].map((val) => (
-                                            <button
-                                                key={val}
-                                                type="button"
-                                                onClick={() => {
-                                                    if (otpSent) invalidateOtp();
-                                                    setAmount(prev => (Number(prev) || 0) + val + "");
-                                                }}
-                                                className="px-3 py-1.5 text-xs font-medium rounded-md border border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-white transition-colors"
-                                            >
-                                                +₹{val}
-                                            </button>
-                                        ))}
+                                {/* Quick Amount Buttons */}
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {[100, 200, 500, 1000, 2000, 3000, 5000, 10000].map((val) => (
                                         <button
+                                            key={val}
                                             type="button"
                                             onClick={() => {
                                                 if (otpSent) invalidateOtp();
-                                                setAmount("");
+                                                setAmount(prev => (Number(prev) || 0) + val + "");
                                             }}
-                                            className="px-3 py-1.5 text-xs font-medium rounded-md border border-red-500/20 bg-red-500/5 text-red-500 hover:bg-red-500 hover:text-white transition-colors"
+                                            className="rounded-full border bg-background px-3 py-1.5 text-xs font-semibold tabular-nums text-foreground hover:bg-zinc-900 hover:text-white hover:border-zinc-900 dark:hover:bg-zinc-200 dark:hover:text-zinc-900 dark:hover:border-zinc-200"
                                         >
-                                            Clear
+                                            +₹{val}
                                         </button>
-                                    </div>
-
-                                    {/* AEPS Transaction OTP - required only for withdrawals > ₹5000 */}
-                                    {activeTab === 'cash_withdrawal' && Number(amount) > AEPS_OTP_THRESHOLD && (
-                                        <div className="flex flex-col gap-2 mt-2 border-t border-border/60 pt-3">
-                                            <div className="flex items-center justify-between gap-2">
-                                                <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                                                    <KeyRound size={14} className="text-primary" />
-                                                    AEPS Transaction OTP
-                                                </label>
-                                                <button
-                                                    type="button"
-                                                    onClick={handleSendOtp}
-                                                    disabled={sendingOtp}
-                                                    className="px-3 py-1.5 text-xs font-medium rounded-md border border-primary/30 bg-primary/5 text-primary hover:bg-primary hover:text-white transition-colors disabled:opacity-50"
-                                                >
-                                                    {sendingOtp ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : (otpSent ? "Resend OTP" : "Send OTP")}
-                                                </button>
-                                            </div>
-                                            {otpSent && (
-                                                <>
-                                                    <p className="text-xs text-emerald-600 font-medium">
-                                                        OTP sent to the customer's registered mobile number.
-                                                    </p>
-                                                    <input
-                                                        type="text"
-                                                        value={otp}
-                                                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                                        placeholder="Enter 6-digit OTP"
-                                                        className="w-full p-2.5 border border-border rounded-md focus:border-primary outline-none bg-background shadow-sm transition-colors text-center tracking-[0.4em] font-bold"
-                                                    />
-                                                    <p className="text-[11px] text-muted-foreground">
-                                                        The OTP is bound to the customer's fingerprint capture and is required by the bank for this withdrawal.
-                                                    </p>
-                                                </>
-                                            )}
-                                        </div>
-                                    )}
-                                    {activeTab === 'cash_withdrawal' && amount && Number(amount) > 0 && Number(amount) <= AEPS_OTP_THRESHOLD && (
-                                        <p className="text-[11px] text-muted-foreground mt-2">
-                                            No transaction OTP required for amounts up to ₹{AEPS_OTP_THRESHOLD}.
-                                        </p>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                        {/* Right Column: Scan & Action Area */}
-                        <div className="flex flex-col items-center justify-center gap-6 bg-primary/5 p-5 border-r-4 border-primary rounded-lg w-full lg:w-[400px]">
-                            {/* Consent */}
-                            <label className="flex items-start gap-3 cursor-pointer group w-full bg-background p-4 rounded-xl border border-border">
-                                <input 
-                                    type="checkbox" 
-                                    checked={consent}
-                                    onChange={(e) => setConsent(e.target.checked)}
-                                    className="w-5 h-5 rounded border-border text-primary focus:ring-primary accent-primary mt-1 cursor-pointer shrink-0" 
-                                />
-                                <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors leading-tight">
-                                    I hereby provide my consent to CSP to use my Aadhaar number/ VID to complete AEPS transaction authorisation.
-                                </span>
-                            </label>
-
-                            {/* Scan Button */}
-                            <button 
-                                onClick={captureFingerprint} 
-                                disabled={isScanning || !!pidData}
-                                className={`flex flex-col items-center justify-center gap-3 p-6 rounded-xl border-2 transition-all w-full
-                                    ${pidData 
-                                        ? 'border-green-500 bg-green-50 dark:bg-green-500/10' 
-                                        : 'border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 cursor-pointer bg-background'}`}
-                            >
-                                <div className="relative">
-                                    <Fingerprint className={`w-12 h-12 ${pidData ? 'text-green-500' : 'text-primary'} ${isScanning ? 'animate-pulse' : ''}`} />
-                                    {isScanning && (
-                                        <div className="absolute inset-0 bg-primary/20 animate-ping rounded-full"></div>
-                                    )}
-                                </div>
-                                <div className="text-center">
-                                    <h3 className={`font-semibold ${pidData ? 'text-green-600 dark:text-green-400' : 'text-foreground'}`}>
-                                        {isScanning ? 'Scanning...' : (pidData ? 'Fingerprint Captured' : 'Scan Fingerprint')}
-                                    </h3>
-                                    {!pidData && !isScanning && (
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            Click to capture customer biometric
-                                        </p>
-                                    )}
-                                </div>
-                            </button>
-
-                            {/* Clear/Submit Buttons */}
-                            <div className="flex gap-4 w-full">
-                                <button onClick={() => {
-                                    setAadhaarNo('');
-                                    setMobileNo('');
-                                    setAmount('');
-                                    setPidData(null);
-                                    setBankName('');
-                                    invalidateOtp();
-                                }} className="flex-1 py-3 rounded-lg border border-border hover:bg-muted font-medium transition-colors">
-                                    Clear
-                                </button>
-                                <button onClick={handleSubmit} disabled={loading || !pidData} className="flex-1 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-bold shadow-[0_0_15px_rgba(139,92,246,0.4)] hover:shadow-[0_0_20px_rgba(139,92,246,0.6)] transition-all duration-300 disabled:opacity-50">
-                                    {loading ? <RefreshCcw className="animate-spin mx-auto" size={20} /> : "Submit"}
-                                </button>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    {/* Geo-fencing is the most common reason a withdrawal is declined
-                        outright, and the retailer can fix it themselves from here. */}
-                    <ShopLocationCard />
-
-                    {/* Popular Banks Selection */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-                        {banks.map((bank) => (
-                            <label 
-                                key={bank.name} 
-                                className={`flex flex-col items-center justify-between p-4 border rounded-xl cursor-pointer transition-all duration-300 gap-3 bg-background/50 hover:-translate-y-1 ${selectedBank === bank.name ? 'border-primary ring-1 ring-primary shadow-[0_0_15px_rgba(139,92,246,0.3)]' : 'border-border hover:border-primary/50 hover:shadow-md'}`}
-                            >
-                                <div className="h-10 flex items-center justify-center">
-                                    <img 
-                                        src={bank.logo} 
-                                        alt={bank.displayName} 
-                                        className="max-h-8 object-contain drop-shadow-sm rounded-sm"
-                                        onError={(e) => {
-                                            (e.target as HTMLImageElement).style.display = 'none';
+                                    ))}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (otpSent) invalidateOtp();
+                                            setAmount("");
                                         }}
-                                    />
+                                        className="rounded-full border border-rose-500/30 bg-rose-500/5 px-3 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500 hover:text-white"
+                                    >
+                                        Clear
+                                    </button>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <input 
-                                        type="radio" 
-                                        name="bank" 
-                                        value={bank.name} 
-                                        checked={selectedBank === bank.name}
-                                        onChange={() => handleGridBankSelect(bank.name)}
-                                        className="w-3.5 h-3.5 text-primary focus:ring-primary accent-primary"
-                                    />
-                                    <span className="text-xs font-semibold text-center text-foreground">{bank.displayName}</span>
-                                </div>
-                            </label>
-                        ))}
-                    </div>
 
-                    {/* Device Selection and Reset */}
-                    <div className="flex items-center justify-between gap-4 border border-border p-4 rounded-xl bg-background/30 backdrop-blur-sm flex-wrap">
-                        <div className="flex flex-wrap gap-8">
-                            {[
-                                { name: 'Mantra', logo: 'Mantra' },
-                                { name: 'Morpho', logo: 'Morpho' },
-                                { name: 'Startek', logo: 'Startek' }
-                            ].map((device) => (
-                                <label key={device.name} className={`flex items-center gap-3 p-2 pr-4 rounded-lg cursor-pointer transition-all border ${selectedDevice === device.name.toLowerCase() ? 'border-primary bg-primary/5 shadow-sm' : 'border-transparent hover:bg-black/5 dark:hover:bg-white/5'} group`}>
-                                    <input 
-                                        type="radio" 
-                                        name="device" 
-                                        value={device.name.toLowerCase()}
-                                        checked={selectedDevice === device.name.toLowerCase()}
-                                        onChange={() => setSelectedDevice(device.name.toLowerCase())}
-                                        className="w-4 h-4 text-primary focus:ring-primary accent-primary" 
-                                    />
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-white/50 dark:bg-black/20 rounded-md flex items-center justify-center shadow-sm overflow-hidden border border-border/50 p-1 text-primary">
-                                            <Fingerprint className="w-6 h-6 opacity-80" />
+                                {/* AEPS Transaction OTP - required only for withdrawals > ₹5000 */}
+                                {activeTab === 'cash_withdrawal' && Number(amount) > AEPS_OTP_THRESHOLD && (
+                                    <div className="flex flex-col gap-2 mt-3 rounded-xl border bg-background/50 p-4">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                                                <KeyRound size={14} className="text-muted-foreground" />
+                                                AEPS Transaction OTP
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={handleSendOtp}
+                                                disabled={sendingOtp}
+                                                className={`rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-50 ${ACTIVE_BUTTON}`}
+                                            >
+                                                {sendingOtp ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : (otpSent ? "Resend OTP" : "Send OTP")}
+                                            </button>
                                         </div>
-                                        <span className={`font-medium transition-colors ${selectedDevice === device.name.toLowerCase() ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`}>
-                                            {device.name}
-                                        </span>
-                                    </div>
-                                </label>
-                            ))}
-                        </div>
-                        <button 
-                            onClick={handleReset} 
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 border border-red-200 transition-all text-sm font-semibold shadow-sm h-fit"
-                            title="Reset all fields"
-                        >
-                            <RefreshCcw size={16} />
-                            Reset
-                        </button>
-                    </div>
-
-                    {/* Recent Transactions Section */}
-                    <div className="mt-8 pt-6 border-t border-border">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Clock className="w-5 h-5 text-primary" />
-                            <h3 className="text-lg font-bold text-foreground">Recent Transactions</h3>
-                            <Link to="/reports" className="ml-auto text-sm text-primary hover:underline bg-primary/10 px-3 py-1 rounded-full font-medium transition-colors">
-                                View More
-                            </Link>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {recentTransactions.map((tx) => (
-                                <div 
-                                    key={tx._id} 
-                                    onClick={() => loadTransactionToForm(tx)}
-                                    className="flex flex-col p-4 rounded-xl border border-border bg-background/30 hover:bg-background/80 hover:border-primary/50 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-lg group"
-                                >
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div>
-                                            <p className="font-semibold text-foreground group-hover:text-primary transition-colors">{tx.metadata?.name || 'Customer'}</p>
-                                            <p className="text-xs text-muted-foreground">{new Date(tx.createdAt).toLocaleString()}</p>
-                                        </div>
-                                        {tx.status === 'SUCCESS' ? (
-                                            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                                        ) : tx.status === 'PENDING' ? (
-                                            <RefreshCcw className="w-5 h-5 text-yellow-500 animate-spin" />
-                                        ) : (
-                                            <XCircle className="w-5 h-5 text-red-500" />
+                                        {otpSent && (
+                                            <>
+                                                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                                                    OTP sent to the customer's registered mobile number.
+                                                </p>
+                                                <input
+                                                    type="text"
+                                                    value={otp}
+                                                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                                    placeholder="Enter 6-digit OTP"
+                                                    className={`${INPUT} text-center tracking-[0.4em] font-bold`}
+                                                />
+                                                <p className="text-[11px] text-muted-foreground">
+                                                    The OTP is bound to the customer's fingerprint capture and is required by the bank for this withdrawal.
+                                                </p>
+                                            </>
                                         )}
                                     </div>
-                                    
-                                    <div className="flex justify-between items-end mt-auto pt-2 border-t border-border/50">
-                                        <div className="flex flex-col gap-1.5">
-                                            <div className="flex items-center gap-2">
-                                                <img 
-                                                    src={banks.find(b => b.name.toLowerCase() === (tx.metadata?.bankName || '').toLowerCase())?.logo || 'https://www.google.com/s2/favicons?domain=bank.com&sz=128'} 
-                                                    alt={tx.metadata?.bankName || 'Bank'} 
-                                                    className="w-5 h-5 object-contain rounded-sm"
-                                                    onError={(e) => {
-                                                        (e.target as HTMLImageElement).style.display = 'none';
-                                                    }}
-                                                />
-                                                <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded w-max">
-                                                    {tx.metadata?.bankName || 'AEPS'}
-                                                </span>
+                                )}
+                                {activeTab === 'cash_withdrawal' && amount && Number(amount) > 0 && Number(amount) <= AEPS_OTP_THRESHOLD && (
+                                    <p className="text-[11px] text-muted-foreground mt-2">
+                                        No transaction OTP required for amounts up to ₹{AEPS_OTP_THRESHOLD}.
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Live checklist: mirrors what handleSubmit will insist on. */}
+                    {(() => {
+                        const needsAmount = activeTab === 'cash_withdrawal' || activeTab === 'cash_deposit' || activeTab === 'aadhaar_pay';
+                        const steps = [
+                            { label: 'Customer details', done: /^\d{12}$/.test(aadhaarNo) && (activeTab === 'balance_enquiry' || /^\d{10}$/.test(mobileNo)) && (!needsAmount || Number(amount) > 0) },
+                            { label: 'Bank selected', done: !!bankName },
+                            { label: 'Fingerprint', done: !!pidData },
+                        ];
+                        const doneCount = steps.filter((st) => st.done).length;
+                        return (
+                            <div className="mt-auto pt-6">
+                                <div className="rounded-2xl border bg-background/50 p-4">
+                                    <div className="mb-3 flex items-center justify-between">
+                                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ready to submit</span>
+                                        <span className="text-xs font-semibold tabular-nums text-muted-foreground">{doneCount}/{steps.length}</span>
+                                    </div>
+                                    <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-black/5 dark:bg-white/10">
+                                        <div className="h-full rounded-full bg-gradient-to-r from-zinc-400 via-zinc-600 to-zinc-400 dark:from-zinc-500 dark:via-zinc-200 dark:to-zinc-500 transition-[width] duration-500" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        {steps.map((st, i) => (
+                                            <div key={st.label} className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium ring-1 transition-colors ${st.done ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20' : 'text-muted-foreground ring-border'}`}>
+                                                {st.done ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px]">{i + 1}</span>}
+                                                {st.label}
                                             </div>
-                                            <span className="text-xs text-muted-foreground tracking-wider">
-                                                **** {(tx.metadata?.aadhaar || 'XXXX').slice(-4)}
-                                            </span>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-bold text-sm text-foreground">₹ {tx.amount.toFixed(2)}</p>
-                                            <p className={`text-[10px] font-bold ${tx.status === 'SUCCESS' ? 'text-emerald-500' : tx.status === 'PENDING' ? 'text-yellow-500' : 'text-red-500'}`}>{tx.status}</p>
-                                        </div>
+                                        ))}
                                     </div>
                                 </div>
-                            ))}
+                            </div>
+                        );
+                    })()}
+                </section>
+
+                {/* Scan & submit */}
+                <section className="flex flex-col gap-5 rounded-2xl border bg-card p-6 shadow-sm">
+                    {/* Consent */}
+                    <label className="flex items-start gap-3 cursor-pointer group w-full rounded-xl border bg-background/50 p-4">
+                        <input
+                            type="checkbox"
+                            checked={consent}
+                            onChange={(e) => setConsent(e.target.checked)}
+                            className="w-5 h-5 rounded border-border accent-zinc-900 dark:accent-zinc-300 mt-0.5 cursor-pointer shrink-0"
+                        />
+                        <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors leading-snug">
+                            I hereby provide my consent to CSP to use my Aadhaar number/ VID to complete AEPS transaction authorisation.
+                        </span>
+                    </label>
+
+                    {/* Scan Button */}
+                    <button
+                        onClick={captureFingerprint}
+                        disabled={isScanning || !!pidData}
+                        className={`relative flex flex-1 flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border-2 p-8 transition-all w-full
+                            ${pidData
+                                ? 'border-emerald-500/60 bg-emerald-500/5'
+                                : 'border-dashed border-zinc-300 dark:border-zinc-700 hover:border-zinc-500 dark:hover:border-zinc-400 bg-background/50 cursor-pointer'}`}
+                    >
+                        <div className="relative">
+                            {isScanning && <div className="absolute inset-0 rounded-full bg-zinc-400/30 animate-ping" />}
+                            <div className={`relative rounded-full p-5 ring-1 ${pidData ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-emerald-500/30' : SILVER_TILE}`}>
+                                {pidData ? <CheckCircle2 className="w-10 h-10" /> : <Fingerprint className={`w-10 h-10 ${isScanning ? 'animate-pulse' : ''}`} />}
+                            </div>
                         </div>
+                        <div className="text-center">
+                            <h3 className={`font-semibold ${pidData ? 'text-emerald-700 dark:text-emerald-400' : 'text-foreground'}`}>
+                                {isScanning ? 'Scanning...' : (pidData ? 'Fingerprint Captured' : 'Scan Fingerprint')}
+                            </h3>
+                            {!pidData && !isScanning && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Click to capture customer biometric
+                                </p>
+                            )}
+                        </div>
+                    </button>
+
+                    {/* Clear/Submit Buttons */}
+                    <div className="flex gap-3 w-full">
+                        <button onClick={() => {
+                            setAadhaarNo('');
+                            setMobileNo('');
+                            setAmount('');
+                            setPidData(null);
+                            setBankName('');
+                            invalidateOtp();
+                        }} className="flex-1 rounded-xl border py-3 font-medium hover:bg-black/5 dark:hover:bg-white/5">
+                            Clear
+                        </button>
+                        <button onClick={handleSubmit} disabled={loading || !pidData} className={`flex-[2] rounded-xl py-3 font-bold disabled:opacity-50 disabled:shadow-none ${ACTIVE_BUTTON}`}>
+                            {loading ? <RefreshCcw className="animate-spin mx-auto" size={20} /> : "Submit"}
+                        </button>
+                    </div>
+                </section>
+            </div>
+
+            {/* Popular banks, device, reset */}
+            <section className="rounded-2xl border bg-card p-6 shadow-sm">
+                <div className="mb-4 flex items-center justify-between gap-4 flex-wrap">
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Popular banks</h3>
+                    <button
+                        onClick={handleReset}
+                        className="flex items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/5 px-4 py-2 text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500 hover:text-white"
+                        title="Reset all fields"
+                    >
+                        <RefreshCcw size={16} />
+                        Reset
+                    </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                    {banks.map((bank) => (
+                        <label
+                            key={bank.name}
+                            className={`flex flex-col items-center justify-between gap-3 rounded-xl border bg-background/50 p-4 cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${selectedBank === bank.name ? 'border-zinc-900 ring-2 ring-zinc-900/10 dark:border-zinc-300 dark:ring-zinc-300/20 shadow-md' : 'hover:border-zinc-400 dark:hover:border-zinc-600'}`}
+                        >
+                            <div className="h-10 flex items-center justify-center">
+                                <img
+                                    src={bank.logo}
+                                    alt={bank.displayName}
+                                    className="max-h-8 object-contain drop-shadow-sm rounded-sm"
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="radio"
+                                    name="bank"
+                                    value={bank.name}
+                                    checked={selectedBank === bank.name}
+                                    onChange={() => handleGridBankSelect(bank.name)}
+                                    className="w-3.5 h-3.5 accent-zinc-900 dark:accent-zinc-300"
+                                />
+                                <span className="text-xs font-semibold text-center text-foreground">{bank.displayName}</span>
+                            </div>
+                        </label>
+                    ))}
+                </div>
+
+                <div className="mt-6 border-t pt-5">
+                    <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Biometric device</h3>
+                    <div className="flex flex-wrap gap-3">
+                        {['Mantra', 'Morpho', 'Startek'].map((device) => {
+                            const value = device.toLowerCase();
+                            const active = selectedDevice === value;
+                            return (
+                                <label key={device} className={`flex items-center gap-3 rounded-xl border p-2 pr-5 cursor-pointer transition-all ${active ? 'border-zinc-900 bg-zinc-900/[0.03] dark:border-zinc-300 dark:bg-white/5 shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}>
+                                    <input
+                                        type="radio"
+                                        name="device"
+                                        value={value}
+                                        checked={active}
+                                        onChange={() => setSelectedDevice(value)}
+                                        className="sr-only"
+                                    />
+                                    <div className={`rounded-lg p-2 ring-1 ${active ? SILVER_TILE : 'bg-black/5 dark:bg-white/10 text-muted-foreground ring-transparent'}`}>
+                                        <Fingerprint className="w-5 h-5" />
+                                    </div>
+                                    <span className={`text-sm font-medium ${active ? 'text-foreground' : 'text-muted-foreground'}`}>{device}</span>
+                                    {active && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                                </label>
+                            );
+                        })}
                     </div>
                 </div>
-            </div>
+            </section>
+
+            {/* Recent Transactions Section */}
+            <section className="rounded-2xl border bg-card p-6 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                    <Clock className="w-5 h-5 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold text-foreground">Recent Transactions</h3>
+                    <Link to="/reports" className="ml-auto rounded-full border px-3 py-1 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5">
+                        View More
+                    </Link>
+                </div>
+
+                {recentTransactions.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-muted-foreground">No AEPS transactions yet</p>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {recentTransactions.map((tx) => (
+                            <div
+                                key={tx._id}
+                                onClick={() => loadTransactionToForm(tx)}
+                                className="group flex flex-col rounded-xl border bg-background/50 p-4 cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:border-zinc-400 dark:hover:border-zinc-600"
+                            >
+                                <div className="flex justify-between items-start mb-3">
+                                    <div className="min-w-0">
+                                        <p className="truncate font-semibold text-foreground">{tx.metadata?.name || 'Customer'}</p>
+                                        <p className="text-xs text-muted-foreground">{new Date(tx.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                                    </div>
+                                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${tx.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20' : tx.status === 'PENDING' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-amber-500/20' : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 ring-rose-500/20'}`}>
+                                        {tx.status}
+                                    </span>
+                                </div>
+
+                                <div className="flex justify-between items-end mt-auto pt-3 border-t">
+                                    <div className="flex flex-col gap-1.5">
+                                        <div className="flex items-center gap-2">
+                                            <img
+                                                src={banks.find(b => b.name.toLowerCase() === (tx.metadata?.bankName || '').toLowerCase())?.logo || 'https://www.google.com/s2/favicons?domain=bank.com&sz=128'}
+                                                alt={tx.metadata?.bankName || 'Bank'}
+                                                className="w-5 h-5 object-contain rounded-sm"
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).style.display = 'none';
+                                                }}
+                                            />
+                                            <span className="text-xs font-medium text-foreground">
+                                                {tx.metadata?.bankName || 'AEPS'}
+                                            </span>
+                                        </div>
+                                        <span className="text-xs text-muted-foreground tracking-wider">
+                                            **** {(tx.metadata?.aadhaar || 'XXXX').slice(-4)}
+                                        </span>
+                                    </div>
+                                    <p className="font-bold text-base tabular-nums text-foreground">₹ {tx.amount.toFixed(2)}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </section>
 
             {/* Receipt Modal */}
             {showReceiptModal && receiptData && (() => {
