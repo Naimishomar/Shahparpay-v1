@@ -113,10 +113,10 @@ export const icchhamatiWebhook = async (req, res) => {
   const type = req.body?.type;
   const panHandler = PAN_WEBHOOK_HANDLERS[type];
 
-  // Not a PAN webhook: it is a QR collection notification, which carries the
-  // shared secret and credits a wallet. Left entirely to its own handler.
+  // Not a PAN webhook: it is a QR collection notification (`vpa_transaction`),
+  // which credits a wallet. Left entirely to its own handler and its own guard.
   if (!panHandler) {
-    if (type) console.warn('[Icchhamati Webhook] Unknown type, treating as collection:', type);
+    if (type && type !== 'vpa_transaction') console.warn('[Icchhamati Webhook] Unknown type, treating as collection:', type);
     return collectionWebhook(req, res);
   }
 

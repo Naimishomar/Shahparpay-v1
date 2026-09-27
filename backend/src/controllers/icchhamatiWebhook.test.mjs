@@ -92,14 +92,21 @@ process.env.ICCHHAMATI_MID = 'MID_1001';
   assert.strictEqual(r.captured.payload.message, 'vle_id and application_no are required');
 }
 
-// Anything that is not a PAN type is a collection notification. With no
-// collection secret configured that handler refuses — proving the payload was
-// handed to it rather than accepted by the PAN path's mid/mkey.
-for (const body of [{ type: 'paymentReceived' }, { status: 'SUCCESS', amount: 100 }]) {
+// Anything that is not a PAN type is a collection notification. These carry no
+// virtual account, so the collection handler rejects them as incomplete —
+// proving the payload was handed to it rather than accepted by the PAN path.
+for (const body of [{ type: 'vpa_transaction', data: {} }, { status: 'SUCCESS', amount: 100 }]) {
   const r = res();
   await icchhamatiWebhook(req({ body }), r);
-  assert.strictEqual(r.captured.code, 503, 'must fall through to collectionWebhook');
+  assert.strictEqual(r.captured.code, 400, 'must fall through to collectionWebhook');
   assert.strictEqual(r.captured.payload.success, false);
+}
+
+// Collection notifications with wrong mid/mkey are refused by that handler too.
+{
+  const r = res();
+  await icchhamatiWebhook(req({ headers: { mkey: 'wrong' }, body: { type: 'vpa_transaction', data: {} } }), r);
+  assert.strictEqual(r.captured.code, 401);
 }
 
 console.log('icchhamatiWebhook: all assertions passed');

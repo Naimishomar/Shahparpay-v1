@@ -340,20 +340,28 @@ export const collectionWebhook = async (req, res) => {
   try {
     // This endpoint credits a wallet on the caller's say-so, so an unauthenticated
     // caller who learns a virtual account id could mint balance with a forged
-    // notification. With no secret configured there is nothing to check, and
-    // skipping the check in that case makes a missing environment variable an
-    // open door — so it refuses instead.
+    // notification. Icchhamati's vpa_transaction callback authenticates with the
+    // account's own mid/mkey headers (sent as both `mid`/`mkey` and
+    // `x-mid`/`x-mkey`); a shared secret is still accepted for older setups.
+    // With neither configured there is nothing to check, and skipping the check
+    // would make a missing environment variable an open door — so it refuses.
+    const mid = String(process.env.ICCHHAMATI_MID || '').trim();
+    const mkey = String(process.env.ICCHHAMATI_MKEY || '').trim();
     const configuredSecret = String(process.env.ICCHHAMATI_COLLECTION_WEBHOOK_SECRET || '').trim();
-    if (!configuredSecret) {
+    if (!(mid && mkey) && !configuredSecret) {
       console.error(
-        '[Collection Webhook] ICCHHAMATI_COLLECTION_WEBHOOK_SECRET is not set — refusing the callback. Set it and register the same secret with Icchhamati.'
+        '[Collection Webhook] Neither ICCHHAMATI_MID/ICCHHAMATI_MKEY nor ICCHHAMATI_COLLECTION_WEBHOOK_SECRET is set — refusing the callback.'
       );
       return res.status(503).json({ success: false, message: 'Webhook is not configured' });
     }
-    const suppliedSecret = String(
-      req.get('x-icchhamati-signature') || req.get('x-webhook-secret') || ''
-    ).trim();
-    if (suppliedSecret !== configuredSecret) {
+    const header = (...names) =>
+      names.map((name) => String(req.get(name) || '').trim()).find(Boolean) || '';
+    const byCredentials =
+      Boolean(mid && mkey) && header('mid', 'x-mid') === mid && header('mkey', 'x-mkey') === mkey;
+    const bySecret =
+      Boolean(configuredSecret) &&
+      header('x-icchhamati-signature', 'x-webhook-secret') === configuredSecret;
+    if (!byCredentials && !bySecret) {
       return res.status(401).json({ success: false, message: 'Invalid webhook signature' });
     }
 
@@ -362,16 +370,29 @@ export const collectionWebhook = async (req, res) => {
     const status = normaliseStatus(
       data.status || data.payment_status || data.transaction_status || body.status
     );
-    const virtualAccountId = String(
-      data.virtual_account_id || data.virtualAccountId || data.account_id || data.accountId || ''
-    ).trim();
+    // vpa_transaction sends `vpa_account_id` / `vpa_id` / `txn_id`; the older
+    // shapes are kept so a replayed legacy notification still parses.
+    const accountIds = [
+      ...new Set(
+        [data.vpa_account_id, data.vpa_id, data.virtual_account_id, data.virtualAccountId, data.account_id]
+          .map((value) => String(value ?? '').trim())
+          .filter(Boolean)
+      ),
+    ];
+    const virtualAccountId = accountIds[0] || '';
     const providerReference = String(
-      data.txnid || data.transaction_id || data.transactionId || data.utr || data.rrn || data.reference_id || ''
+      data.txn_id || data.txnid || data.transaction_id || data.transactionId || data.utr || data.rrn || data.reference_id || ''
     ).trim();
     const amount = Number(data.amount ?? data.paid_amount ?? data.total_amount ?? data.credit_amount);
 
-    if (!virtualAccountId || !providerReference || status !== 'SUCCESS' || !Number.isFinite(amount) || amount <= 0) {
+    if (!virtualAccountId || !providerReference || !Number.isFinite(amount) || amount <= 0) {
       return res.status(400).json({ success: false, message: 'Incomplete QR payment notification' });
+    }
+    // A failed or pending credit is not money, but it is a well-formed
+    // notification: acknowledge it so the provider stops retrying.
+    if (status !== 'SUCCESS') {
+      console.warn(`[Collection Webhook] ${providerReference} reported ${data.status}; nothing credited.`);
+      return res.status(200).json({ status: 1, message: 'Success', success: true, credited: false });
     }
 
     // Icchhamati issues one virtual account per merchant account, not per
@@ -380,7 +401,12 @@ export const collectionWebhook = async (req, res) => {
     // up holding the same virtual account id, and crediting "the" owner would
     // pay one retailer for money a different one collected. Nothing is credited
     // unless exactly one retailer owns the account.
-    const owners = await Retailer.find({ 'collectionQr.virtualAccountId': virtualAccountId })
+    const owners = await Retailer.find({
+      $or: [
+        { 'collectionQr.virtualAccountId': { $in: accountIds } },
+        { 'collectionQr.upiHandle': { $in: accountIds } },
+      ],
+    })
       .select('_id')
       .limit(2);
     if (!owners.length) {
@@ -412,6 +438,9 @@ export const collectionWebhook = async (req, res) => {
             collectionChannel: 'QR',
             virtualAccountId,
             providerTxnId: providerReference,
+            utr: data.utr || null,
+            remitterName: data.remitter_full_name || null,
+            serviceChargeWithGst: data.service_charge_with_gst ?? null,
             webhookPayload: body,
           },
         },
@@ -442,9 +471,11 @@ export const collectionWebhook = async (req, res) => {
       );
     }
 
+    // `status: 1` is Icchhamati's documented acknowledgement; anything else is retried.
     return res.status(200).json({
+      status: 1,
+      message: 'Success',
       success: true,
-      status: 'SUCCESS',
       transactionId,
       credited: Boolean(claimed),
     });
