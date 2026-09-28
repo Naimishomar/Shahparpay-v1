@@ -3,6 +3,7 @@ import Retailer from '../models/users/retailer.model.js';
 import Distributor from '../models/users/distributor.model.js';
 import { uploadOnR2 } from '../utils/r2.js';
 import { updateWalletAtomically } from '../utils/wallet.util.js';
+import { logActivity } from '../utils/activity.js';
 
 // ======================= RETAILER -> DISTRIBUTOR =======================
 
@@ -47,6 +48,7 @@ export const createFundRequest = async (req, res) => {
       depositSlipUrl,
       remarks,
     });
+    logActivity({ req, action: 'fund_request.create', summary: `Requested ₹${Number(fundRequest.amount).toLocaleString('en-IN')} from distributor (${transactionMode})`, meta: { fundRequestId: fundRequest._id, amount: fundRequest.amount } });
 
     return res
       .status(201)
@@ -147,6 +149,13 @@ export const updateFundRequestStatus = async (req, res) => {
     fundRequest.status = status;
     if (adminRemarks) fundRequest.adminRemarks = adminRemarks;
     await fundRequest.save();
+    logActivity({
+      req,
+      action: `fund_request.${status.toLowerCase()}`,
+      target: { _id: fundRequest.retailerId || fundRequest.distributorId, role: fundRequest.requestType === 'RETAILER' ? 'retailer' : 'distributor' },
+      summary: `${status === 'APPROVED' ? 'Approved' : 'Rejected'} a ₹${Number(fundRequest.amount).toLocaleString('en-IN')} fund request`,
+      meta: { fundRequestId: fundRequest._id, amount: fundRequest.amount, remarks: adminRemarks },
+    });
 
     return res
       .status(200)
@@ -200,6 +209,7 @@ export const createDistributorFundRequest = async (req, res) => {
       depositSlipUrl,
       remarks,
     });
+    logActivity({ req, action: 'fund_request.create', summary: `Requested ₹${Number(fundRequest.amount).toLocaleString('en-IN')} from admin (${transactionMode})`, meta: { fundRequestId: fundRequest._id, amount: fundRequest.amount } });
 
     return res.status(201).json({
       success: true,
@@ -287,6 +297,13 @@ export const updateAdminFundRequestStatus = async (req, res) => {
     fundRequest.status = status;
     if (adminRemarks) fundRequest.adminRemarks = adminRemarks;
     await fundRequest.save();
+    logActivity({
+      req,
+      action: `fund_request.${status.toLowerCase()}`,
+      target: { _id: fundRequest.retailerId || fundRequest.distributorId, role: fundRequest.requestType === 'RETAILER' ? 'retailer' : 'distributor' },
+      summary: `${status === 'APPROVED' ? 'Approved' : 'Rejected'} a ₹${Number(fundRequest.amount).toLocaleString('en-IN')} fund request`,
+      meta: { fundRequestId: fundRequest._id, amount: fundRequest.amount, remarks: adminRemarks },
+    });
 
     return res
       .status(200)

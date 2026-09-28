@@ -11,6 +11,7 @@ import { uploadOnR2 } from '../utils/r2.js';
 import bcrypt from 'bcrypt';
 import Otp from '../models/otp.model.js';
 import { parseDisabledServices } from '../utils/services.js';
+import { logActivity } from '../utils/activity.js';
 import { sendEmailOTP } from '../utils/email.js';
 import {
   onboardMerchant,
@@ -106,7 +107,10 @@ export const loginUser = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Account is inactive.' });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ success: false, message: 'Invalid credentials.' });
+    if (!isMatch) {
+      logActivity({ req, actor: { _id: user._id, role, name: user.name }, action: 'auth.login_failed', summary: 'Failed sign-in: wrong password' });
+      return res.status(401).json({ success: false, message: 'Invalid credentials.' });
+    }
 
     // Generate OTP
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -211,6 +215,8 @@ export const verifyLoginOtp = async (req, res) => {
       { expiresIn: '7d' }
     );
 
+    logActivity({ req, actor: { _id: user._id, role, name: user.name }, action: 'auth.login', summary: 'Signed in' });
+
     const userObj = user.toObject();
     delete userObj.password;
 
@@ -299,6 +305,9 @@ export const refreshAccessToken = async (req, res) => {
 
     if (!user) {
       return res.status(401).json({ success: false, message: 'User not found' });
+    }
+    if (user.isActive === false) {
+      return res.status(403).json({ success: false, message: 'Account is inactive.' });
     }
 
     const newAccessToken = jwt.sign(
@@ -569,6 +578,7 @@ export const createDistributor = async (req, res) => {
     });
 
     await newDistributor.save();
+    logActivity({ req, action: 'distributor.create', target: { _id: newDistributor._id, role: 'distributor', name: newDistributor.name }, summary: `Created distributor ${newDistributor.name}` });
 
     await Admin.findByIdAndUpdate(req.user.id, { $push: { distributors: newDistributor._id } });
 
@@ -714,6 +724,7 @@ export const createRetailer = async (req, res) => {
     });
 
     await newRetailer.save();
+    logActivity({ req, action: 'retailer.create', target: { _id: newRetailer._id, role: 'retailer', name: newRetailer.name }, summary: `Onboarded retailer ${newRetailer.name} (${newRetailer.retailerId})` });
 
     await Distributor.findByIdAndUpdate(req.user.id, { $push: { retailers: newRetailer._id } });
 
@@ -1200,6 +1211,12 @@ export const changePassword = async (req, res) => {
         .json({ success: false, message: 'Email, OTP, and new password are required.' });
     }
 
+    if (String(newPassword).length < 6) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'New password must be at least 6 characters long.' });
+    }
+
     let Model;
     if (role === 'admin') Model = Admin;
     else if (role === 'distributor') Model = Distributor;
@@ -1224,6 +1241,7 @@ export const changePassword = async (req, res) => {
     // lock the user out.
     user.password = newPassword;
     await user.save();
+    logActivity({ req, actor: { _id: user._id, role, name: user.name }, action: 'auth.password_change', summary: 'Changed password' });
 
     res.status(200).json({ success: true, message: 'Password changed successfully.' });
   } catch (error) {
@@ -1309,6 +1327,13 @@ export const resetPassword = async (req, res) => {
 
     user.password = newPassword;
     await user.save();
+    logActivity({
+      req,
+      // Model name gives the role: Retailer | Distributor | Admin.
+      actor: { _id: user._id, role: user.constructor.modelName.toLowerCase(), name: user.name },
+      action: 'auth.password_reset',
+      summary: 'Reset password with an emailed code',
+    });
 
     return res.status(200).json({ success: true, message: 'Password has been reset successfully! You can now log in.' });
   } catch (error) {

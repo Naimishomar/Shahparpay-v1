@@ -27,6 +27,10 @@ export const authMiddlewares = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid Access Token' });
     }
+    // Deactivation must end a session that is already open, not just block the next login.
+    if (user.isActive === false) {
+      return res.status(403).json({ success: false, code: 'ACCOUNT_INACTIVE', message: 'Account is inactive.' });
+    }
 
     req.user = user;
     req.user.role = decodedToken.role; // Attach role for route guarding

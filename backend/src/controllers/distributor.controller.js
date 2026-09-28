@@ -6,6 +6,7 @@ import AepsWallet from '../models/aepsWallet.model.js';
 import { uploadOnR2 } from '../utils/r2.js';
 import { lifetimeFor } from './distributorAnalytics.controller.js';
 import { parseDisabledServices } from '../utils/services.js';
+import { logActivity } from '../utils/activity.js';
 
 // Get dashboard statistics for distributor
 export const getDashboardStats = async (req, res) => {
@@ -199,6 +200,14 @@ export const updateRetailer = async (req, res) => {
 
     Object.assign(retailer, updateData);
     await retailer.save();
+    logActivity({
+      req,
+      action: 'retailer.update',
+      target: { _id: retailer._id, role: 'retailer', name: retailer.name },
+      summary: `Updated ${retailer.name}'s details`,
+      // Field names only: values can be passwords or KYC numbers.
+      meta: { fields: Object.keys(updateData) },
+    });
 
     const retailerObj = retailer.toObject();
     delete retailerObj.password;
@@ -241,8 +250,15 @@ export const updateRetailerServices = async (req, res) => {
       { _id: req.params.id, distributorId: req.user.id },
       { $set: { disabledServices } },
       { new: true }
-    ).select('_id disabledServices');
+    ).select('_id name disabledServices');
     if (!retailer) return res.status(404).json({ success: false, message: 'Retailer not found' });
+    logActivity({
+      req,
+      action: 'retailer.services',
+      target: { _id: retailer._id, role: 'retailer', name: retailer.name },
+      summary: disabledServices.length ? `Switched off: ${disabledServices.join(', ')}` : 'All services switched on',
+      meta: { disabledServices },
+    });
 
     return res.status(200).json({ success: true, message: 'Services updated', data: retailer });
   } catch (error) {

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
-import { Save, Percent } from 'lucide-react';
+import { Loader2, Save, Percent } from 'lucide-react';
+import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SILVER_TILE } from './distributor/shared';
 
 const AdminCommissions = () => {
     const { token } = useAuth();
@@ -63,92 +64,100 @@ const AdminCommissions = () => {
         }
     };
 
-    if (loading) return <div className="text-center py-10">Loading settings...</div>;
+    const adminProfit = rates.totalApiPercentage - rates.retailerPercentage - rates.distributorPercentage;
+    const over = adminProfit < 0;
+    // Share of the total API commission each party gets, for the split bar.
+    const share = (v: number) => (rates.totalApiPercentage > 0 ? Math.max(0, (v / rates.totalApiPercentage) * 100) : 0);
+    const EXAMPLE = 10000;
 
-    const adminProfit = (rates.totalApiPercentage - rates.retailerPercentage - rates.distributorPercentage).toFixed(2);
+    const field = (key: keyof typeof rates, label: string, hint: string) => (
+        <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">{label}</label>
+            <div className="relative">
+                <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={rates[key]}
+                    onChange={(e) => setRates({ ...rates, [key]: parseFloat(e.target.value) || 0 })}
+                    className={`${INPUT} pr-10 tabular-nums`}
+                />
+                <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+            </div>
+            <p className="text-xs text-muted-foreground">{hint}</p>
+        </div>
+    );
 
     return (
-        <div className="max-w-4xl mx-auto animate-fade-in pb-10">
-            <div className="mb-8">
-                <h2 className="text-2xl font-bold text-foreground">Commission Settings</h2>
-                <p className="text-sm text-muted-foreground mt-1">Configure global percentage-based commissions for your network.</p>
-            </div>
-
-            <div className="glass-card p-6 md:p-8 rounded-2xl border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.1)] relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 translate-x-1/3 -translate-y-1/3"></div>
-                
-                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                    <Percent className="w-5 h-5 text-primary" />
-                    AEPS Commissions
-                </h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1">Total API Commission (%)</label>
-                        <p className="text-xs text-muted-foreground mb-2">The total commission you receive from PaySprint</p>
-                        <input
-                            type="number"
-                            step="0.01"
-                            value={rates.totalApiPercentage}
-                            onChange={e => setRates({...rates, totalApiPercentage: parseFloat(e.target.value) || 0})}
-                            className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                        />
+        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
+                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
+                <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><Percent className="h-7 w-7" /></div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Commission settings</h1>
+                            <p className="text-sm text-muted-foreground">How AEPS commission is split between retailers, distributors and you.</p>
+                        </div>
                     </div>
-                </div>
-
-                <div className="h-px w-full bg-black/10 dark:bg-white/10 my-6"></div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1">Retailer Commission (%)</label>
-                        <p className="text-xs text-muted-foreground mb-2">Percentage given to the Retailer</p>
-                        <input
-                            type="number"
-                            step="0.01"
-                            value={rates.retailerPercentage}
-                            onChange={e => setRates({...rates, retailerPercentage: parseFloat(e.target.value) || 0})}
-                            className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1">Distributor Commission (%)</label>
-                        <p className="text-xs text-muted-foreground mb-2">Percentage given to the Distributor</p>
-                        <input
-                            type="number"
-                            step="0.01"
-                            value={rates.distributorPercentage}
-                            onChange={e => setRates({...rates, distributorPercentage: parseFloat(e.target.value) || 0})}
-                            className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                        />
-                    </div>
-                </div>
-
-                <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div>
-                        <p className="text-sm font-medium text-foreground">Your Admin Profit (Calculated)</p>
-                        <p className="text-xs text-muted-foreground">What remains in your Admin Wallet</p>
-                    </div>
-                    <div className="text-2xl font-bold text-primary">
-                        {adminProfit}%
-                    </div>
-                </div>
-
-                <div className="flex justify-end">
-                    <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="btn-primary py-3 px-8 rounded-xl font-medium flex items-center gap-2"
-                    >
-                        {saving ? (
-                            <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                        ) : (
-                            <Save className="w-5 h-5" />
-                        )}
-                        Save Settings
+                    <button onClick={handleSave} disabled={saving || loading || over} className={PRIMARY_BUTTON}>
+                        {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save settings
                     </button>
                 </div>
-            </div>
+            </section>
+
+            {loading ? (
+                <div className="grid gap-6 lg:grid-cols-3"><div className="h-80 animate-pulse rounded-2xl bg-black/5 dark:bg-white/5 lg:col-span-2" /><div className="h-80 animate-pulse rounded-2xl bg-black/5 dark:bg-white/5" /></div>
+            ) : (
+                <div className="grid gap-6 lg:grid-cols-3">
+                    <section className={`${CARD} lg:col-span-2 space-y-6`}>
+                        <div>
+                            <p className={LABEL}>AEPS commission</p>
+                            <h2 className="mt-1 text-lg font-semibold">Rates</h2>
+                        </div>
+                        {field('totalApiPercentage', 'Total API commission', 'What PaySprint pays the platform on each withdrawal.')}
+                        <div className="grid gap-5 border-t pt-5 md:grid-cols-2">
+                            {field('retailerPercentage', 'Retailer share (reference)', 'Not used for payouts: retailers are paid by the fixed withdrawal slab. Shown to retailers as their rate.')}
+                            {field('distributorPercentage', 'Distributor share', "Paid to the retailer's distributor on every successful withdrawal.")}
+                        </div>
+                        {over && (
+                            <p className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+                                Retailer + distributor shares are more than the total API commission. Lower one of them to save.
+                            </p>
+                        )}
+                    </section>
+
+                    <section className={`${CARD} space-y-5`}>
+                        <div>
+                            <p className={LABEL}>The split</p>
+                            <p className={`mt-1 text-3xl font-bold tabular-nums ${over ? 'text-red-600 dark:text-red-400' : ''}`}>{adminProfit.toFixed(2)}%</p>
+                            <p className="text-sm text-muted-foreground">kept by the platform (estimate)</p>
+                        </div>
+                        <div className="flex h-3 overflow-hidden rounded-full bg-black/5 dark:bg-white/10" aria-hidden>
+                            <div className="bg-zinc-800 dark:bg-zinc-200" style={{ width: `${share(rates.retailerPercentage)}%` }} />
+                            <div className="bg-zinc-500" style={{ width: `${share(rates.distributorPercentage)}%` }} />
+                            <div className="bg-zinc-300 dark:bg-zinc-600" style={{ width: `${share(Math.max(0, adminProfit))}%` }} />
+                        </div>
+                        <ul className="space-y-2 text-sm">
+                            {[
+                                ['bg-zinc-800 dark:bg-zinc-200', 'Retailer', rates.retailerPercentage],
+                                ['bg-zinc-500', 'Distributor', rates.distributorPercentage],
+                                ['bg-zinc-300 dark:bg-zinc-600', 'Platform', Math.max(0, adminProfit)],
+                            ].map(([dot, label, pct]) => (
+                                <li key={label as string} className="flex items-center justify-between gap-3">
+                                    <span className="flex items-center gap-2"><span className={`h-2.5 w-2.5 rounded-full ${dot}`} />{label}</span>
+                                    <span className="tabular-nums">
+                                        {(pct as number).toFixed(2)}% · <span className="text-muted-foreground">₹{(((pct as number) / 100) * EXAMPLE).toFixed(2)}</span>
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                        <p className="rounded-xl border bg-background px-3 py-2.5 text-xs text-muted-foreground">
+                            Rupee figures are for a ₹{EXAMPLE.toLocaleString('en-IN')} withdrawal. Actual platform earnings are the total minus the retailer's slab commission and the distributor share, so they differ from this estimate.
+                        </p>
+                    </section>
+                </div>
+            )}
         </div>
     );
 };

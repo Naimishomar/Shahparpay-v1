@@ -183,7 +183,10 @@ export const getRecentTransactions = async (req, res) => {
 };
 
 export const liveTransactionsHandler = (req, res) => {
-  // Register the client connection for SSE
+  // Every platform transaction is broadcast on this stream, so only admins may
+  // subscribe. It used to accept any signed-in retailer or distributor.
+  if (req.user.role !== 'admin')
+    return res.status(403).json({ success: false, message: 'Unauthorized access' });
   addClient(req, res);
 };
 

@@ -68,6 +68,7 @@ const DocUpload = ({ label, file, onChange, locked, current }: {
 const DistributorProfile = ({
     token, profile, setProfile, isEditing, setIsEditing, isLoading, message, onSubmit,
     profilePic, setProfilePic, aadhaarPic, setAadhaarPic, panPic, setPanPic, isAadhaarLocked, isPanLocked, onViewNetwork,
+    roleLabel = 'Distributor', code, showNetwork = true,
 }: {
     token: string | null;
     profile: any;
@@ -83,8 +84,13 @@ const DistributorProfile = ({
     isAadhaarLocked: boolean;
     isPanLocked: boolean;
     onViewNetwork: () => void;
+    /** The admin portal reuses this page with its own label and ID, without the network card. */
+    roleLabel?: string;
+    code?: string;
+    showNetwork?: boolean;
 }) => {
-    const { data: network, loading: networkLoading } = useDistributorData<NetworkAnalytics>(token, '/api/distributor/analytics', 30);
+    const idCode = code ?? profile.distributorId;
+    const { data: network, loading: networkLoading } = useDistributorData<NetworkAnalytics>(token, showNetwork ? '/api/distributor/analytics' : null, 30);
     const [passwordOpen, setPasswordOpen] = useState(false);
     const set = (key: string, value: unknown) => setProfile({ ...profile, [key]: value });
     // One object URL per picked file, released when it changes.
@@ -123,9 +129,9 @@ const DistributorProfile = ({
                             <h1 className="truncate text-2xl md:text-3xl font-bold tracking-tight">{profile.name}</h1>
                             <p className="truncate text-sm text-muted-foreground">{profile.email}</p>
                             <div className="mt-3 flex flex-wrap items-center gap-2">
-                                <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${SILVER_TILE}`}>Distributor</span>
-                                {profile.distributorId && (
-                                    <span className="rounded-full border bg-background/70 backdrop-blur px-2.5 py-0.5 font-mono text-xs">ID {profile.distributorId}</span>
+                                <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${SILVER_TILE}`}>{roleLabel}</span>
+                                {idCode && (
+                                    <span className="rounded-full border bg-background/70 backdrop-blur px-2.5 py-0.5 font-mono text-xs">ID {idCode}</span>
                                 )}
                                 {profile.businessName && (
                                     <span className="flex items-center gap-1.5 rounded-full border bg-background/70 backdrop-blur px-2.5 py-0.5 text-xs">
@@ -249,6 +255,7 @@ const DistributorProfile = ({
 
                 {/* Network snapshot */}
                 <aside className="flex flex-col gap-6">
+                    {showNetwork && (
                     <section className={CARD}>
                         <div className="mb-4 flex items-center gap-3">
                             <div className={`rounded-xl p-2 ${SILVER_TILE}`}><Network className="h-4 w-4" /></div>
@@ -278,6 +285,7 @@ const DistributorProfile = ({
                         )}
                         <button onClick={onViewNetwork} className={`${SECONDARY_BUTTON} mt-4 w-full justify-center`}>View overview</button>
                     </section>
+                    )}
                     <section className={`${CARD} p-2`}>
                         <p className={`${LABEL} px-4 pt-3 pb-1`}>Security</p>
                         <button
@@ -294,10 +302,13 @@ const DistributorProfile = ({
                             <ChevronRight size={18} className="text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                         </button>
                     </section>
-                    <section className={`${CARD} text-sm`}>
-                        <p className="font-semibold">Need to change your email or a verified document?</p>
-                        <p className="mt-1 text-muted-foreground">These are locked for security. Contact the Shahparpay support team and they will update them for you.</p>
-                    </section>
+                    {/* Only distributors have a support team above them to ask. */}
+                    {showNetwork && (
+                        <section className={`${CARD} text-sm`}>
+                            <p className="font-semibold">Need to change your email or a verified document?</p>
+                            <p className="mt-1 text-muted-foreground">These are locked for security. Contact the Shahparpay support team and they will update them for you.</p>
+                        </section>
+                    )}
                 </aside>
             </div>
 

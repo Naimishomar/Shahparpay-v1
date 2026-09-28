@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/sidebar"
 
 import { Link, useLocation } from "react-router-dom"
-import { BarChart3, Send, Zap, ScanFace, Landmark, ArrowRightLeft, LayoutDashboard, Users, Store, UserPlus, UserCircle, FileText, QrCode, Link2, CreditCard, Bell, Headset } from "lucide-react"
+import { History, BarChart3, Send, Zap, ScanFace, Landmark, ArrowRightLeft, LayoutDashboard, Users, Store, UserPlus, UserCircle, FileText, QrCode, Link2, CreditCard, Bell, Headset } from "lucide-react"
 import logo from "../assets/logo.png"
 import { useAuth } from "../context/AuthContext"
 import { isServiceEnabled } from "../lib/services"
@@ -49,14 +49,15 @@ const retailerProjects = [
 
 const adminProjects = [
   { name: "Overview", url: "/admin", icon: LayoutDashboard },
-  { name: "Distributors", url: "/admin/distributors", icon: Users },
+  { name: "Transactions", url: "/admin/transactions", icon: ArrowRightLeft },
+  { name: "Users", url: "/admin/users", icon: Users },
+  { name: "Activity Log", url: "/admin/activity", icon: History },
   { name: "Fund Requests", url: "/admin/fund-requests", icon: Store },
   { name: "Add New", url: "/admin/create", icon: UserPlus },
   { name: "Commissions", url: "/admin/commissions", icon: FileText },
   { name: "Notifications", url: "/admin/notifications", icon: Bell },
   { name: "Customer Support", url: "/admin/support", icon: Headset },
   { name: "Ledger", url: "/reports/ledger", icon: FileText },
-  { name: "Lead Generation", url: "/lead-generation", icon: UserPlus },
 ]
 
 const distributorProjects = [

@@ -1,28 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, useParams } from 'react-router-dom';
-import { 
-    Users, 
-    UserPlus, 
-    LayoutDashboard, 
-    Activity, 
-    CreditCard, 
-    Briefcase,
-    ShieldCheck,
-    UserCircle,
-    ChevronLeft,
-    Wallet,
-    Store,
-    CheckCircle,
-    XCircle,
-    FileText
-} from 'lucide-react';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import AdminCommissions from '../components/AdminCommissions';
 import AdminNotifications from '../components/AdminNotifications';
 import AdminSupport from '../components/AdminSupport';
-import DailyAuthModal from '../components/DailyAuthModal';
-import { INDIAN_STATES } from '../constants';
+import AdminOverview from '../components/admin/AdminOverview';
+import TransactionExplorer, { type TxnQuery } from '../components/admin/TransactionExplorer';
+import UserDirectory, { type UserQuery } from '../components/admin/UserDirectory';
+import UserDetail from '../components/admin/UserDetail';
+import ActivityLog from '../components/admin/ActivityLog';
+import CreateRetailerWizard from '../components/distributor/CreateRetailerWizard';
+import DistributorProfile from '../components/distributor/DistributorProfile';
+import AdminFundRequests from '../components/admin/AdminFundRequests';
 
 const AdminPortal = () => {
     const { user, token, isInitializing } = useAuth();
@@ -30,10 +20,22 @@ const AdminPortal = () => {
     const { tab } = useParams<{ tab: string }>();
     const activeTab = tab ? tab.replace('-', '_') : 'dashboard';
     const setActiveTab = (t: string) => navigate('/admin/' + t);
+    const [searchParams] = useSearchParams();
+    // Console drill-downs ride in history state: the browser back button walks
+    // back through them, and a plain sidebar link opens a fresh, unfiltered list.
+    const navState = (useLocation().state || {}) as { viewUser?: { role: 'retailer' | 'distributor'; id: string }; txnQuery?: TxnQuery };
+    const viewUser = navState.viewUser || null;
+    const txnQuery = navState.txnQuery || {};
+    const openUser = (role: 'retailer' | 'distributor', id: string) => {
+        navigate('/admin/users', { state: { viewUser: { role, id } } });
+        window.scrollTo({ top: 0 });
+    };
+    const openTransactions = (query: TxnQuery) => {
+        navigate('/admin/transactions', { state: { txnQuery: query } });
+        window.scrollTo({ top: 0 });
+    };
     
     // Data states
-    const [stats, setStats] = useState({ totalDistributors: 0, totalRetailers: 0, activeUsers: 0, totalTransactions: 0 });
-    const [distributors, setDistributors] = useState<any[]>([]);
     const [fundRequests, setFundRequests] = useState<any[]>([]);
     const [loadingFR, setLoadingFR] = useState(false);
     
@@ -43,8 +45,6 @@ const AdminPortal = () => {
         dob: '', city: '', landmark: '', district: '', state: '', 
         businessName: '', businessAddress: '', 
         aadhaarNumber: '', panNumber: '', hasGst: false, gstNumber: '', otp: '',
-        dmtPackage: '', rechargePackage: '', aepsPackage: '', bbpsPackage: '', payoutPackage: '',
-        cmsPackage: '', ccpayPackage: '', payinPackage: '', upiPackage: '', 
         website: '', brandName: '', companyRegisterName: '', supportEmail: '', supportMobile: ''
     });
     const [otpSent, setOtpSent] = useState(false);
@@ -54,8 +54,6 @@ const AdminPortal = () => {
     const [profilePicture, setProfilePicture] = useState<File | null>(null);
     const [message, setMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [selectedDistributor, setSelectedDistributor] = useState<any>(null);
-    const [selectedRetailer, setSelectedRetailer] = useState<any>(null);
     
     const [profileData, setProfileData] = useState<any>(null);
     const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -88,13 +86,8 @@ const AdminPortal = () => {
                 setRecentTransactions(prev => {
                     if (prev.some(t => t._id === data._id)) return prev;
                     
-                    if (data.commissions?.adminEarned > 0) {
-                        window.dispatchEvent(new Event('wallet-updated'));
-                        setStats((prevStats: any) => ({
-                            ...prevStats,
-                            adminWalletBalance: (prevStats.adminWalletBalance || 0) + data.commissions.adminEarned
-                        }));
-                    }
+                    // The header re-reads the admin wallet on this event.
+                    if (data.commissions?.adminEarned > 0) window.dispatchEvent(new Event('wallet-updated'));
                     
                     return [data, ...prev].slice(0, 10);
                 });
@@ -114,22 +107,12 @@ const AdminPortal = () => {
 
     const fetchDashboardData = async () => {
         try {
-            const [statsRes, distRes, profileRes, frRes, recentTxRes] = await Promise.all([
-                fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/stats`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/distributors`, { headers: { 'Authorization': `Bearer ${token}` } }),
+            const [profileRes, frRes, recentTxRes] = await Promise.all([
                 fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/profile`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${import.meta.env.VITE_BACKEND_URL}/api/fund-request/admin`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/recent-transactions`, { headers: { 'Authorization': `Bearer ${token}` } })
             ]);
             
-            if (statsRes.ok) {
-                const statsData = await statsRes.json();
-                setStats(statsData.data);
-            }
-            if (distRes.ok) {
-                const distData = await distRes.json();
-                setDistributors(distData.data);
-            }
             if (profileRes.ok) {
                 const profData = await profileRes.json();
                 setProfileData(profData.data);
@@ -157,11 +140,6 @@ const AdminPortal = () => {
     }
 
     if (!user || user.role !== 'admin') return null;
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-        setFormData({ ...formData, [e.target.name]: value });
-    };
 
     const handleSendOtp = async () => {
         if (!formData.email) {
@@ -248,7 +226,7 @@ const AdminPortal = () => {
                 setMessage('Distributor created successfully!');
                 toast.success('Distributor created successfully!');
                 fetchDashboardData(); // Refresh list
-                setTimeout(() => { setActiveTab('distributors'); setMessage(''); }, 2000);
+                setTimeout(() => { setActiveTab('users?role=distributor'); setMessage(''); }, 2000);
             } else {
                 setMessage(resData.message || 'Failed to create distributor.');
                 toast.error(resData.message || 'Failed to create distributor.');
@@ -309,10 +287,8 @@ const AdminPortal = () => {
         }
     };
 
-    const handleFundRequestStatus = async (requestId: string, status: 'APPROVED' | 'REJECTED') => {
-        const remarks = window.prompt(`Enter remarks for ${status.toLowerCase()} (optional):`);
-        if (remarks === null) return; // User cancelled
-
+    // Remarks come from the confirm panel in AdminFundRequests (no browser prompt).
+    const handleFundRequestStatus = async (requestId: string, status: 'APPROVED' | 'REJECTED', remarks: string) => {
         setLoadingFR(true);
         try {
             const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/fund-request/admin/update`, {
@@ -352,948 +328,106 @@ const AdminPortal = () => {
                 {activeTab === 'notifications' && <AdminNotifications />}
                 {activeTab === 'support' && <AdminSupport />}
                 {activeTab === 'dashboard' && (
-                    <div className="animate-in fade-in duration-500">
-                        <div className="mb-8">
-                            <h2 className="text-3xl font-bold mb-2">Platform Overview</h2>
-                            <p className="text-muted-foreground">Monitor your network's growth and metrics in real-time.</p>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                            {/* Stat Card 1 */}
-                            <div className="glass-card p-6 rounded-2xl relative overflow-hidden group">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="p-3 bg-muted/10 rounded-xl text-foreground"><Users size={24} /></div>
-                                    <span className="text-xs font-semibold px-2 py-1 bg-green-500/20 text-green-400 rounded-full">+12%</span>
-                                </div>
-                                <h3 className="text-3xl font-bold mb-1">{stats.totalDistributors}</h3>
-                                <p className="text-sm text-muted-foreground">Total Distributors</p>
-                                <div className="absolute -bottom-4 -right-4 text-foreground/5 group-hover:text-foreground/10 transition-colors pointer-events-none">
-                                    <Users size={100} />
-                                </div>
-                            </div>
-
-                            {/* Stat Card 2 */}
-                            <div className="glass-card p-6 rounded-2xl relative overflow-hidden group">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="p-3 bg-muted/10 rounded-xl text-foreground"><Briefcase size={24} /></div>
-                                </div>
-                                <h3 className="text-3xl font-bold mb-1">{stats.totalRetailers}</h3>
-                                <p className="text-sm text-muted-foreground">Total Retailers</p>
-                                <div className="absolute -bottom-4 -right-4 text-foreground/5 group-hover:text-foreground/10 transition-colors pointer-events-none">
-                                    <Briefcase size={100} />
-                                </div>
-                            </div>
-
-                            {/* Stat Card 3 */}
-                            <div className="glass-card p-6 rounded-2xl relative overflow-hidden group">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="p-3 bg-muted/10 rounded-xl text-foreground"><Activity size={24} /></div>
-                                </div>
-                                <h3 className="text-3xl font-bold mb-1">{stats.activeUsers}</h3>
-                                <p className="text-sm text-muted-foreground">Total Network Size</p>
-                                <div className="absolute -bottom-4 -right-4 text-foreground/5 group-hover:text-foreground/10 transition-colors pointer-events-none">
-                                    <Activity size={100} />
-                                </div>
-                            </div>
-
-                            {/* Stat Card 4 */}
-                            <div className="glass-card p-6 rounded-2xl relative overflow-hidden group border-primary/20 bg-primary/5">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="p-3 bg-primary/20 rounded-xl text-foreground"><CreditCard size={24} /></div>
-                                </div>
-                                <h3 className="text-3xl font-bold mb-1">₹ {((stats as any).totalTrxVolume || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-                                <p className="text-sm text-muted-foreground">Total Trx Volume</p>
-                            </div>
-
-                            {/* Stat Card 5 - Admin Wallet */}
-                            <div className="glass-card p-6 rounded-2xl relative overflow-hidden group border-amber-500/20 bg-amber-500/5 col-span-1 md:col-span-2 lg:col-span-1">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="p-3 bg-amber-500/20 rounded-xl text-amber-500"><Wallet size={24} /></div>
-                                </div>
-                                <h3 className="text-3xl font-bold mb-1">₹ {(stats as any).adminWalletBalance?.toFixed(2) || '0.00'}</h3>
-                                <p className="text-sm text-muted-foreground">Admin Wallet</p>
-                            </div>
-                        </div>
-
-                        <div className="glass-card rounded-3xl border border-border overflow-hidden">
-                            <div className="p-6 border-b border-border flex justify-between items-center bg-muted/5">
-                                <h3 className="text-xl font-bold flex items-center gap-2">
-                                    <Activity className="text-primary" size={20} />
-                                    Live Platform Activity
-                                </h3>
-                                <div className="flex items-center gap-2 text-xs font-medium text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full animate-pulse">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                                    Live Updates Active
-                                </div>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-muted/10 border-b border-border">
-                                            <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</th>
-                                            <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Txn ID</th>
-                                            <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Details</th>
-                                            <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Amount</th>
-                                            <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {recentTransactions.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={5} className="p-8 text-center text-muted-foreground">
-                                                    Waiting for new transactions...
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            recentTransactions.map((tx, idx) => (
-                                                <tr key={tx._id || idx} className="hover:bg-muted/10 transition-colors animate-in fade-in slide-in-from-top-2 duration-300">
-                                                    <td className="p-4">
-                                                        <div className="text-sm font-medium text-foreground">{new Date(tx.createdAt).toLocaleDateString()}</div>
-                                                        <div className="text-[11px] text-muted-foreground">{new Date(tx.createdAt).toLocaleTimeString()}</div>
-                                                    </td>
-                                                    <td className="p-4">
-                                                        <div className="text-sm text-foreground/80 font-mono truncate max-w-[150px]">{tx.transactionId || tx._id}</div>
-                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                            <div className="text-[11px] text-primary">{tx.type}</div>
-                                                            {tx.userId?.name && (
-                                                                <div className="text-[9px] bg-primary/10 text-primary px-1 py-0.5 rounded uppercase tracking-wide">
-                                                                    By {tx.userId.name}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-4">
-                                                        <div className="text-sm font-medium text-foreground truncate max-w-[140px]">{tx.metadata?.name || tx.metadata?.customerName || tx.metadata?.beneficiaryName || "N/A"}</div>
-                                                        <div className="text-xs text-muted-foreground">{tx.metadata?.mobile || tx.metadata?.accountNumber || "N/A"}</div>
-                                                    </td>
-                                                    <td className="p-4 text-right">
-                                                        <div className="text-sm font-bold text-foreground">₹ {tx.amount}</div>
-                                                        {tx.commissions?.adminEarned > 0 && (
-                                                            <div className="text-[10px] text-emerald-500 font-medium bg-emerald-500/10 px-1.5 py-0.5 rounded inline-block mt-1">Comm: +₹{tx.commissions.adminEarned.toFixed(2)}</div>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-4 text-center">
-                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                                            tx.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' : 
-                                                            tx.status === 'FAILED' ? 'bg-rose-500/10 text-rose-500' : 
-                                                            'bg-yellow-500/10 text-yellow-500'
-                                                        }`}>
-                                                            {tx.status || "UNKNOWN"}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+                    <AdminOverview
+                        token={token}
+                        live={recentTransactions}
+                        onNavigate={setActiveTab}
+                        onOpenUser={openUser}
+                        onOpenTransactions={openTransactions}
+                    />
                 )}
 
-                {/* Fund Requests Tab */}
+                {activeTab === 'transactions' && (
+                    <TransactionExplorer key={JSON.stringify(txnQuery)} token={token} initial={txnQuery} onOpenUser={openUser} />
+                )}
+
+                {activeTab === 'users' && (
+                    viewUser ? (
+                        <UserDetail
+                            key={`${viewUser.role}-${viewUser.id}`}
+                            token={token}
+                            role={viewUser.role}
+                            id={viewUser.id}
+                            onBack={() => navigate(-1)}
+                            onOpenUser={openUser}
+                            onOpenTransactions={openTransactions}
+                        />
+                    ) : (
+                        <UserDirectory key={searchParams.toString()} token={token} initial={Object.fromEntries(searchParams) as UserQuery} onOpenUser={openUser} />
+                    )
+                )}
+
+                {activeTab === 'activity' && <ActivityLog token={token} onOpenUser={openUser} />}
+
                 {activeTab === 'fund_requests' && (
-                    <div className="animate-in fade-in duration-500">
-                        <div className="mb-8 flex justify-between items-end">
-                            <div>
-                                <h2 className="text-3xl font-bold mb-2">Fund Requests</h2>
-                                <p className="text-muted-foreground">Manage incoming fund requests from your distributors.</p>
-                            </div>
-                        </div>
-
-                        <div className="glass-card rounded-2xl border border-border overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-muted/10 border-b border-border">
-                                            <th className="p-4 text-sm font-semibold text-muted-foreground">Date</th>
-                                            <th className="p-4 text-sm font-semibold text-muted-foreground">Distributor</th>
-                                            <th className="p-4 text-sm font-semibold text-muted-foreground">Amount</th>
-                                            <th className="p-4 text-sm font-semibold text-muted-foreground">Txn Mode & UTR</th>
-                                            <th className="p-4 text-sm font-semibold text-muted-foreground">Receipt</th>
-                                            <th className="p-4 text-sm font-semibold text-muted-foreground">Status</th>
-                                            <th className="p-4 text-sm font-semibold text-muted-foreground">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {fundRequests.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={7} className="p-8 text-center text-muted-foreground">No fund requests found.</td>
-                                            </tr>
-                                        ) : (
-                                            fundRequests.map((req) => (
-                                                <tr key={req._id} className="hover:bg-muted/10 transition-colors">
-                                                    <td className="p-4 text-sm text-foreground/70">
-                                                        {new Date(req.depositDate).toLocaleDateString()}
-                                                    </td>
-                                                    <td className="p-4">
-                                                        <div className="font-medium text-foreground">{req.distributorId?.firstName} {req.distributorId?.lastName}</div>
-                                                        <div className="text-xs text-muted-foreground">{req.distributorId?.businessName}</div>
-                                                        <div className="text-xs text-primary/70">{req.distributorId?.distributorId}</div>
-                                                    </td>
-                                                    <td className="p-4 font-bold text-foreground">₹{req.amount}</td>
-                                                    <td className="p-4">
-                                                        <div className="text-sm text-foreground">{req.transactionMode}</div>
-                                                        <div className="text-xs font-mono text-muted-foreground">{req.bankUtr}</div>
-                                                    </td>
-                                                    <td className="p-4">
-                                                        {req.depositSlipUrl ? (
-                                                            <a href={req.depositSlipUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-primary hover:underline text-sm">
-                                                                <FileText size={14} /> View
-                                                            </a>
-                                                        ) : <span className="text-xs text-muted-foreground">No File</span>}
-                                                    </td>
-                                                    <td className="p-4">
-                                                        <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full border ${
-                                                            req.status === 'APPROVED' ? 'text-green-500 bg-green-500/10 border-green-500/20' :
-                                                            req.status === 'REJECTED' ? 'text-red-500 bg-red-500/10 border-red-500/20' :
-                                                            'text-yellow-500 bg-yellow-500/10 border-yellow-500/20'
-                                                        }`}>
-                                                            {req.status}
-                                                        </span>
-                                                        {req.adminRemarks && (
-                                                            <div className="text-[10px] text-muted-foreground mt-1 max-w-[150px] truncate" title={req.adminRemarks}>
-                                                                {req.adminRemarks}
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-4">
-                                                        {req.status === 'PENDING' && (
-                                                            <div className="flex items-center gap-2">
-                                                                <button 
-                                                                    disabled={loadingFR}
-                                                                    onClick={() => handleFundRequestStatus(req._id, 'APPROVED')}
-                                                                    className="p-1.5 bg-green-500/10 text-green-500 hover:bg-green-500/20 rounded-md transition-colors disabled:opacity-50"
-                                                                    title="Approve & Credit Wallet"
-                                                                >
-                                                                    <CheckCircle size={18} />
-                                                                </button>
-                                                                <button 
-                                                                    disabled={loadingFR}
-                                                                    onClick={() => handleFundRequestStatus(req._id, 'REJECTED')}
-                                                                    className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-md transition-colors disabled:opacity-50"
-                                                                    title="Reject"
-                                                                >
-                                                                    <XCircle size={18} />
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+                    <AdminFundRequests
+                        requests={fundRequests}
+                        busy={loadingFR}
+                        onDecide={handleFundRequestStatus}
+                        onOpenDistributor={(id) => openUser('distributor', id)}
+                    />
                 )}
 
-                {/* Distributors Tab */}
+                {/* The old distributors page lives on as Users → Distributors. */}
                 {activeTab === 'distributors' && (
-                    <div className="animate-in slide-in-from-right-8 duration-500">
-                        {selectedRetailer ? (
-                            <div>
-                                <button onClick={() => setSelectedRetailer(null)} className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors">
-                                    <ChevronLeft size={18} /> Back to {selectedDistributor?.name || 'Distributor'}
-                                </button>
-                                <div className="flex justify-between items-end mb-8">
-                                    <div>
-                                        <h2 className="text-3xl font-bold mb-2">{selectedRetailer.name}</h2>
-                                        <p className="text-muted-foreground">Retailer ID: <span className="text-foreground font-mono">{selectedRetailer.retailerId}</span></p>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="px-4 py-2 bg-green-500/10 border border-green-500/20 text-green-500 rounded-lg flex items-center gap-2 font-medium">
-                                            <ShieldCheck size={18} /> Active
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    <div className="glass-card p-8 rounded-3xl border border-border space-y-6">
-                                        <h3 className="text-xl font-bold border-b border-border pb-4 flex items-center gap-2"><UserCircle size={20}/> Personal Info</h3>
-                                        <div className="grid grid-cols-2 gap-6">
-                                            <div>
-                                                <p className="text-sm text-muted-foreground mb-1">Email Address</p>
-                                                <p className="font-medium">{selectedRetailer.email}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-muted-foreground mb-1">Contact Number</p>
-                                                <p className="font-medium">{selectedRetailer.contactNumber}</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                                <p className="text-sm text-muted-foreground mb-1">Address</p>
-                                                <p className="font-medium">{selectedRetailer.address?.city}, {selectedRetailer.address?.district}, {selectedRetailer.address?.state}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="glass-card p-8 rounded-3xl border border-border space-y-6">
-                                        <h3 className="text-xl font-bold border-b border-border pb-4 flex items-center gap-2"><Briefcase size={20}/> Business & Legal Info</h3>
-                                        <div className="grid grid-cols-2 gap-6">
-                                            <div>
-                                                <p className="text-sm text-muted-foreground mb-1">Business Name</p>
-                                                <p className="font-medium">{selectedRetailer.businessName}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-muted-foreground mb-1">Business Address</p>
-                                                <p className="font-medium">{selectedRetailer.businessAddress}</p>
-                                            </div>
-                                            <div className="col-span-2 md:col-span-1">
-                                                <p className="text-sm text-muted-foreground mb-2 flex justify-between items-center">
-                                                    Aadhaar Number <span className="font-medium font-mono text-foreground">{selectedRetailer.aadhaarNumber}</span>
-                                                </p>
-                                                {selectedRetailer.aadhaarPicture ? (
-                                                    <a href={selectedRetailer.aadhaarPicture} target="_blank" rel="noreferrer" className="block relative group overflow-hidden rounded-xl border border-border">
-                                                        <img src={selectedRetailer.aadhaarPicture} alt="Aadhaar" className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-500" />
-                                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <span className="text-sm font-medium text-foreground">View Full</span>
-                                                        </div>
-                                                    </a>
-                                                ) : <span className="text-xs text-muted-foreground">Not uploaded</span>}
-                                            </div>
-                                            <div className="col-span-2 md:col-span-1">
-                                                <p className="text-sm text-muted-foreground mb-2 flex justify-between items-center">
-                                                    PAN Number <span className="font-medium font-mono text-foreground">{selectedRetailer.panNumber}</span>
-                                                </p>
-                                                {selectedRetailer.panPicture ? (
-                                                    <a href={selectedRetailer.panPicture} target="_blank" rel="noreferrer" className="block relative group overflow-hidden rounded-xl border border-border">
-                                                        <img src={selectedRetailer.panPicture} alt="PAN" className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-500" />
-                                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <span className="text-sm font-medium text-foreground">View Full</span>
-                                                        </div>
-                                                    </a>
-                                                ) : <span className="text-xs text-muted-foreground">Not uploaded</span>}
-                                            </div>
-                                            {selectedRetailer.hasGst && (
-                                                <div className="col-span-2">
-                                                    <p className="text-sm text-muted-foreground mb-1">GST Number</p>
-                                                    <p className="font-medium font-mono">{selectedRetailer.gstNumber}</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : selectedDistributor ? (
-                            <div>
-                                <button onClick={() => setSelectedDistributor(null)} className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors">
-                                    <ChevronLeft size={18} /> Back to Distributors
-                                </button>
-                                <div className="flex justify-between items-end mb-8">
-                                    <div className="flex items-center gap-6">
-                                        {selectedDistributor.profilePicture ? (
-                                            <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-inner border border-border">
-                                                <img src={selectedDistributor.profilePicture} alt="Profile" className="w-full h-full object-cover" />
-                                            </div>
-                                        ) : (
-                                            <div className="w-20 h-20 rounded-2xl bg-primary/20 flex items-center justify-center text-foreground font-bold text-3xl shadow-inner border border-border">
-                                                {selectedDistributor.name.charAt(0)}
-                                            </div>
-                                        )}
-                                        <div>
-                                            <h2 className="text-3xl font-bold mb-2">{selectedDistributor.name}</h2>
-                                            <p className="text-muted-foreground">Distributor ID: <span className="text-foreground font-mono">{selectedDistributor.distributorId}</span></p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="px-4 py-2 bg-primary/10 border border-primary/20 text-primary-foreground rounded-lg flex items-center gap-2 font-medium">
-                                            <Wallet size={18} /> Commissions: ₹{selectedDistributor.commissionsEarned?.toFixed(2) || '0.00'}
-                                        </div>
-                                        <div className="px-4 py-2 bg-green-500/10 border border-green-500/20 text-green-500 rounded-lg flex items-center gap-2 font-medium">
-                                            <ShieldCheck size={18} /> Active
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    <div className="glass-card p-8 rounded-3xl border border-border space-y-6">
-                                        <h3 className="text-xl font-bold border-b border-border pb-4 flex items-center gap-2"><UserCircle size={20}/> Personal Info</h3>
-                                        <div className="grid grid-cols-2 gap-6">
-                                            <div>
-                                                <p className="text-sm text-muted-foreground mb-1">Email Address</p>
-                                                <p className="font-medium">{selectedDistributor.email}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-muted-foreground mb-1">Contact Number</p>
-                                                <p className="font-medium">{selectedDistributor.contactNumber}</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                                <p className="text-sm text-muted-foreground mb-1">Address</p>
-                                                <p className="font-medium">{selectedDistributor.address?.city}, {selectedDistributor.address?.district}, {selectedDistributor.address?.state}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="glass-card p-8 rounded-3xl border border-border space-y-6">
-                                        <h3 className="text-xl font-bold border-b border-border pb-4 flex items-center gap-2"><Briefcase size={20}/> Business & Legal Info</h3>
-                                        <div className="grid grid-cols-2 gap-6">
-                                            <div>
-                                                <p className="text-sm text-muted-foreground mb-1">Business Name</p>
-                                                <p className="font-medium">{selectedDistributor.businessName}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-muted-foreground mb-1">Business Address</p>
-                                                <p className="font-medium">{selectedDistributor.businessAddress}</p>
-                                            </div>
-                                            <div className="col-span-2 md:col-span-1">
-                                                <p className="text-sm text-muted-foreground mb-2 flex justify-between items-center">
-                                                    Aadhaar Number <span className="font-medium font-mono text-foreground">{selectedDistributor.aadhaarNumber}</span>
-                                                </p>
-                                                {selectedDistributor.aadhaarPicture ? (
-                                                    <a href={selectedDistributor.aadhaarPicture} target="_blank" rel="noreferrer" className="block relative group overflow-hidden rounded-xl border border-border">
-                                                        <img src={selectedDistributor.aadhaarPicture} alt="Aadhaar" className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-500" />
-                                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <span className="text-sm font-medium text-foreground">View Full</span>
-                                                        </div>
-                                                    </a>
-                                                ) : <span className="text-xs text-muted-foreground">Not uploaded</span>}
-                                            </div>
-                                            <div className="col-span-2 md:col-span-1">
-                                                <p className="text-sm text-muted-foreground mb-2 flex justify-between items-center">
-                                                    PAN Number <span className="font-medium font-mono text-foreground">{selectedDistributor.panNumber}</span>
-                                                </p>
-                                                {selectedDistributor.panPicture ? (
-                                                    <a href={selectedDistributor.panPicture} target="_blank" rel="noreferrer" className="block relative group overflow-hidden rounded-xl border border-border">
-                                                        <img src={selectedDistributor.panPicture} alt="PAN" className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-500" />
-                                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <span className="text-sm font-medium text-foreground">View Full</span>
-                                                        </div>
-                                                    </a>
-                                                ) : <span className="text-xs text-muted-foreground">Not uploaded</span>}
-                                            </div>
-                                            {selectedDistributor.hasGst && (
-                                                <div className="col-span-2">
-                                                    <p className="text-sm text-muted-foreground mb-1">GST Number</p>
-                                                    <p className="font-medium font-mono">{selectedDistributor.gstNumber}</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="mt-8 glass-card p-8 rounded-3xl border border-border">
-                                    <div className="flex justify-between items-center mb-6">
-                                        <h3 className="text-xl font-bold flex items-center gap-2"><Store size={20}/> Associated Retailers</h3>
-                                        <span className="px-3 py-1 bg-muted/20 rounded-full text-sm font-medium">{selectedDistributor.retailers?.length || 0} Total</span>
-                                    </div>
-                                    
-                                    <div className="overflow-x-auto rounded-xl border border-border">
-                                        <table className="w-full text-left border-collapse">
-                                            <thead>
-                                                <tr className="bg-muted/10 border-b border-border">
-                                                    <th className="p-4 text-sm font-semibold text-muted-foreground">Retailer ID</th>
-                                                    <th className="p-4 text-sm font-semibold text-muted-foreground">Name</th>
-                                                    <th className="p-4 text-sm font-semibold text-muted-foreground">Contact</th>
-                                                    <th className="p-4 text-sm font-semibold text-muted-foreground">Business</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-border">
-                                                {!selectedDistributor.retailers || selectedDistributor.retailers.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan={4} className="p-6 text-center text-muted-foreground">No retailers associated with this distributor yet.</td>
-                                                    </tr>
-                                                ) : (
-                                                    selectedDistributor.retailers.map((ret: any) => (
-                                                        <tr key={ret._id} onClick={() => setSelectedRetailer(ret)} className="hover:bg-muted/10 transition-colors cursor-pointer group">
-                                                            <td className="p-4 font-mono text-sm text-foreground group-hover:text-foreground transition-colors">{ret.retailerId}</td>
-                                                            <td className="p-4">
-                                                                <div className="font-medium">{ret.name}</div>
-                                                                <div className="text-xs text-muted-foreground">{ret.email}</div>
-                                                            </td>
-                                                            <td className="p-4 text-sm">{ret.contactNumber}</td>
-                                                            <td className="p-4 text-sm">{ret.businessName}</td>
-                                                        </tr>
-                                                    ))
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="flex justify-between items-end mb-8">
-                                    <div>
-                                        <h2 className="text-3xl font-bold mb-2">Network Distributors</h2>
-                                        <p className="text-muted-foreground">Manage your direct downstream partners.</p>
-                                    </div>
-                                    <button onClick={() => setActiveTab('create')} className="px-5 py-2.5 bg-primary text-primary-foreground font-medium rounded-lg flex items-center gap-2">
-                                        <UserPlus size={18} /> New
-                                    </button>
-                                </div>
-
-                                <div className="glass-card rounded-2xl border border-border overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-muted/10 border-b border-border">
-                                            <th className="p-4 text-sm font-semibold text-muted-foreground">Distributor ID</th>
-                                            <th className="p-4 text-sm font-semibold text-muted-foreground">Name</th>
-                                            <th className="p-4 text-sm font-semibold text-muted-foreground">Contact</th>
-                                            <th className="p-4 text-sm font-semibold text-muted-foreground">Business</th>
-                                            <th className="p-4 text-sm font-semibold text-muted-foreground">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {distributors.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={5} className="p-8 text-center text-muted-foreground">No distributors found. Click "New" to create one.</td>
-                                            </tr>
-                                        ) : (
-                                            distributors.map((dist) => (
-                                                <tr key={dist._id} onClick={() => setSelectedDistributor(dist)} className="hover:bg-muted/10 transition-colors cursor-pointer">
-                                                    <td className="p-4 font-mono text-sm text-foreground">{dist.distributorId}</td>
-                                                    <td className="p-4">
-                                                        <div className="font-medium">{dist.name}</div>
-                                                        <div className="text-xs text-muted-foreground">{dist.email}</div>
-                                                    </td>
-                                                    <td className="p-4 text-sm">{dist.contactNumber}</td>
-                                                    <td className="p-4 text-sm">{dist.businessName}</td>
-                                                    <td className="p-4">
-                                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-500 border border-green-500/20">
-                                                            <ShieldCheck size={14} /> Verified
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        </>
-                        )}
-                    </div>
+                    <UserDirectory token={token} initial={{ role: 'distributor' }} onOpenUser={openUser} />
                 )}
 
-                {/* Create Tab */}
                 {activeTab === 'create' && (
-                    <div className="animate-in slide-in-from-bottom-8 duration-500">
-                        <div className="max-w-7xl mx-auto">
-                            <div className="mb-8">
-                                <h2 className="text-3xl font-bold mb-2">Onboard Distributor</h2>
-                                <p className="text-muted-foreground">Register a new distributor onto the platform. They will receive credentials via email (Mock).</p>
-                            </div>
-                            
-                            <div className="glass-card p-8 rounded-3xl border border-border">
-                                {message && (
-                                    <div className={`mb-6 p-4 rounded-xl text-sm border ${message.includes('success') ? 'bg-green-500/10 border-green-500/20 text-green-500' : 'bg-primary/10 border-primary/20 text-primary-foreground'}`}>
-                                        {message}
-                                    </div>
-                                )}
-
-                                <form onSubmit={handleCreateSubmit} className="space-y-8">
-                                    <div className="space-y-12">
-                                        
-                                        {/* SECTION: Personal Information */}
-                                        <div>
-                                            <h3 className="text-xl font-bold mb-6 border-b border-border pb-2 text-foreground">1. Personal Information</h3>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Assign Role *</label>
-                                                    <input value="Distributor" disabled className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none text-muted-foreground cursor-not-allowed" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Distributor ID (Auto-Generated) *</label>
-                                                    <input value={merchantCode} disabled className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none font-mono text-muted-foreground cursor-not-allowed" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Parent *</label>
-                                                    <input value={user?.name || 'Self'} disabled className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none text-muted-foreground cursor-not-allowed" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Prefix *</label>
-                                                    <select name="prefix" onChange={(e: any) => handleChange(e)} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors appearance-none">
-                                                        <option value="Mr">Mr</option>
-                                                        <option value="Mrs">Mrs</option>
-                                                        <option value="Miss">Miss</option>
-                                                    </select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">First Name *</label>
-                                                    <input name="firstName" placeholder="First Name" onChange={handleChange} required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Last Name *</label>
-                                                    <input name="lastName" placeholder="Last Name" onChange={handleChange} required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground flex justify-between">
-                                                        Email * 
-                                                        {isEmailVerified ? (
-                                                            <span className="text-green-500 text-xs flex items-center">Verified!</span>
-                                                        ) : otpSent ? (
-                                                            <span className="text-green-500 text-xs flex items-center">Sent!</span>
-                                                        ) : (
-                                                            <button type="button" onClick={handleSendOtp} disabled={sendingOtp} className="text-blue-500 text-xs font-bold hover:underline">
-                                                                {sendingOtp ? 'Sending...' : 'Send OTP'}
-                                                            </button>
-                                                        )}
-                                                    </label>
-                                                    <input name="email" type="email" placeholder="Email Address" onChange={handleChange} required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" disabled={otpSent} />
-                                                </div>
-                                                {otpSent && !isEmailVerified && (
-                                                    <div className="space-y-2 animate-in fade-in">
-                                                        <label className="text-sm font-semibold text-green-500 flex justify-between">
-                                                            Email OTP *
-                                                            <button type="button" onClick={handleVerifyEmail} disabled={verifyingEmail} className="text-blue-500 text-xs font-bold hover:underline">
-                                                                {verifyingEmail ? 'Verifying...' : 'Verify OTP'}
-                                                            </button>
-                                                        </label>
-                                                        <input name="otp" placeholder="Enter 6-Digit OTP" onChange={handleChange} required maxLength={6} className="w-full p-3 rounded-xl bg-background border border-green-500 focus:border-green-400 outline-none transition-colors font-mono tracking-widest" />
-                                                    </div>
-                                                )}
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Mobile *</label>
-                                                    <input name="contactNumber" placeholder="Mobile Number" onChange={handleChange} required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Date Of Birth *</label>
-                                                    <input name="dob" type="date" onChange={handleChange} required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Password *</label>
-                                                    <input name="password" type="password" placeholder="Password" onChange={handleChange} required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground flex justify-between">
-                                                        Profile Picture
-                                                        {profilePicture && <span className="text-green-500 text-xs">Uploaded</span>}
-                                                    </label>
-                                                    <label className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors cursor-pointer block text-muted-foreground">
-                                                        {profilePicture ? profilePicture.name : 'Choose file...'}
-                                                        <input type="file" onChange={(e) => setProfilePicture(e.target.files?.[0] || null)} className="hidden" accept="image/*" />
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* SECTION: Business & Identity */}
-                                        <div>
-                                            <h3 className="text-xl font-bold mb-6 border-b border-border pb-2 text-foreground">2. Business & Identity</h3>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Business Name *</label>
-                                                    <input name="businessName" placeholder="Business Name" onChange={handleChange} required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground flex justify-between">
-                                                        Aadhar Number (Optional)
-                                                        <div className="flex gap-2">
-                                                            {aadhaarPicture ? <span className="text-green-500 text-xs">Pic Uploaded</span> : (
-                                                                <label className="text-blue-500 text-xs hover:underline cursor-pointer">
-                                                                    Upload Pic <input type="file" onChange={(e) => setAadhaarPicture(e.target.files?.[0] || null)} className="hidden" />
-                                                                </label>
-                                                            )}
-                                                        </div>
-                                                    </label>
-                                                    <input name="aadhaarNumber" placeholder="Enter your aadhar number" onChange={handleChange} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground flex justify-between">
-                                                        Pancard Number (Optional)
-                                                        <div className="flex gap-2">
-                                                            {panPicture ? <span className="text-green-500 text-xs">Pic Uploaded</span> : (
-                                                                <label className="text-blue-500 text-xs hover:underline cursor-pointer">
-                                                                    Upload Pic <input type="file" onChange={(e) => setPanPicture(e.target.files?.[0] || null)} className="hidden" />
-                                                                </label>
-                                                            )}
-                                                        </div>
-                                                    </label>
-                                                    <input name="panNumber" placeholder="Enter your Pancard number" onChange={handleChange} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Street Address *</label>
-                                                    <input name="businessAddress" placeholder="Street Address" onChange={handleChange} required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">City *</label>
-                                                    <input name="city" placeholder="City" onChange={handleChange} required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">District *</label>
-                                                    <input name="district" placeholder="District" onChange={handleChange} required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">State *</label>
-                                                    <select name="state" onChange={handleChange} required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors">
-                                                        <option value="" disabled selected className="bg-background text-foreground">Select State</option>
-                                                        {INDIAN_STATES.map((state) => (
-                                                            <option key={state} value={state} className="bg-background text-foreground">{state}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Landmark</label>
-                                                    <input name="landmark" placeholder="Landmark (Optional)" onChange={handleChange} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Company Register Name</label>
-                                                    <input name="companyRegisterName" placeholder="Company Name" onChange={handleChange} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* SECTION: Branding & Support */}
-                                        <div>
-                                            <h3 className="text-xl font-bold mb-6 border-b border-border pb-2 text-foreground">3. Branding & Support</h3>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Brand Name</label>
-                                                    <input name="brandName" placeholder="Brand Name" onChange={handleChange} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Website</label>
-                                                    <div className="flex">
-                                                        <span className="p-3 bg-muted/10 border border-r-0 border-border rounded-l-xl text-muted-foreground text-sm">https://</span>
-                                                        <input name="website" placeholder="www.company.com" onChange={handleChange} className="w-full p-3 rounded-r-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                    </div>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Support Email</label>
-                                                    <input name="supportEmail" type="email" placeholder="support@company.com" onChange={handleChange} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Support Mobile</label>
-                                                    <input name="supportMobile" placeholder="Support Mobile" onChange={handleChange} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* SECTION: Service Packages */}
-                                        <div>
-                                            <h3 className="text-xl font-bold mb-6 border-b border-border pb-2 text-foreground">4. Service Packages</h3>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Assign DMT Package</label>
-                                                    <select name="dmtPackage" onChange={(e: any) => handleChange(e)} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors appearance-none text-sm">
-                                                        <option value="">Choose Commission Package</option>
-                                                        <option value="Standard">Standard Package</option>
-                                                        <option value="Premium">Premium Package</option>
-                                                    </select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Assign Recharge Package</label>
-                                                    <select name="rechargePackage" onChange={(e: any) => handleChange(e)} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors appearance-none text-sm">
-                                                        <option value="">Choose Commission Package</option>
-                                                        <option value="Standard">Standard Package</option>
-                                                        <option value="Premium">Premium Package</option>
-                                                    </select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Assign Aeps Package</label>
-                                                    <select name="aepsPackage" onChange={(e: any) => handleChange(e)} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors appearance-none text-sm">
-                                                        <option value="">Choose Commission Package</option>
-                                                        <option value="Standard">Standard Package</option>
-                                                        <option value="Premium">Premium Package</option>
-                                                    </select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Assign BBPS Package</label>
-                                                    <select name="bbpsPackage" onChange={(e: any) => handleChange(e)} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors appearance-none text-sm">
-                                                        <option value="">Choose Commission Package</option>
-                                                        <option value="Standard">Standard Package</option>
-                                                        <option value="Premium">Premium Package</option>
-                                                    </select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Assign Payout Package</label>
-                                                    <select name="payoutPackage" onChange={(e: any) => handleChange(e)} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors appearance-none text-sm">
-                                                        <option value="">Choose Commission Package</option>
-                                                        <option value="Standard">Standard Package</option>
-                                                        <option value="Premium">Premium Package</option>
-                                                    </select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Assign CMS Package</label>
-                                                    <select name="cmsPackage" onChange={(e: any) => handleChange(e)} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors appearance-none text-sm">
-                                                        <option value="">Choose Commission Package</option>
-                                                        <option value="Standard">Standard Package</option>
-                                                        <option value="Premium">Premium Package</option>
-                                                    </select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Assign CCPAY Package</label>
-                                                    <select name="ccpayPackage" onChange={(e: any) => handleChange(e)} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors appearance-none text-sm">
-                                                        <option value="">Choose Commission Package</option>
-                                                        <option value="Standard">Standard Package</option>
-                                                        <option value="Premium">Premium Package</option>
-                                                    </select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Assign Payin Package</label>
-                                                    <select name="payinPackage" onChange={(e: any) => handleChange(e)} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors appearance-none text-sm">
-                                                        <option value="">Choose Commission Package</option>
-                                                        <option value="Standard">Standard Package</option>
-                                                        <option value="Premium">Premium Package</option>
-                                                    </select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-muted-foreground">Assign UPI Package</label>
-                                                    <select name="upiPackage" onChange={(e: any) => handleChange(e)} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors appearance-none text-sm">
-                                                        <option value="">Choose Commission Package</option>
-                                                        <option value="Standard">Standard Package</option>
-                                                        <option value="Premium">Premium Package</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Submit Button */}
-                                    <div className="pt-8">
-                                        <button disabled={isLoading || !otpSent} type="submit" className="w-full py-4 bg-primary text-primary-foreground font-bold text-lg rounded-xl shadow-lg hover:shadow-primary/20 hover:scale-[0.99] transition-all disabled:opacity-70 disabled:scale-100 flex items-center justify-center gap-2">
-                                            {isLoading ? <div className="w-6 h-6 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div> : <><UserPlus size={20}/> Complete Onboarding</>}
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
+                    <CreateRetailerWizard
+                        kind="distributor"
+                        formData={formData}
+                        setFormData={(f) => setFormData(f as typeof formData)}
+                        parentName="Admin"
+                        merchantCode={merchantCode}
+                        setMerchantCode={setMerchantCode}
+                        isExistingMerchant={false}
+                        setIsExistingMerchant={() => {}}
+                        aadhaarPicture={aadhaarPicture} setAadhaarPicture={setAadhaarPicture}
+                        panPicture={panPicture} setPanPicture={setPanPicture}
+                        profilePicture={profilePicture} setProfilePicture={setProfilePicture}
+                        otpSent={otpSent}
+                        sendingOtp={sendingOtp}
+                        isEmailVerified={isEmailVerified}
+                        verifyingEmail={verifyingEmail}
+                        onSendOtp={handleSendOtp}
+                        onVerifyEmail={handleVerifyEmail}
+                        onResetEmail={() => {
+                            setOtpSent(false);
+                            setIsEmailVerified(false);
+                            setFormData({ ...formData, otp: '' });
+                        }}
+                        isLoading={isLoading}
+                        message={message}
+                        onSubmit={handleCreateSubmit}
+                    />
                 )}
 
-                {/* Commissions Tab */}
                 {activeTab === 'commissions' && (
                     <AdminCommissions />
                 )}
 
                 {/* Profile Tab */}
                 {activeTab === 'profile' && profileData && (
-                    <div className="animate-in fade-in duration-500">
-                        <div className="flex justify-between items-end mb-8">
-                            <div>
-                                <h2 className="text-3xl font-bold mb-2">My Profile</h2>
-                                <p className="text-muted-foreground">Manage your personal and business details.</p>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-3">
-                                <button onClick={() => setIsEditingProfile(!isEditingProfile)} className={`px-5 py-2.5 font-medium rounded-lg transition-colors ${isEditingProfile ? 'bg-muted/20 text-foreground border border-border' : 'bg-primary text-primary-foreground'}`}>
-                                    {isEditingProfile ? 'Cancel Edit' : 'Edit Profile'}
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="glass-card p-8 rounded-3xl border border-border max-w-3xl">
-                            {profileMessage && (
-                                <div className={`mb-6 p-4 rounded-xl text-sm border ${profileMessage.includes('success') ? 'bg-green-500/10 border-green-500/20 text-green-500' : 'bg-primary/10 border-primary/20 text-primary-foreground'}`}>
-                                    {profileMessage}
-                                </div>
-                            )}
-
-                            {isEditingProfile ? (
-                                <form onSubmit={handleProfileUpdate} className="space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-4">
-                                            <h3 className="text-lg font-semibold border-b border-border pb-2 text-muted-foreground">Personal</h3>
-                                            <input value={profileData.name || ''} onChange={(e) => setProfileData({...profileData, name: e.target.value})} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" placeholder="Full Name" required />
-                                            <input value={profileData.contactNumber || ''} onChange={(e) => setProfileData({...profileData, contactNumber: e.target.value})} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" placeholder="Contact Number" required />
-                                        </div>
-                                        <div className="space-y-4">
-                                            <h3 className="text-lg font-semibold border-b border-border pb-2 text-muted-foreground">Business</h3>
-                                            <input value={profileData.businessName || ''} onChange={(e) => setProfileData({...profileData, businessName: e.target.value})} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" placeholder="Business Name" required />
-                                            <input value={profileData.businessAddress || ''} onChange={(e) => setProfileData({...profileData, businessAddress: e.target.value})} className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" placeholder="Business Address" required />
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="space-y-4 pt-4">
-                                        <h3 className="text-lg font-semibold border-b border-border pb-2 text-muted-foreground">Legal Documents</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div className="space-y-2 col-span-1 md:col-span-2">
-                                                <div className="p-4 border border-dashed border-border rounded-xl bg-muted/10 hover:bg-muted/20 transition-colors relative cursor-pointer group">
-                                                    <label className="flex flex-col items-center justify-center cursor-pointer">
-                                                        <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">{profileProfilePic ? profileProfilePic.name : 'Update Profile Picture'}</span>
-                                                        <input type="file" onChange={(e) => setProfileProfilePic(e.target.files?.[0] || null)} className="hidden" accept="image/*" />
-                                                    </label>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <input value={profileData.aadhaarNumber || ''} onChange={(e) => setProfileData({...profileData, aadhaarNumber: e.target.value})} placeholder="12-Digit Aadhaar Number" required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                <div className="p-4 border border-dashed border-border rounded-xl bg-muted/10 hover:bg-muted/20 transition-colors relative cursor-pointer group">
-                                                    <label className="flex flex-col items-center justify-center cursor-pointer">
-                                                        <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">{profileAadhaarPic ? profileAadhaarPic.name : 'Update Aadhaar Picture'}</span>
-                                                        <input type="file" onChange={(e) => setProfileAadhaarPic(e.target.files?.[0] || null)} className="hidden" />
-                                                    </label>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <input value={profileData.panNumber || ''} onChange={(e) => setProfileData({...profileData, panNumber: e.target.value})} placeholder="10-Digit PAN Number" required className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary outline-none transition-colors" />
-                                                <div className="p-4 border border-dashed border-border rounded-xl bg-muted/10 hover:bg-muted/20 transition-colors relative cursor-pointer group">
-                                                    <label className="flex flex-col items-center justify-center cursor-pointer">
-                                                        <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">{profilePanPic ? profilePanPic.name : 'Update PAN Picture'}</span>
-                                                        <input type="file" onChange={(e) => setProfilePanPic(e.target.files?.[0] || null)} className="hidden" />
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-muted/10 rounded-xl border border-border">
-                                            <div className="flex items-center gap-2">
-                                                <input type="checkbox" id="profileHasGst" checked={profileData.hasGst || false} onChange={(e) => setProfileData({...profileData, hasGst: e.target.checked})} className="w-4 h-4 accent-primary" />
-                                                <label htmlFor="profileHasGst" className="text-sm font-medium">Business has GST Registration?</label>
-                                            </div>
-                                            {profileData.hasGst && (
-                                                <input value={profileData.gstNumber || ''} placeholder="Enter GST Number" onChange={(e) => setProfileData({...profileData, gstNumber: e.target.value})} className="flex-1 p-2 rounded-lg bg-background border border-border focus:border-primary outline-none transition-colors text-sm" />
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-end pt-4 border-t border-border">
-                                        <button disabled={isLoading} type="submit" className="px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl flex items-center gap-2 hover:scale-[0.98] transition-all disabled:opacity-70">
-                                            {isLoading ? <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div> : 'Save Changes'}
-                                        </button>
-                                    </div>
-                                </form>
-                            ) : (
-                                <div className="space-y-8">
-                                    <div className="flex items-center gap-6 pb-8 border-b border-border">
-                                        <div className="w-24 h-24 rounded-2xl bg-primary/20 flex items-center justify-center text-foreground font-bold text-4xl shadow-inner overflow-hidden">
-                                            {profileData.profilePicture ? (
-                                                <img src={profileData.profilePicture} alt="Profile" className="w-full h-full object-cover" />
-                                            ) : (
-                                                profileData.name.charAt(0)
-                                            )}
-                                        </div>
-                                        <div>
-                                            <h3 className="text-2xl font-bold">{profileData.name}</h3>
-                                            <p className="text-muted-foreground flex items-center gap-2 mt-1"><ShieldCheck size={16}/> Super Admin ({profileData.adminId})</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div>
-                                            <p className="text-sm text-muted-foreground mb-1">Email Address</p>
-                                            <p className="font-medium">{profileData.email}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-muted-foreground mb-1">Contact Number</p>
-                                            <p className="font-medium">{profileData.contactNumber}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-muted-foreground mb-1">Business Name</p>
-                                            <p className="font-medium">{profileData.businessName}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-muted-foreground mb-1">Business Address</p>
-                                            <p className="font-medium">{profileData.businessAddress}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-muted-foreground mb-1">Aadhaar Number</p>
-                                            <p className="font-medium font-mono">{profileData.aadhaarNumber}</p>
-                                            {profileData.aadhaarPicture && <a href={profileData.aadhaarPicture} target="_blank" rel="noreferrer" className="text-xs text-foreground hover:underline mt-1 inline-block">View Document</a>}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-muted-foreground mb-1">PAN Number</p>
-                                            <p className="font-medium font-mono">{profileData.panNumber}</p>
-                                            {profileData.panPicture && <a href={profileData.panPicture} target="_blank" rel="noreferrer" className="text-xs text-foreground hover:underline mt-1 inline-block">View Document</a>}
-                                        </div>
-                                        {profileData.hasGst && (
-                                            <div>
-                                                <p className="text-sm text-muted-foreground mb-1">GST Number</p>
-                                                <p className="font-medium font-mono">{profileData.gstNumber}</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    <DistributorProfile
+                        token={token}
+                        roleLabel="Admin"
+                        code={profileData.adminId}
+                        showNetwork={false}
+                        profile={profileData}
+                        setProfile={setProfileData}
+                        isEditing={isEditingProfile}
+                        setIsEditing={setIsEditingProfile}
+                        isLoading={isLoading}
+                        message={profileMessage}
+                        onSubmit={handleProfileUpdate}
+                        profilePic={profileProfilePic} setProfilePic={setProfileProfilePic}
+                        aadhaarPic={profileAadhaarPic} setAadhaarPic={setProfileAadhaarPic}
+                        panPic={profilePanPic} setPanPic={setProfilePanPic}
+                        isAadhaarLocked={false}
+                        isPanLocked={false}
+                        onViewNetwork={() => setActiveTab('dashboard')}
+                    />
                 )}
             </main>
         </div>

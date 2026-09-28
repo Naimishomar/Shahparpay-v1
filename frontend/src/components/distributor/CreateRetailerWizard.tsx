@@ -13,12 +13,15 @@ export type RetailerForm = Record<string, string | boolean>;
 const PACKAGES = SERVICES.map((s) => [`svc_${s.key}`, s.label, s.hint] as const);
 const PACKAGE_OPTIONS = [['Yes', 'Yes'], ['No', 'No']] as const;
 
-const STEPS = [
+const RETAILER_STEPS = [
     { title: 'Account', hint: 'Who they are and how they sign in', icon: User },
     { title: 'KYC & business', hint: 'Identity documents and shop address', icon: IdCard },
     { title: 'Services & branding', hint: 'What they can use', icon: Package },
     { title: 'Review', hint: 'Check everything, then create', icon: BadgeCheck },
 ] as const;
+// A distributor has no per-service switches; step 3 is branding only.
+const DISTRIBUTOR_STEPS = RETAILER_STEPS.map((st, i) => (i === 2 ? { ...st, title: 'Branding', hint: 'Optional extras' } : st));
+
 
 const AADHAAR = /^\d{12}$/;
 const PAN = /^[A-Z]{5}\d{4}[A-Z]$/;
@@ -74,7 +77,7 @@ const CreateRetailerWizard = ({
     formData, setFormData, parentName, merchantCode, setMerchantCode, isExistingMerchant, setIsExistingMerchant,
     aadhaarPicture, setAadhaarPicture, panPicture, setPanPicture, profilePicture, setProfilePicture,
     otpSent, sendingOtp, isEmailVerified, verifyingEmail, onSendOtp, onVerifyEmail, onResetEmail,
-    isLoading, message, onSubmit,
+    isLoading, message, onSubmit, kind = 'retailer',
 }: {
     formData: RetailerForm;
     setFormData: (f: RetailerForm) => void;
@@ -91,7 +94,12 @@ const CreateRetailerWizard = ({
     isLoading: boolean;
     message: string;
     onSubmit: (e: React.FormEvent) => void;
+    /** Admins onboard distributors with the same flow, minus the retailer-only parts. */
+    kind?: 'retailer' | 'distributor';
 }) => {
+    const isRetailer = kind === 'retailer';
+    const STEPS = isRetailer ? RETAILER_STEPS : DISTRIBUTOR_STEPS;
+    const noun = isRetailer ? 'retailer' : 'distributor';
     const [step, setStep] = useState(0);
     const [touched, setTouched] = useState<Set<number>>(new Set());
     const [showPassword, setShowPassword] = useState(false);
@@ -108,14 +116,14 @@ const CreateRetailerWizard = ({
             ...(!MOBILE.test(v('contactNumber')) && { contactNumber: 'Enter a 10-digit mobile number' }),
             ...(!v('dob') && { dob: 'Required' }),
             ...(v('password').length < 6 && { password: 'At least 6 characters' }),
-            ...(isExistingMerchant && !merchantCode.trim() && { merchantCode: 'Enter the existing merchant ID' }),
+            ...(isRetailer && isExistingMerchant && !merchantCode.trim() && { merchantCode: 'Enter the existing merchant ID' }),
         },
         {
             ...(!v('businessName').trim() && { businessName: 'Required' }),
             ...(!AADHAAR.test(v('aadhaarNumber')) && { aadhaarNumber: 'Aadhaar is 12 digits' }),
             ...(!PAN.test(v('panNumber')) && { panNumber: 'Format: ABCDE1234F' }),
-            ...(!aadhaarPicture && { aadhaarPicture: 'Upload the Aadhaar photo' }),
-            ...(!panPicture && { panPicture: 'Upload the PAN photo' }),
+            ...(isRetailer && !aadhaarPicture && { aadhaarPicture: 'Upload the Aadhaar photo' }),
+            ...(isRetailer && !panPicture && { panPicture: 'Upload the PAN photo' }),
             ...(!v('businessAddress').trim() && { businessAddress: 'Required' }),
             ...(!v('city').trim() && { city: 'Required' }),
             ...(!v('district').trim() && { district: 'Required' }),
@@ -161,8 +169,8 @@ const CreateRetailerWizard = ({
                     <div className="flex items-center gap-4">
                         <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><UserPlus className="h-7 w-7" /></div>
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Onboard a retailer</h1>
-                            <p className="text-sm text-muted-foreground">Four short steps. They'll join your network under {parentName}.</p>
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Onboard a {noun}</h1>
+                            <p className="text-sm text-muted-foreground">{isRetailer ? `Four short steps. They'll join your network under ${parentName}.` : 'Four short steps to add a distributor to the platform.'}</p>
                         </div>
                     </div>
 
@@ -271,6 +279,12 @@ const CreateRetailerWizard = ({
                             </Field>
                             <FilePicker label="Profile photo" file={profilePicture} onChange={setProfilePicture} />
 
+                            {!isRetailer && (
+                                <Field label="Distributor ID (auto-generated)">
+                                    <input value={merchantCode} disabled className={`${INPUT} font-mono disabled:cursor-not-allowed disabled:opacity-70`} />
+                                </Field>
+                            )}
+                            {isRetailer && (
                             <div className="md:col-span-2 rounded-2xl border bg-background p-4">
                                 <label className="flex cursor-pointer items-start gap-3">
                                     <input
@@ -298,6 +312,7 @@ const CreateRetailerWizard = ({
                                     </Field>
                                 </div>
                             </div>
+                            )}
                         </div>
                     )}
 
@@ -309,8 +324,8 @@ const CreateRetailerWizard = ({
                             <Field label="PAN number" required error={err('panNumber')}>
                                 {text('panNumber', { placeholder: 'ABCDE1234F', className: `${inputCls('panNumber')} font-mono uppercase tracking-wider` }, (s) => s.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10))}
                             </Field>
-                            <FilePicker label="Aadhaar photo" required file={aadhaarPicture} onChange={setAadhaarPicture} error={err('aadhaarPicture')} />
-                            <FilePicker label="PAN photo" required file={panPicture} onChange={setPanPicture} error={err('panPicture')} />
+                            <FilePicker label="Aadhaar photo" required={isRetailer} file={aadhaarPicture} onChange={setAadhaarPicture} error={err('aadhaarPicture')} />
+                            <FilePicker label="PAN photo" required={isRetailer} file={panPicture} onChange={setPanPicture} error={err('panPicture')} />
 
                             <div className="md:col-span-2 border-t pt-5">
                                 <p className={`${LABEL} mb-4 flex items-center gap-2`}><Building2 size={14} /> Shop details</p>
@@ -355,6 +370,7 @@ const CreateRetailerWizard = ({
                                 </div>
                             </div>
 
+                            {isRetailer && (
                             <div className="border-t pt-5">
                                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                                     <p className={`${LABEL} flex items-center gap-2`}><Package size={14} /> Service packages</p>
@@ -397,6 +413,7 @@ const CreateRetailerWizard = ({
                                     ))}
                                 </div>
                             </div>
+                            )}
                         </div>
                     )}
 
@@ -406,7 +423,7 @@ const CreateRetailerWizard = ({
                                 { title: 'Account', to: 0, rows: [
                                     ['Name', `${v('prefix')} ${v('firstName')} ${v('lastName')}`],
                                     ['Email', v('email')], ['Mobile', v('contactNumber') && `+91 ${v('contactNumber')}`],
-                                    ['Date of birth', v('dob')], ['Retailer ID', merchantCode + (isExistingMerchant ? ' (existing)' : '')],
+                                    ['Date of birth', v('dob')], [isRetailer ? 'Retailer ID' : 'Distributor ID', merchantCode + (isRetailer && isExistingMerchant ? ' (existing)' : '')],
                                 ] },
                                 { title: 'KYC & business', to: 1, rows: [
                                     ['Aadhaar', v('aadhaarNumber') && `XXXX XXXX ${v('aadhaarNumber').slice(-4)}`], ['PAN', v('panNumber')],
@@ -414,9 +431,9 @@ const CreateRetailerWizard = ({
                                     ['Business', v('businessName')],
                                     ['Address', [v('businessAddress'), v('city'), v('district'), v('state')].filter(Boolean).join(', ')],
                                 ] },
-                                { title: 'Services & branding', to: 2, rows: [
+                                { title: STEPS[2].title, to: 2, rows: [
                                     ['Brand', v('brandName')], ['Website', v('website')],
-                                    ['Packages', PACKAGES.every(([k]) => v(k) === 'Yes') ? 'All services' : PACKAGES.filter(([k]) => v(k) === 'Yes').map(([, l]) => l).join(', ') || 'None'],
+                                    ...(isRetailer ? [['Packages', PACKAGES.every(([k]) => v(k) === 'Yes') ? 'All services' : PACKAGES.filter(([k]) => v(k) === 'Yes').map(([, l]) => l).join(', ') || 'None']] : []),
                                 ] },
                             ].map((block) => (
                                 <div key={block.title} className="rounded-2xl border bg-background p-4">
@@ -455,7 +472,7 @@ const CreateRetailerWizard = ({
                         ) : (
                             <button type="submit" disabled={isLoading || done} className={`${PRIMARY_BUTTON} px-6`}>
                                 {isLoading ? <Loader2 size={16} className="animate-spin" /> : done ? <CheckCircle2 size={16} /> : <UserPlus size={16} />}
-                                {isLoading ? 'Creating…' : done ? 'Created' : 'Create retailer'}
+                                {isLoading ? 'Creating…' : done ? 'Created' : `Create ${noun}`}
                             </button>
                         )}
                     </div>
@@ -469,8 +486,8 @@ const CreateRetailerWizard = ({
                             {[
                                 ['Email verified', isEmailVerified],
                                 ['Mobile & date of birth', MOBILE.test(v('contactNumber')) && !!v('dob')],
-                                ['Aadhaar number & photo', AADHAAR.test(v('aadhaarNumber')) && !!aadhaarPicture],
-                                ['PAN number & photo', PAN.test(v('panNumber')) && !!panPicture],
+                                [isRetailer ? 'Aadhaar number & photo' : 'Aadhaar number', AADHAAR.test(v('aadhaarNumber')) && (!isRetailer || !!aadhaarPicture)],
+                                [isRetailer ? 'PAN number & photo' : 'PAN number', PAN.test(v('panNumber')) && (!isRetailer || !!panPicture)],
                                 ['Shop address', !!(v('businessName') && v('businessAddress') && v('city') && v('district') && v('state'))],
                             ].map(([label, ok]) => (
                                 <li key={label as string} className="flex items-center gap-3">
@@ -487,7 +504,7 @@ const CreateRetailerWizard = ({
                             <div className={`rounded-xl p-2 ${SILVER_TILE}`}><Sparkles className="h-4 w-4" /></div>
                             <div className="text-sm">
                                 <p className="font-semibold">After you create them</p>
-                                <p className="mt-1 text-muted-foreground">They sign in with this email and password. Send them the KYC link from <b>Retailers</b> so they can start AEPS.</p>
+                                <p className="mt-1 text-muted-foreground">{isRetailer ? <>They sign in with this email and password. Send them the KYC link from <b>Retailers</b> so they can start AEPS.</> : <>They sign in with this email and password and can start onboarding retailers right away. Find them under <b>Users</b>.</>}</p>
                             </div>
                         </div>
                     </section>

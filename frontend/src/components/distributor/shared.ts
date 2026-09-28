@@ -102,18 +102,21 @@ export type RetailerPerformance = Omit<NetworkAnalytics, 'retailers' | 'totals'>
 };
 
 /**
- * Fetches `path` with the bearer token and refetches when `days` changes.
+ * GET `url` (path + query) with the bearer token; refetches when it changes.
  * State is only set from the response, keyed by request, so `loading` is just
- * "the last result is for a different request".
+ * "the last result is for a different request". Previous data stays on screen
+ * while the next request loads, so charts animate instead of blanking.
+ * `reload()` refetches the same url.
  */
-export function useDistributorData<T>(token: string | null, path: string | null, days: number) {
-    const key = path ? `${path}${path.includes('?') ? '&' : '?'}days=${days}` : null;
+export function useApiGet<T>(token: string | null, url: string | null) {
     const [result, setResult] = useState<{ key: string | null; data: T | null; error: string }>({ key: null, data: null, error: '' });
+    const [nonce, setNonce] = useState(0);
+    const key = url ? `${url}#${nonce}` : null;
 
     useEffect(() => {
-        if (!token || !key) return;
+        if (!token || !url || !key) return;
         let cancelled = false;
-        fetch(`${import.meta.env.VITE_BACKEND_URL}${key}`, { headers: { Authorization: `Bearer ${token}` } })
+        fetch(`${import.meta.env.VITE_BACKEND_URL}${url}`, { headers: { Authorization: `Bearer ${token}` } })
             .then((res) => res.json())
             .then((json) => {
                 if (cancelled) return;
@@ -125,10 +128,19 @@ export function useDistributorData<T>(token: string | null, path: string | null,
         return () => {
             cancelled = true;
         };
-    }, [token, key]);
+    }, [token, url, key]);
 
-    // Previous data stays on screen while a new range loads, so charts animate instead of blanking.
-    return { data: result.data, loading: result.key !== key, error: result.key === key ? result.error : '' };
+    return {
+        data: result.data,
+        loading: result.key !== key,
+        error: result.key === key ? result.error : '',
+        reload: () => setNonce((n) => n + 1),
+    };
+}
+
+/** Distributor endpoints that take a `days` range. */
+export function useDistributorData<T>(token: string | null, path: string | null, days: number) {
+    return useApiGet<T>(token, path ? `${path}${path.includes('?') ? '&' : '?'}days=${days}` : null);
 }
 
 export const RANGES = [7, 30, 90] as const;
