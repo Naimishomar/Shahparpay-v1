@@ -82,6 +82,10 @@ const transactionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Per-retailer history and the distributor analytics both filter on userId
+// and a createdAt range.
+transactionSchema.index({ userId: 1, createdAt: -1 });
+
 transactionSchema.post('save', function (doc) {
   // Fire and forget broadcast
   broadcastTransaction(doc);

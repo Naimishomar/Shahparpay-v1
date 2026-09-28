@@ -19,6 +19,8 @@ export interface User {
   panNumber?: string;
   panPicture?: string;
   dob?: string;
+  /** Services this retailer's distributor has switched off (see constants/services). */
+  disabledServices?: string[];
   businessName?: string;
   businessAddress?: string;
   gstNumber?: string;
@@ -51,8 +53,6 @@ export interface ApiResponse<T> {
 export interface WalletBalances {
   aepsBalance: number;
   mainBalance: number;
-  /** UPI QR collections land here; only this wallet can be moved to Main. */
-  qrBalance: number;
   adminBalance: number;
 }
 
@@ -93,12 +93,10 @@ export interface NavigationParams {
     PAN: undefined;
     LeadGeneration: undefined;
     ITR: undefined;
-    UPIPayments: undefined;
     DMT: undefined;
     Recharge: undefined;
     BBPS: undefined;
     Collect: undefined;
-    WalletTransfer: undefined;
     DirectPayout: undefined;
     FundRequest: undefined;
     AddMoney: undefined;

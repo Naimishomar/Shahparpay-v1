@@ -1,8 +1,11 @@
+import mongoose from 'mongoose';
 import Distributor from '../models/users/distributor.model.js';
 import Retailer from '../models/users/retailer.model.js';
 import MainWallet from '../models/mainWallet.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
 import { uploadOnR2 } from '../utils/r2.js';
+import { lifetimeFor } from './distributorAnalytics.controller.js';
+import { parseDisabledServices } from '../utils/services.js';
 
 // Get dashboard statistics for distributor
 export const getDashboardStats = async (req, res) => {
@@ -48,19 +51,28 @@ export const getRetailers = async (req, res) => {
       .select('-password')
       .sort({ createdAt: -1 });
 
-    const retailersWithStats = await Promise.all(
-      retailers.map(async (ret) => {
-        const mainWallet = await MainWallet.findOne({ userId: ret._id, userModel: 'Retailer' });
-        const aepsWallet = await AepsWallet.findOne({ userId: ret._id, userModel: 'Retailer' });
+    const ids = retailers.map((ret) => ret._id);
+    const [mainWallets, aepsWallets, lifetime] = await Promise.all([
+      MainWallet.find({ userId: { $in: ids }, userModel: 'Retailer' }).select('userId balance').lean(),
+      AepsWallet.find({ userId: { $in: ids }, userModel: 'Retailer' }).select('userId balance').lean(),
+      lifetimeFor(ids),
+    ]);
+    const balance = (wallets) => new Map(wallets.map((w) => [String(w.userId), w.balance || 0]));
+    const main = balance(mainWallets);
+    const aeps = balance(aepsWallets);
 
-        return {
-          ...ret.toObject(),
-          mainWalletBalance: mainWallet?.balance || 0,
-          aepsWalletBalance: aepsWallet?.balance || 0,
-          commissionsEarned: (mainWallet?.balance || 0) + (aepsWallet?.balance || 0),
-        };
-      })
-    );
+    const retailersWithStats = retailers.map((ret) => {
+      const key = String(ret._id);
+      return {
+        ...ret.toObject(),
+        mainWalletBalance: main.get(key) || 0,
+        aepsWalletBalance: aeps.get(key) || 0,
+        // What the distributor has earned from this retailer. It used to be the
+        // retailer's own wallet balance, which is not the distributor's money.
+        commissionsEarned: Math.round((lifetime.get(key)?.earned || 0) * 100) / 100,
+        lastActiveAt: lifetime.get(key)?.lastActiveAt || null,
+      };
+    });
 
     return res.status(200).json({ success: true, data: retailersWithStats });
   } catch (error) {
@@ -113,6 +125,7 @@ export const updateRetailer = async (req, res) => {
       supportMobile,
       isExistingMerchant,
       isActive,
+      disabledServices,
     } = req.body;
 
     const updateData = {};
@@ -150,6 +163,12 @@ export const updateRetailer = async (req, res) => {
     Object.entries(packages).forEach(([key, value]) => {
       if (value !== undefined && value !== null) updateData[key] = value;
     });
+
+    if (disabledServices !== undefined) {
+      const parsed = parseDisabledServices(disabledServices);
+      if (!parsed) return res.status(400).json({ success: false, message: 'Invalid services list' });
+      updateData.disabledServices = parsed;
+    }
 
     if (website) updateData.website = website;
     if (brandName) updateData.brandName = brandName;
@@ -197,6 +216,37 @@ export const updateRetailer = async (req, res) => {
       });
     }
     console.error('Error updating retailer:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+/**
+ * PUT /api/distributor/retailers/:id/services  { disabledServices: string[] }
+ * Switches services on or off for one of this distributor's retailers. Takes
+ * effect on the retailer's next request; their menus refresh within 15 minutes.
+ */
+export const updateRetailerServices = async (req, res) => {
+  try {
+    if (req.user.role !== 'distributor')
+      return res.status(403).json({ success: false, message: 'Unauthorized access' });
+
+    if (!mongoose.isValidObjectId(req.params.id))
+      return res.status(400).json({ success: false, message: 'Invalid retailer id' });
+
+    const disabledServices = parseDisabledServices(req.body?.disabledServices);
+    if (!disabledServices)
+      return res.status(400).json({ success: false, message: 'Invalid services list' });
+
+    const retailer = await Retailer.findOneAndUpdate(
+      { _id: req.params.id, distributorId: req.user.id },
+      { $set: { disabledServices } },
+      { new: true }
+    ).select('_id disabledServices');
+    if (!retailer) return res.status(404).json({ success: false, message: 'Retailer not found' });
+
+    return res.status(200).json({ success: true, message: 'Services updated', data: retailer });
+  } catch (error) {
+    console.error('Error updating retailer services:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

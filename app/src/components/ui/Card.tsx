@@ -88,17 +88,17 @@ const styles = themed((c, isDark) => ({
   base: { borderRadius: radius.lg, overflow: 'hidden' },
   default: {
     backgroundColor: c.card,
+    // Bordered in both modes, as on the site: its dark card is only 2% lighter
+    // than the page, so the hairline is what separates them.
     borderWidth: 1,
-    // On the black ground the card's own fill is the separation; an outline on
-    // top of it just draws a grey box around every block.
-    borderColor: isDark ? 'transparent' : c.border,
+    borderColor: c.border,
     ...lift('sm', isDark),
   },
   /** Lifted off the page — summary tiles, anything that invites a tap. */
   elevated: {
     backgroundColor: c.card,
     borderWidth: 1,
-    borderColor: isDark ? c.border : 'transparent',
+    borderColor: c.border,
     ...lift('md', isDark),
   },
   flat: { backgroundColor: c.secondary, borderWidth: 1, borderColor: c.border },

@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { IconTile } from '@/components/ui/Gradient';
 import {
   Screen,
   Banner,
@@ -144,13 +145,17 @@ export const BbpsScreen: React.FC = () => {
                   : `${item.label}. Coming soon, not live on our BBPS provider yet`
               }
             >
-              <View style={[styles.tileIcon, !item.available && styles.tileIconOff]}>
-                <MaterialCommunityIcons
-                  name={categoryIcon(item.label) as any}
-                  size={22}
-                  color={item.available ? colors.accent : colors.mutedForeground}
-                />
-              </View>
+              {item.available ? (
+                <IconTile icon={categoryIcon(item.label)} size={42} iconSize={22} />
+              ) : (
+                <View style={[styles.tileIcon, styles.tileIconOff]}>
+                  <MaterialCommunityIcons
+                    name={categoryIcon(item.label) as any}
+                    size={22}
+                    color={colors.mutedForeground}
+                  />
+                </View>
+              )}
               <Text
                 style={[styles.tileLabel, !item.available && styles.tileLabelOff]}
                 numberOfLines={2}
@@ -216,7 +221,7 @@ const styles = themed((c, isDark) => ({
   tileIcon: {
     width: 42,
     height: 42,
-    borderRadius: radius.pill,
+    borderRadius: radius.sm,
     backgroundColor: isDark ? c.surfaceAlt : c.accentSubtle,
     alignItems: 'center',
     justifyContent: 'center',

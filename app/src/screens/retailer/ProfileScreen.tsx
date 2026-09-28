@@ -4,6 +4,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { IconTile } from '@/components/ui/Gradient';
 import { Input, SelectField } from '@/components/ui/Input';
 import { Sheet } from '@/components/ui/Sheet';
 import {
@@ -234,7 +235,6 @@ export const ProfileScreen: React.FC = () => {
               label="AEPS wallet"
               value={money(balances.data?.aepsBalance)}
             />
-            <Tile icon="qrcode" label="QR wallet" value={money(balances.data?.qrBalance)} />
             <Tile icon="wallet" label="Main wallet" value={money(balances.data?.mainBalance)} />
           </>
         )}
@@ -675,9 +675,7 @@ const Tile: React.FC<{ icon: string; label: string; value: string }> = ({
   value,
 }) => (
   <View style={styles.tile}>
-    <View style={styles.tileIcon}>
-      <MaterialCommunityIcons name={icon as any} size={18} color={colors.accent} />
-    </View>
+    <IconTile icon={icon} size={36} iconSize={18} />
     <Text style={styles.tileLabel} numberOfLines={1}>
       {label}
     </Text>
@@ -777,14 +775,6 @@ const styles = themed((c) => ({
     backgroundColor: c.card,
     borderWidth: 1,
     borderColor: c.border,
-  },
-  tileIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
-    backgroundColor: c.accentSubtle,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   tileLabel: { flex: 1, fontSize: t.small, fontWeight: '600', color: c.mutedForeground },
   tileValue: {

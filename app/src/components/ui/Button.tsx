@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { colors, themed, lift, motion, radius, space, type as t, TOUCH } from '../../theme/colors';
+import { colors, getActivePalette, themed, lift, motion, radius, space, type as t, TOUCH } from '../../theme/colors';
+import { GradientFill } from './Gradient';
 
 type Variant = 'default' | 'accent' | 'outline' | 'secondary' | 'ghost' | 'destructive';
 type Size = 'sm' | 'default' | 'lg';
@@ -43,8 +44,10 @@ const HAPTIC = {
 const variantStyles = themed((c, isDark) => ({
   // Filled buttons sit above the card they live on; outline and ghost stay
   // flush so a form never looks like a stack of floating chips.
-  default: { backgroundColor: c.primary, borderColor: c.primary, ...lift('sm', isDark) },
-  accent: { backgroundColor: c.accent, borderColor: c.accent, ...lift('sm', isDark) },
+  // The site's ACTIVE_BUTTON: zinc-900 with a soft drop in light; in dark a
+  // silver gradient is painted over this fill (see `silver` below).
+  default: { backgroundColor: c.primary, borderColor: isDark ? c.activeGradient[c.activeGradient.length - 1] : c.primary, ...lift('md', isDark) },
+  accent: { backgroundColor: c.accent, borderColor: isDark ? c.activeGradient[c.activeGradient.length - 1] : c.accent, ...lift('md', isDark) },
   outline: { backgroundColor: 'transparent', borderColor: c.borderStrong },
   secondary: { backgroundColor: c.secondary, borderColor: c.secondary },
   ghost: { backgroundColor: 'transparent', borderColor: 'transparent' },
@@ -93,6 +96,7 @@ export const Button = React.forwardRef<View, ButtonProps>(
     ref
   ) => {
     const isDisabled = !!disabled || loading;
+    const silver = getActivePalette() === 'dark' && (variant === 'default' || variant === 'accent');
     const textColor = (variantTextStyles[variant] as any).color;
     const label = typeof children === 'string' ? children : undefined;
     const scale = useRef(new Animated.Value(1)).current;
@@ -132,6 +136,7 @@ export const Button = React.forwardRef<View, ButtonProps>(
           ]}
           {...props}
         >
+          {silver && <GradientFill stops={colors.activeGradient} radius={(sizeStyles[size] as any).borderRadius - 1} />}
           {loading ? (
             <ActivityIndicator size="small" color={textColor} />
           ) : (

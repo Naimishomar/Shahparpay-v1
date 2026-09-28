@@ -15,8 +15,7 @@ import {
     Store,
     CheckCircle,
     XCircle,
-    FileText,
-    LogOut
+    FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
 import AdminCommissions from '../components/AdminCommissions';
@@ -26,7 +25,7 @@ import DailyAuthModal from '../components/DailyAuthModal';
 import { INDIAN_STATES } from '../constants';
 
 const AdminPortal = () => {
-    const { user, token, logout, isInitializing } = useAuth();
+    const { user, token, isInitializing } = useAuth();
     const navigate = useNavigate();
     const { tab } = useParams<{ tab: string }>();
     const activeTab = tab ? tab.replace('-', '_') : 'dashboard';
@@ -1168,10 +1167,6 @@ const AdminPortal = () => {
                             <div className="flex flex-wrap items-center gap-3">
                                 <button onClick={() => setIsEditingProfile(!isEditingProfile)} className={`px-5 py-2.5 font-medium rounded-lg transition-colors ${isEditingProfile ? 'bg-muted/20 text-foreground border border-border' : 'bg-primary text-primary-foreground'}`}>
                                     {isEditingProfile ? 'Cancel Edit' : 'Edit Profile'}
-                                </button>
-                                <button onClick={logout} className="px-5 py-2.5 font-medium rounded-lg transition-colors bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 flex items-center gap-2">
-                                    <LogOut className="w-4 h-4" />
-                                    Logout
                                 </button>
                             </div>
                         </div>

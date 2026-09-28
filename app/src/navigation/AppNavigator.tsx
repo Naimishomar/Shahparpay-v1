@@ -13,14 +13,12 @@ import { AepsSettlementScreen } from '@/screens/retailer/AepsSettlementScreen';
 import { PanCardScreen } from '@/screens/retailer/PanCardScreen';
 import { LeadGenerationScreen } from '@/screens/retailer/LeadGenerationScreen';
 import { ItrScreen } from '@/screens/retailer/ItrScreen';
-import { UpiPaymentsScreen } from '@/screens/retailer/UpiPaymentsScreen';
 import { DmtScreen } from '@/screens/retailer/DmtScreen';
 import { MatmScreen } from '@/screens/retailer/MatmScreen';
 import { RechargeScreen } from '@/screens/retailer/RechargeScreen';
 import { BbpsScreen } from '@/screens/retailer/BbpsScreen';
 import { BbpsServiceScreen } from '@/screens/retailer/BbpsServiceScreen';
 import { CollectScreen } from '@/screens/retailer/CollectScreen';
-import { WalletTransferScreen } from '@/screens/retailer/WalletTransferScreen';
 import { DirectPayoutScreen } from '@/screens/retailer/DirectPayoutScreen';
 import { FundRequestScreen } from '@/screens/retailer/FundRequestScreen';
 import { AddMoneyScreen } from '@/screens/retailer/AddMoneyScreen';
@@ -36,6 +34,7 @@ import { SupportScreen } from '@/screens/SupportScreen';
 import { NotificationsScreen } from '@/screens/NotificationsScreen';
 import { ReportsScreen } from '@/screens/ReportsScreen';
 import { AppSplashScreen } from '@/screens/AppSplashScreen';
+import { withServiceGate } from '@/components/ServiceGate';
 import {
   AepsReport,
   DmtReport,
@@ -96,7 +95,7 @@ const REPORT_SCREENS: [string, React.ComponentType<any>][] = [
 ];
 
 // Route names must match `route` in SERVICE_ITEMS / REPORT_ITEMS (src/constants).
-const RETAILER_SCREENS: [string, React.ComponentType<any>][] = [
+const RETAILER_SCREENS: [string, React.ComponentType<any>][] = ([
   ['Dashboard', DashboardScreen],
   ['Services', ServicesScreen],
   ...REPORT_SCREENS,
@@ -105,14 +104,12 @@ const RETAILER_SCREENS: [string, React.ComponentType<any>][] = [
   ['PAN', PanCardScreen],
   ['LeadGeneration', LeadGenerationScreen],
   ['ITR', ItrScreen],
-  ['UPIPayments', UpiPaymentsScreen],
   ['DMT', DmtScreen],
   ['MATM', MatmScreen],
   ['Recharge', RechargeScreen],
   ['BBPS', BbpsScreen],
   ['BbpsService', BbpsServiceScreen],
   ['Collect', CollectScreen],
-  ['WalletTransfer', WalletTransferScreen],
   ['DirectPayout', DirectPayoutScreen],
   ['FundRequest', FundRequestScreen],
   ['AddMoney', AddMoneyScreen],
@@ -121,7 +118,7 @@ const RETAILER_SCREENS: [string, React.ComponentType<any>][] = [
   ['Profile', ProfileScreen],
   ['KycStatus', KycStatusScreen],
   ...COMMON_SCREENS,
-];
+] as [string, React.ComponentType<any>][]).map(([name, Screen]): [string, React.ComponentType<any>] => [name, withServiceGate(name, Screen)]);
 
 const ADMIN_SCREENS: [string, React.ComponentType<any>][] = [
   ['AdminPortal', AdminPortalScreen],

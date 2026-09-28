@@ -5,7 +5,7 @@ const router = express.Router();
 
 // Single public callback URL for every Icchhamati event — their panel accepts
 // only one. Outside authMiddlewares: Icchhamati posts server-to-server and
-// authenticates with mid/mkey headers or the collection webhook secret.
+// authenticates PAN webhooks with mid/mkey headers.
 router.post('/callback', icchhamatiWebhook);
 
 export default router;

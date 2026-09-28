@@ -3,9 +3,14 @@ import {
   getDashboardStats,
   getRetailers,
   updateRetailer,
+  updateRetailerServices,
   getProfile,
   updateProfile,
 } from '../controllers/distributor.controller.js';
+import {
+  getNetworkAnalytics,
+  getRetailerPerformance,
+} from '../controllers/distributorAnalytics.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 import { upload } from '../middlewares/multer.middleware.js';
 
@@ -13,9 +18,12 @@ const router = Router();
 
 // Dashboard
 router.get('/stats', authMiddlewares, getDashboardStats);
+router.get('/analytics', authMiddlewares, getNetworkAnalytics);
 
 // Retailers
 router.get('/retailers', authMiddlewares, getRetailers);
+router.get('/retailers/:id/performance', authMiddlewares, getRetailerPerformance);
+router.put('/retailers/:id/services', authMiddlewares, updateRetailerServices);
 router.put(
   '/retailers/:id',
   authMiddlewares,

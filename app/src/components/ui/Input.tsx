@@ -189,18 +189,17 @@ const styles = themed((c) => ({
     borderWidth: 1,
     borderColor: c.input,
     borderRadius: radius.md,
-    // Fields sit *into* the card rather than on top of it, so a form reads as
-    // one surface with inputs cut into it.
-    backgroundColor: c.secondary,
+    // The site's INPUT: page-ground fill inside the card, rounded-xl.
+    backgroundColor: c.background,
     minHeight: TOUCH,
   },
   // 2px ring plus a tinted halo: focus stays visible without relying on colour
   // alone, and survives at the largest Dynamic Type sizes.
+  // The site's focus:ring-4 ring-zinc-400/15, as a soft halo around the border.
   wrapperFocused: {
-    borderColor: c.ring,
+    borderColor: c.focus,
     borderWidth: 2,
-    backgroundColor: c.card,
-    ...({ shadowColor: c.ring, shadowOpacity: 0.18, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } } as const),
+    ...({ shadowColor: c.focus, shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } } as const),
   },
   wrapperError: { borderColor: c.destructive },
   select: { paddingHorizontal: space.md, justifyContent: 'space-between' },

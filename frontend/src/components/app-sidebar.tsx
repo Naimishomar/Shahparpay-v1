@@ -7,24 +7,23 @@ import {
 } from "@/components/ui/sidebar"
 
 import { Link, useLocation } from "react-router-dom"
-import { BarChart3, Wallet, Send, Zap, ScanFace, Landmark, ArrowRightLeft, LayoutDashboard, Users, Store, UserPlus, UserCircle, FileText, QrCode, Link2, CreditCard, Bell, Headset } from "lucide-react"
+import { BarChart3, Send, Zap, ScanFace, Landmark, ArrowRightLeft, LayoutDashboard, Users, Store, UserPlus, UserCircle, FileText, QrCode, Link2, CreditCard, Bell, Headset } from "lucide-react"
 import logo from "../assets/logo.png"
 import { useAuth } from "../context/AuthContext"
+import { isServiceEnabled } from "../lib/services"
 
 const retailerProjects = [
   { name: "Dashboard", url: "/dashboard", icon: BarChart3 },
-  { name: "AEPS", url: "/aeps", icon: ScanFace },
+  { name: "AEPS", url: "/aeps", service: "aeps", icon: ScanFace },
   { name: "AEPS Settlement", url: "/aeps-settlement", icon: Landmark },
   // { name: "MATM", url: "/matm", icon: CreditCard },
-  { name: "PAN Card", url: "/pan", icon: FileText },
-  { name: "Lead Generation", url: "/lead-generation", icon: UserPlus },
-  { name: "ITR Filing", url: "/itr", icon: FileText },
-  // { name: "UPI Payments", url: "/upi-payments", icon: QrCode },
-  { name: "DMT", url: "/dmt", icon: Send },
-  { name: "Recharge", url: "/recharge", icon: Zap },
-  { name: "BBPS", url: "/bbps", icon: Zap },
-  { name: "Collect Payments", url: "/payments/collect", icon: Link2 },
-  // { name: "Wallet Transfer", url: "/wallet-transfer", icon: Wallet },
+  { name: "PAN Card", url: "/pan", service: "pan", icon: FileText },
+  { name: "Lead Generation", url: "/lead-generation", service: "lead", icon: UserPlus },
+  { name: "ITR Filing", url: "/itr", service: "itr", icon: FileText },
+  { name: "DMT", url: "/dmt", service: "dmt", icon: Send },
+  { name: "Recharge", url: "/recharge", service: "recharge", icon: Zap },
+  { name: "BBPS", url: "/bbps", service: "bbps", icon: Zap },
+  { name: "Collect Payments", url: "/payments/collect", service: "collect", icon: Link2 },
   // { name: "Direct Payout", url: "/direct-payout", icon: ArrowRightLeft },
   {
     name: "Reports",
@@ -79,7 +78,7 @@ export function AppSidebar() {
   
   const projects = user?.role === 'admin' ? adminProjects : 
                    user?.role === 'distributor' ? distributorProjects : 
-                   retailerProjects;
+                   retailerProjects.filter((item: any) => isServiceEnabled(user, item.service));
 
   return (
     <Sidebar className="border-r border-black/10 dark:border-white/10 !bg-background/95">

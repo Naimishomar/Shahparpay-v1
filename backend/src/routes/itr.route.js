@@ -6,11 +6,12 @@ import {
   getItrHistory,
 } from '../controllers/itr.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
+import { requireService } from '../middlewares/service.middleware.js';
 
 const router = express.Router();
 
 // Authenticated routes for retailers
-router.post('/launch', authMiddlewares, launchItrFiling);
+router.post('/launch', authMiddlewares, requireService('itr'), launchItrFiling);
 router.get('/history', authMiddlewares, getItrHistory);
 
 // Public callback routes from eSevaTech

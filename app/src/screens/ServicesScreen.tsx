@@ -4,8 +4,11 @@ import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, radius, space, type as t } from '../theme/colors';
 import { Card } from '@/components/ui/Card';
+import { IconTile } from '@/components/ui/Gradient';
 import { Screen } from '@/components/ui/Screen';
 import { SERVICE_ITEMS, MenuEntry } from '@/constants';
+import { isRouteEnabled } from '@/constants/services';
+import { useAuth } from '@/context/AuthContext';
 
 /**
  * Second-level hub. The old drawer listed 17 flat items; grouping them here by
@@ -20,11 +23,12 @@ const GROUPS = ['Banking', 'Payments', 'Government', 'Account'];
 
 export const ServicesScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
 
   return (
     <Screen>
       {GROUPS.map((group) => {
-        const items = SERVICE_ITEMS.filter((item) => item.group === group);
+        const items = SERVICE_ITEMS.filter((item) => item.group === group && isRouteEnabled(user, item.route));
         if (!items.length) return null;
         return (
           <View key={group} style={styles.group}>
@@ -57,9 +61,7 @@ const ServiceRow: React.FC<{ item: MenuEntry; last: boolean; onPress: () => void
     accessibilityRole="button"
     accessibilityLabel={item.hint ? `${item.name}. ${item.hint}` : item.name}
   >
-    <View style={styles.rowIcon}>
-      <MaterialCommunityIcons name={item.icon as any} size={20} color={colors.foreground} />
-    </View>
+    <IconTile icon={item.icon} />
     <View style={styles.rowText}>
       <Text style={styles.rowName} numberOfLines={1}>
         {item.name}
@@ -102,14 +104,6 @@ const styles = themed((c) => ({
   rowLast: { borderBottomWidth: 0 },
   rowPressed: { backgroundColor: c.accentSubtle },
   // Circular and neutral, the same chip Home and Reports use for a service.
-  rowIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.pill,
-    backgroundColor: c.surfaceAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   rowText: { flex: 1, minWidth: 0, gap: 1 },
   rowName: { fontSize: t.small, fontWeight: '700', color: c.foreground },
   rowHint: { fontSize: t.micro, color: c.mutedForeground },

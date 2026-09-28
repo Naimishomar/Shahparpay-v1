@@ -3,6 +3,7 @@ import { X, Loader2, UserPlus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import { INDIAN_STATES } from '../constants';
+import { SERVICES } from '../lib/services';
 
 interface EditRetailerModalProps {
     retailer: any;
@@ -31,20 +32,13 @@ const EditRetailerModal: React.FC<EditRetailerModalProps> = ({ retailer, onClose
         landmark: retailer.address?.landmark || '',
         district: retailer.address?.district || '',
         state: retailer.address?.state || '',
-        dmtPackage: retailer.dmtPackage || '',
-        rechargePackage: retailer.rechargePackage || '',
-        aepsPackage: retailer.aepsPackage || '',
-        bbpsPackage: retailer.bbpsPackage || '',
-        payoutPackage: retailer.payoutPackage || '',
-        cmsPackage: retailer.cmsPackage || '',
-        ccpayPackage: retailer.ccpayPackage || '',
-        payinPackage: retailer.payinPackage || '',
-        upiPackage: retailer.upiPackage || '',
         website: retailer.website || '',
         brandName: retailer.brandName || '',
         companyRegisterName: retailer.companyRegisterName || '',
         supportEmail: retailer.supportEmail || '',
         supportMobile: retailer.supportMobile || '',
+        // Yes/No per service; saved as the list of services switched off.
+        ...Object.fromEntries(SERVICES.map((svc) => [`svc_${svc.key}`, retailer.disabledServices?.includes(svc.key) ? 'No' : 'Yes'])),
     }));
 
     const [profilePicture, setProfilePicture] = useState<File | null>(null);
@@ -65,8 +59,12 @@ const EditRetailerModal: React.FC<EditRetailerModalProps> = ({ retailer, onClose
         Object.entries(formData).forEach(([key, value]) => {
             if (['city', 'landmark', 'district', 'state'].includes(key)) return;
             if (key === 'password' && !value) return;
+            if (key.startsWith('svc_')) return;
             data.append(key, value as any);
         });
+        data.append('disabledServices', JSON.stringify(
+            SERVICES.filter((svc) => formData[`svc_${svc.key}`] === 'No').map((svc) => svc.key)
+        ));
         data.append('address', JSON.stringify({
             city: formData.city,
             landmark: formData.landmark,
@@ -245,18 +243,15 @@ const EditRetailerModal: React.FC<EditRetailerModalProps> = ({ retailer, onClose
 
                     {/* Service Packages */}
                     <div>
-                        <h3 className="text-lg font-bold mb-4 border-b border-border pb-2">3. Service Packages</h3>
+                        <h3 className="text-lg font-bold mb-4 border-b border-border pb-2">3. Services</h3>
+                        <p className="-mt-2 mb-4 text-xs text-muted-foreground">Services set to No are hidden from the retailer and blocked.</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {(
-                                ['dmtPackage', 'rechargePackage', 'aepsPackage', 'bbpsPackage', 'payoutPackage',
-                                    'cmsPackage', 'ccpayPackage', 'payinPackage', 'upiPackage'] as const
-                            ).map((pkg) => (
-                                <div className="space-y-2" key={pkg}>
-                                    <label className={labelCls}>{pkg.replace('Package', ' Package').replace(/([a-z])([A-Z])/g, '$1 $2')}</label>
-                                    <select name={pkg} value={formData[pkg]} onChange={handleChange} className={inputCls}>
-                                        <option value="">Choose Commission Package</option>
-                                        <option value="Standard">Standard Package</option>
-                                        <option value="Premium">Premium Package</option>
+                            {SERVICES.map((svc) => (
+                                <div className="space-y-2" key={svc.key}>
+                                    <label className={labelCls}>{svc.label}</label>
+                                    <select name={`svc_${svc.key}`} value={formData[`svc_${svc.key}`]} onChange={handleChange} className={inputCls}>
+                                        <option value="Yes">Yes</option>
+                                        <option value="No">No</option>
                                     </select>
                                 </div>
                             ))}

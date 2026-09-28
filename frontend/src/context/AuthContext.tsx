@@ -18,6 +18,8 @@ interface User {
     activeAepsPipes?: string[];
     aadhaarNumber?: string;
     dob?: string;
+    /** Services this retailer's distributor has switched off. */
+    disabledServices?: string[];
 }
 
 interface AuthContextType {

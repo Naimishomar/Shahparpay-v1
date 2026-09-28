@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { isServiceEnabled } from '../lib/services';
 import { useNavigate } from 'react-router-dom';
 import MerchantKycModal from '../components/MerchantKycModal';
 import { toast } from "sonner";
@@ -27,10 +28,10 @@ const ACCENTS = {
 } as const;
 
 const QUICK_ACTIONS = [
-    { title: 'AEPS Services', hint: 'Cash withdrawal & inquiry', url: '/aeps', icon: Fingerprint, accent: 'emerald' },
-    { title: 'Lead Generation', hint: 'Credit cards & loans', url: '/lead-generation', icon: Users, accent: 'sky' },
-    { title: 'PAN Card', hint: 'Apply NSDL PAN', url: '/pan', icon: CreditCard, accent: 'rose' },
-    { title: 'ITR Filing', hint: 'Income tax return', url: '/itr', icon: FileText, accent: 'silver' },
+    { title: 'AEPS Services', hint: 'Cash withdrawal & inquiry', url: '/aeps', service: 'aeps' as const, icon: Fingerprint, accent: 'emerald' },
+    { title: 'Lead Generation', hint: 'Credit cards & loans', url: '/lead-generation', service: 'lead' as const, icon: Users, accent: 'sky' },
+    { title: 'PAN Card', hint: 'Apply NSDL PAN', url: '/pan', service: 'pan' as const, icon: CreditCard, accent: 'rose' },
+    { title: 'ITR Filing', hint: 'Income tax return', url: '/itr', service: 'itr' as const, icon: FileText, accent: 'silver' },
 ] as const;
 
 const STATUS_PILL: Record<string, string> = {
@@ -433,7 +434,7 @@ const Dashboard = () => {
                 <section className="lg:col-span-2 rounded-2xl border bg-card p-5 shadow-sm">
                     <h3 className="text-lg font-semibold mb-4">Quick actions</h3>
                     <div className="grid grid-cols-2 gap-3">
-                        {QUICK_ACTIONS.map(({ title, hint, url, icon: Icon, accent }) => (
+                        {QUICK_ACTIONS.filter((a) => isServiceEnabled(user, a.service)).map(({ title, hint, url, icon: Icon, accent }) => (
                             <button
                                 key={url}
                                 onClick={() => navigate(url)}

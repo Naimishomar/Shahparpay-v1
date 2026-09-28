@@ -10,6 +10,7 @@ import Admin from '../models/users/admin.model.js';
 import { uploadOnR2 } from '../utils/r2.js';
 import bcrypt from 'bcrypt';
 import Otp from '../models/otp.model.js';
+import { parseDisabledServices } from '../utils/services.js';
 import { sendEmailOTP } from '../utils/email.js';
 import {
   onboardMerchant,
@@ -621,6 +622,7 @@ export const createRetailer = async (req, res) => {
       supportEmail,
       supportMobile,
       isExistingMerchant,
+      disabledServices,
     } = req.body;
 
     const name = `${firstName} ${lastName}`;
@@ -708,6 +710,7 @@ export const createRetailer = async (req, res) => {
       supportEmail,
       supportMobile,
       isExistingMerchant: isExistingMerchant === 'true' || isExistingMerchant === true,
+      disabledServices: parseDisabledServices(disabledServices) || [],
     });
 
     await newRetailer.save();

@@ -25,6 +25,7 @@ import {
 } from '../controllers/onboardCallback.controller.js';
 import { getBaseLocation, updateBaseLocation } from '../controllers/aepsLocation.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
+import { requireService } from '../middlewares/service.middleware.js';
 
 const router = express.Router();
 
@@ -42,12 +43,12 @@ router.post('/get-pid-options', authMiddlewares, getPidOptions);
 
 // Core AEPS Services
 router.get('/banks', getBankList);
-router.post('/balance-enquiry', authMiddlewares, balanceEnquiry);
-router.post('/initiate-otp', authMiddlewares, initiateAepsTxnOtp);
-router.post('/cash-withdrawal', authMiddlewares, cashWithdrawal);
-router.post('/cash-deposit', authMiddlewares, cashDeposit);
-router.post('/aadhaar-pay', authMiddlewares, aadhaarPay);
-router.post('/mini-statement', authMiddlewares, miniStatement);
+router.post('/balance-enquiry', authMiddlewares, requireService('aeps'), balanceEnquiry);
+router.post('/initiate-otp', authMiddlewares, requireService('aeps'), initiateAepsTxnOtp);
+router.post('/cash-withdrawal', authMiddlewares, requireService('aeps'), cashWithdrawal);
+router.post('/cash-deposit', authMiddlewares, requireService('aeps'), cashDeposit);
+router.post('/aadhaar-pay', authMiddlewares, requireService('aeps'), aadhaarPay);
+router.post('/mini-statement', authMiddlewares, requireService('aeps'), miniStatement);
 router.post('/txn-status', authMiddlewares, cashWithdrawalTxnStatus);
 
 // Merchant eKYC & Auth

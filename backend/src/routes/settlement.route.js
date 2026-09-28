@@ -13,6 +13,7 @@ import {
   getSettlementHistory,
 } from '../controllers/settlement.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
+import { requireService } from '../middlewares/service.middleware.js';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -35,7 +36,7 @@ router.post(
   uploadSettlementDocument
 );
 router.post('/initiate', initiateSettlement);
-router.post('/direct-payout', initiateDirectPayout);
+router.post('/direct-payout', requireService('payout'), initiateDirectPayout);
 router.post('/status', checkSettlementStatus);
 router.get('/history', getSettlementHistory);
 

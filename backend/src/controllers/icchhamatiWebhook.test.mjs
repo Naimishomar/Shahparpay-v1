@@ -1,15 +1,11 @@
 // Run: node src/controllers/icchhamatiWebhook.test.mjs
-// Icchhamati allows one callback URL for the whole account, so PAN webhooks and
-// wallet-crediting QR collection notifications arrive on the same public
-// endpoint. If dispatch or the mid/mkey guard regresses, either PAN statuses
-// stop updating or an unauthenticated caller reaches a handler it should not.
+// Icchhamati allows one callback URL for the whole account. If dispatch or the
+// mid/mkey guard regresses, either PAN statuses stop updating or an
+// unauthenticated caller reaches a handler it should not.
 import assert from 'node:assert';
 
 process.env.ICCHHAMATI_MID = 'MID_1001';
 process.env.ICCHHAMATI_MKEY = 'MKEY_2002';
-// Left unset on purpose: collectionWebhook must refuse rather than credit, so a
-// payload that falls through to it is provably not silently accepted here.
-delete process.env.ICCHHAMATI_COLLECTION_WEBHOOK_SECRET;
 
 const { icchhamatiWebhook, isAuthorisedPanWebhook, PAN_WEBHOOK_HANDLERS } = await import(
   './icchhamatiWebhook.controller.js'
@@ -92,21 +88,13 @@ process.env.ICCHHAMATI_MID = 'MID_1001';
   assert.strictEqual(r.captured.payload.message, 'vle_id and application_no are required');
 }
 
-// Anything that is not a PAN type is a collection notification. These carry no
-// virtual account, so the collection handler rejects them as incomplete —
-// proving the payload was handed to it rather than accepted by the PAN path.
+// QR collections are retired: anything that is not a PAN type is acknowledged
+// (so Icchhamati stops retrying) and ignored.
 for (const body of [{ type: 'vpa_transaction', data: {} }, { status: 'SUCCESS', amount: 100 }]) {
   const r = res();
   await icchhamatiWebhook(req({ body }), r);
-  assert.strictEqual(r.captured.code, 400, 'must fall through to collectionWebhook');
-  assert.strictEqual(r.captured.payload.success, false);
-}
-
-// Collection notifications with wrong mid/mkey are refused by that handler too.
-{
-  const r = res();
-  await icchhamatiWebhook(req({ headers: { mkey: 'wrong' }, body: { type: 'vpa_transaction', data: {} } }), r);
-  assert.strictEqual(r.captured.code, 401);
+  assert.strictEqual(r.captured.code, 200);
+  assert.strictEqual(r.captured.payload.message, 'Ignored');
 }
 
 console.log('icchhamatiWebhook: all assertions passed');

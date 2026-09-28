@@ -1,6 +1,7 @@
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } from "react-router-dom"
 import Landing from "./pages/Landing"
 import Layout from "./pages/Layout"
+import ServiceGate from "./components/ServiceGate"
 import Dashboard from "./pages/Dashboard"
 import AEPS from "./pages/AEPS"
 import AepsSettlement from "./pages/AepsSettlement"
@@ -8,9 +9,7 @@ import PipeStatus from "./pages/PipeStatus"
 import DirectPayout from "./pages/DirectPayout"
 import DMT from "./pages/DMT"
 import Recharge from "./pages/Recharge"
-import WalletTransfer from "./pages/WalletTransfer"
 import BBPS from "./pages/BBPS"
-import UPI_Payments from "./pages/UPI_Payments"
 import Collect from "./pages/Collect"
 import FundRequest from "./pages/FundRequest"
 import AddMoney from "./pages/AddMoney"
@@ -102,20 +101,18 @@ function App() {
         <Route path="/distributor" element={<DistributorPortal/>}/>
         <Route path="/distributor/:tab" element={<DistributorPortal/>}/>
  
-        <Route path="/aeps" element={<AEPS/>}/>
+        <Route path="/aeps" element={<ServiceGate service="aeps"><AEPS/></ServiceGate>}/>
         <Route path="/aeps/pipes" element={<PipeStatus/>}/>
         <Route path="/aeps-settlement" element={<AepsSettlement/>}/>
-        <Route path="/matm" element={<MATM/>}/>
-        <Route path="/direct-payout" element={<DirectPayout/>}/>
-        <Route path="/dmt" element={<DMT/>}/>
-        <Route path="/recharge" element={<Recharge/>}/>
-        <Route path="/wallet-transfer" element={<WalletTransfer/>}/>
-        <Route path="/bbps" element={<BBPS/>}/>
-        <Route path="/upi-payments" element={<UPI_Payments/>}/>
-        <Route path="/payments/collect" element={<Collect/>}/>
-        <Route path="/lead-generation" element={<LeadGeneration/>}/>
-        <Route path="/pan" element={<PanCard/>}/>
-        <Route path="/itr" element={<ITR/>}/>
+        <Route path="/matm" element={<ServiceGate service="matm"><MATM/></ServiceGate>}/>
+        <Route path="/direct-payout" element={<ServiceGate service="payout"><DirectPayout/></ServiceGate>}/>
+        <Route path="/dmt" element={<ServiceGate service="dmt"><DMT/></ServiceGate>}/>
+        <Route path="/recharge" element={<ServiceGate service="recharge"><Recharge/></ServiceGate>}/>
+        <Route path="/bbps" element={<ServiceGate service="bbps"><BBPS/></ServiceGate>}/>
+        <Route path="/payments/collect" element={<ServiceGate service="collect"><Collect/></ServiceGate>}/>
+        <Route path="/lead-generation" element={<ServiceGate service="lead"><LeadGeneration/></ServiceGate>}/>
+        <Route path="/pan" element={<ServiceGate service="pan"><PanCard/></ServiceGate>}/>
+        <Route path="/itr" element={<ServiceGate service="itr"><ITR/></ServiceGate>}/>
         
         {/* Reports Routes */}
         <Route path="/reports/ledger" element={<LedgerReport/>}/>

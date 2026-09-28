@@ -1,11 +1,17 @@
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Phone, MapPin, Building2, ShieldCheck, KeyRound, Lock, ChevronRight, LogOut, Camera, Edit2, Save, X } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Building2, ShieldCheck, KeyRound, Lock, ChevronRight, Camera, Edit2, Save, X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+const ACTIVE_BUTTON = 'bg-zinc-900 text-white shadow-md shadow-black/20 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:shadow-white/10';
+const SILVER_TILE = 'bg-gradient-to-br from-zinc-100 to-zinc-300 text-zinc-700 ring-1 ring-zinc-400/40 dark:from-zinc-600 dark:to-zinc-800 dark:text-zinc-100 dark:ring-zinc-400/30';
+const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500';
+const PRIMARY_BUTTON = `${ACTIVE_BUTTON} inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50`;
+const SECONDARY_BUTTON = 'inline-flex items-center gap-2 whitespace-nowrap rounded-xl border bg-card/70 backdrop-blur px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm hover:bg-black/5 dark:hover:bg-white/10 transition-colors disabled:opacity-50';
+const LABEL = 'text-[11px] font-medium uppercase tracking-wider text-muted-foreground';
+
 const Profile = () => {
-    const { user, token, logout, checkSession } = useAuth();
-    const [isHovering, setIsHovering] = useState(false);
+    const { user, token, checkSession } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     
@@ -201,432 +207,382 @@ const Profile = () => {
         setIsPasswordModalOpen(true);
     };
 
+    const closeSecurityModal = () => {
+        setIsPasswordModalOpen(false);
+        setPasswordStep(1);
+        setPasswordFormData({ email: '', otp: '', newPassword: '', newPin: '' });
+    };
+
+    const kycComplete = user?.role !== 'retailer' || user?.isMerchantKycComplete;
+    const distributorCode = (user as any)?.distributorId?.distributorId || (user as any)?.distributorId;
+    const addressLine = [(user as any)?.address?.city, (user as any)?.address?.district, (user as any)?.address?.state].filter(Boolean).join(', ');
+
+    const sectionHeader = (Icon: typeof User, title: string, editable = false) => (
+        <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+                <div className={`rounded-xl p-2 ${SILVER_TILE}`}>
+                    <Icon className="w-4 h-4" />
+                </div>
+                <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+            </div>
+            {editable && isEditing && (
+                <span className="rounded-full border bg-background px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Editing</span>
+            )}
+        </div>
+    );
+
+    const documentTile = (label: string, number?: string, picture?: string) => (
+        <div className="space-y-2">
+            <p className={LABEL}>{label}</p>
+            <p className="text-sm font-mono text-foreground">{number || 'Not provided'}</p>
+            {picture ? (
+                <a href={picture} target="_blank" rel="noreferrer" className="block relative group overflow-hidden rounded-xl border w-full max-w-[14rem] aspect-[3/2] shadow-sm">
+                    <img src={picture} alt={label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-sm font-medium text-white">View full</span>
+                    </div>
+                </a>
+            ) : (
+                <div className="flex w-full max-w-[14rem] aspect-[3/2] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">Not uploaded</div>
+            )}
+        </div>
+    );
+
     return (
-        <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 mt-8">
-            
-            {/* Profile Info Container */}
-            <div className="relative px-6 sm:px-10">
-                <div className="glass-card rounded-3xl p-6 sm:p-10 flex flex-col md:flex-row gap-8 items-start md:items-center bg-card shadow-lg border border-border">
-                    
-                    {/* Avatar */}
-                    <div 
-                        className="relative w-32 h-32 rounded-full border-4 border-background bg-muted shadow-xl shrink-0 group cursor-pointer overflow-hidden"
-                        onMouseEnter={() => setIsHovering(true)}
-                        onMouseLeave={() => setIsHovering(false)}
-                        onClick={() => document.getElementById('profilePictureInput')?.click()}
-                    >
-                        <input 
-                            type="file" 
-                            id="profilePictureInput" 
-                            className="hidden" 
-                            accept="image/*" 
-                            onChange={handleProfilePictureUpload}
-                        />
-                        {user?.profilePicture ? (
-                            <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover" />
-                        ) : (
-                            <div className="w-full h-full bg-primary/10 flex items-center justify-center text-primary">
-                                <span className="text-5xl font-bold">{user?.name?.charAt(0) || 'U'}</span>
+        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Hero */}
+            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
+                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 h-80 w-80 rounded-full bg-slate-200/70 dark:bg-slate-400/10 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-20 [background-image:radial-gradient(currentColor_1px,transparent_1px)] [background-size:22px_22px] text-black/10 dark:text-white/10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+                <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+                        {/* Avatar */}
+                        <button
+                            type="button"
+                            onClick={() => document.getElementById('profilePictureInput')?.click()}
+                            className="group relative h-24 w-24 shrink-0 rounded-full bg-gradient-to-br from-zinc-200 via-zinc-400 to-zinc-600 p-[3px] shadow-md"
+                            aria-label="Update profile photo"
+                        >
+                            <input
+                                type="file"
+                                id="profilePictureInput"
+                                className="hidden"
+                                accept="image/*"
+                                onChange={handleProfilePictureUpload}
+                            />
+                            <div className="relative h-full w-full overflow-hidden rounded-full bg-background">
+                                {user?.profilePicture ? (
+                                    <img src={user.profilePicture} alt="Profile" className="h-full w-full object-cover" />
+                                ) : (
+                                    <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-foreground">
+                                        {user?.name?.charAt(0) || 'U'}
+                                    </div>
+                                )}
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                                    <Camera size={20} className="mb-0.5" />
+                                    <span className="text-[11px] font-medium">Update</span>
+                                </div>
                             </div>
-                        )}
-                        
-                        <div className={`absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white transition-opacity duration-300 ${isHovering ? 'opacity-100' : 'opacity-0'}`}>
-                            <Camera size={24} className="mb-1" />
-                            <span className="text-xs font-medium">Update Photo</span>
+                        </button>
+
+                        <div className="min-w-0">
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground truncate">{user?.name || 'Retailer Name'}</h1>
+                            {user?.email && <p className="text-sm text-muted-foreground truncate">{user.email}</p>}
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                                <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${SILVER_TILE}`}>
+                                    {user?.role || 'Retailer'}
+                                </span>
+                                {user?.retailerId && (
+                                    <span className="rounded-full border bg-background/70 backdrop-blur px-2.5 py-0.5 text-xs font-mono text-foreground">
+                                        ID {user.retailerId}
+                                    </span>
+                                )}
+                                {user?.role === 'retailer' && distributorCode && (
+                                    <span className="flex items-center gap-1.5 rounded-full border bg-background/70 backdrop-blur px-2.5 py-0.5 text-xs font-mono text-foreground">
+                                        <Building2 size={12} className="text-muted-foreground" />
+                                        {distributorCode}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Main Details */}
-                    <div className="flex-1 w-full">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <h1 className="text-3xl font-bold text-foreground mb-1">{user?.name || 'Retailer Name'}</h1>
-                                <p className="text-muted-foreground flex flex-wrap items-center gap-3 mt-2">
-                                    <span className="px-2.5 py-0.5 rounded-full bg-white text-primary text-xs font-semibold uppercase tracking-wider">
-                                        {user?.role || 'Retailer'}
-                                    </span>
-                                    {user?.retailerId && (
-                                        <span className="text-sm font-mono opacity-80 text-foreground">ID: {user.retailerId}</span>
-                                    )}
-                                    {user?.role === 'retailer' && (user as any)?.distributorId && (
-                                        <span className="text-sm font-mono opacity-80 text-foreground border-l border-border pl-3 flex items-center gap-1.5">
-                                            <Building2 size={14} className="text-primary" />
-                                            Distributor: {(user as any)?.distributorId?.distributorId || (user as any)?.distributorId}
-                                        </span>
-                                    )}
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-3 self-start">
-                                {!isEditing ? (
-                                    <button 
-                                        onClick={() => setIsEditing(true)}
-                                        className="px-5 py-2.5 bg-primary/10 whitespace-nowrap hover:bg-primary/20 dark:bg-white/10 dark:hover:bg-white/20 text-primary dark:text-white rounded-xl font-semibold transition-colors flex items-center gap-2"
-                                    >
-                                        <Edit2 size={16} /> Edit Profile
-                                    </button>
-                                ) : (
-                                    <>
-                                        <button 
-                                            onClick={() => setIsEditing(false)}
-                                            className="px-5 py-2.5 bg-muted hover:bg-muted/80 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white text-foreground rounded-xl font-semibold transition-colors flex items-center gap-2"
-                                            disabled={isLoading}
-                                        >
-                                            <X size={16} /> Cancel
-                                        </button>
-                                        <button 
-                                            onClick={handleSave}
-                                            className="px-5 py-2.5 bg-primary whitespace-nowrap hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2"
-                                            disabled={isLoading}
-                                        >
-                                            {isLoading ? (
-                                                <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
-                                            ) : (
-                                                <Save size={16} />
-                                            )}
-                                            Save Changes
-                                        </button>
-                                    </>
-                                )}
-                                <button 
-                                    onClick={() => logout && logout()}
-                                    className="px-5 py-2.5 bg-red-500/10 hover:bg-red-500/20 dark:bg-red-500/20 dark:hover:bg-red-500/30 text-red-500 dark:text-red-400 rounded-xl font-semibold transition-colors flex items-center gap-2"
-                                >
-                                    <LogOut size={18} />
+                    <div className="flex items-center gap-2 self-start lg:self-center">
+                        {!isEditing ? (
+                            <button onClick={() => setIsEditing(true)} className={SECONDARY_BUTTON}>
+                                <Edit2 size={16} /> Edit profile
+                            </button>
+                        ) : (
+                            <>
+                                <button onClick={() => setIsEditing(false)} className={SECONDARY_BUTTON} disabled={isLoading}>
+                                    <X size={16} /> Cancel
                                 </button>
-                            </div>
-                        </div>
+                                <button onClick={handleSave} className={`${PRIMARY_BUTTON} px-5`} disabled={isLoading}>
+                                    {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                                    Save changes
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
-            </div>
+            </section>
 
-            {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6 px-6 sm:px-10">
-                
-                {/* Left Column - Details */}
-                <div className="lg:col-span-2 space-y-6">
-                    {/* Personal Information */}
-                    <div className="glass-card rounded-3xl p-8 bg-card shadow-sm border border-border">
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg">
-                                    <User size={20} />
-                                </div>
-                                <h2 className="text-xl font-bold text-foreground">Personal Information</h2>
-                            </div>
-                            {isEditing && <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md">Edit Mode</span>}
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left column - details */}
+                <div className="lg:col-span-2 flex flex-col gap-6">
+                    <section className="rounded-2xl border bg-card p-6 shadow-sm">
+                        {sectionHeader(User, 'Personal information', true)}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div className="space-y-1.5">
-                                <label className="text-sm text-muted-foreground font-medium">Full Name</label>
+                                <label className={LABEL}>Full name</label>
                                 {isEditing ? (
-                                    <input 
+                                    <input
                                         type="text"
                                         value={formData.name}
                                         onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                        className="w-full p-2.5 bg-background dark:bg-black/20 border border-border dark:border-white/20 text-foreground dark:text-white rounded-xl focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+                                        className={INPUT}
                                     />
                                 ) : (
                                     <p className="font-medium text-foreground py-2.5">{user?.name || 'N/A'}</p>
                                 )}
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-sm text-muted-foreground font-medium">Email Address <span className="text-xs font-normal text-primary/70 ml-1">(Uneditable)</span></label>
-                                <div className="flex items-center gap-2 opacity-70 cursor-not-allowed">
-                                    <Mail size={16} className="text-muted-foreground" />
-                                    <p className="font-medium text-foreground py-2.5">{user?.email || 'N/A'}</p>
+                                <label className={LABEL}>Email address <span className="normal-case tracking-normal">(not editable)</span></label>
+                                <div className="flex items-center gap-2 py-2.5">
+                                    <Mail size={16} className="text-muted-foreground shrink-0" />
+                                    <p className="font-medium text-foreground truncate">{user?.email || 'N/A'}</p>
                                 </div>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-sm text-muted-foreground font-medium">Contact Number</label>
+                                <label className={LABEL}>Contact number</label>
                                 {isEditing ? (
-                                    <input 
+                                    <input
                                         type="text"
                                         value={formData.contactNumber}
                                         onChange={(e) => setFormData({...formData, contactNumber: e.target.value})}
-                                        className="w-full p-2.5 bg-background dark:bg-black/20 border border-border dark:border-white/20 text-foreground dark:text-white rounded-xl focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+                                        className={INPUT}
                                     />
                                 ) : (
-                                    <div className="flex items-center gap-2">
-                                        <Phone size={16} className="text-muted-foreground" />
-                                        <p className="font-medium text-foreground py-2.5">{user?.contactNumber || 'N/A'}</p>
+                                    <div className="flex items-center gap-2 py-2.5">
+                                        <Phone size={16} className="text-muted-foreground shrink-0" />
+                                        <p className="font-medium text-foreground tabular-nums">{user?.contactNumber || 'N/A'}</p>
                                     </div>
                                 )}
                             </div>
                         </div>
-                    </div>
+                    </section>
 
-                    {/* Business Information */}
-                    <div className="glass-card rounded-3xl p-8 bg-card shadow-sm border border-border">
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg">
-                                    <Building2 size={20} />
-                                </div>
-                                <h2 className="text-xl font-bold text-foreground">Business Details</h2>
-                            </div>
-                            {isEditing && <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md">Edit Mode</span>}
-                        </div>
-                        
-                        <div className="space-y-6">
+                    <section className="rounded-2xl border bg-card p-6 shadow-sm">
+                        {sectionHeader(Building2, 'Business details', true)}
+                        <div className="space-y-5">
                             <div className="space-y-1.5">
-                                <label className="text-sm text-muted-foreground font-medium">Business Name</label>
+                                <label className={LABEL}>Business name</label>
                                 {isEditing ? (
-                                    <input 
+                                    <input
                                         type="text"
                                         value={formData.businessName}
                                         onChange={(e) => setFormData({...formData, businessName: e.target.value})}
-                                        className="w-full p-2.5 bg-background dark:bg-black/20 border border-border dark:border-white/20 text-foreground dark:text-white rounded-xl focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+                                        className={INPUT}
                                     />
                                 ) : (
                                     <p className="font-medium text-foreground py-2.5">{(user as any)?.businessName || 'N/A'}</p>
                                 )}
                             </div>
-                            
                             <div className="space-y-1.5">
-                                <label className="text-sm text-muted-foreground font-medium">Registered Address</label>
+                                <label className={LABEL}>Registered address</label>
                                 {isEditing ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <input 
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <input
                                             type="text"
                                             placeholder="City"
                                             value={formData.address.city}
                                             onChange={(e) => setFormData({...formData, address: {...formData.address, city: e.target.value}})}
-                                            className="w-full p-2.5 bg-background dark:bg-black/20 border border-border dark:border-white/20 text-foreground dark:text-white rounded-xl focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+                                            className={INPUT}
                                         />
-                                        <input 
+                                        <input
                                             type="text"
                                             placeholder="District"
                                             value={formData.address.district}
                                             onChange={(e) => setFormData({...formData, address: {...formData.address, district: e.target.value}})}
-                                            className="w-full p-2.5 bg-background dark:bg-black/20 border border-border dark:border-white/20 text-foreground dark:text-white rounded-xl focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+                                            className={INPUT}
                                         />
-                                        <input 
+                                        <input
                                             type="text"
                                             placeholder="State"
                                             value={formData.address.state}
                                             onChange={(e) => setFormData({...formData, address: {...formData.address, state: e.target.value}})}
-                                            className="w-full p-2.5 bg-background dark:bg-black/20 border border-border dark:border-white/20 text-foreground dark:text-white rounded-xl focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+                                            className={INPUT}
                                         />
                                     </div>
                                 ) : (
-                                    <div className="flex items-start gap-2">
-                                        <MapPin size={16} className="text-muted-foreground mt-3 shrink-0" />
-                                        <p className="font-medium text-foreground py-2.5">
-                                            {[(user as any)?.address?.city, (user as any)?.address?.district, (user as any)?.address?.state].filter(Boolean).join(', ') || 'N/A'}
-                                        </p>
+                                    <div className="flex items-start gap-2 py-2.5">
+                                        <MapPin size={16} className="text-muted-foreground mt-0.5 shrink-0" />
+                                        <p className="font-medium text-foreground">{addressLine || 'N/A'}</p>
                                     </div>
                                 )}
                             </div>
                         </div>
-                    </div>
-                    
-                    {/* Identity Documents */}
-                    <div className="glass-card rounded-3xl p-8 bg-card shadow-sm border border-border">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-2 bg-orange-500/10 text-orange-500 rounded-lg">
-                                <ShieldCheck size={20} />
-                            </div>
-                            <h2 className="text-xl font-bold text-foreground">Identity Documents</h2>
+                    </section>
+
+                    <section className="rounded-2xl border bg-card p-6 shadow-sm">
+                        {sectionHeader(ShieldCheck, 'Identity documents')}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            {documentTile('Aadhaar', aadhaarNumber, aadhaarPicture)}
+                            {documentTile('PAN', panNumber, panPicture)}
                         </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-3">
-                                <h3 className="text-sm font-medium text-muted-foreground">Aadhaar Document</h3>
-                                <p className="text-sm font-mono text-foreground">{aadhaarNumber || 'Not provided'}</p>
-                                {aadhaarPicture ? (
-                                    <a href={aadhaarPicture} target="_blank" rel="noreferrer" className="block relative group overflow-hidden rounded-xl border border-border w-48 h-32">
-                                        <img src={aadhaarPicture} alt="Aadhaar" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <span className="text-sm font-medium text-white">View Full</span>
-                                        </div>
-                                    </a>
-                                ) : <span className="text-sm text-muted-foreground">Not uploaded</span>}
-                            </div>
-
-                            <div className="space-y-3">
-                                <h3 className="text-sm font-medium text-muted-foreground">PAN Document</h3>
-                                <p className="text-sm font-mono text-foreground">{panNumber || 'Not provided'}</p>
-                                {panPicture ? (
-                                    <a href={panPicture} target="_blank" rel="noreferrer" className="block relative group overflow-hidden rounded-xl border border-border w-48 h-32">
-                                        <img src={panPicture} alt="PAN" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <span className="text-sm font-medium text-white">View Full</span>
-                                        </div>
-                                    </a>
-                                ) : <span className="text-sm text-muted-foreground">Not uploaded</span>}
-                            </div>
-                        </div>
-                    </div>
-
+                    </section>
                 </div>
 
-                {/* Right Column - Status & Actions */}
-                <div className="space-y-6">
-                    {/* KYC Status */}
-                    <div className="glass-card rounded-3xl p-8 relative overflow-hidden bg-card shadow-sm border border-border">
-                        <div className="absolute -right-4 -top-4 w-24 h-24 bg-green-500/10 rounded-full blur-2xl"></div>
-                        <div className="flex flex-col items-center text-center space-y-3 relative z-10">
-                            {user?.role !== 'retailer' || user?.isMerchantKycComplete ? (
-                                <>
-                                    <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mb-2">
-                                        <ShieldCheck size={32} />
-                                    </div>
-                                    <h3 className="text-xl font-bold text-foreground">KYC Verified</h3>
-                                    <p className="text-sm text-muted-foreground">Your account is fully verified and unrestricted.</p>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="w-16 h-16 bg-yellow-500/20 text-yellow-500 rounded-full flex items-center justify-center mb-2">
-                                        <ShieldCheck size={32} />
-                                    </div>
-                                    <h3 className="text-xl font-bold text-foreground">KYC Pending</h3>
-                                    <p className="text-sm text-muted-foreground">Complete your KYC to unlock all features.</p>
-                                    <button className="mt-4 px-6 py-2 bg-primary text-primary-foreground rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5">
-                                        Complete Now
-                                    </button>
-                                </>
-                            )}
-                            <div className="mt-4 p-3 bg-muted/50 rounded-xl w-full">
-                                <p className="text-xs text-muted-foreground text-center">
-                                    <span className="font-semibold block mb-1 text-foreground">Identity Information</span>
-                                    Cannot be modified. Please contact support for assistance with KYC details.
-                                </p>
-                            </div>
+                {/* Right column - status & security */}
+                <div className="flex flex-col gap-6">
+                    <section className="rounded-2xl border bg-card p-6 shadow-sm">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-semibold text-foreground">KYC status</h2>
+                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ring-1 ${kycComplete
+                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20'
+                                : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-amber-500/20'}`}>
+                                <span className={`h-1.5 w-1.5 rounded-full ${kycComplete ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                                {kycComplete ? 'Verified' : 'Pending'}
+                            </span>
                         </div>
-                    </div>
+                        <div className="flex items-center gap-4">
+                            <div className={`rounded-2xl p-3 ${SILVER_TILE}`}>
+                                <ShieldCheck className="h-6 w-6" />
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                                {kycComplete
+                                    ? 'Your account is fully verified and unrestricted.'
+                                    : 'Complete your KYC to unlock all features.'}
+                            </p>
+                        </div>
+                        {!kycComplete && (
+                            <button className={`${PRIMARY_BUTTON} mt-4 w-full`}>Complete now</button>
+                        )}
+                        <p className="mt-4 rounded-xl border bg-background px-3 py-2.5 text-xs text-muted-foreground">
+                            Identity details can't be changed here. Contact support for help with KYC details.
+                        </p>
+                    </section>
 
-                    {/* Quick Settings */}
-                    <div className="glass-card rounded-3xl p-4 bg-card shadow-sm border border-border">
-                        <button 
-                            onClick={() => openSecurityModal('password')}
-                            className="w-full flex items-center justify-between p-4 hover:bg-muted/50 rounded-2xl transition-colors group"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-purple-500/10 text-purple-500 rounded-lg">
-                                    <KeyRound size={20} />
+                    <section className="rounded-2xl border bg-card p-2 shadow-sm">
+                        <p className="px-4 pt-3 pb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Security</p>
+                        {([
+                            { mode: 'password', icon: KeyRound, title: 'Change password', hint: 'Update your sign-in credentials' },
+                            { mode: 'pin', icon: Lock, title: 'Change wallet PIN', hint: '4-digit PIN for DMT and settlements' },
+                        ] as const).map(({ mode, icon: Icon, title, hint }) => (
+                            <button
+                                key={mode}
+                                onClick={() => openSecurityModal(mode)}
+                                className="group w-full flex items-center justify-between gap-3 rounded-xl p-3 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                            >
+                                <div className="flex items-center gap-3 text-left">
+                                    <div className={`rounded-xl p-2 ${SILVER_TILE}`}>
+                                        <Icon className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-foreground">{title}</p>
+                                        <p className="text-xs text-muted-foreground">{hint}</p>
+                                    </div>
                                 </div>
-                                <div className="text-left">
-                                    <p className="font-semibold text-foreground group-hover:text-primary transition-colors">Change Password</p>
-                                    <p className="text-xs text-muted-foreground">Update your security credentials</p>
-                                </div>
-                            </div>
-                            <ChevronRight size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                        </button>
-                        <button 
-                            onClick={() => openSecurityModal('pin')}
-                            className="w-full flex items-center justify-between p-4 hover:bg-muted/50 rounded-2xl transition-colors group"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-amber-500/10 text-amber-500 rounded-lg">
-                                    <Lock size={20} />
-                                </div>
-                                <div className="text-left">
-                                    <p className="font-semibold text-foreground group-hover:text-primary transition-colors">Change Wallet PIN</p>
-                                    <p className="text-xs text-muted-foreground">4-digit PIN for transfers, DMT and settlements</p>
-                                </div>
-                            </div>
-                            <ChevronRight size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                        </button>
-                    </div>
+                                <ChevronRight size={18} className="text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                            </button>
+                        ))}
+                    </section>
                 </div>
-
             </div>
-            
-            {/* Change Password Modal */}
+
+            {/* Password / PIN modal */}
             {isPasswordModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-card border border-border rounded-3xl p-8 max-w-md w-full shadow-2xl relative">
-                        <button 
-                            onClick={() => {
-                                setIsPasswordModalOpen(false);
-                                setPasswordStep(1);
-                                setPasswordFormData({ email: '', otp: '', newPassword: '', newPin: '' });
-                            }}
-                            className="absolute top-4 right-4 p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors"
+                    <div className="relative w-full max-w-md rounded-3xl border bg-card p-6 sm:p-8 shadow-2xl">
+                        <button
+                            onClick={closeSecurityModal}
+                            className="absolute top-4 right-4 rounded-full p-2 text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                            aria-label="Close"
                         >
-                            <X size={20} />
+                            <X size={18} />
                         </button>
-                        
+
                         <div className="flex flex-col items-center text-center mb-6">
-                            <div className="w-16 h-16 bg-purple-500/10 text-purple-500 rounded-full flex items-center justify-center mb-4">
-                                <KeyRound size={32} />
+                            <div className={`mb-4 rounded-2xl p-3 ${SILVER_TILE}`}>
+                                {securityMode === 'pin' ? <Lock className="h-6 w-6" /> : <KeyRound className="h-6 w-6" />}
                             </div>
-                            <h2 className="text-2xl font-bold text-foreground">
-                                {securityMode === 'pin' ? 'Change Wallet PIN' : 'Change Password'}
+                            <h2 className="text-xl font-bold tracking-tight text-foreground">
+                                {securityMode === 'pin' ? 'Change wallet PIN' : 'Change password'}
                             </h2>
-                            <p className="text-sm text-muted-foreground mt-2">
+                            <p className="text-sm text-muted-foreground mt-1">
                                 {passwordStep === 1
                                     ? "Verify your identity to proceed."
                                     : securityMode === 'pin'
                                         ? "Enter the OTP and your new 4-digit PIN."
-                                        : "Enter OTP and your new password."}
+                                        : "Enter the OTP and your new password."}
                             </p>
                         </div>
 
                         <div className="space-y-4">
                             {passwordStep === 1 && (
                                 <>
-                                    <div className="text-left space-y-2">
-                                        <label className="text-sm font-medium text-foreground">Enter Registered Email</label>
-                                        <p className="text-xs text-muted-foreground mb-2">Hint: {getMaskedEmail(user?.email || '')}</p>
-                                        <input 
-                                            type="email" 
+                                    <div className="text-left space-y-1.5">
+                                        <label className="text-sm font-medium text-foreground">Registered email</label>
+                                        <p className="text-xs text-muted-foreground">Hint: {getMaskedEmail(user?.email || '')}</p>
+                                        <input
+                                            type="email"
                                             placeholder="Full email address"
                                             value={passwordFormData.email}
                                             onChange={(e) => setPasswordFormData({...passwordFormData, email: e.target.value})}
-                                            className="w-full p-3 bg-background dark:bg-black/20 border border-border dark:border-white/20 text-foreground dark:text-white rounded-xl focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                                            className={INPUT}
                                         />
                                     </div>
-                                    <button 
+                                    <button
                                         onClick={handleSendPasswordOtp}
                                         disabled={isPasswordLoading || !passwordFormData.email}
-                                        className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                        className={`${PRIMARY_BUTTON} w-full py-3`}
                                     >
+                                        {isPasswordLoading && <Loader2 size={16} className="animate-spin" />}
                                         {isPasswordLoading ? "Sending OTP..." : "Send OTP"}
                                     </button>
                                 </>
                             )}
-                            
+
                             {passwordStep === 2 && (
                                 <>
-                                    <div className="text-left space-y-2">
-                                        <label className="text-sm font-medium text-foreground">Enter OTP</label>
-                                        <input 
-                                            type="text" 
+                                    <div className="text-left space-y-1.5">
+                                        <label className="text-sm font-medium text-foreground">OTP</label>
+                                        <input
+                                            type="text"
                                             maxLength={6}
                                             placeholder="6-digit OTP"
                                             value={passwordFormData.otp}
                                             onChange={(e) => setPasswordFormData({...passwordFormData, otp: e.target.value.replace(/\D/g, '')})}
-                                            className="w-full p-3 bg-background dark:bg-black/20 border border-border dark:border-white/20 text-foreground dark:text-white rounded-xl focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                                            className={`${INPUT} tabular-nums`}
                                         />
                                     </div>
                                     {securityMode === 'pin' ? (
-                                        <div className="text-left space-y-2">
-                                            <label className="text-sm font-medium text-foreground">New Wallet PIN</label>
-                                            <input 
-                                                type="password" 
+                                        <div className="text-left space-y-1.5">
+                                            <label className="text-sm font-medium text-foreground">New wallet PIN</label>
+                                            <input
+                                                type="password"
                                                 inputMode="numeric"
                                                 maxLength={4}
                                                 placeholder="4 digits"
                                                 value={passwordFormData.newPin}
                                                 onChange={(e) => setPasswordFormData({...passwordFormData, newPin: e.target.value.replace(/\D/g, '').slice(0, 4)})}
-                                                className="w-full p-3 bg-background dark:bg-black/20 border border-border dark:border-white/20 text-foreground dark:text-white rounded-xl focus:ring-1 focus:ring-primary focus:border-primary outline-none tracking-[0.5em]"
+                                                className={`${INPUT} tracking-[0.5em]`}
                                             />
                                         </div>
                                     ) : (
-                                        <div className="text-left space-y-2">
-                                            <label className="text-sm font-medium text-foreground">New Password</label>
-                                            <input 
-                                                type="password" 
+                                        <div className="text-left space-y-1.5">
+                                            <label className="text-sm font-medium text-foreground">New password</label>
+                                            <input
+                                                type="password"
                                                 placeholder="Enter new password"
                                                 value={passwordFormData.newPassword}
                                                 onChange={(e) => setPasswordFormData({...passwordFormData, newPassword: e.target.value})}
-                                                className="w-full p-3 bg-background dark:bg-black/20 border border-border dark:border-white/20 text-foreground dark:text-white rounded-xl focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                                                className={INPUT}
                                             />
                                         </div>
                                     )}
-                                    <button 
+                                    <button
                                         onClick={securityMode === 'pin' ? handleVerifyAndChangePin : handleVerifyAndChangePassword}
                                         disabled={
                                             isPasswordLoading ||
@@ -635,9 +591,10 @@ const Profile = () => {
                                                 ? passwordFormData.newPin.length !== 4
                                                 : passwordFormData.newPassword.length < 6)
                                         }
-                                        className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                        className={`${PRIMARY_BUTTON} w-full py-3`}
                                     >
-                                        {isPasswordLoading ? "Updating..." : securityMode === 'pin' ? "Change PIN" : "Change Password"}
+                                        {isPasswordLoading && <Loader2 size={16} className="animate-spin" />}
+                                        {isPasswordLoading ? "Updating..." : securityMode === 'pin' ? "Change PIN" : "Change password"}
                                     </button>
                                 </>
                             )}

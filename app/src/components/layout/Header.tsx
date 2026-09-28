@@ -56,7 +56,6 @@ export const Header: React.FC<HeaderProps> = ({
   const [balances, setBalances] = useState<WalletBalances>({
     aepsBalance: 0,
     mainBalance: 0,
-    qrBalance: 0,
     adminBalance: 0,
   });
   const [anchor, setAnchor] = useState<Anchor | null>(null);
@@ -78,7 +77,6 @@ export const Header: React.FC<HeaderProps> = ({
       ? [{ label: 'Admin wallet', amount: balances.adminBalance, icon: 'shield-account' }]
       : [
           { label: 'AEPS wallet', amount: balances.aepsBalance, icon: 'fingerprint' },
-          { label: 'QR wallet', amount: balances.qrBalance, icon: 'qrcode' },
           { label: 'Main wallet', amount: balances.mainBalance, icon: 'wallet' },
         ];
 

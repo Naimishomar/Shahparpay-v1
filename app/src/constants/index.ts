@@ -152,9 +152,7 @@ export const SERVICE_ITEMS: MenuEntry[] = [
   { name: 'AEPS', route: 'AEPS', icon: 'fingerprint', hint: 'Aadhaar banking', group: 'Banking' },
   { name: 'MATM', route: 'MATM', icon: 'credit-card-outline', hint: 'Micro ATM withdrawal', group: 'Banking' },
   { name: 'DMT', route: 'DMT', icon: 'bank-transfer', hint: 'Money transfer', group: 'Banking' },
-  { name: 'Wallet Transfer', route: 'WalletTransfer', icon: 'wallet-plus-outline', hint: 'QR to main wallet', group: 'Banking' },
   { name: 'Direct Payout', route: 'DirectPayout', icon: 'cash-fast', hint: 'Pay any account', group: 'Banking' },
-  { name: 'UPI Payments', route: 'UPIPayments', icon: 'qrcode', hint: 'Printable counter QR', group: 'Payments' },
 
   { name: 'Recharge', route: 'Recharge', icon: 'cellphone', hint: 'Mobile & DTH', group: 'Payments' },
   { name: 'BBPS', route: 'BBPS', icon: 'receipt', hint: 'Utility bills', group: 'Payments' },
@@ -238,7 +236,6 @@ export const API_ENDPOINTS = {
     balance: '/api/wallet/balance',
     setPin: '/api/wallet/set-pin',
     changePin: '/api/wallet/change-pin',
-    transfer: '/api/wallet/transfer',
     history: '/api/wallet/history',
     ledger: '/api/wallet/ledger',
   },
@@ -302,7 +299,6 @@ export const API_ENDPOINTS = {
   collect: {
     order: '/api/collect/order',
     verify: '/api/collect/verify',
-    qr: '/api/collect/qr',
     history: '/api/collect/history',
   },
   topup: {

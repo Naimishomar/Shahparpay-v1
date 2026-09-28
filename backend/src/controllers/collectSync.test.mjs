@@ -7,7 +7,7 @@
 import assert from 'node:assert';
 import http from 'node:http';
 
-const state = { transactions: [], qrWallets: [] };
+const state = { transactions: [], mainWallets: [] };
 
 const Transaction = {
   async findOneAndUpdate(query, update, options = {}) {
@@ -22,10 +22,10 @@ const Transaction = {
     return state.transactions.find((t) => t._id === id) ?? null;
   },
 };
-const QrWallet = {
+const MainWallet = {
   async findOneAndUpdate(query, update) {
-    let row = state.qrWallets.find((w) => w.userId === query.userId);
-    if (!row) { row = { ...query, ...(update.$setOnInsert || {}), balance: 0 }; state.qrWallets.push(row); }
+    let row = state.mainWallets.find((w) => w.userId === query.userId);
+    if (!row) { row = { ...query, ...(update.$setOnInsert || {}), balance: 0 }; state.mainWallets.push(row); }
     for (const [k, v] of Object.entries(update.$inc || {})) row[k] = (row[k] || 0) + v;
     return row;
   },
@@ -41,9 +41,9 @@ const syncCollectionTransaction = await (async () => {
   const body = src.slice(from, next === -1 ? undefined : next);
   const { icchhamatiPost, isOk, normaliseStatus } = await import('../utils/icchhamati.util.js');
   return new Function(
-    'Transaction', 'QrWallet', 'icchhamatiPost', 'isOk', 'normaliseStatus',
+    'Transaction', 'MainWallet', 'icchhamatiPost', 'isOk', 'normaliseStatus',
     `${body.replace('export const syncCollectionTransaction', 'const syncCollectionTransaction')}; return syncCollectionTransaction;`
-  )(Transaction, QrWallet, icchhamatiPost, isOk, normaliseStatus);
+  )(Transaction, MainWallet, icchhamatiPost, isOk, normaliseStatus);
 })();
 
 const withGateway = async (reply, run) => {
@@ -63,7 +63,7 @@ const newOrder = (id) => {
   state.transactions.push(txn);
   return txn;
 };
-const balance = () => state.qrWallets.find((w) => w.userId === 'ret_1')?.balance ?? 0;
+const balance = () => state.mainWallets.find((w) => w.userId === 'ret_1')?.balance ?? 0;
 
 // --- an unpaid order stays PENDING and credits nothing ----------------------
 //

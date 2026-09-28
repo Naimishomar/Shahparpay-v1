@@ -1,5 +1,5 @@
 import axios from "axios";
-import { User, Wallet, Sun, Moon, ChevronDown, UserCircle } from "lucide-react";
+import { User, Wallet, Sun, Moon, ChevronDown, UserCircle, LogOut } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
@@ -19,14 +19,13 @@ const formatBalance = (value: unknown) => {
 // Full class strings: Tailwind only ships classes it can find literally.
 const WALLET_TILES = {
     silver: 'bg-gradient-to-br from-zinc-100 to-zinc-300 text-zinc-700 ring-zinc-400/40 dark:from-zinc-600 dark:to-zinc-800 dark:text-zinc-100 dark:ring-zinc-400/30',
-    cyan: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 ring-cyan-500/20',
     emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-emerald-500/20',
 };
 
 const Header = () => {
     const { theme, setTheme } = useTheme();
-    const { user, token } = useAuth();
-    const [balances, setBalances] = useState({ aepsBalance: 0, mainBalance: 0, qrBalance: 0, adminBalance: 0 });
+    const { user, token, logout } = useAuth();
+    const [balances, setBalances] = useState({ aepsBalance: 0, mainBalance: 0, adminBalance: 0 });
 
     useEffect(() => {
         const fetchBalances = async () => {
@@ -59,7 +58,6 @@ const Header = () => {
         ? [{ label: 'Admin Wallet', value: balances.adminBalance, tile: WALLET_TILES.silver }]
         : [
             { label: 'AEPS Wallet', value: balances.aepsBalance, tile: WALLET_TILES.silver },
-            { label: 'QR Wallet', value: balances.qrBalance, tile: WALLET_TILES.cyan },
             { label: 'Main Wallet', value: balances.mainBalance, tile: WALLET_TILES.emerald },
         ];
 
@@ -137,6 +135,11 @@ const Header = () => {
                             <UserCircle className="w-4 h-4 text-muted-foreground" /> My profile
                         </Link>
                         {user && <LanguageSelector />}
+                        {user && (
+                            <button onClick={logout} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-500/10">
+                                <LogOut className="w-4 h-4" /> Logout
+                            </button>
+                        )}
                     </div>
                 </PopoverContent>
             </Popover>

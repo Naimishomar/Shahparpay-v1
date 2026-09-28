@@ -32,7 +32,11 @@ const retailerSchema = new mongoose.Schema(
     lastName: { type: String, required: true, trim: true },
     dob: { type: String },
 
-    // Packages
+    // Services the distributor has switched off for this retailer (keys from
+    // utils/services.js). Empty means everything is on.
+    disabledServices: { type: [String], default: [] },
+
+    // Legacy package labels; superseded by disabledServices.
     dmtPackage: { type: String },
     rechargePackage: { type: String },
     aepsPackage: { type: String },

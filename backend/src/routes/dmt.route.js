@@ -1,5 +1,6 @@
 import express from 'express';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
+import { requireService } from '../middlewares/service.middleware.js';
 import {
   fetchBeneficiaries,
   addBeneficiary,
@@ -14,6 +15,7 @@ import {
 const router = express.Router();
 
 router.use(authMiddlewares);
+router.use(requireService('dmt'));
 
 router.post('/beneficiary/fetch', fetchBeneficiaries);
 router.post('/beneficiary/add', addBeneficiary);

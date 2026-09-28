@@ -11,7 +11,8 @@ import {
   ViewStyle,
 } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { colors, themed, lift, motion, radius, space, type as t, TOUCH } from '../../theme/colors';
+import { colors, getActivePalette, themed, lift, motion, radius, space, type as t, TOUCH } from '../../theme/colors';
+import { GradientFill } from './Gradient';
 import { useResponsive } from '@/hooks/useResponsive';
 
 interface ScreenProps {
@@ -325,7 +326,8 @@ export const StatusPill: React.FC<{ status?: string | null }> = ({ status }) => 
   const fg = spec ? (colors[TONES[spec.tone].fg] as string) : colors.mutedForeground;
   const bg = spec ? (colors[TONES[spec.tone].bg] as string) : colors.secondary;
   return (
-    <View style={[styles.pill, { backgroundColor: bg }]}>
+    // Tinted fill plus a ring of the same hue, like the site's status pills.
+    <View style={[styles.pill, { backgroundColor: bg, borderColor: `${fg}33` }]}>
       <MaterialCommunityIcons name={(spec?.icon ?? 'help-circle-outline') as any} size={11} color={fg} />
       <Text style={[styles.pillText, { color: fg }]} numberOfLines={1}>
         {label}
@@ -437,6 +439,9 @@ export const Segmented = <T extends string>({
         accessibilityState={{ selected: active }}
         accessibilityLabel={option.label}
       >
+        {active && getActivePalette() === 'dark' && (
+          <GradientFill stops={colors.activeGradient} radius={radius.pill} />
+        )}
         <Text
           style={[styles.chipText, active && (scroll ? styles.chipTextActive : styles.chipTextFlushActive)]}
           numberOfLines={1}
@@ -597,6 +602,7 @@ const styles = themed((c, isDark) => ({
     paddingHorizontal: space.sm + 1,
     paddingVertical: 4,
     borderRadius: radius.pill,
+    borderWidth: 1,
     alignSelf: 'flex-start',
   },
   pillText: { fontSize: t.micro, fontWeight: '700', letterSpacing: 0.4 },
@@ -639,18 +645,21 @@ const styles = themed((c, isDark) => ({
     borderColor: c.border,
     backgroundColor: c.card,
   },
-  chipActive: { backgroundColor: c.primary, borderColor: c.primary, ...lift('sm', isDark) },
+  chipActive: { backgroundColor: c.primary, borderColor: isDark ? c.activeGradient[c.activeGradient.length - 1] : c.primary, ...lift('sm', isDark) },
   chipGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.xs,
     padding: space.xs,
     borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: c.border,
     backgroundColor: c.card,
   },
   chipFlush: { flex: 1, minWidth: 0, alignItems: 'center', borderWidth: 0, backgroundColor: 'transparent' },
-  chipFlushActive: { backgroundColor: c.surfaceAlt },
-  chipTextFlushActive: { color: c.foreground, fontWeight: '700' },
+  // Both forms use the site's ACTIVE_BUTTON: zinc-900, silver in dark.
+  chipFlushActive: { backgroundColor: c.primary, ...lift('sm', isDark) },
+  chipTextFlushActive: { color: c.primaryForeground, fontWeight: '700' },
   chipText: { fontSize: t.caption, fontWeight: '600', color: c.foreground },
   chipTextActive: { color: c.primaryForeground },
 }));

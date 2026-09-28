@@ -16,6 +16,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '@/services/api';
 import { STORAGE_KEYS } from '@/constants';
 import { isoDate } from '@/components/ui/Screen';
+import { useAuth } from '@/context/AuthContext';
+import { isRouteEnabled } from '@/constants/services';
 
 const { width } = Dimensions.get('window');
 
@@ -24,6 +26,8 @@ interface AppSplashScreenProps {
 }
 
 export const AppSplashScreen: React.FC<AppSplashScreenProps> = ({ onFinish }) => {
+  // Signed out, or still restoring the session: user is null and every tile shows.
+  const { user } = useAuth();
   useEffect(() => {
     // Preload backend data during the 3-second splash window so screens don't show skeleton loaders
     const preloadBackendData = async () => {
@@ -224,16 +228,6 @@ export const AppSplashScreen: React.FC<AppSplashScreenProps> = ({ onFinish }) =>
       ),
     },
     {
-      id: 'upi_qr',
-      title: 'UPI QR',
-      route: 'UPIPayments',
-      icon: (
-        <View style={[styles.badgeBase, { backgroundColor: '#059669' }]}>
-          <MaterialCommunityIcons name="qrcode-scan" size={20} color="#ffffff" />
-        </View>
-      ),
-    },
-    {
       id: 'recharge',
       title: 'Recharge',
       route: 'Recharge',
@@ -279,7 +273,7 @@ export const AppSplashScreen: React.FC<AppSplashScreenProps> = ({ onFinish }) =>
         {/* Bottom Black Container with 3 Items Per Row (15 Badges total filling height) */}
         <View style={styles.bottomBlackSection}>
           <View style={styles.gridContainer}>
-            {serviceTiles.map((tile) => (
+            {serviceTiles.filter((tile) => isRouteEnabled(user, tile.route)).map((tile) => (
               <TouchableOpacity
                 key={tile.id}
                 activeOpacity={0.8}

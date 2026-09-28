@@ -17,7 +17,9 @@ import { useAsync } from '@/hooks/useAsync';
 import { useAuth } from '@/context/AuthContext';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { UpdatesTicker } from '@/components/layout/UpdatesTicker';
+import { IconTile } from '@/components/ui/Gradient';
 import { QUICK_ACTIONS, SERVICE_METRICS } from '@/constants';
+import { isRouteEnabled } from '@/constants/services';
 import { DashboardStats } from '@/types';
 import api from '@/services/api';
 
@@ -372,9 +374,6 @@ export const DashboardScreen: React.FC = () => {
 
         <View style={styles.walletFoot}>
           <Text style={styles.walletMeta} numberOfLines={1}>
-            QR {money(balances.data?.qrBalance)}
-          </Text>
-          <Text style={styles.walletMeta} numberOfLines={1}>
             AEPS {money(balances.data?.aepsBalance)}
           </Text>
         </View>
@@ -497,7 +496,7 @@ export const DashboardScreen: React.FC = () => {
       <SectionTitle>Quick actions</SectionTitle>
       <View style={styles.card}>
         <Grid columns={4}>
-          {QUICK_ACTIONS.map((action, index) => (
+          {QUICK_ACTIONS.filter((action) => isRouteEnabled(user, action.route)).map((action, index) => (
             <Pressable
               key={action.route}
               onPress={() => navigation.navigate(action.route)}
@@ -524,11 +523,20 @@ export const DashboardScreen: React.FC = () => {
       {/* Shortcut mosaic: two stacked squares, then two wide tiles. */}
       <View style={styles.mosaic}>
         <View style={styles.mosaicColumn}>
-          <SquareTile
-            icon="qrcode-scan"
-            label="UPI collect"
-            onPress={() => navigation.navigate('UPIPayments')}
-          />
+          {/* Falls back to Fund request when Collect is switched off, so the mosaic keeps its shape. */}
+          {isRouteEnabled(user, 'Collect') ? (
+            <SquareTile
+              icon="link-variant"
+              label="Collect"
+              onPress={() => navigation.navigate('Collect')}
+            />
+          ) : (
+            <SquareTile
+              icon="hand-coin-outline"
+              label="Fund request"
+              onPress={() => navigation.navigate('FundRequest')}
+            />
+          )}
           <SquareTile
             icon="plus"
             label="Add money"
@@ -674,7 +682,7 @@ const SquareTile: React.FC<{ icon: string; label: string; onPress: () => void }>
     accessibilityRole="button"
     accessibilityLabel={label}
   >
-    <MaterialCommunityIcons name={icon as any} size={22} color={colors.foreground} />
+    <IconTile icon={icon} size={60} iconSize={22} radius={radius.md} />
   </Pressable>
 );
 
@@ -690,9 +698,7 @@ const WideTile: React.FC<{
     accessibilityRole="button"
     accessibilityLabel={subtitle ? `${title}. ${subtitle}` : title}
   >
-    <View style={styles.wideIcon}>
-      <MaterialCommunityIcons name={icon as any} size={20} color={colors.foreground} />
-    </View>
+    <IconTile icon={icon} size={38} iconSize={20} />
     <View>
       <Text style={styles.tileTitle} numberOfLines={1}>
         {title}
@@ -763,6 +769,8 @@ const styles = themed((c) => ({
   duo: { flexDirection: 'row', gap: space.md },
   tile: {
     backgroundColor: c.card,
+    borderWidth: 1,
+    borderColor: c.border,
     borderRadius: radius.lg,
     padding: space.lg,
     justifyContent: 'space-between',
@@ -838,16 +846,8 @@ const styles = themed((c) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  wideIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.pill,
-    backgroundColor: c.surfaceAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 
-  card: { backgroundColor: c.card, borderRadius: radius.lg, padding: space.lg },
+  card: { backgroundColor: c.card, borderWidth: 1, borderColor: c.border, borderRadius: radius.lg, padding: space.lg },
   quick: {
     minHeight: 74,
     alignItems: 'center',

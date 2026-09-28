@@ -656,14 +656,6 @@ class ApiService {
     return this.post(API_ENDPOINTS.collect.verify, { transactionId });
   }
 
-  async generateCollectionQr(data: {
-    name: string;
-    account_number: string;
-    account_ifsc: string;
-  }) {
-    return this.post(API_ENDPOINTS.collect.qr, data);
-  }
-
   async getCollectionHistory() {
     return this.get(API_ENDPOINTS.collect.history);
   }
@@ -850,16 +842,6 @@ class ApiService {
   /** Replaces the wallet PIN. Gated on the OTP from `sendPasswordOtp`, not the old PIN. */
   async changeWalletPin(data: { otp: string; newPin: string }) {
     return this.post(API_ENDPOINTS.wallet.changePin, data);
-  }
-
-  /**
-   * QR wallet -> Main wallet. Named for what the endpoint actually does:
-   * `/api/wallet/transfer` is `transferQrToMain`, which debits the QR wallet.
-   * It was called transferAepsToMain here, so the app offered the retailer
-   * their AEPS balance and then asked the server to move QR money.
-   */
-  async transferQrToMain(data: { amount: number; pin: string }) {
-    return this.post(API_ENDPOINTS.wallet.transfer, data);
   }
 
   async getWalletHistory() {
