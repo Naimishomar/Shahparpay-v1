@@ -49,6 +49,16 @@ const SALE_ICON: Record<string, typeof Banknote> = {
     'Recharge / BBPS': Smartphone,
 };
 
+// Same accents as the stat cards, so a sale's icon matches its service's card.
+const SALE_ACCENT: Record<string, keyof typeof ACCENTS> = {
+    'DMT': 'silver',
+    'AEPS': 'emerald',
+    'AEPS Settlement': 'amber',
+    'Direct Payout': 'amber',
+    'Wallet Topup': 'cyan',
+    'Recharge / BBPS': 'sky',
+};
+
 const greeting = () => {
     const h = new Date().getHours();
     return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
@@ -293,8 +303,8 @@ const Dashboard = () => {
 
             {/* Hero */}
             <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
-                <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 h-80 w-80 rounded-full bg-slate-200/70 dark:bg-slate-400/10 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-sky-300/40 dark:bg-sky-500/20 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 h-80 w-80 rounded-full bg-emerald-200/50 dark:bg-emerald-500/15 blur-3xl" />
                 <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-20 [background-image:radial-gradient(currentColor_1px,transparent_1px)] [background-size:22px_22px] text-black/10 dark:text-white/10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
 
                 <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -402,7 +412,7 @@ const Dashboard = () => {
                             const Icon = card.icon;
                             return (
                                 <div key={card.title} className="group relative overflow-hidden rounded-2xl border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
-                                    <div aria-hidden className={`pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full blur-2xl opacity-40 transition-opacity duration-500 group-hover:opacity-100 ${a.glow}`} />
+                                    <div aria-hidden className={`pointer-events-none absolute inset-0 opacity-60 transition-opacity duration-500 group-hover:opacity-100 ${a.glow}`} />
                                     <div className="relative flex items-center justify-between gap-3">
                                         <span className="text-sm font-medium text-muted-foreground">{card.title}</span>
                                         <div className={`rounded-xl p-2.5 ring-1 ${a.tile}`}>
@@ -438,7 +448,7 @@ const Dashboard = () => {
                             <button
                                 key={url}
                                 onClick={() => navigate(url)}
-                                className="group relative flex flex-col items-start gap-3 rounded-xl border bg-background/50 p-4 text-left hover:border-foreground/20 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] active:scale-[0.98]"
+                                className={`group relative flex flex-col items-start gap-3 rounded-xl border p-4 text-left hover:border-foreground/20 active:scale-[0.98] ${ACCENTS[accent].glow}`}
                             >
                                 <ArrowUpRight className="absolute right-3 top-3 h-4 w-4 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                                 <div className={`rounded-xl p-2.5 ring-1 ${ACCENTS[accent].tile}`}>
@@ -464,9 +474,10 @@ const Dashboard = () => {
                         <ul className="divide-y divide-border">
                             {recentSales.map((sale, i) => {
                                 const Icon = SALE_ICON[sale.service] || Receipt;
+                                const tile = ACCENTS[SALE_ACCENT[sale.service] || 'rose'].tile;
                                 return (
                                     <li key={i} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/5 dark:bg-white/10 text-foreground/80">
+                                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 ${tile}`}>
                                             <Icon className="h-5 w-5" />
                                         </div>
                                         <div className="min-w-0 flex-1">

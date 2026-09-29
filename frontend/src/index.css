@@ -192,3 +192,16 @@
 body { top: 0 !important; }
 .goog-te-banner-frame.skiptranslate { display: none !important; }
 .goog-te-gadget { display: none !important; }
+
+/* Service page tint, set per route in Layout.tsx. */
+[data-accent] .bg-card {
+    background-image: linear-gradient(135deg, var(--page-tint), transparent 70%);
+}
+[data-accent="emerald"] { --page-tint: color-mix(in oklab, var(--color-emerald-500) 14%, transparent); }
+[data-accent="amber"] { --page-tint: color-mix(in oklab, var(--color-amber-500) 14%, transparent); }
+[data-accent="rose"] { --page-tint: color-mix(in oklab, var(--color-rose-500) 14%, transparent); }
+[data-accent="sky"] { --page-tint: color-mix(in oklab, var(--color-sky-500) 14%, transparent); }
+[data-accent="violet"] { --page-tint: color-mix(in oklab, var(--color-violet-500) 14%, transparent); }
+[data-accent="indigo"] { --page-tint: color-mix(in oklab, var(--color-indigo-500) 14%, transparent); }
+[data-accent="cyan"] { --page-tint: color-mix(in oklab, var(--color-cyan-500) 14%, transparent); }
+[data-accent="teal"] { --page-tint: color-mix(in oklab, var(--color-teal-500) 14%, transparent); }
