@@ -223,8 +223,12 @@ export const startReconciliationWorker = () => {
       // Find transactions stuck in PROCESSING for more than 5 minutes
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
 
+      // Payment links sit in PENDING, not PROCESSING, until the gateway
+      // confirms — without the second clause the PG_COLLECTION branch below
+      // never runs and a paid link is only credited when the retailer reopens
+      // the Collect page.
       const stuckTransactions = await Transaction.find({
-        status: 'PROCESSING',
+        $or: [{ status: 'PROCESSING' }, { status: 'PENDING', type: 'PG_COLLECTION' }],
         createdAt: { $lt: fiveMinutesAgo },
       });
 
