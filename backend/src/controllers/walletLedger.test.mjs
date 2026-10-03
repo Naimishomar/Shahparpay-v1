@@ -129,4 +129,9 @@ assert.strictEqual(
   -95
 );
 
+// PAN commission is eSevaTech's net figure, credited in full with the fee debit.
+for (const type of ['PAN_SERVICE', 'PAN_COUPON']) {
+  assert.strictEqual(getWalletDeltas(tx(type, { commissions: { retailerEarned: 7 } })).main, -93);
+}
+
 console.log(`walletLedger: ${TYPES.length} transaction types map to a wallet effect OK`);

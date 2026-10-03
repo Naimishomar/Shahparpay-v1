@@ -25,6 +25,10 @@ const CREDIT_AMOUNT_ONLY = new Set([
   // value of every UPI collection.
 ]);
 
+// eSevaTech PAN flows debit the fee and credit net_commission in one MAIN wallet
+// update (see applyWalletImpact in panEseva.controller.js).
+const PAN_ESEVA_TYPES = new Set(['PAN_SERVICE', 'PAN_COUPON']);
+
 const MONEY_MOVING_STATUSES = ['SUCCESS', 'REFUNDED', 'APPROVED'];
 
 // Which wallet each transaction actually moves money in/out of.
@@ -160,7 +164,8 @@ const getCommissionSplit = (tx) => {
   const stored = toNumber(tx.commissions?.retailerEarned);
   const gross = round2(stored);
   // Cash-deposit commission is credited in full — no TDS/GST is deducted.
-  if (tx.type === 'AEPS_DEPOSIT') {
+  // PAN commission is eSevaTech's net_commission, credited as-is (no TDS here).
+  if (tx.type === 'AEPS_DEPOSIT' || PAN_ESEVA_TYPES.has(tx.type)) {
     return { gross, tds: 0, net: gross };
   }
   // The rate is configurable, so a row booked at a different one must report the
@@ -223,14 +228,6 @@ export const getWalletDeltas = (tx) => {
   // AEPS wallet debit (settlement).
   if (tx.type === 'AEPS_SETTLEMENT') {
     return { main: 0, aeps: round2(-amount) };
-  }
-
-  // PAN_SERVICE: the eSevaTech flow applies fee debit + commission credit in a
-  // single atomic MAIN wallet update (-fee + retailerEarned), so the ledger must
-  // mirror that net impact instead of the plain -amount of other PAN flows.
-  if (tx.type === 'PAN_SERVICE') {
-    const commission = toNumber(tx.commissions?.retailerEarned);
-    return { main: round2(-amount + commission), aeps: 0 };
   }
 
   // Everything else moves money in/out of the Main wallet.
@@ -341,7 +338,13 @@ export const getWalletLedger = async (req, res) => {
       // stored on the same transaction under commissions.retailerEarned.
       const hasCommission =
         gross > 0 &&
-        ['AEPS_WITHDRAWAL', 'AEPS_DEPOSIT', 'RECHARGE', 'BILL_PAYMENT'].includes(tx.type) &&
+        [
+          'AEPS_WITHDRAWAL',
+          'AEPS_DEPOSIT',
+          'RECHARGE',
+          'BILL_PAYMENT',
+          ...PAN_ESEVA_TYPES,
+        ].includes(tx.type) &&
         !isRefundRow;
 
       // TDS (2%) is deducted ONLY from commission-paying transactions, never
