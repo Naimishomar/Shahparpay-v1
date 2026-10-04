@@ -18,7 +18,7 @@ async function run() {
         console.log("Main wallet not found");
         return;
     }
-    Mainwallet.balance = 5000;
+    Mainwallet.balance = 20000;
     await Mainwallet.save();
     console.log("Main wallet updated", Mainwallet);
     console.log("New balance", Mainwallet.balance);

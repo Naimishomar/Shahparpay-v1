@@ -101,9 +101,10 @@ export const getNarration = (tx) => {
     case 'WALLET_TOPUP':
       return `Wallet Top-up ${m.utr ? 'UTR ' + m.utr : ''}`.trim();
     case 'RECHARGE':
-      return `${m.operator || 'Recharge'} ${m.caNumber || ''}`.trim();
+      // `operator` is the provider's numeric code ("11"); the name is what a person reads.
+      return `${m.operatorName || 'Recharge'} ${m.caNumber || ''}`.trim();
     case 'BILL_PAYMENT':
-      return `Bill Payment ${m.caNumber || ''}`.trim();
+      return `${m.mode ? m.mode + ' ' : ''}Bill Payment ${m.caNumber || ''}`.trim();
     case 'DMT':
       return `DMT A/C ${m.beneficiaryAccount || 'N/A'}`;
     case 'AEPS_SETTLEMENT':
