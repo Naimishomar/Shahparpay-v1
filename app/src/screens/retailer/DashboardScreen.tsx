@@ -213,15 +213,6 @@ export const DashboardScreen: React.FC = () => {
     .map((part) => part.charAt(0).toUpperCase())
     .join('');
 
-  // Month-to-date split, in the same order as the metric grid below, so the
-  // bar and the tiles always tell the same story.
-  const segments = METRICS.map((metric, index) => ({
-    label: metric.label,
-    value: Number(stats?.[metric.key] ?? 0),
-    color: colors.chart[index % colors.chart.length],
-  })).filter((segment) => segment.value > 0);
-  const spent = segments.reduce((sum, segment) => sum + segment.value, 0);
-
   // One pass over the window feeds both the commission strip and the grouped
   // list: same rows, same day boundaries, so the two can never disagree.
   const today = startOfDay(new Date());
@@ -564,40 +555,6 @@ export const DashboardScreen: React.FC = () => {
       <SectionTitle
         action={
           <Pressable
-            onPress={() => navigation.navigate('Reports')}
-            hitSlop={10}
-            accessibilityRole="button"
-          >
-            <Text style={styles.link}>All reports</Text>
-          </Pressable>
-        }
-      >
-        {spent > 0 ? `This month · ${money(spent)}` : 'This month'}
-      </SectionTitle>
-      <Grid columns={2}>
-        {METRICS.map((metric, index) => (
-          <View key={metric.key} style={styles.metric}>
-            <View style={styles.metricTop}>
-              <View
-                style={[
-                  styles.metricDot,
-                  { backgroundColor: colors.chart[index % colors.chart.length] },
-                ]}
-              />
-              <Text style={styles.metricLabel} numberOfLines={1}>
-                {metric.label}
-              </Text>
-            </View>
-            <Text style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit>
-              {money(stats?.[metric.key])}
-            </Text>
-          </View>
-        ))}
-      </Grid>
-
-      <SectionTitle
-        action={
-          <Pressable
             onPress={() => navigation.navigate('WalletLedgerReport')}
             hitSlop={10}
             accessibilityRole="button"
@@ -877,22 +834,6 @@ const styles = themed((c) => ({
     lineHeight: 13,
   },
   link: { fontSize: t.small, fontWeight: '700', color: c.mutedForeground },
-
-  metric: {
-    padding: space.lg,
-    borderRadius: radius.lg,
-    backgroundColor: c.card,
-    gap: 8,
-  },
-  metricTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  metricDot: { width: 8, height: 8, borderRadius: radius.pill },
-  metricLabel: { flex: 1, fontSize: t.micro, fontWeight: '600', color: c.mutedForeground },
-  metricValue: {
-    fontSize: t.title,
-    fontWeight: '700',
-    color: c.foreground,
-    fontVariant: ['tabular-nums'],
-  },
 
   dayBlock: { gap: 2 },
   dayHead: {

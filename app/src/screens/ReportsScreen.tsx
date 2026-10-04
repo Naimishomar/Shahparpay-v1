@@ -8,9 +8,7 @@ import {
   Screen,
   Segmented,
   SectionTitle,
-  StatusPill,
   money,
-  dateTime,
   isoDate,
 } from '@/components/ui/Screen';
 import { useAsync } from '@/hooks/useAsync';
@@ -110,13 +108,6 @@ export const ReportsScreen: React.FC = () => {
     async () => (isRetailer ? (await api.getRetailerDashboard(rangeFor(period))).data : null),
     [period, isRetailer]
   );
-  const recent = useAsync<any>(
-    async () =>
-      isRetailer
-        ? (await api.getRecentTransactions({ limit: 8, ...rangeFor(period) })).data
-        : null,
-    [period, isRetailer]
-  );
 
   const stats = summary.data?.stats;
   const segments = SERVICE_METRICS.map((metric, index) => ({
@@ -146,17 +137,10 @@ export const ReportsScreen: React.FC = () => {
 
   const active = arcs.find((arc) => arc.label === selected) ?? null;
 
-  const transactions: any[] = Array.isArray(recent.data)
-    ? recent.data
-    : (recent.data?.transactions ?? []);
-
   return (
     <Screen
-      refreshing={summary.refreshing || recent.refreshing}
-      onRefresh={() => {
-        summary.refresh();
-        recent.refresh();
-      }}
+      refreshing={summary.refreshing}
+      onRefresh={summary.refresh}
       error={summary.error}
       onRetry={summary.reload}
     >
@@ -275,44 +259,6 @@ export const ReportsScreen: React.FC = () => {
             </View>
           )}
 
-          <SectionTitle>Transactions</SectionTitle>
-          <View style={styles.card}>
-            {transactions.length ? (
-              transactions.slice(0, 8).map((tx: any, index: number) => (
-                <View key={tx.id ?? tx._id ?? index} style={styles.tx}>
-                  <View
-                    style={[
-                      styles.txAvatar,
-                      { backgroundColor: colors.chart[index % colors.chart.length] },
-                    ]}
-                  >
-                    <MaterialCommunityIcons
-                      name={(ICON_FOR[String(tx.type || '').toUpperCase()] ??
-                        'swap-horizontal') as any}
-                      size={18}
-                      color="#FFFFFF"
-                    />
-                  </View>
-                  <View style={styles.txInfo}>
-                    <Text style={styles.txTitle} numberOfLines={1}>
-                      {tx.description || tx.service || tx.type || 'Transaction'}
-                    </Text>
-                    <Text style={styles.txMeta} numberOfLines={1}>
-                      {dateTime(tx.createdAt || tx.date)}
-                    </Text>
-                  </View>
-                  <View style={styles.txRight}>
-                    <Text style={styles.txAmount} numberOfLines={1}>
-                      {money(tx.amount)}
-                    </Text>
-                    <StatusPill status={tx.status} />
-                  </View>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.empty}>No transactions in this period.</Text>
-            )}
-          </View>
         </>
       )}
 
@@ -329,18 +275,6 @@ export const ReportsScreen: React.FC = () => {
       </View>
     </Screen>
   );
-};
-
-/** Transaction type -> glyph. Anything unknown falls back to a generic swap. */
-const ICON_FOR: Record<string, string> = {
-  AEPS: 'fingerprint',
-  AEPS_WITHDRAWAL: 'fingerprint',
-  AEPS_SETTLEMENT: 'cash-fast',
-  DMT: 'bank-transfer',
-  RECHARGE: 'cellphone',
-  BILL_PAYMENT: 'receipt',
-  WALLET_TOPUP: 'qrcode',
-  PAYOUT: 'cash-fast',
 };
 
 const ReportRow: React.FC<{ item: ReportEntry; last: boolean; onPress: () => void }> = ({
@@ -402,26 +336,6 @@ const styles = themed((c) => ({
     fontVariant: ['tabular-nums'],
   },
 
-  card: { backgroundColor: c.card, borderRadius: radius.lg, padding: space.lg },
-  empty: { fontSize: t.small, color: c.mutedForeground, paddingVertical: space.sm },
-  tx: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md },
-  txAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  txInfo: { flex: 1, minWidth: 0, gap: 2 },
-  txTitle: { fontSize: t.body, fontWeight: '600', color: c.foreground },
-  txMeta: { fontSize: t.micro, color: c.mutedForeground },
-  txRight: { alignItems: 'flex-end', gap: 4 },
-  txAmount: {
-    fontSize: t.body,
-    fontWeight: '700',
-    color: c.foreground,
-    fontVariant: ['tabular-nums'],
-  },
 
   list: {
     borderRadius: radius.lg,
