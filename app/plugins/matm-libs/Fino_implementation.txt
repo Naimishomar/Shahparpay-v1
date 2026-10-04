@@ -1,0 +1,64 @@
+    /////////////////////build.gradle/////////////////
+
+    implementation ("androidx.multidex:multidex:2.0.1")
+    implementation("com.android.support:design:27.1.1")
+    implementation("com.android.support:cardview-v7:27.1.1")
+    implementation("de.greenrobot:greendao:2.1.0")
+    implementation("org.greenrobot:eventbus:3.0.0")
+    implementation("com.karumi:dexter:4.2.0")
+
+    implementation (files("libs/fino_matm_live_20nov-release.aar"))
+    implementation (files("libs/finosdk-release19Nov.aar"))
+    //////////////////////////////////////////////////////
+
+
+    ////////////////////MainActivity class///////////////
+
+    Intent intent = new Intent(this, MatmHostActivity.class);
+    intent.putExtra("partnerid", "");
+    intent.putExtra("partnerapikey", JWT key);
+    intent.putExtra("submerchantid", "");
+    intent.putExtra("mobile", "");
+    intent.putExtra("amount", "");
+    intent.putExtra("remarks", "Test");
+    intent.putExtra("latitude", lat);
+    intent.putExtra("longitude", lng);
+    intent.putExtra("txnid", ""); // unique
+    intent.putExtra("ttype", "ATMBE");// ATMBE for balance enquiry & ATMCW for cash withdrawal
+    launcher.launch(intent);
+
+
+private ActivityResultLauncher<Intent> launcher =registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result-> {
+        if (result.getResultCode() == RESULT_OK) {
+            Intent data = result.getData();
+            if (data != null){
+                boolean status = data.getBooleanExtra("status", false);
+                int response = data.getIntExtra("response", 0);
+                String message = data.getStringExtra("message");
+                String dataObject = data.getStringExtra("data");
+
+                String detailedResponse = "Status: " + status + ", Response: " + response + ", Message: " + message + ", Data: " + dataObject;
+                showSnack(detailedResponse); // Replace with your snack method
+                Log.i("casa", detailedResponse);
+            }
+        }
+    });
+    ///////////////////////////////////////////////
+
+
+   Create MyApplication class inside the project as below and add in Manifest:
+  -----------------------------------------------------------------------------
+
+public class MyApplication extends Application {
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        FinoApplication.init(this);
+    }
+
+    @Override
+    protected void attachBaseContext(Context context) {
+        super.attachBaseContext(context);
+        MultiDex.install(context);
+    }
+}

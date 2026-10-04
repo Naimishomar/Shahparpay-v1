@@ -2,8 +2,8 @@ import jwt from 'jsonwebtoken';
 import Retailer from '../models/users/retailer.model.js';
 import Transaction from '../models/transaction.model.js';
 import MainWallet from '../models/mainWallet.model.js';
-import AepsWallet from '../models/aepsWallet.model.js';
-import { generatePaySprintToken, paySprintMatmThreeWay } from '../utils/paysprint.util.js';
+import { generatePaySprintToken } from '../utils/paysprint.util.js';
+import { settleMatmWithdrawal } from './matm.controller.js';
 import { leadCallback } from './lead.controller.js';
 
 // PaySprint calls these endpoints server-to-server, so they cannot sit behind
@@ -221,7 +221,6 @@ export const matmCallback = async (req, res) => {
     const event = String(body.event || '').toUpperCase();
     const ref = param.ackno || param.txnrefrenceNo;
     const txnStatus = Number(param.txnstatus); // 1 = success, 3 = failed
-    const amount = Number(param.amount || 0);
 
     if (!ref) {
       return ack(res, 400, 'Invalid MATM callback parameters');
@@ -236,28 +235,14 @@ export const matmCallback = async (req, res) => {
       type: 'MATM',
     });
 
-    if (transaction) {
-      if (txnStatus === 1) {
-        if (transaction.status !== 'SUCCESS') {
-          transaction.status = 'SUCCESS';
-          await transaction.save();
-
-          if (event === 'MATM' && amount > 0) {
-            await AepsWallet.findOneAndUpdate(
-              { userId: transaction.userId },
-              { $inc: { balance: amount } },
-              { upsert: true, new: true }
-            );
-          }
-        }
-        await paySprintMatmThreeWay({ reference: transaction.transactionId, status: 'success' });
-      } else if (txnStatus === 3) {
-        if (transaction.status !== 'FAILED') {
-          transaction.status = 'FAILED';
-          await transaction.save();
-        }
-        await paySprintMatmThreeWay({ reference: transaction.transactionId, status: 'failed' });
-      }
+    if (transaction && event === 'MATM') {
+      await settleMatmWithdrawal(transaction, param);
+    } else if (transaction && (txnStatus === 1 || txnStatus === 3)) {
+      // Balance enquiry: no money moves, just record the outcome.
+      await Transaction.updateOne(
+        { _id: transaction._id },
+        { $set: { status: txnStatus === 1 ? 'SUCCESS' : 'FAILED' } }
+      );
     }
 
     return ack(res, 200, 'MATM callback processed');

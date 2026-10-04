@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Linking, Platform } from 'react-native';
+import { View, Text, Platform, PermissionsAndroid } from 'react-native';
+import * as IntentLauncher from 'expo-intent-launcher';
 import { themed, space, type as t } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -20,6 +21,7 @@ import {
 import { useAsync, useAction } from '@/hooks/useAsync';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/services/api';
+import { coordsPayload } from '@/services/location';
 
 const TRANSACTION_TYPES = [
   { key: 'ATMCW', label: 'Cash withdrawal' },
@@ -28,20 +30,27 @@ const TRANSACTION_TYPES = [
 
 type TxnType = (typeof TRANSACTION_TYPES)[number]['key'];
 
+// Lives inside our APK via plugins/withPaysprintMatm (PaySprint's Fino AARs).
+const MATM_ACTIVITY = 'com.example.matm.MatmHostActivity';
+
+/** The SDK scans for the device over BLE; Android 12+ asks for these at runtime. */
+const ensureBluetooth = async () => {
+  if (Platform.OS !== 'android' || Number(Platform.Version) < 31) return;
+  const result = await PermissionsAndroid.requestMultiple([
+    PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+    PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+  ]);
+  if (Object.values(result).some((r) => r !== PermissionsAndroid.RESULTS.GRANTED)) {
+    throw new Error('Allow Bluetooth access so the app can find your Micro-ATM device.');
+  }
+};
+
 export const MatmScreen: React.FC = () => {
   const { user } = useAuth();
   const [mobile, setMobile] = useState(user?.contactNumber ?? '');
   const [amount, setAmount] = useState('');
   const [remarks, setRemarks] = useState('PaySprint MATM');
   const [txnType, setTxnType] = useState<TxnType>('ATMCW');
-
-  // Slip / Manual fallback fields if needed
-  const [showSlipInput, setShowSlipInput] = useState(false);
-  const [bankRRN, setBankRRN] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [bankName, setBankName] = useState('');
-  const [cardType, setCardType] = useState('');
-  const [fpTransactionId, setFpTransactionId] = useState('');
 
   const [receipt, setReceipt] = useState<any>(null);
   const [notice, setNotice] = useState('');
@@ -80,84 +89,89 @@ export const MatmScreen: React.FC = () => {
     return !Object.keys(next).length;
   };
 
+  const [launchError, setLaunchError] = useState('');
+
   const handleLaunchDevice = async () => {
     setNotice('');
+    setLaunchError('');
+    submitAction.setError(null);
     if (!validate()) return;
 
-    try {
-      // 1. Fetch fresh PaySprint credentials & reference ID from backend
-      let cfg = config.data;
-      if (!cfg?.token || !cfg?.referenceId) {
-        const fresh = await api.getMatmConfig();
-        if (!fresh.success) throw new Error(fresh.message || 'Failed to obtain PaySprint MATM parameters.');
-        cfg = fresh.data;
-      }
-      if (!cfg?.token || !cfg?.referenceId) {
-        throw new Error('Failed to obtain PaySprint MATM authorization parameters.');
-      }
-
-      const txnid = cfg.referenceId;
-      const partnerid = cfg.partnerId;
-      const partnerapikey = cfg.token;
-      const submerchantid = cfg.merchantCode || user?.retailerId || '';
-      const txnAmount = txnType === 'ATMCW' ? Number(amount) : 0;
-
-      // 2. On Android handset, try launching PaySprint MATM Host Activity Intent
-      if (Platform.OS === 'android') {
-        const intentUrl =
-          `intent:#Intent;` +
-          `action=android.intent.action.MAIN;` +
-          `category=android.intent.category.LAUNCHER;` +
-          `component=com.finopaytech.finosdk/.activity.MatmHostActivity;` +
-          `S.partnerid=${encodeURIComponent(partnerid)};` +
-          `S.partnerapikey=${encodeURIComponent(partnerapikey)};` +
-          `S.submerchantid=${encodeURIComponent(submerchantid)};` +
-          `S.mobile=${encodeURIComponent(mobile)};` +
-          `S.amount=${encodeURIComponent(String(txnAmount))};` +
-          `S.remarks=${encodeURIComponent(remarks)};` +
-          `S.txnid=${encodeURIComponent(txnid)};` +
-          `S.ttype=${encodeURIComponent(txnType)};` +
-          `end`;
-
-        const supported = await Linking.canOpenURL(intentUrl).catch(() => false);
-        if (supported) {
-          await Linking.openURL(intentUrl);
-          setNotice('Micro-ATM device session launched. Complete card swipe on device.');
-          return;
-        }
-      }
-
-      // 3. Fallback / direct processing mode
-      const res = await submitAction.run({
-        txnid,
-        amount: txnAmount,
-        transactionType: txnType,
-        mobile,
-        status: 'success',
-        bankRRN: bankRRN.trim() || undefined,
-        cardNumber: cardNumber.trim() || undefined,
-        bankName: bankName.trim() || undefined,
-        cardType: cardType.trim() || undefined,
-        fpTransactionId: fpTransactionId.trim() || undefined,
-      });
-
-      if (res) {
-        setNotice(res.message || 'MATM transaction processed.');
-        setReceipt({
-          ...(res.data ?? {}),
-          amount: txnAmount,
-          transactionType: txnType,
-          status: res.data?.status || (res.success ? 'SUCCESS' : 'FAILED'),
-        });
-        setAmount('');
-        setBankRRN('');
-        setCardNumber('');
-        setFpTransactionId('');
-        history.reload();
-      }
-    } catch (err: any) {
-      setNotice('');
+    if (Platform.OS !== 'android') {
+      setLaunchError('Micro-ATM works only in the Android app with a paired device.');
+      return;
     }
+
+    let txnid = '';
+    let result: IntentLauncher.IntentLauncherResult;
+    try {
+      await ensureBluetooth();
+      const coords = await coordsPayload();
+      // Fresh reference every launch: PaySprint needs a unique txnid per attempt.
+      const fresh = await api.getMatmConfig();
+      const cfg = fresh?.data;
+      if (!fresh?.success || !cfg?.token || !cfg?.referenceId) {
+        throw new Error(fresh?.message || 'Failed to obtain PaySprint MATM parameters.');
+      }
+      txnid = cfg.referenceId;
+
+      result = await IntentLauncher.startActivityAsync('android.intent.action.MAIN', {
+        className: MATM_ACTIVITY,
+        extra: {
+          partnerid: String(cfg.partnerId),
+          partnerapikey: String(cfg.token),
+          submerchantid: String(cfg.merchantCode || user?.retailerId || ''),
+          mobile,
+          amount: txnType === 'ATMCW' ? String(Number(amount)) : '0',
+          remarks: remarks || 'PaySprint MATM',
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          txnid,
+          ttype: txnType,
+        },
+      });
+    } catch (err: any) {
+      const msg = String(err?.message || '');
+      setLaunchError(
+        /no activity|resolve|not found|unable to find explicit activity/i.test(msg)
+          ? 'Micro-ATM SDK is not included in this app build. Update the app and try again.'
+          : msg || 'Could not start the Micro-ATM device.'
+      );
+      return;
+    }
+
+    // SDK returns RESULT_OK with status (bool), response (int), message, data (JSON string).
+    const extra = (result.extra ?? {}) as Record<string, any>;
+    if (result.resultCode !== IntentLauncher.ResultCode.Success || !Object.keys(extra).length) {
+      setLaunchError('Micro-ATM transaction cancelled.');
+      return;
+    }
+    let sdk: Record<string, any> = { status: extra.status, response: extra.response, message: extra.message };
+    try {
+      sdk = { ...JSON.parse(extra.data || '{}'), ...sdk };
+    } catch {
+      // data is optional detail; the server verifies with PaySprint anyway.
+    }
+
+    // The server verifies withdrawals with PaySprint; the SDK result is only a hint.
+    const res = await submitAction.run({
+      ...sdk,
+      txnid,
+      ttype: txnType,
+      amount: txnType === 'ATMCW' ? Number(amount) : 0,
+    });
+    history.reload();
+    if (!res) return;
+
+    setNotice(res.message || 'MATM transaction processed.');
+    setReceipt({
+      ...(res.data ?? {}),
+      ...(res.data?.metadata ?? {}),
+      amount: res.data?.amount ?? Number(amount),
+      transactionType: txnType,
+      status: res.status || res.data?.status,
+    });
+    setAmount('');
   };
 
   return (
@@ -233,29 +247,7 @@ export const MatmScreen: React.FC = () => {
             placeholder="Cash withdrawal / Balance check"
           />
 
-          {showSlipInput && (
-            <View style={styles.slipContainer}>
-              <Text style={styles.slipTitle}>Device Response Slip / Manual Reference</Text>
-              <Input
-                label="Bank RRN"
-                value={bankRRN}
-                onChangeText={setBankRRN}
-                leftIcon="pound"
-                placeholder="RRN printed on slip"
-              />
-              <Input
-                label="Card Number (Masked)"
-                value={cardNumber}
-                onChangeText={setCardNumber}
-                leftIcon="credit-card-multiple-outline"
-                placeholder="************1234"
-              />
-              <Input label="Bank Name" value={bankName} onChangeText={setBankName} leftIcon="bank" />
-              <Input label="Card Type" value={cardType} onChangeText={setCardType} leftIcon="credit-card-outline" placeholder="Rupay / Visa" />
-              <Input label="FP Transaction ID" value={fpTransactionId} onChangeText={setFpTransactionId} leftIcon="identifier" />
-            </View>
-          )}
-
+          {!!launchError && <ErrorBanner message={launchError} />}
           {!!submitAction.error && <ErrorBanner message={submitAction.error} />}
           {!!notice && <SuccessBanner message={notice} />}
 
@@ -271,13 +263,6 @@ export const MatmScreen: React.FC = () => {
             {txnType === 'ATMCW' ? 'Launch Micro-ATM (Withdrawal)' : 'Launch Micro-ATM (Balance)'}
           </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onPress={() => setShowSlipInput(!showSlipInput)}
-          >
-            {showSlipInput ? 'Hide device slip input' : 'Enter device slip details manually'}
-          </Button>
         </CardContent>
       </Card>
 
@@ -336,6 +321,7 @@ export const MatmScreen: React.FC = () => {
             <Row label="Bank RRN" value={receipt.bankRRN || '—'} mono />
             <Row label="Card Number" value={receipt.cardNumber || '—'} mono />
             <Row label="Bank Name" value={receipt.bankName || '—'} />
+            {receipt.balance != null && <Row label="Account Balance" value={money(receipt.balance)} mono />}
             <Row label="Type" value={receipt.transactionType || 'ATMCW'} last />
           </View>
         )}
@@ -347,8 +333,6 @@ export const MatmScreen: React.FC = () => {
 const styles = themed((c) => ({
   form: { gap: space.lg },
   help: { fontSize: t.caption, color: c.mutedForeground, lineHeight: 18 },
-  slipContainer: { gap: space.md, padding: space.md, backgroundColor: c.muted, borderRadius: 8 },
-  slipTitle: { fontSize: t.caption, fontWeight: '700', color: c.foreground },
   item: { paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
   itemTop: {
     flexDirection: 'row',
