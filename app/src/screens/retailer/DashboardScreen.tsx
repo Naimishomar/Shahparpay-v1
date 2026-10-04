@@ -100,12 +100,17 @@ const labelFor = (type?: string) =>
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 
+/** "Electric Bill" rather than "Bill Payment" when the category is known. */
+const titleFor = (tx: any, type: string) =>
+  type === 'BILL_PAYMENT' && tx?.metadata?.mode ? `${tx.metadata.mode} Bill` : labelFor(type);
+
 /** Who the transaction was for, when the metadata carries it. */
 const partyFor = (tx: any) =>
   tx?.metadata?.name ||
   tx?.metadata?.customerName ||
   tx?.metadata?.beneficiaryName ||
-  tx?.metadata?.operator ||
+  // `operator` is the provider's numeric code ("338"); the name is what a person reads.
+  tx?.metadata?.operatorName ||
   (tx?.metadata?.aadhaar ? `Aadhaar *${String(tx.metadata.aadhaar).slice(-4)}` : '') ||
   (tx?.metadata?.beneficiaryAccount ? `A/C *${String(tx.metadata.beneficiaryAccount).slice(-4)}` : '') ||
   (tx?.metadata?.caNumber ? `No. ${tx.metadata.caNumber}` : '') ||
@@ -648,7 +653,7 @@ const TransactionRow: React.FC<{ tx: any; index: number }> = ({ tx, index }) => 
       </View>
       <View style={styles.saleInfo}>
         <Text style={styles.saleTitle} numberOfLines={1}>
-          {labelFor(type)}
+          {titleFor(tx, type)}
         </Text>
         {!!party && (
           <Text style={styles.saleMeta} numberOfLines={1}>

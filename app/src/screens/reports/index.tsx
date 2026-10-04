@@ -85,8 +85,12 @@ export const RechargeReport: React.FC = () => (
     fetcher={byType('RECHARGE')}
     searchFields={txnSearch}
     titleOf={(i) => i?.metadata?.caNumber ?? 'Recharge'}
-    subtitleOf={(i) => i?.metadata?.mode ?? i?.transactionId ?? ''}
-    details={txnDetails}
+    subtitleOf={(i) => [i?.metadata?.operatorName, i?.metadata?.mode].filter(Boolean).join(' · ') || i?.transactionId || ''}
+    details={[
+      ...txnDetails,
+      { label: 'Operator', value: (i: any) => i?.metadata?.operatorName || '—' },
+      { label: 'Plan type', value: (i: any) => i?.metadata?.mode || '—' },
+    ]}
     emptyIcon="cellphone"
     emptyTitle="No recharges yet"
   />
@@ -101,13 +105,19 @@ export const BbpsReport: React.FC = () => (
   <TransactionReport
     fetcher={byType('BILL_PAYMENT')}
     searchFields={txnSearch}
-    titleOf={(i) => i?.metadata?.billerName ?? i?.metadata?.operator ?? 'Bill payment'}
+    titleOf={(i) => (i?.metadata?.mode ? `${i.metadata.mode} Bill` : 'Bill payment')}
     subtitleOf={(i) =>
-      (txnFailed(i) && txnReason(i)) || i?.metadata?.caNumber || i?.transactionId || ''
+      (txnFailed(i) && txnReason(i)) ||
+      [i?.metadata?.billerName ?? i?.metadata?.operatorName, i?.metadata?.caNumber]
+        .filter(Boolean)
+        .join(' · ') ||
+      i?.transactionId ||
+      ''
     }
     details={[
       ...txnDetails,
-      { label: 'Biller', value: (i: any) => i?.metadata?.billerName ?? i?.metadata?.operator ?? '—' },
+      { label: 'Category', value: (i: any) => i?.metadata?.mode || '—' },
+      { label: 'Biller', value: (i: any) => i?.metadata?.billerName ?? i?.metadata?.operatorName ?? '—' },
       { label: 'Bill number', value: (i: any) => i?.metadata?.billNumber ?? '—' },
     ]}
     emptyIcon="receipt"
@@ -276,6 +286,8 @@ export const WalletLedgerReport: React.FC = () => (
     details={[
       { label: 'Reference', value: (i: any) => i?.UTR || '—' },
       { label: 'Wallet', value: (i: any) => i?.WALLET || '—' },
+      { label: 'Operator', value: (i: any) => i?.OPERATOR || '—' },
+      { label: 'Category', value: (i: any) => i?.CATEGORY || '—' },
       { label: 'Direction', value: (i: any) => (i?.TYPE ? String(i.TYPE).toUpperCase() : '—') },
       { label: 'Transaction status', value: (i: any) => i?.remarks || '—' },
       { label: 'Reason', value: (i: any) => i?.REASON || '—' },

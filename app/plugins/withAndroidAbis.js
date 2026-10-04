@@ -7,7 +7,11 @@ const { withGradleProperties, withAppBuildGradle } = require('@expo/config-plugi
 // arm64-v8a covers every modern phone, armeabi-v7a the budget 32-bit devices
 // still common in the field. Do NOT trim armeabi-v7a to save more: those are
 // exactly the devices this app ships to.
-const ABIS = ['armeabi-v7a', 'arm64-v8a'];
+// ANDROID_ABIS (comma-separated) narrows a build to one ABI: a single-ABI APK is
+// ~10 MB smaller than the two-ABI one, for sideloading onto a known phone.
+const ABIS = process.env.ANDROID_ABIS
+  ? process.env.ANDROID_ABIS.split(',').map((a) => a.trim())
+  : ['armeabi-v7a', 'arm64-v8a'];
 
 // reactNativeArchitectures only governs what Gradle builds FROM SOURCE. React
 // Native ships prebuilt AARs holding all four ABIs, so without abiFilters the

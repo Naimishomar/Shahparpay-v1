@@ -383,6 +383,10 @@ export const getWalletLedger = async (req, res) => {
         // flows use gatewayMessage); the synthesized auto-refund rows carry note.
         REASON: tx.metadata?.apiMessage || tx.metadata?.gatewayMessage || tx.metadata?.note || '',
         TXNTYPE: txntype,
+        // Recharge/BBPS only: the operator or biller by name ("JIO") and the
+        // category ("Electric"), never the provider's numeric code.
+        OPERATOR: tx.metadata?.operatorName || '',
+        CATEGORY: tx.type === 'RECHARGE' || tx.type === 'BILL_PAYMENT' ? tx.metadata?.mode || '' : '',
         DATE: tx.createdAt ? new Date(tx.createdAt).toISOString() : '',
       };
     });

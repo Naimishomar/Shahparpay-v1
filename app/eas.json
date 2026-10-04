@@ -23,6 +23,13 @@
         "EXPO_PUBLIC_BACKEND_URL": "https://api.shahparpay.com"
       },
       "channel": "production"
+    },
+    "apk-arm64": {
+      "extends": "apk",
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "https://api.shahparpay.com",
+        "ANDROID_ABIS": "arm64-v8a"
+      }
     }
   },
   "submit": {
