@@ -1,12 +1,55 @@
 import Lead from '../models/lead.model.js';
 import { generateLeadUrl, checkLeadStatus } from '../utils/paysprint.util.js';
 import Retailer from '../models/users/retailer.model.js';
+import Transaction from '../models/transaction.model.js';
+import { LEAD_RATES, settleCommissions } from '../utils/wallet.util.js';
 
 // Helper to get merchantcode
 const getMerchantCode = async (userId) => {
   // Assuming only retailers generate leads currently
   const retailer = await Retailer.findById(userId);
   return retailer ? retailer.retailerId : 'PS001'; // Defaulting to PS001 if not found for testing
+};
+
+// ponytail: exact status names; extend the set if PaySprint reports another
+// final "approved" wording.
+const PAID_STATUSES = new Set(['APPROVED', 'DISBURSED', 'SUCCESS', 'COMPLETED']);
+
+/**
+ * Pays the rate-card commission once a retailer's lead is approved. The
+ * commissionPaid flip is the idempotency guard, so the callback and a manual
+ * status check racing each other pay once.
+ */
+export const payLeadCommission = async (lead) => {
+  const rate = LEAD_RATES[lead.product];
+  const status = String(lead.executive_status || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, '_');
+  if (!rate || lead.userModel !== 'Retailer' || !PAID_STATUSES.has(status)) return null;
+
+  const claimed = await Lead.findOneAndUpdate(
+    { _id: lead._id, commissionPaid: { $ne: true } },
+    { $set: { commissionPaid: true } }
+  );
+  if (!claimed) return null;
+
+  const split = await settleCommissions({
+    retailerId: lead.userId,
+    retailerGross: rate.retailer,
+    distributorGross: rate.distributor,
+    pool: rate.pool,
+  });
+  // amount 0: no principal moves, the ledger credits only the net commission.
+  return Transaction.create({
+    transactionId: `LEAD-${lead.refid}`,
+    userId: lead.userId,
+    type: 'LEAD',
+    amount: 0,
+    commissions: split,
+    status: 'SUCCESS',
+    metadata: { refid: lead.refid, product: lead.product, executiveStatus: lead.executive_status },
+  });
 };
 
 // Generate a Lead URL
@@ -101,6 +144,7 @@ export const checkStatus = async (req, res) => {
       lead.executive_remarks = data.executive_remarks || lead.executive_remarks;
       lead.executive_updated_date = data.executive_updated_date || lead.executive_updated_date;
       await lead.save();
+      await payLeadCommission(lead);
 
       return res.status(200).json({ success: true, message: psResponse.message, data: lead });
     } else {
@@ -139,9 +183,7 @@ export const leadCallback = async (req, res) => {
         lead.executive_remarks = param.executive_remarks || lead.executive_remarks;
         lead.executive_updated_date = param.executive_updated_date || lead.executive_updated_date;
         await lead.save();
-
-        // If status becomes APPROVED, we could process commission here or wait for settlement.
-        // Currently just updating status.
+        await payLeadCommission(lead);
       }
     }
 

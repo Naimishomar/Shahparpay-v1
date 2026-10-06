@@ -28,7 +28,6 @@ const TABS = [
   { key: 'requests', label: 'Fund requests' },
   { key: 'distributors', label: 'Distributors' },
   { key: 'notifications', label: 'Notifications' },
-  { key: 'commissions', label: 'Commissions' },
 ];
 
 const NOTIFICATION_KINDS = [
@@ -38,23 +37,9 @@ const NOTIFICATION_KINDS = [
   { key: 'urgent', label: 'Urgent' },
 ];
 
-/** The percentages the backend stores under `aepsCommission`. */
-const COMMISSION_FIELDS = [
-  { key: 'retailerPercentage', label: 'Retailer %' },
-  { key: 'distributorPercentage', label: 'Distributor %' },
-  { key: 'totalApiPercentage', label: 'Total API %' },
-] as const;
-
-type CommissionKey = (typeof COMMISSION_FIELDS)[number]['key'];
-
 export const AdminPortalScreen: React.FC = () => {
   const [tab, setTab] = useState('overview');
   const [remarks, setRemarks] = useState<Record<string, string>>({});
-  const [commission, setCommission] = useState<Record<CommissionKey, string>>({
-    retailerPercentage: '',
-    distributorPercentage: '',
-    totalApiPercentage: '',
-  });
   const [announcement, setAnnouncement] = useState({ title: '', message: '', kind: 'info' });
   const [notice, setNotice] = useState('');
   const [onboarding, setOnboarding] = useState(false);
@@ -67,20 +52,6 @@ export const AdminPortalScreen: React.FC = () => {
     async () => (await api.getAdminRecentTransactions({ limit: 15 })).data ?? [],
     []
   );
-  const settings = useAsync<any>(async () => {
-    const res = await api.getGlobalSettings();
-    // `aepsCommission` is an object of three percentages, not a single rate:
-    // posting a bare number left the spread in the controller a no-op, so
-    // "Save settings" silently changed nothing.
-    const rates = res.data?.aepsCommission ?? {};
-    setCommission({
-      retailerPercentage: String(rates.retailerPercentage ?? ''),
-      distributorPercentage: String(rates.distributorPercentage ?? ''),
-      totalApiPercentage: String(rates.totalApiPercentage ?? ''),
-    });
-    return res.data;
-  }, []);
-
   const notifications = useAsync<any[]>(async () => (await api.getNotifications()).data ?? [], []);
 
   const decide = useAction(async (requestId: string, status: 'APPROVED' | 'REJECTED') => {
@@ -88,26 +59,6 @@ export const AdminPortalScreen: React.FC = () => {
       requestId,
       status,
       adminRemarks: remarks[requestId] || '',
-    });
-    if (!res.success) throw new Error(res.message);
-    return res;
-  });
-
-  const saveSettings = useAction(async () => {
-    const retailer = Number(commission.retailerPercentage);
-    const distributor = Number(commission.distributorPercentage);
-    const total = Number(commission.totalApiPercentage);
-    // Same guard the web portal applies: the two shares are carved out of the
-    // provider's total, and the admin keeps the remainder.
-    if (retailer + distributor > total) {
-      throw new Error('Retailer + distributor % cannot exceed the total API %.');
-    }
-    const res = await api.updateGlobalSettings({
-      aepsCommission: {
-        retailerPercentage: retailer,
-        distributorPercentage: distributor,
-        totalApiPercentage: total,
-      },
     });
     if (!res.success) throw new Error(res.message);
     return res;
@@ -153,7 +104,6 @@ export const AdminPortalScreen: React.FC = () => {
         distributors.refresh();
         fundRequests.refresh();
         recent.refresh();
-        settings.refresh();
         notifications.refresh();
       }}
       error={stats.error}
@@ -427,50 +377,6 @@ export const AdminPortalScreen: React.FC = () => {
             </CardContent>
           </Card>
         </>
-      )}
-
-      {tab === 'commissions' && (
-        <Card>
-          <CardHeader>
-            <CardTitle icon="percent-outline">AEPS commission split</CardTitle>
-          </CardHeader>
-          <CardContent style={styles.form}>
-            {COMMISSION_FIELDS.map((field) => (
-              <Input
-                key={field.key}
-                label={field.label}
-                value={commission[field.key]}
-                onChangeText={(v) =>
-                  setCommission((prev) => ({ ...prev, [field.key]: v.replace(/[^0-9.]/g, '') }))
-                }
-                keyboardType="decimal-pad"
-                leftIcon="percent-outline"
-              />
-            ))}
-            <Text style={styles.help}>
-              The retailer and distributor shares are carved out of the total API commission; the
-              admin keeps whatever is left.
-            </Text>
-            {!!settings.error && <ErrorBanner message={settings.error} onRetry={settings.reload} />}
-            {!!saveSettings.error && <ErrorBanner message={saveSettings.error} />}
-            <Button
-              onPress={async () => {
-                setNotice('');
-                const res = await saveSettings.run();
-                if (res) {
-                  setNotice(res.message || 'Settings saved.');
-                  settings.reload();
-                }
-              }}
-              loading={saveSettings.pending}
-              disabled={COMMISSION_FIELDS.some((f) => !commission[f.key])}
-              icon="content-save-outline"
-              fullWidth
-            >
-              Save settings
-            </Button>
-          </CardContent>
-        </Card>
       )}
 
       <OnboardMemberSheet

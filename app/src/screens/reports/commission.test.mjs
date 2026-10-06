@@ -30,8 +30,8 @@ assert.ok(/TDS: tdsShown/.test(ledgerCtl), 'the ledger must expose TDS for the a
 // --- both sides net off the SAME quantity ---------------------------------
 for (const [name, src] of [['retailerNetCommission', walletUtil], ['getCommissionSplit', ledgerCtl]]) {
   assert.ok(
-    /storedTds === undefined \|\| storedTds === null \? gross \* 0\.02/.test(src) ||
-      /stored === undefined \|\| stored === null \? gross \* 0\.02/.test(src),
+    /stored(Tds)? === undefined \|\| stored(Tds)? === null \? fallback/.test(src) &&
+      /: gross \* 0\.02;/.test(src),
     `${name} must fall back to 2% TDS for rows booked before the field existed`
   );
 }

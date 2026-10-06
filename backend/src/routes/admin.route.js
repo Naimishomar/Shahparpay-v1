@@ -6,8 +6,6 @@ import {
   updateAdminProfile,
   getRecentTransactions,
   liveTransactionsHandler,
-  getGlobalSettings,
-  updateGlobalSettings,
 } from '../controllers/admin.controller.js';
 import {
   getOverview,
@@ -50,8 +48,5 @@ router.put(
 
 router.get('/recent-transactions', getRecentTransactions);
 router.get('/live-transactions', liveTransactionsHandler);
-
-router.get('/settings', getGlobalSettings);
-router.put('/settings', updateGlobalSettings);
 
 export default router;

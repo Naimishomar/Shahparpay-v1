@@ -11,6 +11,10 @@ type Biller = { name: string; kind: 'flat' | 'percent'; value: number };
 
 type Rates = {
     aeps: { withdrawal: Slab[]; deposit: Slab[]; tdsPercent: number };
+    matm: Slab[];
+    pan: { fee: number; earns: number };
+    charges: { name: string; fee: number; plusGst: boolean }[];
+    leads: { name: string; earns: number }[];
     prepaid: Operator[];
     dth: Operator[];
     bbps: Biller[];
@@ -134,7 +138,7 @@ const Commission: React.FC = () => {
                                 <Card
                                     icon={Banknote}
                                     title="AEPS cash deposit"
-                                    note="Flat commission per transaction. No TDS or GST is deducted."
+                                    note={`Flat commission per transaction. ${rates.aeps.tdsPercent}% TDS is deducted.`}
                                 >
                                     {rates.aeps.deposit.map((slab) => (
                                         <RateRow
@@ -147,9 +151,24 @@ const Commission: React.FC = () => {
                                 </Card>
 
                                 <Card
+                                    icon={Fingerprint}
+                                    title="Micro ATM cash withdrawal"
+                                    note={`Shown per transaction. ${rates.aeps.tdsPercent}% TDS is deducted.`}
+                                >
+                                    {rates.matm.map((slab) => (
+                                        <RateRow
+                                            key={slab.label}
+                                            left={slab.label}
+                                            right={slab.earns ? `${rupees(slab.earns)} on ${rupees(slab.sample)}` : 'No commission'}
+                                            muted={!slab.earns}
+                                        />
+                                    ))}
+                                </Card>
+
+                                <Card
                                     icon={RefreshCw}
                                     title="Mobile recharge"
-                                    note="Percentage of the recharge amount, credited in full to your wallet."
+                                    note={`Percentage of the recharge amount. ${rates.aeps.tdsPercent}% TDS is deducted.`}
                                 >
                                     {rates.prepaid.map((op) => (
                                         <RateRow key={op.name} left={op.name} right={`${op.percent}%`} />
@@ -180,6 +199,39 @@ const Commission: React.FC = () => {
                                             />
                                         ))}
                                     </div>
+                                </Card>
+
+                                <Card
+                                    icon={Receipt}
+                                    title="PAN card"
+                                    note={`Per application or coupon. ${rates.aeps.tdsPercent}% TDS is deducted.`}
+                                >
+                                    <RateRow left={`Application at ${rupees(rates.pan.fee)}`} right={rupees(rates.pan.earns)} />
+                                </Card>
+
+                                <Card
+                                    icon={Receipt}
+                                    title="Lead generation"
+                                    note={`Flat, once the lead is approved. ${rates.aeps.tdsPercent}% TDS is deducted.`}
+                                >
+                                    {rates.leads.map((lead) => (
+                                        <RateRow key={lead.name} left={lead.name} right={rupees(lead.earns)} />
+                                    ))}
+                                </Card>
+
+                                <Card
+                                    icon={Banknote}
+                                    title="Service charges"
+                                    note="Debited from your wallet with the transaction and refunded if it fails."
+                                >
+                                    {rates.charges.map((c) => (
+                                        <RateRow
+                                            key={c.name}
+                                            left={c.name}
+                                            right={`${rupees(c.fee)}${c.plusGst ? ' + GST' : ''}`}
+                                            muted
+                                        />
+                                    ))}
                                 </Card>
 
                                 <Card

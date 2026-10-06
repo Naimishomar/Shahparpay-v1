@@ -8,7 +8,7 @@ import {
   providerMessage,
   makeReferenceId,
 } from '../utils/icchhamati.util.js';
-import { lockFundsForTransaction, resolveTransaction } from '../utils/wallet.util.js';
+import { getDmtCharge, lockFundsForTransaction, resolveTransaction } from '../utils/wallet.util.js';
 import DmtTransaction from '../models/dmtTransaction.model.js';
 import Transaction from '../models/transaction.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
@@ -33,8 +33,10 @@ const requireMobile = (mobile) => {
 };
 
 const beneficiaryMobile = (row) =>
-  String(row.mobile ?? row.mobile_number ?? row.remitter_mobile ?? row.user?.mobile ?? '')
-    .replace(/\D/g, '');
+  String(row.mobile ?? row.mobile_number ?? row.remitter_mobile ?? row.user?.mobile ?? '').replace(
+    /\D/g,
+    ''
+  );
 
 // Icchhamati currently returns `id`; retain the aliases used by older account
 // responses so OTP, delete, and payout always use the provider's real ID.
@@ -77,8 +79,12 @@ const toBeneficiary = (row) => ({
   branch: row.branch || null,
   status: row.status || null,
   verified:
-    row.verified === true || row.account_verified === true || row.ifsc_verified === true ||
-    ['verified', 'active', 'approved', '1', 'success'].includes(String(row.status || '').toLowerCase()),
+    row.verified === true ||
+    row.account_verified === true ||
+    row.ifsc_verified === true ||
+    ['verified', 'active', 'approved', '1', 'success'].includes(
+      String(row.status || '').toLowerCase()
+    ),
 });
 
 export const fetchBeneficiaries = async (req, res) => {
@@ -117,7 +123,9 @@ export const addBeneficiary = async (req, res) => {
     const beneName = benename || name;
     const beneAccount = String(beneaccount || accno || account || '').trim();
 
-    const normalizedIfsc = String(ifsc || '').trim().toUpperCase();
+    const normalizedIfsc = String(ifsc || '')
+      .trim()
+      .toUpperCase();
     if (!mobile || !beneName || !beneAccount || !normalizedIfsc) {
       return res.status(400).json({
         success: false,
@@ -142,10 +150,16 @@ export const addBeneficiary = async (req, res) => {
     if (!verification.verified) {
       return res.status(400).json({
         success: false,
-        message: verification.message || 'Bank account and account-holder name could not be matched.',
+        message:
+          verification.message || 'Bank account and account-holder name could not be matched.',
         data: {
           pennyDropVerified: false,
-          bankVerification: { ...(verification.providerData || {}), accountMatch: verification.accountMatches, nameMatch: verification.nameMatch, verified: false },
+          bankVerification: {
+            ...(verification.providerData || {}),
+            accountMatch: verification.accountMatches,
+            nameMatch: verification.nameMatch,
+            verified: false,
+          },
         },
       });
     }
@@ -167,7 +181,8 @@ export const addBeneficiary = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'Bank account verified successfully. Beneficiary added; verify it with OTP to pay it.',
+      message:
+        'Bank account verified successfully. Beneficiary added; verify it with OTP to pay it.',
       data: {
         ...(data.data ? toBeneficiary(data.data) : {}),
         pennyDropVerified: true,
@@ -235,7 +250,10 @@ export const sendBeneficiaryDeleteOtp = async (req, res) => {
     if (!isOk(data)) {
       return res
         .status(400)
-        .json({ success: false, message: providerMessage(data, 'Could not send the deletion OTP.') });
+        .json({
+          success: false,
+          message: providerMessage(data, 'Could not send the deletion OTP.'),
+        });
     }
 
     return res.status(200).json({
@@ -296,10 +314,14 @@ export const deleteBeneficiary = async (req, res) => {
     if (!isOk(data)) {
       const providerError = String(data?.message || '').toLowerCase();
       if (providerError.includes('undefined variable') || providerError.includes('$request')) {
-        console.error('Icchhamati beneficiary delete endpoint is failing server-side:', data?.message);
+        console.error(
+          'Icchhamati beneficiary delete endpoint is failing server-side:',
+          data?.message
+        );
         return res.status(502).json({
           success: false,
-          message: 'Beneficiary deletion is temporarily unavailable at the service provider. Please try again later.',
+          message:
+            'Beneficiary deletion is temporarily unavailable at the service provider. Please try again later.',
           providerUnavailable: true,
         });
       }
@@ -380,13 +402,20 @@ export const initiateTransfer = async (req, res) => {
     // Lock the funds as PROCESSING. A payout is accepted before the beneficiary
     // bank confirms it, so the money stays held until there is a final answer —
     // refunding on "Pending" would hand back money that is on its way.
+    // The DMT charge (+18% GST) is debited with the transfer and refunded with
+    // it, so `amount` is the whole debit and the payout below sends totalAmount.
+    const charge = getDmtCharge(totalAmount);
     try {
-      await lockFundsForTransaction(retailerId, 'MAIN', -totalAmount, {
+      await lockFundsForTransaction(retailerId, 'MAIN', -(totalAmount + charge.total), {
         transactionId,
         userId: retailerId,
         type: 'DMT',
-        amount: totalAmount,
+        amount: totalAmount + charge.total,
+        commissions: { chargeDeducted: charge.total },
         metadata: {
+          transferAmount: totalAmount,
+          dmtFee: charge.fee,
+          dmtGst: charge.gst,
           beneficiaryId: String(beneficiaryId),
           beneficiaryAccount: providerAccount || null,
           transferMode: mode,

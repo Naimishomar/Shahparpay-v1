@@ -1,8 +1,14 @@
 import {
   getAepsWithdrawalCommission,
   getAepsDepositCommission,
+  getMatmCommission,
   getRechargeCommissionRate,
   getBbpsCommissionRule,
+  getBbpsCharge,
+  getDmtCharge,
+  commissionTdsRate,
+  PAN_RATES,
+  LEAD_RATES,
 } from '../utils/wallet.util.js';
 
 /**
@@ -18,14 +24,29 @@ import {
 // the ones a retailer would really be credited.
 const AEPS_WITHDRAWAL_SLABS = [
   { label: 'Below ₹300', sample: 200 },
-  { label: '₹300 – ₹3,000', sample: 2000 },
-  { label: '₹3,001 – ₹10,000', sample: 5000 },
+  { label: '₹300 – ₹2,999', sample: 2000 },
+  { label: '₹3,000 – ₹10,000', sample: 5000 },
 ];
 
 const AEPS_DEPOSIT_SLABS = [
   { label: 'Below ₹500', sample: 300 },
-  { label: '₹500 – ₹3,000', sample: 2000 },
-  { label: '₹3,001 – ₹10,000', sample: 5000 },
+  { label: '₹500 – ₹2,999', sample: 2000 },
+  { label: '₹3,000 – ₹10,000', sample: 5000 },
+];
+
+const MATM_SLABS = [
+  { label: 'Below ₹500', sample: 300 },
+  { label: '₹500 – ₹2,999', sample: 2000 },
+  { label: '₹3,000 – ₹10,000', sample: 5000 },
+];
+
+// Probed at the top of each DMT charge slab.
+const DMT_SLABS = [
+  { label: '₹100 – ₹1,000', sample: 1000 },
+  { label: '₹1,001 – ₹2,000', sample: 2000 },
+  { label: '₹2,001 – ₹3,000', sample: 3000 },
+  { label: '₹3,001 – ₹4,000', sample: 4000 },
+  { label: '₹4,001 – ₹5,000', sample: 5000 },
 ];
 
 const PREPAID_OPERATORS = [
@@ -48,7 +69,6 @@ const BBPS_SERVICES = [
   { name: 'Electricity', probe: 'electricity' },
   { name: 'Water', probe: 'water' },
   { name: 'Gas & LPG', probe: 'gas' },
-  { name: 'Credit card bill', probe: 'creditcard' },
   { name: 'Loan & EMI', probe: 'loan' },
   { name: 'Insurance premium', probe: 'insurance' },
   { name: 'FASTag', probe: 'fastag' },
@@ -57,7 +77,7 @@ const BBPS_SERVICES = [
 
 export const getPublicCommissionRates = async (req, res) => {
   try {
-    const tdsPercent = Number(process.env.AEPS_COMMISSION_TDS_RATE || 2);
+    const tdsPercent = commissionTdsRate() * 100;
 
     const withdrawal = AEPS_WITHDRAWAL_SLABS.map(({ label, sample }) => ({
       label,
@@ -72,6 +92,22 @@ export const getPublicCommissionRates = async (req, res) => {
       sample,
       earns: getAepsDepositCommission(sample),
     }));
+
+    const matm = MATM_SLABS.map(({ label, sample }) => ({
+      label,
+      sample,
+      earns: getMatmCommission(sample),
+    }));
+
+    // Charges the retailer pays, rather than earns.
+    const charges = [
+      ...DMT_SLABS.map(({ label, sample }) => ({
+        name: `Money transfer ${label}`,
+        fee: getDmtCharge(sample).fee,
+        plusGst: true,
+      })),
+      { name: 'Credit card bill payment', fee: getBbpsCharge('creditcard'), plusGst: false },
+    ];
 
     // Sorted rather than hand-ordered: a rate change in wallet.util.js would
     // otherwise leave a lower-paying operator sitting above a higher one.
@@ -89,20 +125,21 @@ export const getPublicCommissionRates = async (req, res) => {
       success: true,
       data: {
         aeps: { withdrawal, deposit, tdsPercent },
+        matm,
+        pan: { fee: PAN_RATES.fee, earns: PAN_RATES.retailer },
+        charges,
+        leads: [
+          { name: 'Zero-balance savings account', earns: LEAD_RATES.SA.retailer },
+          { name: 'Credit card', earns: LEAD_RATES.CC.retailer },
+          { name: 'Instant loan', earns: LEAD_RATES.IL.retailer },
+        ],
         prepaid: map(PREPAID_OPERATORS, 'prepaid'),
         dth: map(DTH_OPERATORS, 'dth'),
         bbps,
         // Services with no published rate card yet. Listed explicitly rather
         // than silently omitted, so the page can say "on request" instead of
         // leaving a retailer to assume they earn nothing.
-        onRequest: [
-          'Domestic Money Transfer (DMT)',
-          'Micro ATM',
-          'PAN Card services',
-          'ITR filing',
-          'Lead generation',
-          'UPI QR collections',
-        ],
+        onRequest: ['ITR filing', 'Personal & business loan leads', 'UPI QR collections'],
       },
     });
   } catch (error) {

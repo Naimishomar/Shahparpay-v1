@@ -58,6 +58,11 @@ const leadSchema = new mongoose.Schema(
     url: {
       type: String, // The PaySprint application URL
     },
+    // Set once the rate-card commission for an approved lead has been paid.
+    commissionPaid: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

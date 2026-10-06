@@ -2,6 +2,7 @@ import axios from 'axios';
 import Retailer from '../models/users/retailer.model.js';
 import MainWallet from '../models/mainWallet.model.js';
 import Transaction from '../models/transaction.model.js';
+import { getDistributorCommission, PAN_RATES, settleCommissions } from '../utils/wallet.util.js';
 
 // ==========================================
 // eSevaTech PAN Service / PAN Coupon APIs
@@ -51,25 +52,23 @@ const mapEsevaStatus = (status) => {
   return 'PENDING';
 };
 
-// Atomically debit fee and credit commission on the retailer MainWallet.
-// Creates a single Transaction record with the fee as `amount` and the
-// net commission stored under commissions.retailerEarned.
+// Atomically debit the fee from the retailer MainWallet, then pay the
+// rate-card commission split (retailer, distributor, admin) per application or
+// coupon. The provider's own net_commission is kept in metadata only.
 const applyWalletImpact = async ({
   retailer,
   finalAmount,
-  netCommission,
+  units,
   transactionId,
   type,
   status,
   metadata,
 }) => {
   const fee = Number(finalAmount) || 0;
-  const commission = Number(netCommission) || 0;
 
-  // Single atomic update: check balance >= fee, then apply fee debit + commission credit
   const updatedWallet = await MainWallet.findOneAndUpdate(
     { userId: retailer._id, balance: { $gte: fee } },
-    { $inc: { balance: -fee + commission } },
+    { $inc: { balance: -fee } },
     { returnDocument: 'after' }
   );
 
@@ -77,20 +76,26 @@ const applyWalletImpact = async ({
     return { error: 'Insufficient wallet balance' };
   }
 
+  const split = await settleCommissions({
+    retailerId: retailer._id,
+    retailerGross: PAN_RATES.retailer * units,
+    distributorGross: getDistributorCommission(type) * units,
+    pool: (PAN_RATES.fee - PAN_RATES.apiCost) * units,
+  });
+
   const transaction = await Transaction.create({
     transactionId,
     userId: retailer._id,
     type,
     amount: fee,
-    commissions: {
-      retailerEarned: commission,
-      chargeDeducted: fee,
-    },
+    commissions: { ...split, chargeDeducted: fee },
     status,
     metadata,
   });
 
-  return { transaction, newBalance: updatedWallet.balance };
+  const newBalance =
+    Math.round((updatedWallet.balance + split.retailerEarned - split.retailerTds) * 100) / 100;
+  return { transaction, newBalance };
 };
 
 /**
@@ -177,7 +182,7 @@ export const applyPanService = async (req, res) => {
     const impact = await applyWalletImpact({
       retailer,
       finalAmount,
-      netCommission,
+      units: 1,
       transactionId: `PAN-SERVICE-${applicationNumber}`,
       type: 'PAN_SERVICE',
       status: 'SUCCESS',
@@ -226,7 +231,9 @@ export const applyPanService = async (req, res) => {
       final_amount: finalAmount,
       commission_amount: result.commission_amount,
       tds_amount: result.tds_amount,
-      net_commission: netCommission,
+      // What this retailer was actually credited, not the provider's figure.
+      net_commission:
+        impact.transaction.commissions.retailerEarned - impact.transaction.commissions.retailerTds,
       new_wallet_balance: impact.newBalance,
       status: result.status,
       transactionId: impact.transaction.transactionId,
@@ -317,7 +324,7 @@ export const applyPanCoupon = async (req, res) => {
     const impact = await applyWalletImpact({
       retailer,
       finalAmount,
-      netCommission,
+      units: Number(number_of_coupons),
       transactionId: `PAN-COUPON-${applicationNumber}`,
       type: 'PAN_COUPON',
       status: 'SUCCESS',
@@ -364,7 +371,9 @@ export const applyPanCoupon = async (req, res) => {
       final_amount: finalAmount,
       commission_amount: result.commission_amount,
       tds_amount: result.tds_amount,
-      net_commission: netCommission,
+      // What this retailer was actually credited, not the provider's figure.
+      net_commission:
+        impact.transaction.commissions.retailerEarned - impact.transaction.commissions.retailerTds,
       new_wallet_balance: impact.newBalance,
       status: result.status,
       transactionId: impact.transaction.transactionId,

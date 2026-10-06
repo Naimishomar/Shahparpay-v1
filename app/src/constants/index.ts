@@ -371,7 +371,6 @@ export const API_ENDPOINTS = {
     distributors: '/api/admin/distributors',
     profile: '/api/admin/profile',
     recentTransactions: '/api/admin/recent-transactions',
-    settings: '/api/admin/settings',
   },
 };
 

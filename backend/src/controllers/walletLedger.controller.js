@@ -25,8 +25,8 @@ const CREDIT_AMOUNT_ONLY = new Set([
   // value of every UPI collection.
 ]);
 
-// eSevaTech PAN flows debit the fee and credit net_commission in one MAIN wallet
-// update (see applyWalletImpact in panEseva.controller.js).
+// eSevaTech PAN flows debit the fee and credit the rate-card commission
+// (see applyWalletImpact in panEseva.controller.js).
 const PAN_ESEVA_TYPES = new Set(['PAN_SERVICE', 'PAN_COUPON']);
 
 const MONEY_MOVING_STATUSES = ['SUCCESS', 'REFUNDED', 'APPROVED'];
@@ -58,6 +58,7 @@ const TXNTYPE_LABELS = {
   PAN_CARD: 'PAN Card',
   PAN_SERVICE: 'PAN Service',
   PAN_COUPON: 'PAN Coupon',
+  LEAD: 'Lead Commission',
   ITR: 'ITR',
   GST_REGISTRATION: 'GST Registration',
   DAILY_AUTH_CHARGE: 'Daily Auth',
@@ -138,19 +139,6 @@ export const getNarration = (tx) => {
   }
 };
 
-// AEPS cash-withdrawal retailer commission (slab based).
-//   ₹300–₹3000    → 0.35% of the amount
-//   ₹3001–₹10000  → flat ₹12
-//   below ₹300    → ₹0 (no commission)
-// Mirrors getAepsWithdrawalCommission in wallet.util.js.
-// Kept only as a reference for the commission display fallback below.
-const getAepsWithdrawalCommission = (amount) => {
-  const amt = toNumber(amount);
-  if (amt < 300) return 0;
-  if (amt <= 3000) return round2(amt * 0.0035);
-  return 12;
-};
-
 /**
  * Splits a transaction's retailer commission into gross, TDS (2%) and the net
  * actually credited to the wallet. The wallet is credited with the commission
@@ -164,16 +152,13 @@ const getAepsWithdrawalCommission = (amount) => {
 const getCommissionSplit = (tx) => {
   const stored = toNumber(tx.commissions?.retailerEarned);
   const gross = round2(stored);
-  // Cash-deposit commission is credited in full — no TDS/GST is deducted.
-  // PAN commission is eSevaTech's net_commission, credited as-is (no TDS here).
-  if (tx.type === 'AEPS_DEPOSIT' || PAN_ESEVA_TYPES.has(tx.type)) {
-    return { gross, tds: 0, net: gross };
-  }
   // The rate is configurable, so a row booked at a different one must report the
-  // TDS it actually had. Rows from before the field existed fall back to 2%.
+  // TDS it actually had. Rows from before the field existed fall back to 2%,
+  // except cash-deposit and PAN commission, which were credited in full then.
   const storedTds = tx.commissions?.retailerTds;
+  const fallback = tx.type === 'AEPS_DEPOSIT' || PAN_ESEVA_TYPES.has(tx.type) ? 0 : gross * 0.02;
   const tds = round2(
-    storedTds === undefined || storedTds === null ? gross * 0.02 : toNumber(storedTds)
+    storedTds === undefined || storedTds === null ? fallback : toNumber(storedTds)
   );
   const net = round2(gross - tds);
   return { gross, tds, net };
@@ -216,6 +201,11 @@ export const getWalletDeltas = (tx) => {
   // Internal transfer QR Wallet → Main.
   if (tx.type === 'QRTO_MAIN') {
     return { main: round2(amount), aeps: 0, qr: round2(-amount) };
+  }
+
+  // An approved lead moves no principal; only its commission is credited.
+  if (tx.type === 'LEAD') {
+    return { main: net, aeps: 0 };
   }
 
   // AEPS wallet credits.

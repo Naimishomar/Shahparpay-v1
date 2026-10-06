@@ -7,6 +7,7 @@ import assert from 'node:assert';
 import {
   getAepsWithdrawalCommission,
   getAepsDepositCommission,
+  getMatmCommission,
   getRechargeCommissionRate,
   getBbpsCommissionRule,
 } from '../utils/wallet.util.js';
@@ -49,6 +50,14 @@ for (const slab of data.aeps.deposit) {
   );
 }
 
+for (const slab of data.matm) {
+  assert.strictEqual(
+    slab.earns,
+    getMatmCommission(slab.sample),
+    `MATM slab "${slab.label}" is out of step`
+  );
+}
+
 // The no-commission floors must stay visible rather than quietly disappear: a
 // retailer who does not know about them reads every small withdrawal as a loss.
 assert.strictEqual(data.aeps.withdrawal[0].earns, 0, 'the sub-₹300 floor must be shown as ₹0');
@@ -67,8 +76,14 @@ for (const op of data.dth) {
   assert.ok(op.percent > 0, `${op.name} published at 0% — the probe label no longer matches`);
 }
 // Spot-check against the source of truth.
-assert.strictEqual(data.prepaid.find((o) => o.name === 'BSNL').percent, getRechargeCommissionRate('BSNL TOPUP', 'prepaid'));
-assert.strictEqual(data.dth.find((o) => o.name === 'Tata Play').percent, getRechargeCommissionRate('Tata Play', 'dth'));
+assert.strictEqual(
+  data.prepaid.find((o) => o.name === 'BSNL').percent,
+  getRechargeCommissionRate('BSNL TOPUP', 'prepaid')
+);
+assert.strictEqual(
+  data.dth.find((o) => o.name === 'Tata Play').percent,
+  getRechargeCommissionRate('Tata Play', 'dth')
+);
 
 // Highest first reads as a rate card rather than an arbitrary list.
 const descending = (list) => list.every((o, i) => i === 0 || list[i - 1].percent >= o.percent);
@@ -85,9 +100,17 @@ const rule = getBbpsCommissionRule('electricity');
 assert.strictEqual(electricity.kind, rule.kind);
 assert.strictEqual(electricity.value, rule.value);
 
+// ---------------------------------------------------------------- charges
+// DMT is a charge the retailer pays, not a commission, and must say so.
+assert.strictEqual(data.charges.find((c) => c.name.includes('₹100 – ₹1,000')).fee, 5);
+assert.ok(
+  !data.bbps.some((b) => b.name === 'Credit card bill'),
+  'a charge must not be listed as earnings'
+);
+
 // --------------------------------------------------------------- on request
 // Services without a rate card must be named, not omitted.
-assert.ok(data.onRequest.includes('Domestic Money Transfer (DMT)'));
+assert.ok(!data.onRequest.includes('Domestic Money Transfer (DMT)'));
 assert.ok(data.onRequest.length > 0);
 
 console.log('commissionRates: published rates match the wallet functions that pay them');

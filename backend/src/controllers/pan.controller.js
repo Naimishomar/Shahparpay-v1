@@ -2,6 +2,7 @@ import Transaction from '../models/transaction.model.js';
 import Retailer from '../models/users/retailer.model.js';
 import MainWallet from '../models/mainWallet.model.js';
 import axios from 'axios';
+import { PAN_RATES, setCommissions, settleCommissions } from '../utils/wallet.util.js';
 
 // Standard UTI PAN token charge per PAN card application / coupon.
 const PAN_COUPON_FEE = 107;
@@ -14,6 +15,19 @@ const debitMainWallet = async (userId, amount) => {
     { $inc: { balance: -amount } },
     { returnDocument: 'after' }
   );
+};
+
+// Rate-card commission on PAN coupons (retailer, distributor, admin), paid once
+// the purchase has actually succeeded. Call before the transaction is saved.
+const payCouponCommission = async (transaction, units) => {
+  if (transaction.status !== 'SUCCESS' || !(units > 0)) return;
+  const split = await settleCommissions({
+    retailerId: transaction.userId,
+    retailerGross: PAN_RATES.retailer * units,
+    distributorGross: PAN_RATES.distributor * units,
+    pool: (PAN_RATES.fee - PAN_RATES.apiCost) * units,
+  });
+  setCommissions(transaction, split);
 };
 
 // @desc Get existing Retailer Biometric PSA Status
@@ -435,6 +449,9 @@ export const buyPsaCoupons = async (req, res) => {
       }
 
       transaction.status = data.data?.status || 'SUCCESS';
+      // ponytail: the PSA purchase is priced in rupees, so coupons are counted at
+      // ₹107 each; a coupon left pending here is never revisited for commission.
+      await payCouponCommission(transaction, Math.floor(couponAmount / PAN_COUPON_FEE));
       transaction.metadata = {
         ...transaction.metadata,
         order_id: data.data?.order_id,
@@ -912,6 +929,7 @@ export const purchaseStdCoupons = async (req, res) => {
       }
 
       transaction.status = data.data?.status || 'SUCCESS';
+      await payCouponCommission(transaction, couponQty);
       transaction.metadata = {
         ...transaction.metadata,
         request_id: data.data?.request_id,

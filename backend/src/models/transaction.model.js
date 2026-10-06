@@ -41,6 +41,7 @@ const transactionSchema = new mongoose.Schema(
         'FUND_TRANSFER',
         'PG_COLLECTION',
         'MATM',
+        'LEAD',
       ],
       required: true,
     },
@@ -62,6 +63,10 @@ const transactionSchema = new mongoose.Schema(
         default: 0,
       },
       distributorEarned: {
+        type: Number,
+        default: 0,
+      },
+      distributorTds: {
         type: Number,
         default: 0,
       },

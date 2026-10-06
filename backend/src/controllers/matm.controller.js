@@ -2,6 +2,13 @@ import Transaction from '../models/transaction.model.js';
 import Retailer from '../models/users/retailer.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
 import {
+  getApiCommission,
+  getDistributorCommission,
+  getMatmCommission,
+  setCommissions,
+  settleCommissions,
+} from '../utils/wallet.util.js';
+import {
   generatePaySprintToken,
   paySprintMatmThreeWay,
   paySprintMatmStatusQuery,
@@ -11,7 +18,9 @@ const makeReferenceId = (prefix = 'MATM') =>
   `${prefix}${Date.now()}${Math.floor(1000 + Math.random() * 9000)}`;
 
 const getRetailer = async (req) =>
-  Retailer.findById(req.user.id).select('retailerId merchantcode contactNumber email name businessName');
+  Retailer.findById(req.user.id).select(
+    'retailerId merchantcode contactNumber email name businessName'
+  );
 
 /**
  * Initialise PaySprint MATM parameters for mobile SDK / app initiation.
@@ -79,6 +88,17 @@ export const settleMatmWithdrawal = async (transaction, param) => {
         { $inc: { balance: amount } },
         { upsert: true, new: true }
       );
+      // Only the request that flipped the status gets here, so this is paid once.
+      const split = await settleCommissions({
+        retailerId: transaction.userId,
+        retailerGross: getMatmCommission(amount),
+        distributorGross: getDistributorCommission('MATM', amount),
+        pool: getApiCommission('MATM', amount),
+        retailerWallet: AepsWallet,
+        distributorWallet: AepsWallet,
+      });
+      setCommissions(flipped, split);
+      await flipped.save();
     }
     await paySprintMatmThreeWay({ reference: transaction.transactionId, status: 'success' });
     return 'SUCCESS';
@@ -98,10 +118,24 @@ export const settleMatmWithdrawal = async (transaction, param) => {
 
 const settledResponse = (res, status, transaction, message) => {
   if (status === 'SUCCESS') {
-    return res.status(200).json({ success: true, status, message: message || 'MATM cash withdrawal successful. Wallet credited.', data: transaction });
+    return res
+      .status(200)
+      .json({
+        success: true,
+        status,
+        message: message || 'MATM cash withdrawal successful. Wallet credited.',
+        data: transaction,
+      });
   }
   if (status === 'FAILED') {
-    return res.status(400).json({ success: false, status, message: message || 'MATM cash withdrawal failed.', data: transaction });
+    return res
+      .status(400)
+      .json({
+        success: false,
+        status,
+        message: message || 'MATM cash withdrawal failed.',
+        data: transaction,
+      });
   }
   return res.status(202).json({
     success: true,
@@ -128,10 +162,14 @@ export const processMatm = async (req, res) => {
     const inputData = req.body?.data || req.body;
     const referenceId = String(inputData?.txnid || inputData?.referenceId || '').trim();
     if (!referenceId) {
-      return res.status(400).json({ success: false, message: 'MATM reference (txnid) is required' });
+      return res
+        .status(400)
+        .json({ success: false, message: 'MATM reference (txnid) is required' });
     }
 
-    const transactionType = String(inputData.ttype || inputData.transactionType || 'ATMCW').toUpperCase();
+    const transactionType = String(
+      inputData.ttype || inputData.transactionType || 'ATMCW'
+    ).toUpperCase();
     const sdkStatus = String(inputData.status ?? '').toLowerCase();
     const sdkFailed = ['false', 'failed', 'decline', '3'].includes(sdkStatus);
 
@@ -167,22 +205,35 @@ export const processMatm = async (req, res) => {
       return res.status(sdkFailed ? 400 : 200).json({
         success: !sdkFailed,
         status: transaction.status,
-        message: sdkFailed ? inputData.message || 'Balance enquiry failed.' : 'Balance enquiry successful.',
-        data: { ...transaction.toObject(), balance: inputData.balAmount || inputData.balance || null },
+        message: sdkFailed
+          ? inputData.message || 'Balance enquiry failed.'
+          : 'Balance enquiry successful.',
+        data: {
+          ...transaction.toObject(),
+          balance: inputData.balAmount || inputData.balance || null,
+        },
       });
     }
 
     if (transaction.status === 'SUCCESS' || transaction.status === 'FAILED') {
-      return settledResponse(res, transaction.status, transaction, `This MATM transaction is already ${transaction.status.toLowerCase()}.`);
+      return settledResponse(
+        res,
+        transaction.status,
+        transaction,
+        `This MATM transaction is already ${transaction.status.toLowerCase()}.`
+      );
     }
 
     const queryRes = await paySprintMatmStatusQuery({ reference: referenceId });
-    const status = queryRes?.status === true ? await settleMatmWithdrawal(transaction, queryRes) : 'PENDING';
+    const status =
+      queryRes?.status === true ? await settleMatmWithdrawal(transaction, queryRes) : 'PENDING';
     const fresh = await Transaction.findById(transaction._id);
     return settledResponse(res, status, fresh, status === 'FAILED' ? queryRes?.message : undefined);
   } catch (error) {
     console.error('MATM Process Error:', error?.message);
-    return res.status(500).json({ success: false, message: 'Failed to process PaySprint MATM transaction' });
+    return res
+      .status(500)
+      .json({ success: false, message: 'Failed to process PaySprint MATM transaction' });
   }
 };
 
@@ -207,15 +258,23 @@ export const checkMatmStatus = async (req, res) => {
     }
 
     if (transaction.status === 'SUCCESS' || transaction.status === 'FAILED') {
-      return settledResponse(res, transaction.status, transaction, `Transaction is already ${transaction.status.toLowerCase()}.`);
+      return settledResponse(
+        res,
+        transaction.status,
+        transaction,
+        `Transaction is already ${transaction.status.toLowerCase()}.`
+      );
     }
 
     const queryRes = await paySprintMatmStatusQuery({ reference: transactionId });
     if (!queryRes) {
-      return res.status(500).json({ success: false, message: 'Could not fetch transaction status from PaySprint.' });
+      return res
+        .status(500)
+        .json({ success: false, message: 'Could not fetch transaction status from PaySprint.' });
     }
 
-    const status = queryRes.status === true ? await settleMatmWithdrawal(transaction, queryRes) : 'PENDING';
+    const status =
+      queryRes.status === true ? await settleMatmWithdrawal(transaction, queryRes) : 'PENDING';
     const fresh = await Transaction.findById(transaction._id);
     return settledResponse(res, status, fresh, status === 'FAILED' ? queryRes.message : undefined);
   } catch (error) {

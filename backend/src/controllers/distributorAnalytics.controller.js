@@ -26,6 +26,7 @@ export const SERVICE_TYPES = [
   'ITR',
   'GST_REGISTRATION',
   'PG_COLLECTION',
+  'LEAD',
 ];
 
 export const ALLOWED_DAYS = [7, 30, 90];

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import AdminCommissions from '../components/AdminCommissions';
 import AdminNotifications from '../components/AdminNotifications';
 import AdminSupport from '../components/AdminSupport';
 import AdminOverview from '../components/admin/AdminOverview';
@@ -401,10 +400,6 @@ const AdminPortal = () => {
                         message={message}
                         onSubmit={handleCreateSubmit}
                     />
-                )}
-
-                {activeTab === 'commissions' && (
-                    <AdminCommissions />
                 )}
 
                 {/* Profile Tab */}

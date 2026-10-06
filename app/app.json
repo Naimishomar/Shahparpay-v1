@@ -75,7 +75,7 @@
             "usesCleartextTraffic": true,
             "enableProguardInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true,
-            "extraProguardRules": "-keep class com.example.matm.** { *; }\n-keep class com.finopaytech.** { *; }\n-keep class com.anfu.** { *; }\n-keep class de.greenrobot.** { *; }\n-keepclassmembers class * { @org.greenrobot.eventbus.Subscribe <methods>; }\n-dontwarn com.finopaytech.**\n-dontwarn com.anfu.**\n-dontwarn retrofit2.**\n-dontwarn okhttp3.**"
+            "extraProguardRules": "-keep class com.example.matm.** { *; }\n-keep class com.finopaytech.** { *; }\n-keep class com.anfu.** { *; }\n-keep class com.pax.** { *; }\n-keep class com.paxsz.** { *; }\n-keep class pax.ecr.** { *; }\n-keep class com.morpho.** { *; }\n-keep class com.mantra.** { *; }\n-keep class SecuGen.** { *; }\n-keep class com.datamini.** { *; }\n-keep class com.commonsware.** { *; }\n-keep class org.bouncycastle.** { *; }\n-keep class org.apache.commons.** { *; }\n-keep class de.greenrobot.** { *; }\n-keepclassmembers class * { @org.greenrobot.eventbus.Subscribe <methods>; }\n-dontwarn com.example.matm.**\n-dontwarn com.finopaytech.**\n-dontwarn com.anfu.**\n-dontwarn com.pax.**\n-dontwarn com.paxsz.**\n-dontwarn pax.ecr.**\n-dontwarn com.morpho.**\n-dontwarn com.mantra.**\n-dontwarn SecuGen.**\n-dontwarn com.datamini.**\n-dontwarn com.commonsware.**\n-dontwarn org.bouncycastle.**\n-dontwarn org.apache.commons.**\n-dontwarn de.greenrobot.**\n-dontwarn javax.naming.**\n-dontwarn java.awt.**\n-dontwarn retrofit2.**\n-dontwarn okhttp3.**"
           }
         }
       ]

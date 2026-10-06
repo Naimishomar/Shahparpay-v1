@@ -38,7 +38,15 @@ module.exports = function withPaysprintMatm(config) {
       .replace(/defaultConfig\s*{/, (m) => `${m}\n        multiDexEnabled true`)
       .replace(
         /dependencies\s*{/,
-        (m) => `${m}
+        // finosdk bundles its own BouncyCastle; the Maven copies (pulled in by
+        // expo-updates, only used for update code signing, which we don't
+        // configure) then fail checkDuplicateClasses.
+        (m) => `configurations.all {
+    exclude group: 'org.bouncycastle', module: 'bcprov-jdk15to18'
+    exclude group: 'org.bouncycastle', module: 'bcutil-jdk15to18'
+}
+
+${m}
     ${MARKER}
     ${AARS.map((f) => `implementation files('libs/${f}')`).join('\n    ')}
     implementation 'androidx.multidex:multidex:2.0.1'
@@ -48,6 +56,8 @@ module.exports = function withPaysprintMatm(config) {
     implementation 'de.greenrobot:greendao:2.1.0'
     implementation 'org.greenrobot:eventbus:3.0.0'
     implementation 'com.karumi:dexter:4.2.0'
+    // MatmHostActivity.onCreate calls EdgeToEdge.enable (activity 1.8+); expo only brings 1.7.2.
+    implementation 'androidx.activity:activity:1.8.0'
     // MatmHostActivity calls PaySprint over retrofit + gson + okhttp logging.
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'

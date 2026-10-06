@@ -60,8 +60,6 @@ export const ProfileScreen: React.FC = () => {
   const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
   const isRetailer = user?.role === 'retailer';
   const isAdmin = user?.role === 'admin';
-  // Read-only here — the portal's Settings tab is where it is changed.
-  const settings = useAsync<any>(async () => (await api.getGlobalSettings()).data, [], isAdmin);
   const merchant = useAsync<any>(
     async () => (await api.getAepsMerchantStatus({ merchantcode: user?.retailerId || user?.code })).data,
     [user?.retailerId],
@@ -152,7 +150,6 @@ export const ProfileScreen: React.FC = () => {
       onRefresh={() => {
         balances.refresh();
         if (isRetailer) merchant.refresh();
-        if (isAdmin) settings.refresh();
       }}
       error={balances.error}
       onRetry={balances.reload}
@@ -214,18 +211,6 @@ export const ProfileScreen: React.FC = () => {
               icon="shield-account"
               label="Admin wallet"
               value={money(balances.data?.adminBalance)}
-            />
-            <Tile
-              icon="percent-outline"
-              label="AEPS commission"
-              value={
-                // aepsCommission is an object of three percentages, not a
-                // number — Number() on it rendered "NaN%". Show the retailer's
-                // share, which is the one this tile is about.
-                settings.data?.aepsCommission?.retailerPercentage == null
-                  ? '—'
-                  : `${Number(settings.data.aepsCommission.retailerPercentage)}%`
-              }
             />
           </>
         ) : (

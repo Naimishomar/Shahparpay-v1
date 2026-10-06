@@ -2,7 +2,11 @@ import axios from 'axios';
 import Retailer from '../models/users/retailer.model.js';
 import MainWallet from '../models/mainWallet.model.js';
 import Transaction from '../models/transaction.model.js';
-import { updateWalletAtomically } from '../utils/wallet.util.js';
+import {
+  getDistributorCommission,
+  settleCommissions,
+  updateWalletAtomically,
+} from '../utils/wallet.util.js';
 
 /**
  * 1. Launch ITR Filing Session (returns redirection URL from eSevaTech)
@@ -271,6 +275,24 @@ export const itrWebhook = async (req, res) => {
           status: payload.status || 'Submitted',
         },
       });
+
+      // The retailer sets their own price to the customer; only the partner
+      // (distributor) is paid on the rate card.
+      const split = await settleCommissions({
+        retailerId: retailer._id,
+        distributorGross: getDistributorCommission(service_type, total_amount),
+      });
+      if (split.distributorEarned > 0) {
+        await Transaction.updateOne(
+          { transactionId },
+          {
+            $set: {
+              'commissions.distributorEarned': split.distributorEarned,
+              'commissions.distributorTds': split.distributorTds,
+            },
+          }
+        );
+      }
 
       console.log(
         `[ITR Webhook] Submit successful. Debited ₹${total_amount} from Retailer ${agent_unique_id}`

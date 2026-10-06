@@ -974,14 +974,6 @@ class ApiService {
     return this.get(API_ENDPOINTS.admin.recentTransactions, params);
   }
 
-  async getGlobalSettings() {
-    return this.get(API_ENDPOINTS.admin.settings);
-  }
-
-  async updateGlobalSettings(data: Record<string, any>) {
-    return this.put(API_ENDPOINTS.admin.settings, data);
-  }
-
   async createDistributor(
     data: Record<string, any>,
     files?: Record<string, { uri: string; name: string; type: string } | undefined>

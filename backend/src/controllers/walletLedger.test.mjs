@@ -82,12 +82,18 @@ const aepsToMain = getWalletDeltas(tx('AEPSTOMAIN'));
 assert.strictEqual(aepsToMain.main, 100);
 assert.strictEqual(aepsToMain.aeps, -100);
 
+// An approved lead credits only its net commission; there is no principal.
+const lead = getWalletDeltas(
+  tx('LEAD', { amount: 0, commissions: { retailerEarned: 100, retailerTds: 2 } })
+);
+assert.deepStrictEqual([lead.main, lead.aeps], [98, 0]);
+
 const qrToMain = getWalletDeltas(tx('QRTO_MAIN'));
 assert.strictEqual(qrToMain.main, 100);
 assert.strictEqual(qrToMain.qr, -100);
 
 for (const type of TYPES) {
-  if (type === 'AEPSTOMAIN' || type === 'QRTO_MAIN') continue;
+  if (type === 'AEPSTOMAIN' || type === 'QRTO_MAIN' || type === 'LEAD') continue;
   const expected = EXPECTED[type];
   assert.ok(expected, `${type} is in the schema enum but has no pinned ledger effect here`);
   const [wallet, sign] = expected;

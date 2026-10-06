@@ -54,7 +54,6 @@ const adminProjects = [
   { name: "Activity Log", url: "/admin/activity", icon: History },
   { name: "Fund Requests", url: "/admin/fund-requests", icon: Store },
   { name: "Add New", url: "/admin/create", icon: UserPlus },
-  { name: "Commissions", url: "/admin/commissions", icon: FileText },
   { name: "Notifications", url: "/admin/notifications", icon: Bell },
   { name: "Customer Support", url: "/admin/support", icon: Headset },
   { name: "Ledger", url: "/reports/ledger", icon: FileText },

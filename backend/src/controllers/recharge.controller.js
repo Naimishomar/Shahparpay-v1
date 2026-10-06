@@ -13,7 +13,11 @@ import {
   isBillType,
   OPERATOR_CATEGORY,
 } from '../utils/icchhamati.util.js';
-import { lockFundsForTransaction, resolveTransaction } from '../utils/wallet.util.js';
+import {
+  getBbpsCharge,
+  lockFundsForTransaction,
+  resolveTransaction,
+} from '../utils/wallet.util.js';
 import Transaction from '../models/transaction.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
 
@@ -34,7 +38,9 @@ import AepsWallet from '../models/aepsWallet.model.js';
  * by the biller category name.
  */
 export const operatorSource = (type) => {
-  const key = String(type || '').trim().toLowerCase();
+  const key = String(type || '')
+    .trim()
+    .toLowerCase();
   if (OPERATOR_CATEGORY[key]) return { kind: 'operator', category: OPERATOR_CATEGORY[key] };
   const providerOperatorCategory = Object.values(OPERATOR_CATEGORY).find(
     (category) => String(category).toLowerCase() === key
@@ -88,7 +94,9 @@ const fetchBillers = async (category) => {
 const dedupeRows = (rows) => {
   const seen = new Set();
   return rows.filter((row) => {
-    const key = String(row.code ?? row.id ?? row.name ?? '').trim().toLowerCase();
+    const key = String(row.code ?? row.id ?? row.name ?? '')
+      .trim()
+      .toLowerCase();
     if (!key || seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -150,8 +158,9 @@ const resolveProviderOperator = async (type, candidate) => {
 
   try {
     const rows = await fetchOperatorRows(type);
-    const match = rows.find((row) => String(row.code ?? '') === value)
-      || rows.find((row) => String(row.id ?? '') === value);
+    const match =
+      rows.find((row) => String(row.code ?? '') === value) ||
+      rows.find((row) => String(row.id ?? '') === value);
     return { code: String(match?.code ?? value), name: match?.name || null };
   } catch (error) {
     console.error('Resolve provider operator Error:', error?.response?.data || error?.message);
@@ -342,7 +351,9 @@ export const browsePlans = async (req, res) => {
       planstatus: plan.planstatus ?? plan.status ?? 'Active',
     });
     const isActivePlan = (plan) => {
-      const status = String(plan.planstatus || '').trim().toLowerCase();
+      const status = String(plan.planstatus || '')
+        .trim()
+        .toLowerCase();
       return !['inactive', 'in-active', '0', 'false', 'disabled'].includes(status);
     };
 
@@ -431,8 +442,7 @@ export const fetchDthInfo = async (req, res) => {
         .json({ success: false, message: 'Customer details are not available for this operator.' });
     }
 
-    const baseUrl =
-      process.env.PAYSPRINT_BASE_URL || 'https://sit.paysprint.in/service-api/api/v1';
+    const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://sit.paysprint.in/service-api/api/v1';
     const response = await axios.post(
       `${baseUrl}/service/recharge/hlrapi/dthinfo`,
       { RAW_BODY: JSON.stringify({ op: opName, canumber: dthNumber }) },
@@ -477,7 +487,8 @@ const normaliseBillDetails = (raw = {}) => ({
   billerId: raw.billerId ?? raw.biller_code ?? raw.billerid ?? null,
   account: raw.account ?? raw.customer_id ?? raw.customerKey ?? null,
   amount: raw.amount ?? raw.billAmount ?? raw.dueamount ?? raw.due_amount ?? null,
-  dueAmount: raw.dueAmount ?? raw.dueamount ?? raw.billAmount ?? raw.due_amount ?? raw.amount ?? null,
+  dueAmount:
+    raw.dueAmount ?? raw.dueamount ?? raw.billAmount ?? raw.due_amount ?? raw.amount ?? null,
   customerName: raw.customerName ?? raw.customername ?? raw.customer_name ?? raw.name ?? null,
   billNumber: raw.billNumber ?? raw.billnumber ?? raw.bill_no ?? null,
   billDate: raw.billDate ?? raw.billdate ?? null,
@@ -493,7 +504,8 @@ const normaliseBillDetails = (raw = {}) => ({
 
 export const fetchBill = async (req, res) => {
   try {
-    const { caNumber, operator, type, category, customerMobile, mobile_number, mobile, amount } = req.body;
+    const { caNumber, operator, type, category, customerMobile, mobile_number, mobile, amount } =
+      req.body;
     if (!caNumber || !operator) {
       return res
         .status(400)
@@ -527,17 +539,16 @@ export const fetchBill = async (req, res) => {
       billerid: billerId,
       biller_code: providerOperator,
       customer_id: customerId,
-      ...(customerMobileNumber ? { mobile_number: customerMobileNumber, mobile: customerMobileNumber } : {}),
+      ...(customerMobileNumber
+        ? { mobile_number: customerMobileNumber, mobile: customerMobileNumber }
+        : {}),
       ...(amount ? { amount: Number(amount) } : {}),
     });
 
     if (!isOk(data)) {
       return res.status(400).json({
         success: false,
-        message: providerMessage(
-          data,
-          'Failed to fetch bill. Please verify the consumer number.'
-        ),
+        message: providerMessage(data, 'Failed to fetch bill. Please verify the consumer number.'),
       });
     }
 
@@ -591,8 +602,10 @@ export const doRecharge = async (req, res) => {
 
     const typeCode = rechargeTypeCode(type);
     const bill = isBillType(type);
-    const { code: providerOperator, name: providerOperatorName } =
-      await resolveProviderOperator(type, operator);
+    const { code: providerOperator, name: providerOperatorName } = await resolveProviderOperator(
+      type,
+      operator
+    );
     const providerAccountId = String(process.env.ICCHHAMATI_ACCOUNT_ID || '').trim();
     const providerMpin = String(process.env.ICCHHAMATI_MPIN || '').trim();
 
@@ -637,12 +650,17 @@ export const doRecharge = async (req, res) => {
     // Lock the funds as PROCESSING. A recharge can come back pending, and a
     // pending recharge must neither be refunded nor marked successful yet, so
     // the money stays held until the provider gives a final answer.
+    // Credit-card bills carry a flat charge on top of the bill. It is held and
+    // refunded with the bill, so `amount` is the whole debit.
+    const charge = bill ? getBbpsCharge(type) : 0;
+    const debit = totalAmount + charge;
     try {
-      await lockFundsForTransaction(userId, 'MAIN', -totalAmount, {
+      await lockFundsForTransaction(userId, 'MAIN', -debit, {
         transactionId: referenceId,
         userId,
         type: bill ? 'BILL_PAYMENT' : 'RECHARGE',
-        amount: totalAmount,
+        amount: debit,
+        commissions: { chargeDeducted: charge },
         metadata: {
           caNumber,
           operator: providerOperator,
@@ -714,10 +732,10 @@ export const doRecharge = async (req, res) => {
           // a missed one leaves the status query asking after our own reference,
           // which the gateway does not know.
           'metadata.orderId':
-            providerResponse?.data?.transaction?.transaction_id
-            || providerResponse?.data?.orderId
-            || providerResponse?.data?.txnid
-            || null,
+            providerResponse?.data?.transaction?.transaction_id ||
+            providerResponse?.data?.orderId ||
+            providerResponse?.data?.txnid ||
+            null,
           'metadata.operatorTxnId': providerResponse?.data?.txnId || null,
           'metadata.apiResponse': providerResponse,
         },
