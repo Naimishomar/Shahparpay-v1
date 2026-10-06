@@ -165,7 +165,7 @@ export const PAN_RATES = { fee: 107, apiCost: 95, retailer: 5, distributor: 1 };
  * Lead generation, paid once per approved lead. `pool` is what the lender pays.
  * SA pays the zero-balance account rate and CC the credit-card rate; the lead
  * carries no bank or card variant to pick the Kotak811 / Bajaj EMI rows.
- * ponytail: PL/BL pay 0.80% of the disbursed amount, which the lead callback
+ * ponytail: PL/BL pay 0.70% (partner 0.10%) of the disbursed amount, which the lead callback
  * does not carry; add them once PaySprint sends it.
  */
 export const LEAD_RATES = {
