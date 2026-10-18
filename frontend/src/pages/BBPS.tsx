@@ -44,6 +44,9 @@ const BBPS = () => {
     const [operatorId, setOperatorId] = useState("");
     const [consumerNumber, setConsumerNumber] = useState("");
     const [customerMobile, setCustomerMobile] = useState("");
+    // Set once the biller asks for a date of birth (LIC); YYYY-MM-DD from the date input.
+    const [needsDob, setNeedsDob] = useState(false);
+    const [dob, setDob] = useState("");
     const [amount, setAmount] = useState("");
     const [pin, setPin] = useState("");
     
@@ -115,15 +118,25 @@ const BBPS = () => {
         setOperatorId("");
         setConsumerNumber("");
         setCustomerMobile("");
+        setNeedsDob(false);
+        setDob("");
         setAmount("");
         setPin("");
         setFetchedBill(null);
         fetchOperators(service.providerCategory || service.id);
     };
 
+    // The gateway takes a date of birth only joined to the account: "policy|DD/MM/YYYY".
+    const accountNumber = () =>
+        needsDob && dob ? `${consumerNumber.trim()}|${dob.split('-').reverse().join('/')}` : consumerNumber.trim();
+
     const handleFetchBill = async () => {
         if (!operatorId || !consumerNumber) {
             toast.error("Please select an operator and enter the consumer number");
+            return;
+        }
+        if (needsDob && !dob) {
+            toast.error("Please enter the date of birth");
             return;
         }
 
@@ -131,7 +144,7 @@ const BBPS = () => {
         try {
             const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/fetch-bill`, {
                 operator: operatorId,
-                caNumber: consumerNumber,
+                caNumber: accountNumber(),
                 type: selectedService?.id,
                 category: selectedService?.providerCategory,
                 customerMobile: customerMobile || undefined,
@@ -146,6 +159,7 @@ const BBPS = () => {
                 toast.error(response.data.message || "Failed to fetch bill details");
             }
         } catch (error: any) {
+            if (error.response?.data?.requiredField === 'dateofbirth') setNeedsDob(true);
             toast.error(error.response?.data?.message || "Error fetching bill");
         } finally {
             setFetchingBill(false);
@@ -167,7 +181,7 @@ const BBPS = () => {
             const apiType = selectedService.id;
             const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/do-recharge`, {
                 type: apiType,
-                number: consumerNumber.trim(),
+                number: accountNumber(),
                 operator: operatorId,
                 amount: amount,
                 pin: pin,
@@ -340,6 +354,8 @@ const BBPS = () => {
                                             setOperatorId(e.target.value);
                                             setConsumerNumber("");
                                             setCustomerMobile("");
+                                            setNeedsDob(false);
+                                            setDob("");
                                             setAmount("");
                                             setFetchedBill(null);
                                         }}
@@ -378,6 +394,20 @@ const BBPS = () => {
                                         readOnly={!!fetchedBill}
                                     />
                                 </div>
+
+                                {needsDob && (
+                                    <div className="space-y-1.5 mt-4">
+                                        <label className="text-sm font-medium text-foreground">Date of Birth</label>
+                                        <input
+                                            type="date"
+                                            className={INPUT}
+                                            max={new Date().toISOString().slice(0, 10)}
+                                            value={dob}
+                                            onChange={(e) => setDob(e.target.value)}
+                                            readOnly={!!fetchedBill}
+                                        />
+                                    </div>
+                                )}
 
                                 {!fetchedBill && selectedOperator?.viewbill === "true" ? (
                                     <button 

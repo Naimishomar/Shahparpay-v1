@@ -55,6 +55,8 @@ const distributorSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
+    // Bumped on logout and password change; refresh tokens carry it, so old ones stop working.
+    tokenVersion: { type: Number, default: 0 },
     password: {
       type: String,
       required: true,
@@ -131,6 +133,14 @@ const distributorSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// The bcrypt hash must never reach an API response.
+distributorSchema.set('toJSON', {
+  transform: (doc, ret) => {
+    delete ret.password;
+    return ret;
+  },
+});
 
 distributorSchema.pre('save', async function () {
   if (!this.isModified('password')) return;

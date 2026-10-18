@@ -6,14 +6,19 @@ import Retailer from '../models/users/retailer.model.js';
 export const authMiddlewares = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
+    // EventSource cannot set headers, so the live SSE feed passes the token in the
+    // query string. Accept it only there: anywhere else it ends up in logs and history.
+    const isEventStream = req.method === 'GET' && req.headers.accept?.includes('text/event-stream');
     const token =
-      req.cookies?.token || (authHeader ? authHeader.split(' ')[1] : null) || req.query?.token;
+      req.cookies?.token ||
+      (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null) ||
+      (isEventStream && typeof req.query?.token === 'string' ? req.query.token : null);
 
     if (!token) {
       return res.status(401).json({ success: false, message: 'Unauthorized request' });
     }
 
-    const decodedToken = jwt.verify(token, process.env.JWT_SECRET || 'default_secret');
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
 
     let user;
     if (decodedToken.role === 'admin') {

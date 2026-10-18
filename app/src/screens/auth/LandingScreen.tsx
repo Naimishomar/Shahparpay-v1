@@ -25,7 +25,8 @@ export const LandingScreen: React.FC = () => {
     <View style={styles.container}>
       <StatusBar
         barStyle={resolvedTheme === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor={colors.background}
+        translucent
+        backgroundColor="transparent"
       />
       <ScrollView
         contentContainerStyle={[

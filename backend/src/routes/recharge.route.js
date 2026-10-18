@@ -10,6 +10,7 @@ import {
   checkStatus,
   fetchBill,
 } from '../controllers/recharge.controller.js';
+import { cacheFor } from '../middlewares/cache.middleware.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 import { requireService } from '../middlewares/service.middleware.js';
 import { isBillType } from '../utils/icchhamati.util.js';
@@ -28,9 +29,9 @@ router.use(
   })
 );
 
-router.get('/circles', getCircles);
-router.get('/bill-categories', getBillCategories);
-router.get('/operators/:type', getOperators);
+router.get('/circles', cacheFor(24 * 3600), getCircles);
+router.get('/bill-categories', cacheFor(6 * 3600), getBillCategories);
+router.get('/operators/:type', cacheFor(6 * 3600), getOperators);
 router.post('/browse-plan', browsePlans);
 router.post('/dth-info', fetchDthInfo);
 router.post('/fetch-bill', fetchBill);

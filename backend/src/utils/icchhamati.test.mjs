@@ -15,6 +15,7 @@ import {
   rechargeTypeCode,
   isBillType,
   fetchRechargeStatus,
+  providerCrashed,
 } from './icchhamati.util.js';
 
 // --- status normalisation -------------------------------------------------
@@ -203,3 +204,13 @@ process.env.ICCHHAMATI_BASE_URL = 'http://127.0.0.1:1';
 assert.equal((await fetchPayoutStatus('DMT8')).finalStatus, 'PROCESSING');
 
 console.log('icchhamati: pending transactions never settle on a non-answer OK');
+
+// --- provider crash is unknown, not failed ---------------------------------
+{
+  const crash = { status: 0, message: 'An unexpected error occurred: Attempt to read property "mid" on null' };
+  assert.equal(providerCrashed(crash), true);
+  const http500 = { status: 0, message: 'x' };
+  Object.defineProperty(http500, 'httpStatus', { value: 500 });
+  assert.equal(providerCrashed(http500), true);
+  assert.equal(providerCrashed({ status: 0, message: 'Insufficient balance for debit transaction' }), false);
+}

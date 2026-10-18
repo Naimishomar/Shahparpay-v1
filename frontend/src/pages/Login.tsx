@@ -21,6 +21,7 @@ import {
     Shield
 } from 'lucide-react';
 import logo from '../assets/logo.png';
+import heroCspBg from '../assets/hero-csp-bg.svg';
 
 const Login: React.FC = () => {
     const { login } = useAuth();
@@ -196,28 +197,14 @@ const Login: React.FC = () => {
         <div className="min-h-screen flex w-full bg-white text-slate-900 selection:bg-[#ccf788] selection:text-slate-900 font-sans relative overflow-hidden">
             {/* ------------------------------------------------ LEFT BRANDING & HERO COMPONENTS PANEL */}
             <div className="hidden lg:flex flex-col justify-between w-7/12 p-10 xl:p-14 relative overflow-hidden bg-white border-r border-slate-200/80">
-                {/* Official Cashfree Platform Background Texture */}
+                {/* Background illustration: neighbourhood shops with a CSP banking point (same as landing hero).
+                    Only on tall screens; on short ones a cropped strip of it looks broken behind the footer. */}
+                <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-b from-[#f7fee7] via-white to-[#ecfdf3]" />
                 <img
-                    src="https://cdn.prod.website-files.com/6a60525e5f4d2e4f1faed952/6a9462804c0231fefd408efe_platform-bg-p-1600.png"
+                    src={heroCspBg}
                     alt=""
-                    className="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-40 select-none z-0"
+                    className="hidden [@media(min-height:860px)]:block absolute bottom-0 inset-x-0 w-full h-[210px] object-cover object-[100%_100%] pointer-events-none select-none z-0"
                 />
-
-                {/* Subtle Hero Background MP4 Video Loop */}
-                <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none select-none opacity-30 z-0">
-                    <video
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        className="w-full h-full object-cover object-bottom"
-                    >
-                        <source
-                            src="https://cashfreelogo.cashfree.com/website/hero/Homepage_Hero_Cashfree%20revamp_v4%20Mp4.mp4"
-                            type="video/mp4"
-                        />
-                    </video>
-                </div>
 
                 {/* Top Ambient Radial Glows */}
                 <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#a3e635]/25 rounded-full blur-3xl pointer-events-none z-0" />
@@ -247,15 +234,15 @@ const Login: React.FC = () => {
                     {/* Eyebrow Pill Badge (from Landing Hero) */}
                     <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-4 py-1.5 rounded-full text-xs font-bold shadow-2xs">
                         <Sparkles className="w-3.5 h-3.5 text-[#008c46]" />
-                        <span>India's #1 Payment Infrastructure</span>
+                        <span>Digital banking services for your shop</span>
                     </div>
 
                     <h1 className="text-4xl xl:text-5xl font-extrabold text-slate-900 tracking-tight leading-[1.12]">
-                        Welcome back to your <span className="text-[#008c46]">Payment Command Center</span>
+                        Welcome back to your <span className="text-[#008c46]">Banking Point</span>
                     </h1>
 
                     <p className="text-slate-600 font-medium text-sm xl:text-base leading-relaxed">
-                        Manage 180+ payment modes, instant 24/7 payouts, automated reconciliation, and AePS banking services from a single dashboard.
+                        Serve your neighbourhood with AEPS, Micro ATM, money transfer, recharge, bill payments and PAN services, all from one dashboard.
                     </p>
 
                     {/* HERO LIME/YELLOW OFFER CARD (Directly referenced from Landing Page Hero) */}
@@ -265,15 +252,9 @@ const Login: React.FC = () => {
                             background: 'linear-gradient(180deg, rgba(228, 250, 173, 0.95) 0%, rgba(254, 248, 184, 0.95) 100%)'
                         }}
                     >
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-4xl font-black text-[#00502b] tracking-tight">0%</span>
-                                <span className="text-lg font-bold text-slate-400 line-through">1.95%</span>
-                                <span className="text-xs font-extrabold text-[#00502b] uppercase tracking-wide">Platform Fees*</span>
-                            </div>
-                            <span className="text-[0.68rem] font-bold bg-[#008c46] text-white px-2.5 py-1 rounded-full shadow-2xs">
-                                Festive Season Offer
-                            </span>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-4xl font-black text-[#00502b] tracking-tight">₹0</span>
+                            <span className="text-sm font-extrabold text-[#00502b]">to join. You earn a commission on every transaction.</span>
                         </div>
 
                         <div className="w-full h-px bg-slate-900/10" />
@@ -281,37 +262,16 @@ const Login: React.FC = () => {
                         <div className="grid grid-cols-3 gap-2 text-[0.7rem] font-bold text-slate-800">
                             <div className="flex items-center gap-1.5">
                                 <CheckCircle2 className="w-3.5 h-3.5 text-[#00502b] shrink-0" />
-                                <span>Next-Day Payouts</span>
+                                <span>Settle to bank daily</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <CheckCircle2 className="w-3.5 h-3.5 text-[#00502b] shrink-0" />
-                                <span>24/7 Support</span>
+                                <span>Commission on every service</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <CheckCircle2 className="w-3.5 h-3.5 text-[#00502b] shrink-0" />
-                                <span>Instant Setup</span>
+                                <span>Call &amp; WhatsApp support</span>
                             </div>
-                        </div>
-                    </div>
-
-                    {/* LIVE TRANSACTIONS CARD PREVIEW (Referenced from Landing Platform Section) */}
-                    <div className="bg-[#ccf788]/40 backdrop-blur-md border border-lime-300/80 rounded-2xl p-4 shadow-xs flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-2xs">
-                                <Zap className="w-5 h-5 text-lime-300" />
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                                    <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-                                    <span>Real-time Merchant Settlements</span>
-                                </div>
-                                <p className="text-[0.72rem] text-slate-600 font-medium">99.99% Uptime SLA • Instant Auto-Routing</p>
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <span className="text-xs font-black text-emerald-800 bg-emerald-100/90 px-2.5 py-1 rounded-full border border-emerald-300">
-                                ⚡ T+0 Active
-                            </span>
                         </div>
                     </div>
 
@@ -319,13 +279,13 @@ const Login: React.FC = () => {
                     <div className="pt-2 flex flex-wrap items-center gap-2">
                         <span className="text-[0.68rem] font-extrabold text-slate-400 uppercase tracking-wider mr-2">Supports:</span>
                         <div className="inline-flex items-center gap-1.5 bg-slate-100/90 px-3 py-1 rounded-lg text-xs font-bold text-slate-700">
-                            <QrCode className="w-3.5 h-3.5 text-[#008c46]" /> UPI 2.0
-                        </div>
-                        <div className="inline-flex items-center gap-1.5 bg-slate-100/90 px-3 py-1 rounded-lg text-xs font-bold text-slate-700">
-                            <CreditCard className="w-3.5 h-3.5 text-[#008c46]" /> Cards
-                        </div>
-                        <div className="inline-flex items-center gap-1.5 bg-slate-100/90 px-3 py-1 rounded-lg text-xs font-bold text-slate-700">
                             <Fingerprint className="w-3.5 h-3.5 text-[#008c46]" /> AePS
+                        </div>
+                        <div className="inline-flex items-center gap-1.5 bg-slate-100/90 px-3 py-1 rounded-lg text-xs font-bold text-slate-700">
+                            <CreditCard className="w-3.5 h-3.5 text-[#008c46]" /> Micro ATM
+                        </div>
+                        <div className="inline-flex items-center gap-1.5 bg-slate-100/90 px-3 py-1 rounded-lg text-xs font-bold text-slate-700">
+                            <QrCode className="w-3.5 h-3.5 text-[#008c46]" /> UPI Collect
                         </div>
                         <div className="inline-flex items-center gap-1.5 bg-slate-100/90 px-3 py-1 rounded-lg text-xs font-bold text-slate-700">
                             <Receipt className="w-3.5 h-3.5 text-[#008c46]" /> BBPS
@@ -334,9 +294,9 @@ const Login: React.FC = () => {
                 </div>
 
                 {/* FOOTER COPYRIGHT */}
-                <div className="relative z-10 text-xs font-semibold text-slate-400 flex items-center justify-between">
-                    <span>© {new Date().getFullYear()} Shahparpay Solutions Pvt. Ltd.</span>
-                    <span className="flex items-center gap-1.5"><ShieldCheck className="w-4 h-4 text-[#008c46]" /> RBI Authorized Payment Aggregator</span>
+                <div className="relative z-10 text-xs font-semibold text-slate-600 flex items-center justify-between">
+                    <span className="bg-white/85 backdrop-blur-sm px-3 py-1 rounded-full">© {new Date().getFullYear()} Shahparpay Solutions Pvt. Ltd.</span>
+                    <span className="flex items-center gap-1.5 bg-white/85 backdrop-blur-sm px-3 py-1 rounded-full"><Zap className="w-4 h-4 text-[#008c46]" /> Runs on NPCI rails</span>
                 </div>
             </div>
 
@@ -365,7 +325,7 @@ const Login: React.FC = () => {
                 <div className="hidden lg:flex items-center justify-between text-xs font-extrabold text-slate-500">
                     <div className="inline-flex items-center gap-1.5 text-[0.68rem] text-[#008c46] bg-[#f0fdf4] px-3 py-1 rounded-full border border-emerald-200">
                         <Building2 className="w-3.5 h-3.5 text-[#008c46]" />
-                        <span>Merchant Portal</span>
+                        <span>Retailer Portal</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold">
                         <Shield className="w-4 h-4 text-[#008c46]" />
@@ -680,16 +640,16 @@ const Login: React.FC = () => {
                             <button
                                 type="submit"
                                 disabled={isLoading || !identifier.trim() || !password || !acceptTerms}
-                                className="w-full py-4 px-6 bg-[#18181b] hover:bg-black text-white font-extrabold text-base rounded-full shadow-lg shadow-slate-900/10 hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-3 cursor-pointer group mt-4"
+                                className="w-full min-h-13 inline-flex items-center justify-center gap-2.5 bg-[#18181b] hover:bg-black text-white rounded-full pl-6 pr-2 py-2 text-base font-bold shadow-md transition-all hover:scale-[1.01] disabled:opacity-70 disabled:hover:scale-100 disabled:hover:bg-[#18181b] disabled:cursor-not-allowed cursor-pointer group mt-4"
                             >
                                 {isLoading ? (
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                 ) : (
                                     <>
                                         <span>Sign In to Dashboard</span>
-                                        <div className="w-6.5 h-6.5 rounded-md bg-[#a3e635] text-slate-900 flex items-center justify-center font-black text-xs group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">
+                                        <span className="w-6 h-6 rounded-full bg-[#a3e635] text-black flex items-center justify-center font-black text-xs [font-family:'Inter_Variable',Inter,ui-sans-serif,system-ui,-apple-system,sans-serif] group-hover:rotate-45 group-disabled:rotate-0 transition-transform">
                                             ↗
-                                        </div>
+                                        </span>
                                     </>
                                 )}
                             </button>
@@ -739,14 +699,16 @@ const Login: React.FC = () => {
                             <button
                                 type="submit"
                                 disabled={isLoading || otp.length < 6}
-                                className="w-full py-4 px-6 bg-[#18181b] hover:bg-black text-white font-extrabold text-base rounded-full shadow-lg shadow-slate-900/10 hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-2 cursor-pointer"
+                                className="w-full min-h-13 inline-flex items-center justify-center gap-2.5 bg-[#18181b] hover:bg-black text-white rounded-full pl-6 pr-2 py-2 text-base font-bold shadow-md transition-all hover:scale-[1.01] disabled:opacity-70 disabled:hover:scale-100 disabled:hover:bg-[#18181b] disabled:cursor-not-allowed cursor-pointer group"
                             >
                                 {isLoading ? (
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                 ) : (
                                     <>
                                         <span>Verify &amp; Enter Dashboard</span>
-                                        <ShieldCheck className="w-5 h-5 text-[#a3e635]" />
+                                        <span className="w-6 h-6 rounded-full bg-[#a3e635] text-black flex items-center justify-center font-black text-xs [font-family:'Inter_Variable',Inter,ui-sans-serif,system-ui,-apple-system,sans-serif] group-hover:rotate-45 group-disabled:rotate-0 transition-transform">
+                                            ↗
+                                        </span>
                                     </>
                                 )}
                             </button>
@@ -757,7 +719,7 @@ const Login: React.FC = () => {
                     <div className="pt-4 grid grid-cols-2 gap-3 text-center">
                         <div className="bg-slate-50 px-3.5 py-3 rounded-2xl border border-slate-200/70 flex items-center justify-center gap-2 text-slate-600 font-bold text-xs">
                             <ShieldCheck className="w-4 h-4 text-[#008c46] shrink-0" />
-                            <span>PCI-DSS Level 1</span>
+                            <span>Aadhaar data never stored</span>
                         </div>
                         <div className="bg-slate-50 px-3.5 py-3 rounded-2xl border border-slate-200/70 flex items-center justify-center gap-2 text-slate-600 font-bold text-xs">
                             <CheckCircle2 className="w-4 h-4 text-[#008c46] shrink-0" />

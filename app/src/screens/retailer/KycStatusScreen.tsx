@@ -1,10 +1,20 @@
 import React, { useState } from 'react';
 import { View, Text, Linking } from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Screen, Banner, ErrorBanner, Row, StatusPill, shortDate } from '@/components/ui/Screen';
+import {
+  Screen,
+  SectionTitle,
+  Banner,
+  ErrorBanner,
+  Row,
+  shortDate,
+  SkeletonCard,
+  SkeletonRows,
+  SkeletonTitle,
+} from '@/components/ui/Screen';
 import { MerchantKycSheet } from '@/components/aeps/MerchantKycSheet';
 import { DailyAuthSheet } from '@/components/aeps/DailyAuthSheet';
 import { useAsync, useAction } from '@/hooks/useAsync';
@@ -72,6 +82,7 @@ export const KycStatusScreen: React.FC = () => {
   return (
     <Screen
       loading={status.loading}
+      skeleton={<View style={{ gap: 16 }}><SkeletonCard><SkeletonRows count={1} amount={false} avatar={56} /></SkeletonCard><SkeletonTitle /><SkeletonCard><SkeletonRows count={4} amount={false} /></SkeletonCard></View>}
       refreshing={status.refreshing || pipes.refreshing}
       onRefresh={() => {
         status.refresh();
@@ -81,20 +92,20 @@ export const KycStatusScreen: React.FC = () => {
       error={status.error}
       onRetry={status.reload}
     >
-      <Card variant={kycDone ? 'accent' : 'default'}>
+      <Card>
         <CardContent style={styles.overall}>
-          <View style={[styles.statusCircle, kycDone && styles.statusCircleDone]}>
-            <MaterialCommunityIcons
-              name={kycDone ? 'shield-check' : 'clock-outline'}
+          <View style={styles.statusCircle}>
+            <Ionicons
+              name={kycDone ? 'shield-checkmark-outline' : 'time-outline'}
               size={26}
-              color={kycDone ? colors.accentForeground : colors.warning}
+              color={kycDone ? colors.success : colors.warning}
             />
           </View>
           <View style={styles.overallText}>
-            <Text style={[styles.statusTitle, kycDone && { color: colors.accentForeground }]}>
+            <Text style={styles.statusTitle}>
               {kycDone ? 'KYC complete' : 'KYC in progress'}
             </Text>
-            <Text style={[styles.statusDesc, kycDone && { color: colors.accentForeground }]}>
+            <Text style={styles.statusDesc}>
               {kycDone
                 ? 'Your merchant account is verified with PaySprint.'
                 : 'Finish web KYC to unlock AEPS services.'}
@@ -103,31 +114,27 @@ export const KycStatusScreen: React.FC = () => {
         </CardContent>
       </Card>
 
+      <SectionTitle>Merchant details</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="store-outline">Merchant details</CardTitle>
-        </CardHeader>
         <CardContent>
           <Row label="Merchant code" value={merchantId} />
           <Row label="Active pipes" value={activePipes.length ? activePipes.join(', ') : 'None'} />
           <Row
             label="Daily 2FA today"
-            value={<StatusPill status={status.data?.isDailyAuthDoneToday ? 'SUCCESS' : 'PENDING'} />}
+            value={<StatusText status={status.data?.isDailyAuthDoneToday ? 'SUCCESS' : 'PENDING'} />}
           />
           <Row label="Last daily auth" value={shortDate(status.data?.lastDailyAuthDate)} last />
         </CardContent>
       </Card>
 
+      <SectionTitle>Verification steps</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="format-list-numbered">Verification steps</CardTitle>
-        </CardHeader>
         <CardContent style={styles.form}>
           {steps.map((step, i) => (
-            <View key={step.id} style={styles.step}>
+            <View key={step.id} style={[styles.step, i === steps.length - 1 && styles.stepLast]}>
               <View style={[styles.stepNumber, step.done && styles.stepNumberDone]}>
                 {step.done ? (
-                  <MaterialCommunityIcons name="check" size={15} color="#FFFFFF" />
+                  <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />
                 ) : (
                   <Text style={styles.stepNumberText}>{i + 1}</Text>
                 )}
@@ -136,7 +143,7 @@ export const KycStatusScreen: React.FC = () => {
                 <Text style={styles.stepName}>{step.name}</Text>
                 <Text style={styles.stepDesc}>{step.desc}</Text>
               </View>
-              <StatusPill status={step.done ? 'COMPLETED' : 'PENDING'} />
+              <StatusText status={step.done ? 'COMPLETED' : 'PENDING'} />
             </View>
           ))}
 
@@ -146,7 +153,6 @@ export const KycStatusScreen: React.FC = () => {
             onPress={onOpenOnboarding}
             loading={onboard.pending}
             disabled={!merchantId}
-            icon="open-in-new"
             size="lg"
             fullWidth
           >
@@ -174,23 +180,21 @@ export const KycStatusScreen: React.FC = () => {
       </Card>
 
       {planSteps.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle icon="map-marker-path">
-              {`Onboarding plan · ${targetPipe}`}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {planSteps.map((step: any, i: number) => (
-              <Row
-                key={i}
-                label={step.title || step.label || `Step ${i + 1}`}
-                value={<StatusPill status={step.done ? 'COMPLETED' : 'PENDING'} />}
-                last={i === planSteps.length - 1}
-              />
-            ))}
-          </CardContent>
-        </Card>
+        <>
+          <SectionTitle>{`Onboarding plan · ${targetPipe}`}</SectionTitle>
+          <Card>
+            <CardContent>
+              {planSteps.map((step: any, i: number) => (
+                <Row
+                  key={i}
+                  label={step.title || step.label || `Step ${i + 1}`}
+                  value={<StatusText status={step.done ? 'COMPLETED' : 'PENDING'} />}
+                  last={i === planSteps.length - 1}
+                />
+              ))}
+            </CardContent>
+          </Card>
+        </>
       )}
 
       {!kycDone && (
@@ -220,20 +224,34 @@ export const KycStatusScreen: React.FC = () => {
   );
 };
 
+/** BHIM status: small coloured text, never a filled pill. */
+const StatusText: React.FC<{ status?: string | null }> = ({ status }) => {
+  const s = String(status || 'PENDING').toUpperCase();
+  const color = /SUCCESS|COMPLETE|APPROVED|ACTIVE|ACCEPTED|CONVERTED/.test(s)
+    ? colors.success
+    : /FAIL|REJECT/.test(s)
+      ? colors.destructive
+      : colors.warning;
+  return (
+    <Text style={{ fontSize: t.small, fontWeight: '500', color }}>
+      {s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, ' ')}
+    </Text>
+  );
+};
+
 const styles = themed((c) => ({
   overall: { flexDirection: 'row', alignItems: 'center', gap: space.lg },
   statusCircle: {
-    width: 50,
-    height: 50,
+    width: 56,
+    height: 56,
     borderRadius: radius.pill,
-    backgroundColor: c.warningSubtle,
+    backgroundColor: c.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statusCircleDone: { backgroundColor: 'rgba(0,0,0,0.14)' },
   overallText: { flex: 1, minWidth: 0, gap: 2 },
-  statusTitle: { fontSize: t.bodyLg, fontWeight: '700', color: c.foreground },
-  statusDesc: { fontSize: t.caption, color: c.mutedForeground, lineHeight: 17 },
+  statusTitle: { fontSize: t.bodyLg + 1, fontWeight: '500', color: c.foreground },
+  statusDesc: { fontSize: t.small, color: c.mutedForeground, lineHeight: 19 },
   form: { gap: space.md },
   step: {
     flexDirection: 'row',
@@ -243,9 +261,10 @@ const styles = themed((c) => ({
     borderBottomWidth: 1,
     borderBottomColor: c.border,
   },
+  stepLast: { borderBottomWidth: 0 },
   stepNumber: {
-    width: 26,
-    height: 26,
+    width: 32,
+    height: 32,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: c.borderStrong,
@@ -253,10 +272,10 @@ const styles = themed((c) => ({
     justifyContent: 'center',
   },
   stepNumberDone: { backgroundColor: c.success, borderColor: c.success },
-  stepNumberText: { fontSize: t.micro, fontWeight: '700', color: c.foreground },
+  stepNumberText: { fontSize: t.small, fontWeight: '500', color: c.foreground },
   stepInfo: { flex: 1, minWidth: 0, gap: 2 },
-  stepName: { fontSize: t.small, fontWeight: '600', color: c.foreground },
-  stepDesc: { fontSize: t.micro, color: c.mutedForeground, lineHeight: 15 },
+  stepName: { fontSize: t.body + 1, fontWeight: '500', color: c.foreground },
+  stepDesc: { fontSize: t.small, color: c.mutedForeground, lineHeight: 18 },
 }));
 
 export default KycStatusScreen;

@@ -378,7 +378,7 @@ const StandardPsaTab: React.FC = () => {
 
                 <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email ID</label>
-                    <input type="email" name="email" value={formData.email} onChange={handleInputChange} className="w-full px-3 py-2 bg-background border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" required placeholder="ads@bharatpays.in" />
+                    <input type="email" name="email" value={formData.email} onChange={handleInputChange} className="w-full px-3 py-2 bg-background border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" required placeholder="you@example.com" />
                 </div>
 
                 <div className="space-y-1.5">

@@ -115,6 +115,9 @@ export const changePin = async (req, res) => {
     const { aepsWallet } = await initializeWallets(req.user.id, userModel);
 
     aepsWallet.pin = await bcrypt.hash(pin, 10);
+    // A verified OTP reset also clears any wrong-PIN lockout.
+    aepsWallet.pinFailedAttempts = 0;
+    aepsWallet.pinLockedUntil = null;
     await aepsWallet.save();
 
     return res.status(200).json({ success: true, message: 'PIN changed successfully.' });

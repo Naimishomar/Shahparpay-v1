@@ -10,6 +10,16 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 /** How long startup waits for a token refresh before showing the app anyway. */
 const BOOT_REFRESH_GRACE_MS = 6000;
 
+/** Milliseconds until a JWT expires; 0 when unreadable (forces a refresh). */
+const accessTokenMsLeft = (token: string) => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload.exp === 'number' ? payload.exp * 1000 - Date.now() : 0;
+  } catch {
+    return 0;
+  }
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -139,7 +149,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // this app is backgrounded on every fingerprint capture, since the RD
     // Service runs as a separate activity. So the foreground transition is the
     // signal that actually matters; the interval is just a backstop.
-    const refreshIfStale = () => {
+    // Only call the server when the token is actually close to expiring: the
+    // app foregrounds after every fingerprint capture, and each of those used
+    // to cost a refresh call. A 401 is still refreshed by the axios interceptor.
+    const refreshIfStale = async () => {
+      const stored = await AsyncStorage.getItem(STORAGE_KEYS.token);
+      if (stored && accessTokenMsLeft(stored) > 5 * 60000) return;
       refreshAuthToken();
     };
 

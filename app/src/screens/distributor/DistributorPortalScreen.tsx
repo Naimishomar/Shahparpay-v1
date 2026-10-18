@@ -17,6 +17,9 @@ import {
   money,
   shortDate,
   isoDate,
+  SkeletonRows,
+  SkeletonCard,
+  SkeletonTitle,
 } from '@/components/ui/Screen';
 import { ConfirmSheet } from '@/components/ui/Sheet';
 import { ImageField } from '@/components/ui/ImageField';
@@ -140,6 +143,7 @@ export const DistributorPortalScreen: React.FC = () => {
   return (
     <Screen
       loading={stats.loading}
+      skeleton={<View style={{ gap: 16 }}><SkeletonCard><SkeletonRows count={2} /></SkeletonCard><SkeletonTitle /><SkeletonCard><SkeletonRows count={4} /></SkeletonCard></View>}
       refreshing={stats.refreshing || retailers.refreshing}
       onRefresh={() => {
         stats.refresh();
@@ -252,7 +256,7 @@ export const DistributorPortalScreen: React.FC = () => {
           </CardHeader>
           <CardContent>
             {!!decide.error && <ErrorBanner message={decide.error} />}
-            {fundRequests.loading ? null : fundRequests.data?.length ? (
+            {fundRequests.loading ? <SkeletonRows count={3} /> : fundRequests.data?.length ? (
               fundRequests.data.map((req: any) => (
                 <View key={req._id} style={styles.requestItem}>
                   <View style={styles.requestTop}>
@@ -400,7 +404,7 @@ export const DistributorPortalScreen: React.FC = () => {
               <CardTitle icon="history">My request history</CardTitle>
             </CardHeader>
             <CardContent>
-              {ownRequests.loading ? null : ownRequests.data?.length ? (
+              {ownRequests.loading ? <SkeletonRows count={3} /> : ownRequests.data?.length ? (
                 ownRequests.data.map((req: any) => (
                   <View key={req._id} style={styles.requestItem}>
                     <View style={styles.requestTop}>

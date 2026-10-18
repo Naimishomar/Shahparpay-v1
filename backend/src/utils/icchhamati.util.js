@@ -45,6 +45,10 @@ export const icchhamatiPost = async (path, body = {}) => {
       headers: getHeaders(), validateStatus: () => true, timeout: 60000,
     });
     logIntegration('provider_response', { provider: 'icchhamati', method: 'POST', path, httpStatus: response.status, providerStatus: response.data?.status, durationMs: Date.now() - startedAt, transactionId: body?.transaction_id || body?.txnid || null });
+    // Non-enumerable, so it stays out of anything that spreads or stores the body.
+    if (response.data && typeof response.data === 'object') {
+      Object.defineProperty(response.data, 'httpStatus', { value: response.status });
+    }
     return response.data;
   } catch (error) {
     logIntegrationError('provider_request_error', error, { provider: 'icchhamati', method: 'POST', path, durationMs: Date.now() - startedAt, transactionId: body?.transaction_id || body?.txnid || null });
@@ -113,6 +117,8 @@ export const normaliseStatus = (status) => {
 export const cleanProviderMessage = (raw) =>
   String(raw ?? '')
     .replace(/<[^>]*>/g, ' ')
+    // Biller templates leak an unfilled "{ParamKey}" placeholder.
+    .replace(/\{ParamKey\}\s*\.?/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -137,6 +143,17 @@ export const providerMessage = (data, fallback) => {
   }
   return cleanProviderMessage(data?.message) || fallback;
 };
+
+/**
+ * The gateway fell over while handling the call: an HTTP 5xx, or its Laravel
+ * "An unexpected error occurred: ..." answer. It can crash after the operator
+ * has already been paid (seen: 24 s, then 'Attempt to read property "mid" on
+ * null', and the recharge was delivered), so the outcome is unknown, not failed.
+ */
+export const providerCrashed = (data) =>
+  Number(data?.httpStatus) >= 500 ||
+  Boolean(data?.exception) ||
+  /^An unexpected error occurred/i.test(String(data?.message ?? ''));
 
 /**
  * `type` on the recharge and bill endpoints: 1 prepaid, 2 DTH, 3 bill payment.

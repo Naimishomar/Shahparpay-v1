@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { colors, getActivePalette, themed, lift, motion, radius, space, type as t, TOUCH } from '../../theme/colors';
+import { colors, themed, motion, radius, space, type as t, TOUCH } from '../../theme/colors';
 import { GradientFill } from './Gradient';
 
 type Variant = 'default' | 'accent' | 'outline' | 'secondary' | 'ghost' | 'destructive';
@@ -41,33 +41,31 @@ const HAPTIC = {
   warning: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning),
 };
 
-const variantStyles = themed((c, isDark) => ({
-  // Filled buttons sit above the card they live on; outline and ghost stay
-  // flush so a form never looks like a stack of floating chips.
-  // The site's ACTIVE_BUTTON: zinc-900 with a soft drop in light; in dark a
-  // silver gradient is painted over this fill (see `silver` below).
-  default: { backgroundColor: c.primary, borderColor: isDark ? c.activeGradient[c.activeGradient.length - 1] : c.primary, ...lift('md', isDark) },
-  accent: { backgroundColor: c.accent, borderColor: isDark ? c.activeGradient[c.activeGradient.length - 1] : c.accent, ...lift('md', isDark) },
+const variantStyles = themed((c) => ({
+  // Flat: BHIM buttons carry no shadow; the gradient is the emphasis.
+  default: { backgroundColor: c.primary, borderColor: 'transparent' },
+  accent: { backgroundColor: c.primary, borderColor: 'transparent' },
   outline: { backgroundColor: 'transparent', borderColor: c.borderStrong },
-  secondary: { backgroundColor: c.secondary, borderColor: c.secondary },
+  secondary: { backgroundColor: c.surfaceAlt, borderColor: c.surfaceAlt },
   ghost: { backgroundColor: 'transparent', borderColor: 'transparent' },
-  destructive: { backgroundColor: c.destructive, borderColor: c.destructive, ...lift('sm', isDark) },
+  destructive: { backgroundColor: 'transparent', borderColor: c.borderStrong },
 }));
 
 const variantTextStyles = themed((c) => ({
   default: { color: c.primaryForeground },
-  accent: { color: c.accentForeground },
+  accent: { color: c.primaryForeground },
   outline: { color: c.foreground },
   secondary: { color: c.secondaryForeground },
   ghost: { color: c.accent },
-  destructive: { color: '#FFFFFF' },
+  // BHIM's Logout: red text on an outlined card, never a red slab.
+  destructive: { color: c.destructive },
 }));
 
 // Every size clears the 48dp minimum target.
 const sizeStyles = themed(() => ({
-  sm: { minHeight: TOUCH, paddingHorizontal: space.md, borderRadius: radius.sm },
-  default: { minHeight: TOUCH, paddingHorizontal: space.lg, borderRadius: radius.md },
-  lg: { minHeight: 54, paddingHorizontal: space.xl, borderRadius: radius.md },
+  sm: { minHeight: TOUCH, paddingHorizontal: space.lg, borderRadius: radius.pill },
+  default: { minHeight: 52, paddingHorizontal: space.xl, borderRadius: radius.pill },
+  lg: { minHeight: 56, paddingHorizontal: space.xl, borderRadius: radius.pill },
 }));
 
 const sizeTextStyles = themed(() => ({
@@ -96,7 +94,8 @@ export const Button = React.forwardRef<View, ButtonProps>(
     ref
   ) => {
     const isDisabled = !!disabled || loading;
-    const silver = getActivePalette() === 'dark' && (variant === 'default' || variant === 'accent');
+    // BHIM's primary button: an orange gradient pill, in both themes.
+    const silver = variant === 'default' || variant === 'accent';
     const textColor = (variantTextStyles[variant] as any).color;
     const label = typeof children === 'string' ? children : undefined;
     const scale = useRef(new Animated.Value(1)).current;
@@ -165,7 +164,7 @@ export const Button = React.forwardRef<View, ButtonProps>(
 
 Button.displayName = 'Button';
 
-const styles = themed((c, isDark) => ({
+const styles = themed(() => ({
   base: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -175,7 +174,7 @@ const styles = themed((c, isDark) => ({
     paddingVertical: space.sm,
   },
   fullWidth: { alignSelf: 'stretch', width: '100%' },
-  text: { fontWeight: '700', letterSpacing: 0.1 },
+  text: { fontWeight: '600', letterSpacing: 0.1 },
   disabled: { opacity: 0.4 },
   pressed: { opacity: 0.9 },
 }));

@@ -17,6 +17,9 @@ import {
   money,
   dateTime,
   shortDate,
+  SkeletonRows,
+  SkeletonCard,
+  SkeletonTitle,
 } from '@/components/ui/Screen';
 import { Sheet } from '@/components/ui/Sheet';
 import { OnboardMemberSheet } from '@/components/network/OnboardMemberSheet';
@@ -98,6 +101,7 @@ export const AdminPortalScreen: React.FC = () => {
   return (
     <Screen
       loading={stats.loading}
+      skeleton={<View style={{ gap: 16 }}><SkeletonCard><SkeletonRows count={2} /></SkeletonCard><SkeletonTitle /><SkeletonCard><SkeletonRows count={4} /></SkeletonCard></View>}
       refreshing={stats.refreshing || fundRequests.refreshing}
       onRefresh={() => {
         stats.refresh();
@@ -128,7 +132,7 @@ export const AdminPortalScreen: React.FC = () => {
               <CardTitle icon="history">Recent transactions</CardTitle>
             </CardHeader>
             <CardContent>
-              {recent.loading ? null : recent.data?.length ? (
+              {recent.loading ? <SkeletonRows count={3} /> : recent.data?.length ? (
                 recent.data.map((txn: any, i: number) => (
                   <View
                     key={txn._id || i}
@@ -167,7 +171,7 @@ export const AdminPortalScreen: React.FC = () => {
           </CardHeader>
           <CardContent>
             {!!decide.error && <ErrorBanner message={decide.error} />}
-            {fundRequests.loading ? null : fundRequests.data?.length ? (
+            {fundRequests.loading ? <SkeletonRows count={3} /> : fundRequests.data?.length ? (
               fundRequests.data.map((req: any) => (
                 <View key={req._id} style={styles.requestItem}>
                   <View style={styles.requestTop}>
@@ -244,7 +248,7 @@ export const AdminPortalScreen: React.FC = () => {
             >
               Onboard a distributor
             </Button>
-            {distributors.loading ? null : distributors.data?.length ? (
+            {distributors.loading ? <SkeletonRows count={3} /> : distributors.data?.length ? (
               distributors.data.map((dist: any, i: number) => (
                 <Pressable
                   key={dist._id}
@@ -347,7 +351,7 @@ export const AdminPortalScreen: React.FC = () => {
               <CardTitle icon="bell-outline">Active announcements</CardTitle>
             </CardHeader>
             <CardContent>
-              {notifications.loading ? null : notifications.data?.length ? (
+              {notifications.loading ? <SkeletonRows count={3} /> : notifications.data?.length ? (
                 notifications.data.map((item: any) => (
                   <View key={item._id} style={styles.detailCard}>
                     <Row label="Title" value={item.title} />

@@ -234,7 +234,7 @@ export const getWalletDeltas = (tx) => {
 export const getWalletLedger = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { startDate, endDate, limit, wallet } = req.query;
+    const { startDate, endDate, limit, wallet, page, search, type: direction } = req.query;
 
     const walletFilter = String(wallet || 'all').toUpperCase();
 
@@ -418,6 +418,45 @@ export const getWalletLedger = async (req, res) => {
 
     // Newest first for display.
     filtered = filtered.sort((a, b) => (a.DATE < b.DATE ? 1 : a.DATE > b.DATE ? -1 : 0));
+
+    // Paged mode (the app's ledger report): the balances above need the whole
+    // history, but the phone only needs one page of rows plus the totals of
+    // everything that matched. Without `page` the answer is unchanged.
+    if (page !== undefined) {
+      const term = String(search || '').trim().toLowerCase().slice(0, 64);
+      const wantedType = String(direction || '').toLowerCase();
+      if (['credit', 'debit'].includes(wantedType)) filtered = filtered.filter((r) => r.TYPE === wantedType);
+      if (term) {
+        filtered = filtered.filter((r) =>
+          [r.UTR, r.TXNTYPE, r.WALLET, r.NARRATION, r.remarks, r.REASON, r.OPERATOR]
+            .join(' ')
+            .toLowerCase()
+            .includes(term)
+        );
+      }
+      const pageSize = Math.min(Math.max(Number(limit) || 30, 1), 100);
+      const pageNo = Math.max(Number(page) || 1, 1);
+      const sum = (key) => round2(filtered.reduce((acc, r) => acc + toNumber(r[key]), 0));
+      const net = round2(
+        filtered.reduce(
+          // Same sign rule as the app's ledgerAmount: only debits subtract.
+          (acc, r) => acc + (r.TYPE === 'debit' ? -toNumber(r.AMOUNT) : toNumber(r.AMOUNT)),
+          0
+        )
+      );
+      return res.status(200).json({
+        success: true,
+        currentCombined,
+        currentMain,
+        currentAeps,
+        wallet: walletFilter === 'AEPS' ? 'AEPS' : walletFilter === 'MAIN' ? 'Main' : 'All',
+        total: filtered.length,
+        page: pageNo,
+        hasMore: pageNo * pageSize < filtered.length,
+        summary: { net, commission: sum('COMMISSION'), tds: sum('TDS'), gst: sum('GST') },
+        data: filtered.slice((pageNo - 1) * pageSize, pageNo * pageSize),
+      });
+    }
 
     if (limit) {
       filtered = filtered.slice(0, Number(limit) || filtered.length);

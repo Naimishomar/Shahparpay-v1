@@ -1,25 +1,26 @@
 import React, { useState } from 'react';
-import { View, Text, Platform, PermissionsAndroid } from 'react-native';
+import { View, Text, Pressable, Platform, PermissionsAndroid } from 'react-native';
 import * as IntentLauncher from 'expo-intent-launcher';
-import { themed, space, type as t } from '../../theme/colors';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { themed, radius, space, type as t } from '../../theme/colors';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Sheet } from '@/components/ui/Sheet';
+import { IconTile } from '@/components/ui/Gradient';
 import {
   Screen,
-  Banner,
   EmptyState,
   ErrorBanner,
   Row,
+  SectionTitle,
   Segmented,
-  StatusPill,
   SuccessBanner,
   money,
   dateTime,
+  SkeletonRows,
 } from '@/components/ui/Screen';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import { useAuth } from '@/context/AuthContext';
+import { StatusText } from '@/components/aeps/TransactionReceipt';
 import api from '@/services/api';
 import { coordsPayload } from '@/services/location';
 
@@ -182,130 +183,131 @@ export const MatmScreen: React.FC = () => {
         history.refresh();
       }}
     >
-      <Card>
-        <CardHeader>
-          <CardTitle icon="access-point-network">PaySprint Micro-ATM Terminal</CardTitle>
-        </CardHeader>
-        <CardContent style={styles.form}>
-          {config.error ? (
+      {/* Terminal status as a BHIM list card: circle icon, title, quiet caption. */}
+      <View style={styles.card}>
+        <View style={styles.row}>
+          <IconTile icon="credit-card-outline" size={48} iconSize={22} />
+          <View style={styles.info}>
+            <Text style={styles.title}>Micro-ATM terminal</Text>
+            {config.loading ? (
+              <Text style={styles.meta}>Initializing PaySprint terminal session…</Text>
+            ) : !config.error ? (
+              <Text style={styles.meta} numberOfLines={1}>
+                <Text style={styles.active}>Active</Text>
+                {` · Merchant ${config.data?.merchantCode || user?.retailerId || '—'}`}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+        {!!config.error && (
+          <View style={styles.gapTop}>
             <ErrorBanner message={config.error} onRetry={config.reload} />
-          ) : config.loading ? (
-            <Text style={styles.help}>Initializing PaySprint terminal session…</Text>
-          ) : (
-            <Banner
-              tone="success"
-              message={`Terminal active. Merchant Code: ${config.data?.merchantCode || user?.retailerId || 'Active'}`}
-            />
-          )}
-          <Text style={styles.help}>
-            Connect your Pax or Fino Micro-ATM device via Bluetooth to perform card withdrawals and balance enquiries.
-          </Text>
-        </CardContent>
-      </Card>
+          </View>
+        )}
+        <Text style={[styles.help, styles.gapTop]}>
+          Connect your Pax or Fino Micro-ATM device via Bluetooth to perform card withdrawals and balance enquiries.
+        </Text>
+      </View>
 
-      <Card>
-        <CardHeader>
-          <CardTitle icon="credit-card-outline">Micro-ATM Transaction</CardTitle>
-        </CardHeader>
-        <CardContent style={styles.form}>
-          <Segmented
-            options={TRANSACTION_TYPES as unknown as { key: TxnType; label: string }[]}
-            value={txnType}
-            onChange={setTxnType}
-            scroll={false}
-          />
+      <View style={[styles.card, styles.form]}>
+        <Segmented
+          options={TRANSACTION_TYPES as unknown as { key: TxnType; label: string }[]}
+          value={txnType}
+          onChange={setTxnType}
+          scroll={false}
+        />
 
+        <Input
+          label="Customer mobile"
+          value={mobile}
+          onChangeText={(v) => setMobile(v.replace(/\D/g, '').slice(0, 10))}
+          keyboardType="number-pad"
+          maxLength={10}
+          required
+          error={errors.mobile}
+        />
+
+        {txnType === 'ATMCW' && (
           <Input
-            label="Customer Mobile"
-            value={mobile}
-            onChangeText={(v) => setMobile(v.replace(/\D/g, '').slice(0, 10))}
+            label="Withdrawal amount"
+            value={amount}
+            onChangeText={(v) => setAmount(v.replace(/\D/g, ''))}
             keyboardType="number-pad"
-            leftIcon="cellphone"
-            maxLength={10}
+            leftIcon="currency-inr"
+            placeholder="e.g. 1000"
             required
-            error={errors.mobile}
+            error={errors.amount}
           />
+        )}
 
-          {txnType === 'ATMCW' && (
-            <Input
-              label="Withdrawal Amount"
-              value={amount}
-              onChangeText={(v) => setAmount(v.replace(/\D/g, ''))}
-              keyboardType="number-pad"
-              leftIcon="currency-inr"
-              placeholder="e.g. 1000"
-              required
-              error={errors.amount}
-            />
-          )}
+        <Input
+          label="Remarks"
+          value={remarks}
+          onChangeText={setRemarks}
+          placeholder="Cash withdrawal / Balance check"
+        />
 
-          <Input
-            label="Remarks"
-            value={remarks}
-            onChangeText={setRemarks}
-            leftIcon="text"
-            placeholder="Cash withdrawal / Balance check"
-          />
+        {!!launchError && <ErrorBanner message={launchError} />}
+        {!!submitAction.error && <ErrorBanner message={submitAction.error} />}
+        {!!notice && <SuccessBanner message={notice} />}
 
-          {!!launchError && <ErrorBanner message={launchError} />}
-          {!!submitAction.error && <ErrorBanner message={submitAction.error} />}
-          {!!notice && <SuccessBanner message={notice} />}
+        <Button
+          onPress={handleLaunchDevice}
+          loading={submitAction.pending}
+          disabled={!!config.error}
+          icon="bluetooth-connect"
+          haptic="medium"
+          fullWidth
+        >
+          {txnType === 'ATMCW' ? 'Launch Micro-ATM (Withdrawal)' : 'Launch Micro-ATM (Balance)'}
+        </Button>
+      </View>
 
-          <Button
-            onPress={handleLaunchDevice}
-            loading={submitAction.pending}
-            disabled={!!config.error}
-            icon="bluetooth-connect"
-            size="lg"
-            haptic="medium"
-            fullWidth
-          >
-            {txnType === 'ATMCW' ? 'Launch Micro-ATM (Withdrawal)' : 'Launch Micro-ATM (Balance)'}
-          </Button>
-
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle icon="history">MATM History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!!checkStatusAction.error && <ErrorBanner message={checkStatusAction.error} />}
-          {history.loading ? null : history.data?.length ? (
-            history.data.slice(0, 20).map((txn: any) => (
-              <View key={txn._id || txn.transactionId} style={styles.item}>
-                <View style={styles.itemTop}>
-                  <Text style={styles.itemAmount}>{money(txn.amount)}</Text>
-                  <StatusPill status={txn.status} />
+      <View>
+        <SectionTitle>MATM history</SectionTitle>
+        {!!checkStatusAction.error && <ErrorBanner message={checkStatusAction.error} />}
+        {history.loading ? <SkeletonRows count={3} /> : history.data?.length ? (
+          <View style={styles.list}>
+            {history.data.slice(0, 20).map((txn: any, index: number, rows: any[]) => (
+              <View key={txn._id || txn.transactionId} style={[styles.txn, index === rows.length - 1 && styles.txnLast]}>
+                <IconTile icon="credit-card-outline" size={44} iconSize={20} />
+                <View style={styles.info}>
+                  <Text style={styles.title} numberOfLines={1}>
+                    {txn.metadata?.transactionType === 'ATMBE' ? 'Balance enquiry' : 'Cash withdrawal'}
+                  </Text>
+                  <Text style={styles.meta} numberOfLines={1}>
+                    {dateTime(txn.createdAt)}
+                  </Text>
+                  <Text style={styles.meta} numberOfLines={1} selectable>
+                    {[txn.transactionId, txn.metadata?.bankRRN && `RRN ${txn.metadata.bankRRN}`].filter(Boolean).join(' · ')}
+                  </Text>
                 </View>
-                <Row label="Reference" value={txn.transactionId} mono />
-                <Row label="Type" value={txn.metadata?.transactionType || 'ATMCW'} />
-                <Row label="Bank RRN" value={txn.metadata?.bankRRN || '—'} mono />
-                <Row label="Date" value={dateTime(txn.createdAt)} last />
-
-                {txn.status === 'PENDING' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    loading={checkStatusAction.pending}
-                    onPress={() => checkStatusAction.run(txn.transactionId)}
-                    style={styles.checkStatusBtn}
-                  >
-                    Check Status
-                  </Button>
-                )}
+                <View style={styles.right}>
+                  <Text style={styles.amount}>{money(txn.amount)}</Text>
+                  <StatusText status={txn.status} />
+                  {txn.status === 'PENDING' && (
+                    <Pressable
+                      onPress={() => checkStatusAction.run(txn.transactionId)}
+                      disabled={checkStatusAction.pending}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel="Check Status"
+                    >
+                      <Text style={styles.link}>{checkStatusAction.pending ? 'Checking…' : 'Check status'}</Text>
+                    </Pressable>
+                  )}
+                </View>
               </View>
-            ))
-          ) : (
-            <EmptyState
-              icon="credit-card-outline"
-              title="No MATM transactions yet"
-              subtitle="Every Micro-ATM card transaction appears here"
-            />
-          )}
-        </CardContent>
-      </Card>
+            ))}
+          </View>
+        ) : (
+          <EmptyState
+            icon="credit-card-outline"
+            title="No MATM transactions yet"
+            subtitle="Every Micro-ATM card transaction appears here"
+          />
+        )}
+      </View>
 
       <Sheet
         visible={!!receipt}
@@ -316,7 +318,7 @@ export const MatmScreen: React.FC = () => {
         {!!receipt && (
           <View>
             <Row label="Amount" value={money(receipt.amount || 0)} mono />
-            <Row label="Status" value={<StatusPill status={receipt.status} />} />
+            <Row label="Status" value={<StatusText status={receipt.status} />} />
             <Row label="Reference" value={receipt.transactionId || '—'} mono />
             <Row label="Bank RRN" value={receipt.bankRRN || '—'} mono />
             <Row label="Card Number" value={receipt.cardNumber || '—'} mono />
@@ -331,23 +333,40 @@ export const MatmScreen: React.FC = () => {
 };
 
 const styles = themed((c) => ({
+  card: {
+    padding: space.xl,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.card,
+  },
   form: { gap: space.lg },
-  help: { fontSize: t.caption, color: c.mutedForeground, lineHeight: 18 },
-  item: { paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
-  itemTop: {
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  info: { flex: 1, minWidth: 0, gap: 3 },
+  title: { fontSize: t.body, fontWeight: '500', color: c.foreground },
+  meta: { fontSize: t.caption, color: c.mutedForeground, fontVariant: ['tabular-nums'] },
+  active: { color: c.success, fontWeight: '500' },
+  gapTop: { marginTop: space.lg },
+  help: { fontSize: t.small, color: c.mutedForeground, lineHeight: 19 },
+  list: {
+    paddingHorizontal: space.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.card,
+  },
+  txn: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     gap: space.md,
-    marginBottom: 2,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
   },
-  itemAmount: {
-    fontSize: t.body,
-    fontWeight: '700',
-    color: c.foreground,
-    fontVariant: ['tabular-nums'],
-  },
-  checkStatusBtn: { marginTop: space.sm },
+  txnLast: { borderBottomWidth: 0 },
+  right: { alignItems: 'flex-end', gap: 3 },
+  amount: { fontSize: t.body, fontWeight: '500', color: c.foreground, fontVariant: ['tabular-nums'] },
+  link: { fontSize: t.small, fontWeight: '500', color: c.accent, textDecorationLine: 'underline' },
 }));
 
 export default MatmScreen;

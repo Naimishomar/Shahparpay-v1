@@ -48,14 +48,14 @@ assert.ok(blockStart > -1 && blockEnd > blockStart, 'ledger helper block not fou
 const helperSource = reports
   .slice(blockStart, blockEnd)
   .replace('(i: any)', '(i)')
-  .replace('(rows: any[])', '(rows)')
+  .replace(/\(s: \{[^}]*\}\)/, '(s)')
   .replace(/\(key: string\)/g, '(key)')
   .replace(/ as const/g, '');
 
-const { ledgerAmount, ledgerSummary } = new Function(
+const { ledgerAmount, ledgerTiles } = new Function(
   `const money = (v) => 'INR' + Number(v ?? 0).toFixed(2);
    ${helperSource}
-   return { ledgerAmount, ledgerSummary };`
+   return { ledgerAmount, ledgerTiles };`
 )();
 
 // Credits add, debits subtract — otherwise the net total counts money leaving
@@ -71,11 +71,9 @@ assert.strictEqual(ledgerAmount({}), 0, 'a malformed row must not produce NaN');
 // that moved. Commission appears as BOTH net and gross: the COMMISSION column
 // is gross, while Home's Earnings tile reports net of TDS, and showing only
 // the gross here made the two screens look like they disagreed.
-const tiles = ledgerSummary([
-  { TYPE: 'credit', AMOUNT: 1000, COMMISSION: 12, TDS: 1.2, GST: 2.16 },
-  { TYPE: 'debit', AMOUNT: 400, COMMISSION: 0, TDS: 0, GST: 0 },
-  { TYPE: 'credit', AMOUNT: 250, COMMISSION: 3 },
-]);
+// The totals come from the server now (paged ledger); these are the sums of
+// { credit 1000, comm 12, tds 1.2, gst 2.16 }, { debit 400 }, { credit 250, comm 3 }.
+const tiles = ledgerTiles({ net: 850, commission: 15, tds: 1.2 });
 assert.deepStrictEqual(
   tiles.map((tile) => tile.label),
   ['Net amount', 'Commission earned', 'Commission (gross)', 'TDS withheld', 'GST']
@@ -86,14 +84,14 @@ assert.strictEqual(tiles[0].value, 'INR850.00', '1000 - 400 + 250');
 assert.strictEqual(tiles[1].value, 'INR13.80');
 assert.strictEqual(tiles[2].value, 'INR15.00');
 assert.strictEqual(tiles[3].value, 'INR1.20');
-assert.strictEqual(tiles[4].value, 'INR2.16', 'a missing GST column counts as zero, not NaN');
+assert.strictEqual(tiles[4].value, 'INR0.00', 'a missing GST total counts as zero, not NaN');
 assert.strictEqual(tiles[0].tone, 'success');
 
 // A net outflow reads as negative, not as a failure-free green.
-assert.strictEqual(ledgerSummary([{ TYPE: 'debit', AMOUNT: 100 }])[0].tone, 'error');
+assert.strictEqual(ledgerTiles({ net: -100 })[0].tone, 'error');
 
 // Empty range must not divide by zero or render NaN.
-assert.strictEqual(ledgerSummary([])[0].value, 'INR0.00');
+assert.strictEqual(ledgerTiles({})[0].value, 'INR0.00');
 
 // The camelCase keys that were silently returning undefined must not return.
 for (const [name, source] of [['WalletLedgerReport', wallet]]) {
@@ -114,7 +112,7 @@ for (const [name, source] of [['WalletLedgerReport', wallet]]) {
 // The ledger must use the shared signed-amount and summary helpers.
 for (const [name, source] of [['WalletLedgerReport', wallet]]) {
   assert.ok(source.includes('amountOf={ledgerAmount}'), `${name} must sign debits negative`);
-  assert.ok(source.includes('summary={ledgerSummary}'), `${name} needs the ledger money tiles`);
+  assert.ok(source.includes('summaryFrom={ledgerTiles}'), `${name} needs the ledger money tiles`);
   assert.ok(source.includes('statuses={LEDGER_STATUSES}'), `${name} filters by CREDIT/DEBIT`);
 }
 

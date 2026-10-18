@@ -66,6 +66,10 @@ const retailerSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
+    // Set when an admin deactivates the account; a distributor cannot reactivate it.
+    deactivatedByAdmin: { type: Boolean, default: false },
+    // Bumped on logout and password change; refresh tokens carry it, so old ones stop working.
+    tokenVersion: { type: Number, default: 0 },
     password: {
       type: String,
       required: true,
@@ -171,6 +175,14 @@ const retailerSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// The bcrypt hash must never reach an API response.
+retailerSchema.set('toJSON', {
+  transform: (doc, ret) => {
+    delete ret.password;
+    return ret;
+  },
+});
 
 retailerSchema.pre('save', async function () {
   if (!this.isModified('password')) return;

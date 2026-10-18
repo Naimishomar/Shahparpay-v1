@@ -16,10 +16,11 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const THEME_STORAGE_KEY = 'theme';
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Dark is the design, not a preference: the UI is drawn for a black ground.
-  // A stored choice still wins, so the Account toggle keeps working.
-  const [theme, setThemeState] = useState<ThemeMode>('dark');
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark');
+  // Both themes are designed, so the phone's own setting decides until the
+  // retailer picks one in Account; a stored choice always wins.
+  const systemTheme = (): 'light' | 'dark' => (Appearance.getColorScheme() === 'dark' ? 'dark' : 'light');
+  const [theme, setThemeState] = useState<ThemeMode>('system');
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(systemTheme);
   const [isLoaded, setIsLoaded] = useState(false);
 
   const resolveTheme = useCallback((themeMode: ThemeMode): 'light' | 'dark' => {
@@ -37,12 +38,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const parsedTheme = storedTheme as ThemeMode;
           setThemeState(parsedTheme);
           setResolvedTheme(resolveTheme(parsedTheme));
-        } else {
-          setResolvedTheme('dark');
         }
       } catch (error) {
         console.error('Failed to load theme:', error);
-        setResolvedTheme('dark');
       } finally {
         setIsLoaded(true);
       }

@@ -6,9 +6,19 @@ import dotenv from 'dotenv';
 import morgan from 'morgan';
 import mongoose from 'mongoose';
 import { connectDB } from './config/db.js';
+import { rejectMongoOperators } from './middlewares/noOperators.middleware.js';
 
 const app = express();
 dotenv.config({ quiet: true });
+
+// Tokens signed with a guessable fallback secret can be forged by anyone, so a
+// missing or short secret must stop the server instead of silently weakening it.
+for (const name of ['JWT_SECRET', 'JWT_REFRESH_SECRET']) {
+  if (!process.env[name] || process.env[name].length < 32) {
+    console.error(`${name} must be set to a random string of at least 32 characters`);
+    process.exit(1);
+  }
+}
 const PORT = process.env.PORT || 5000;
 
 // Caddy sits in front and sets X-Forwarded-For. One hop, so trust exactly one:
@@ -43,15 +53,13 @@ app.use(
 
       if (
         allowedOrigins.includes(origin) ||
-        origin.endsWith('.shahparpay.in') ||
-        origin.endsWith('.shahparpay.com') ||
-        origin.endsWith('.vercel.app')
+        /^https:\/\/[a-z0-9-]+\.shahparpay\.(in|com)$/.test(origin)
       ) {
         return callback(null, true);
       }
 
-      // Fallback: allow all origins
-      return callback(null, true);
+      // Credentialed requests from any other site would act as the logged-in user.
+      return callback(null, false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -97,7 +105,7 @@ app.use(
     return [
       `\x1b[90m[${tokens['custom-date'](req, res)}]\x1b[0m`,
       tokens.method(req, res),
-      tokens.url(req, res),
+      tokens.url(req, res).replace(/([?&](?:token|key)=)[^&]*/gi, '$1[redacted]'),
       `\x1b[${statusColor}m${status}\x1b[0m`,
       tokens['response-time'](req, res),
       'ms',
@@ -110,9 +118,20 @@ app.use(
 // The Razorpay webhook signature is an HMAC over the exact bytes received, so
 // the raw body has to survive parsing: re-serialising the parsed object changes
 // key order and whitespace and every genuine notification would fail to verify.
-app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '1mb', verify: (req, res, buf) => { req.rawBody = buf; } }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'no-referrer',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  });
+  next();
+});
 app.use(cookieParser());
+app.use(rejectMongoOperators);
 
 app.get('/', (req, res) => {
   return res.send('Shahparpay never goes down🚀');

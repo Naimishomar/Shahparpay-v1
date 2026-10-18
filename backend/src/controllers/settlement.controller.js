@@ -1,5 +1,4 @@
 import axios from 'axios';
-import bcrypt from 'bcrypt';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -10,6 +9,29 @@ import Transaction from '../models/transaction.model.js';
 import { generatePaySprintToken } from '../utils/paysprint.util.js';
 import Retailer from '../models/users/retailer.model.js';
 import Distributor from '../models/users/distributor.model.js';
+import { checkWalletPin } from '../utils/walletPin.js';
+
+/**
+ * PaySprint payout answer -> SUCCESS / FAILED / PENDING. Only an explicit
+ * refusal is FAILED (and refunded): a 5xx, an HTML page or an unknown shape may
+ * still have moved the money, so those stay PROCESSING for the status check.
+ */
+const classifyPayoutResponse = (resData, ackno) => {
+  if (resData?.response_code === 1 || (resData?.status === true && ackno)) return 'SUCCESS';
+  if (resData && typeof resData === 'object' && (resData.response_code === 0 || resData.status === false)) {
+    return 'FAILED';
+  }
+  return 'PENDING';
+};
+
+const pendingPayoutResponse = (res, transactionId, apiMessage) =>
+  res.status(202).json({
+    success: false,
+    pending: true,
+    transactionId,
+    message: 'Payout is being confirmed with the bank. Check its status shortly.',
+    detail: typeof apiMessage === 'string' ? apiMessage : undefined,
+  });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -655,7 +677,11 @@ const getSettlementAmountLimits = () => ({
 
 export const initiateSettlement = async (req, res) => {
   try {
-    const { bankId, amount, pin, mode } = req.body;
+    const { bankId, amount, pin } = req.body;
+    const mode = String(req.body.mode || 'IMPS').toUpperCase();
+    if (!['IMPS', 'NEFT'].includes(mode)) {
+      return res.status(400).json({ success: false, message: 'Transfer mode must be IMPS or NEFT.' });
+    }
 
     if (!bankId || !amount || amount <= 0 || !pin) {
       return res.status(400).json({ success: false, message: 'Invalid parameters' });
@@ -698,14 +724,8 @@ export const initiateSettlement = async (req, res) => {
     }
 
     const aepsWallet = await AepsWallet.findOne({ userId: req.user.id });
-    if (!aepsWallet || !aepsWallet.pin) {
-      return res.status(400).json({ success: false, message: 'Please set your wallet PIN first.' });
-    }
-
-    const isPinValid = await bcrypt.compare(pin.toString(), aepsWallet.pin);
-    if (!isPinValid) {
-      return res.status(401).json({ success: false, message: 'Incorrect PIN' });
-    }
+    const pinError = await checkWalletPin(aepsWallet, pin);
+    if (pinError) return res.status(pinError.status).json({ success: false, message: pinError.message });
 
     // Flat fee: ₹5 base charge + 18% GST on that charge (e.g. ₹5 + ₹0.90 = ₹5.90)
     const { baseCharge, gstAmount, total: fee } = getSettlementFee();
@@ -798,12 +818,7 @@ export const initiateSettlement = async (req, res) => {
     const apiMessage =
       resData?.message || (resData?.status ? 'Settlement successful' : 'Settlement failed');
 
-    // response_code 1 => accepted; status true => received by Paysprint.
-    // Any non-success => FAILED (funds auto-refunded by resolveTransaction).
-    let finalStatus = 'FAILED';
-    if (resData?.response_code === 1 || (resData?.status === true && ackno)) {
-      finalStatus = 'SUCCESS';
-    }
+    const finalStatus = classifyPayoutResponse(resData, ackno);
 
     if (finalStatus === 'SUCCESS') {
       await Transaction.updateOne(
@@ -818,9 +833,11 @@ export const initiateSettlement = async (req, res) => {
           },
         }
       );
-    } else {
+    } else if (finalStatus === 'FAILED') {
       const { resolveTransaction } = await import('../utils/wallet.util.js');
       await resolveTransaction(transactionId, 'FAILED', apiMessage, 'AEPS');
+    } else {
+      return pendingPayoutResponse(res, transactionId, apiMessage);
     }
 
     return res.status(finalStatus === 'SUCCESS' ? 200 : 400).json({
@@ -836,7 +853,11 @@ export const initiateSettlement = async (req, res) => {
 
 export const initiateDirectPayout = async (req, res) => {
   try {
-    const { accountNumber, ifscCode, accountHolderName, bankName, amount, pin, mode } = req.body;
+    const { accountNumber, ifscCode, accountHolderName, bankName, amount, pin } = req.body;
+    const mode = String(req.body.mode || 'IMPS').toUpperCase();
+    if (!['IMPS', 'NEFT'].includes(mode)) {
+      return res.status(400).json({ success: false, message: 'Transfer mode must be IMPS or NEFT.' });
+    }
 
     if (!accountNumber || !ifscCode || !accountHolderName || !amount || amount <= 0 || !pin) {
       return res
@@ -851,14 +872,8 @@ export const initiateDirectPayout = async (req, res) => {
     }
 
     const aepsWallet = await AepsWallet.findOne({ userId: req.user.id });
-    if (!aepsWallet || !aepsWallet.pin) {
-      return res.status(400).json({ success: false, message: 'Please set your wallet PIN first.' });
-    }
-
-    const isPinValid = await bcrypt.compare(pin.toString(), aepsWallet.pin);
-    if (!isPinValid) {
-      return res.status(401).json({ success: false, message: 'Incorrect PIN' });
-    }
+    const pinError = await checkWalletPin(aepsWallet, pin);
+    if (pinError) return res.status(pinError.status).json({ success: false, message: pinError.message });
 
     // Calculate Fee based on typical IMPS slab
     let fee = 0;
@@ -953,10 +968,7 @@ export const initiateDirectPayout = async (req, res) => {
     const apiMessage =
       resData?.message || (resData?.status ? 'Direct payout successful' : 'Direct payout failed');
 
-    let finalStatus = 'FAILED';
-    if (resData?.response_code === 1 || (resData?.status === true && ackno)) {
-      finalStatus = 'SUCCESS';
-    }
+    const finalStatus = classifyPayoutResponse(resData, ackno);
 
     const { resolveTransaction } = await import('../utils/wallet.util.js');
     if (finalStatus === 'SUCCESS') {
@@ -972,8 +984,10 @@ export const initiateDirectPayout = async (req, res) => {
           },
         }
       );
-    } else {
+    } else if (finalStatus === 'FAILED') {
       await resolveTransaction(transactionId, 'FAILED', apiMessage, 'MAIN');
+    } else {
+      return pendingPayoutResponse(res, transactionId, apiMessage);
     }
 
     return res.status(finalStatus === 'SUCCESS' ? 200 : 400).json({
@@ -996,7 +1010,11 @@ export const checkSettlementStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: 'transactionId is required' });
     }
 
-    const txn = await Transaction.findOne({ transactionId, userId: req.user.id });
+    const txn = await Transaction.findOne({
+      transactionId: String(transactionId),
+      userId: req.user.id,
+      type: { $in: ['AEPS_SETTLEMENT', 'DIRECT_PAYOUT'] },
+    });
     if (!txn) {
       return res.status(404).json({ success: false, message: 'Transaction not found' });
     }

@@ -1,10 +1,20 @@
 import React, { useState } from 'react';
 import { View, Text } from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { colors, themed, radius, space, type as t } from '../../theme/colors';
+import { colors, themed, space, type as t } from '../../theme/colors';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Screen, Banner, EmptyState, Row, StatusPill, dateTime } from '@/components/ui/Screen';
+import { IconTile } from '@/components/ui/Gradient';
+import {
+  Screen,
+  SectionTitle,
+  Banner,
+  EmptyState,
+  Row,
+  dateTime,
+  SkeletonCard,
+  SkeletonRows,
+  SkeletonTitle,
+} from '@/components/ui/Screen';
 import { MerchantKycSheet } from '@/components/aeps/MerchantKycSheet';
 import { useAsync } from '@/hooks/useAsync';
 import api from '@/services/api';
@@ -28,6 +38,7 @@ export const PipeStatusScreen: React.FC = () => {
   return (
     <Screen
       loading={pipes.loading}
+      skeleton={<View style={{ gap: 16 }}><SkeletonTitle /><SkeletonCard><SkeletonRows count={4} amount={false} /></SkeletonCard></View>}
       refreshing={pipes.refreshing}
       onRefresh={pipes.refresh}
       error={pipes.error}
@@ -41,25 +52,20 @@ export const PipeStatusScreen: React.FC = () => {
         </CardContent>
       </Card>
 
+      <SectionTitle>Bank pipes</SectionTitle>
       {list.length ? (
         list.map((pipe) => (
           <Card key={pipe.pipe}>
             <CardContent>
               <View style={styles.pipeHeader}>
-                <View style={[styles.pipeIcon, pipe.onboarded && styles.pipeIconActive]}>
-                  <MaterialCommunityIcons
-                    name="bank"
-                    size={20}
-                    color={pipe.onboarded ? colors.success : colors.warning}
-                  />
-                </View>
+                <IconTile icon="bank-outline" size={44} iconSize={20} />
                 <View style={styles.pipeInfo}>
                   <Text style={styles.pipeName} numberOfLines={1}>
                     {pipe.label || pipe.pipe}
                   </Text>
                   <Text style={styles.pipeCode}>{pipe.pipe}</Text>
                 </View>
-                <StatusPill status={pipe.onboarded ? 'ACTIVE' : pipe.status} />
+                <StatusText status={pipe.onboarded ? 'ACTIVE' : pipe.status} />
               </View>
               <Row label="Approval" value={pipe.is_approved || '—'} />
               <Row label="Message" value={pipe.message || 'No message from the bank'} last />
@@ -104,20 +110,26 @@ export const PipeStatusScreen: React.FC = () => {
   );
 };
 
+/** BHIM status: small coloured text, never a filled pill. */
+const StatusText: React.FC<{ status?: string | null }> = ({ status }) => {
+  const s = String(status || 'PENDING').toUpperCase();
+  const color = /SUCCESS|COMPLETE|APPROVED|ACTIVE|ACCEPTED|CONVERTED/.test(s)
+    ? colors.success
+    : /FAIL|REJECT/.test(s)
+      ? colors.destructive
+      : colors.warning;
+  return (
+    <Text style={{ fontSize: t.small, fontWeight: '500', color }}>
+      {s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, ' ')}
+    </Text>
+  );
+};
+
 const styles = themed((c) => ({
   pipeHeader: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginBottom: space.sm },
-  pipeIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: c.warningSubtle,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pipeIconActive: { backgroundColor: c.successSubtle },
   pipeInfo: { flex: 1, minWidth: 0, gap: 2 },
-  pipeName: { fontSize: t.small, fontWeight: '700', color: c.foreground },
-  pipeCode: { fontSize: t.micro, color: c.mutedForeground },
+  pipeName: { fontSize: t.body + 1, fontWeight: '500', color: c.foreground },
+  pipeCode: { fontSize: t.small, color: c.mutedForeground },
 }));
 
 export default PipeStatusScreen;

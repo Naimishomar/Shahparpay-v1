@@ -1,3 +1,4 @@
+
 import nodemailer from 'nodemailer';
 
 // Built once, not per send. Creating the transport inside sendEmailOTP meant a
@@ -31,7 +32,7 @@ export const sendEmailOTP = async (toEmail, toName, otp) => {
       html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px;">
                     <h2 style="color: #333; text-align: center;">ShahparPay Verification</h2>
-                    <p style="color: #555; font-size: 16px;">Hello ${toName || 'User'},</p>
+                    <p style="color: #555; font-size: 16px;">Hello ${escapeHtml(toName || 'User')},</p>
                     <p style="color: #555; font-size: 16px;">Your verification code is:</p>
                     <div style="text-align: center; margin: 30px 0;">
                         <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #000; background-color: #f4f4f4; padding: 15px 30px; border-radius: 8px;">${otp}</span>
@@ -43,6 +44,7 @@ export const sendEmailOTP = async (toEmail, toName, otp) => {
             `,
     };
 
+    // Intentional: the operator reads OTPs from the server logs.
     console.log(`\n🔑 OTP GENERATED: [ ${otp} ]`);
     console.log(`✉️  SENT TO: ${toEmail}\n`);
 

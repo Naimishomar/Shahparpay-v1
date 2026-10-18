@@ -44,6 +44,10 @@ export const createOrder = async (req, res) => {
   try {
     const { amount, name, mobile, mobile_number, email } = req.body;
     const totalAmount = Number(amount);
+    // The gateway collects Math.round(amount); crediting the raw figure would pay out the difference.
+    if (!Number.isInteger(totalAmount)) {
+      return res.status(400).json({ success: false, message: 'Amount must be in whole rupees.' });
+    }
     const payerMobile = String(mobile || mobile_number || '').replace(/\D/g, '');
     const payerEmail = String(email || '').trim();
 

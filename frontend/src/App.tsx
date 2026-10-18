@@ -1,54 +1,55 @@
+import { lazy, Suspense, useEffect } from 'react'
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } from "react-router-dom"
 import Landing from "./pages/Landing"
-import Layout from "./pages/Layout"
 import ServiceGate from "./components/ServiceGate"
-import Dashboard from "./pages/Dashboard"
-import AEPS from "./pages/AEPS"
-import AepsSettlement from "./pages/AepsSettlement"
-import PipeStatus from "./pages/PipeStatus"
-import DirectPayout from "./pages/DirectPayout"
-import DMT from "./pages/DMT"
-import Recharge from "./pages/Recharge"
-import BBPS from "./pages/BBPS"
-import Collect from "./pages/Collect"
-import FundRequest from "./pages/FundRequest"
-import AddMoney from "./pages/AddMoney"
-import BiometricSupport from "./pages/BiometricSupport"
-import LedgerReport from "./pages/LedgerReport"
-import DmtReport from "./pages/DmtReport"
-import AepsReport from "./pages/AepsReport"
-import PayoutReport from "./pages/PayoutReport"
-import UpiReport from "./pages/UpiReport"
-import PanReport from "./pages/PanReport"
-import ItrReport from "./pages/ItrReport"
-import LeadGenerationReport from "./pages/LeadGenerationReport"
-import ServiceReport from "./pages/ServiceReport"
-import WalletLedger from "./pages/WalletLedger"
-import LeadGeneration from "./pages/LeadGeneration"
-import PanCard from "./pages/PanCard"
-import ITR from "./pages/ITR"
 
-// New Pages
-import Login from "./pages/Login"
-import AdminPortal from "./pages/AdminPortal"
-import DistributorPortal from "./pages/DistributorPortal"
-import KycStatus from "./pages/KycStatus"
-import Contact from "./pages/Contact"
-import Commission from "./pages/Commission"
-import About from "./pages/About"
-import Terms from "./pages/Terms"
-import AepsPermission from "./pages/AepsPermission"
-import AepsTerms from "./pages/AepsTerms"
-import RefundPolicy from "./pages/RefundPolicy"
-import RetailerTerms from "./pages/RetailerTerms"
-import Profile from "./pages/Profile"
-import MATM from "./pages/MATM"
-import Support from "./pages/Support"
-
-import { useEffect } from 'react'
 import { Toaster } from 'sonner'
 import { useAuth } from './context/AuthContext'
 import { Navigate, useLocation, Outlet } from 'react-router-dom'
+
+// Route-level code splitting: only the landing page ships in the initial bundle.
+const Login = lazy(() => import("./pages/Login"))
+const Layout = lazy(() => import("./pages/Layout"))
+const Dashboard = lazy(() => import("./pages/Dashboard"))
+const AEPS = lazy(() => import("./pages/AEPS"))
+const AepsSettlement = lazy(() => import("./pages/AepsSettlement"))
+const PipeStatus = lazy(() => import("./pages/PipeStatus"))
+const DirectPayout = lazy(() => import("./pages/DirectPayout"))
+const DMT = lazy(() => import("./pages/DMT"))
+const Recharge = lazy(() => import("./pages/Recharge"))
+const BBPS = lazy(() => import("./pages/BBPS"))
+const Collect = lazy(() => import("./pages/Collect"))
+const FundRequest = lazy(() => import("./pages/FundRequest"))
+const AddMoney = lazy(() => import("./pages/AddMoney"))
+const BiometricSupport = lazy(() => import("./pages/BiometricSupport"))
+const LedgerReport = lazy(() => import("./pages/LedgerReport"))
+const DmtReport = lazy(() => import("./pages/DmtReport"))
+const AepsReport = lazy(() => import("./pages/AepsReport"))
+const PayoutReport = lazy(() => import("./pages/PayoutReport"))
+const UpiReport = lazy(() => import("./pages/UpiReport"))
+const PanReport = lazy(() => import("./pages/PanReport"))
+const ItrReport = lazy(() => import("./pages/ItrReport"))
+const LeadGenerationReport = lazy(() => import("./pages/LeadGenerationReport"))
+const ServiceReport = lazy(() => import("./pages/ServiceReport"))
+const WalletLedger = lazy(() => import("./pages/WalletLedger"))
+const LeadGeneration = lazy(() => import("./pages/LeadGeneration"))
+const PanCard = lazy(() => import("./pages/PanCard"))
+const ITR = lazy(() => import("./pages/ITR"))
+const AdminPortal = lazy(() => import("./pages/AdminPortal"))
+const DistributorPortal = lazy(() => import("./pages/DistributorPortal"))
+const KycStatus = lazy(() => import("./pages/KycStatus"))
+const Contact = lazy(() => import("./pages/Contact"))
+const Commission = lazy(() => import("./pages/Commission"))
+const About = lazy(() => import("./pages/About"))
+const Terms = lazy(() => import("./pages/Terms"))
+const AepsPermission = lazy(() => import("./pages/AepsPermission"))
+const AepsTerms = lazy(() => import("./pages/AepsTerms"))
+const RefundPolicy = lazy(() => import("./pages/RefundPolicy"))
+const RetailerTerms = lazy(() => import("./pages/RetailerTerms"))
+const Profile = lazy(() => import("./pages/Profile"))
+const MATM = lazy(() => import("./pages/MATM"))
+const Support = lazy(() => import("./pages/Support"))
+const NotFound = lazy(() => import("./pages/NotFound"))
 
 function ScrollToTopWrapper() {
   const { pathname } = useLocation()
@@ -57,7 +58,11 @@ function ScrollToTopWrapper() {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
   }, [pathname])
 
-  return <Outlet />
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <Outlet />
+    </Suspense>
+  )
 }
 
 function LandingRoute() {
@@ -133,6 +138,7 @@ function App() {
         <Route path="/profile" element={<Profile/>}/>
         <Route path="/support" element={<Support/>}/>
       </Route>
+      <Route path="*" element={<NotFound />} />
       </Route>
     )
   )

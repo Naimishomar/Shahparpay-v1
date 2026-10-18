@@ -208,10 +208,11 @@ const LandingNav: React.FC = () => {
     return (
     <nav
         className={`sticky top-0 z-50 transition-all duration-200 ${
-            scrolled ? 'bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-sm' : 'bg-white border-b border-slate-100'
+            scrolled ? 'bg-white/70 backdrop-blur-md border-b border-slate-200/60 shadow-sm' : 'bg-white/30 backdrop-blur-md border-b border-transparent'
         }`}
     >
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 sm:gap-6 px-4 sm:px-6 py-3.5 sm:py-4">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 sm:gap-6 px-4 sm:px-6 h-[72px]">
+            {/* Fixed 72px height: the landing hero pulls itself up by this much to sit under the translucent nav. */}
             <Link to="/" aria-label="Shahparpay home" className="shrink-0">
                 <Logo className="h-8 sm:h-10" />
             </Link>
@@ -235,7 +236,7 @@ const LandingNav: React.FC = () => {
                                 <div className="col-span-8 grid grid-cols-3 gap-6">
                                     {PRODUCT_MENU_CATEGORIES.map((cat) => (
                                         <div key={cat.title} className="space-y-3">
-                                            <h4 className="text-[0.65rem] font-bold tracking-wider text-slate-400 uppercase border-b border-slate-100 pb-2">
+                                            <h4 className="text-xs font-bold tracking-wider text-slate-600 uppercase border-b border-slate-100 pb-2">
                                                 {cat.title}
                                             </h4>
                                             <div className="space-y-1">
@@ -253,7 +254,7 @@ const LandingNav: React.FC = () => {
                                                             <div className="text-xs font-bold text-slate-900 group-hover:text-[#008c46] transition-colors">
                                                                 {item.title}
                                                             </div>
-                                                            <p className="text-[0.7rem] text-slate-500 line-clamp-1 mt-0.5">
+                                                            <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
                                                                 {item.desc}
                                                             </p>
                                                         </div>
@@ -266,7 +267,7 @@ const LandingNav: React.FC = () => {
 
                                 {/* Right Side Featured Product Cards */}
                                 <div className="col-span-4 border-l border-slate-100 pl-6 space-y-3">
-                                    <p className="text-[0.65rem] font-bold tracking-wider text-slate-400 uppercase">
+                                    <p className="text-xs font-bold tracking-wider text-slate-600 uppercase">
                                         FEATURED SOLUTIONS
                                     </p>
                                     {MEGA_FEATURED_CARDS.map((card) => (
@@ -287,7 +288,7 @@ const LandingNav: React.FC = () => {
                                             <div className="text-xs font-extrabold text-slate-900 group-hover:text-[#008c46] transition-colors">
                                                 {card.title}
                                             </div>
-                                            <p className="text-[0.7rem] text-slate-500 mt-0.5">
+                                            <p className="text-xs text-slate-500 mt-0.5">
                                                 {card.desc}
                                             </p>
                                         </Link>
@@ -315,7 +316,7 @@ const LandingNav: React.FC = () => {
             <div className="flex items-center gap-2 sm:gap-3">
                 <Link
                     to="/login"
-                    className="inline-flex items-center justify-center gap-2 sm:gap-2.5 bg-[#18181b] hover:bg-black text-white rounded-full pl-4 sm:pl-5 pr-1.5 sm:pr-2 py-1.5 sm:py-2 text-xs sm:text-sm font-bold shadow-md transition-all hover:scale-[1.01] group"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 sm:gap-2.5 bg-[#18181b] hover:bg-black text-white rounded-full pl-4 sm:pl-5 pr-1.5 sm:pr-2 py-1.5 sm:py-2 text-xs sm:text-sm font-bold shadow-md transition-all hover:scale-[1.01] group"
                 >
                     <span>Sign In</span>
                     <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#a3e635] text-black flex items-center justify-center font-black text-[0.6rem] sm:text-xs group-hover:rotate-45 transition-transform">
@@ -324,7 +325,7 @@ const LandingNav: React.FC = () => {
                 </Link>
 
                 <button
-                    className="xl:hidden p-2 text-slate-800 rounded-lg hover:bg-slate-100 transition-colors"
+                    className="xl:hidden p-2.5 text-slate-800 rounded-lg hover:bg-slate-100 transition-colors"
                     onClick={() => setMenuOpen(!menuOpen)}
                     aria-label={menuOpen ? 'Close menu' : 'Open menu'}
                 >
@@ -337,20 +338,20 @@ const LandingNav: React.FC = () => {
         {menuOpen && (
             <div className="border-t border-slate-200 px-6 py-6 xl:hidden space-y-5 shadow-2xl bg-white animate-in slide-in-from-top-2 duration-200">
                 <div className="space-y-1">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Navigation</p>
-                    <Link to={appHref} onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
+                    <p className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Navigation</p>
+                    <Link to={appHref} onClick={() => setMenuOpen(false)} className="block py-3 text-sm font-bold text-slate-900 border-b border-slate-100">
                         Products &amp; Services
                     </Link>
-                    <Link to="/contact" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
+                    <Link to="/contact" onClick={() => setMenuOpen(false)} className="block py-3 text-sm font-bold text-slate-900 border-b border-slate-100">
                         Contact Us
                     </Link>
-                    <Link to="/commission" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
+                    <Link to="/commission" onClick={() => setMenuOpen(false)} className="block py-3 text-sm font-bold text-slate-900 border-b border-slate-100">
                         Commission Rates
                     </Link>
-                    <Link to="/about" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
+                    <Link to="/about" onClick={() => setMenuOpen(false)} className="block py-3 text-sm font-bold text-slate-900 border-b border-slate-100">
                         About Us
                     </Link>
-                    <Link to="/contact" onClick={() => setMenuOpen(false)} className="block py-2.5 text-sm font-bold text-slate-900 border-b border-slate-100">
+                    <Link to="/contact" onClick={() => setMenuOpen(false)} className="block py-3 text-sm font-bold text-slate-900 border-b border-slate-100">
                         Contact &amp; Details
                     </Link>
                 </div>

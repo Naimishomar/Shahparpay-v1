@@ -6,26 +6,27 @@ import { StyleSheet, Text, TextInput } from 'react-native';
  * whatever the phone is set to (OnePlus Slate, Samsung One UI, a user-chosen
  * font pack), which changes metrics and breaks the type scale.
  *
- * IBM Plex Sans is the design system's face: a banking/finance grotesque with
- * genuine tabular figures, which the money columns depend on.
+ * Figtree is the design system's face — the one BHIM's own design system uses:
+ * a friendly geometric sans with tabular figures for the money columns.
  */
 export const FONTS = {
-  regular: 'IBMPlexSans_400Regular',
-  medium: 'IBMPlexSans_500Medium',
-  semibold: 'IBMPlexSans_600SemiBold',
-  bold: 'IBMPlexSans_700Bold',
+  light: 'Figtree_300Light',
+  regular: 'Figtree_400Regular',
+  medium: 'Figtree_500Medium',
+  semibold: 'Figtree_600SemiBold',
+  bold: 'Figtree_700Bold',
 } as const;
 
 /**
  * Custom fonts do not synthesize weights on Android: `fontWeight: '700'` with a
  * regular family renders regular, or a smeared fake bold. Each weight has to
- * resolve to its own family, so numeric weights map onto the four faces above.
- * 800/900 fold into Bold — the family ships nothing heavier.
+ * resolve to its own family, so numeric weights map onto the faces above.
+ * 800/900 fold into Bold — the app loads nothing heavier.
  */
 const FAMILY_FOR_WEIGHT: Record<string, string> = {
-  '100': FONTS.regular,
-  '200': FONTS.regular,
-  '300': FONTS.regular,
+  '100': FONTS.light,
+  '200': FONTS.light,
+  '300': FONTS.light,
   '400': FONTS.regular,
   normal: FONTS.regular,
   '500': FONTS.medium,

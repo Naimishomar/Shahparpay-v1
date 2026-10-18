@@ -1,18 +1,23 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { colors, themed, radius, space, type as t } from '../theme/colors';
-import { Card, CardContent } from '@/components/ui/Card';
-import { Screen, EmptyState, dateTime } from '@/components/ui/Screen';
+import { themed, radius, space, type as t } from '../theme/colors';
+import { IconTile } from '@/components/ui/Gradient';
+import {
+  Screen,
+  EmptyState,
+  dateTime,
+  SkeletonCard,
+  SkeletonRows,
+} from '@/components/ui/Screen';
 import { useAsync } from '@/hooks/useAsync';
 import api from '@/services/api';
 
 /** Announcement kind -> glyph. Each tone carries its own shape, not just colour. */
-const ICON: Record<string, { icon: string; tone: 'accent' | 'warning' }> = {
-  info: { icon: 'information', tone: 'accent' },
-  success: { icon: 'check-circle', tone: 'accent' },
-  warning: { icon: 'alert', tone: 'warning' },
-  urgent: { icon: 'alert-octagon', tone: 'warning' },
+const ICON: Record<string, string> = {
+  info: 'information-outline',
+  success: 'check-circle-outline',
+  warning: 'alert-outline',
+  urgent: 'alert-octagon-outline',
 };
 
 /**
@@ -45,16 +50,16 @@ export const NotificationsScreen: React.FC = () => {
   return (
     <Screen
       loading={feed.loading}
+      skeleton={<SkeletonCard><SkeletonRows count={6} amount={false} /></SkeletonCard>}
       refreshing={feed.refreshing}
       onRefresh={feed.refresh}
       error={feed.error}
       onRetry={feed.reload}
     >
       {items.length ? (
-        <Card padding={0}>
-          <CardContent style={styles.list}>
+        <View style={styles.list}>
             {items.map((item: any, index: number) => {
-              const spec = ICON[item.kind] ?? ICON.info;
+              const icon = ICON[item.kind] ?? ICON.info;
               return (
                 <Pressable
                   key={item._id}
@@ -63,7 +68,6 @@ export const NotificationsScreen: React.FC = () => {
                   style={({ pressed }) => [
                     styles.row,
                     index === items.length - 1 && styles.rowLast,
-                    !item.isRead && styles.rowUnread,
                     pressed && styles.pressed,
                   ]}
                   accessibilityRole="button"
@@ -71,20 +75,9 @@ export const NotificationsScreen: React.FC = () => {
                     item.isRead ? '' : '. Unread, tap to mark as read'
                   }`}
                 >
-                  <View
-                    style={[
-                      styles.rowIcon,
-                      spec.tone === 'warning' && { backgroundColor: colors.warningSubtle },
-                    ]}
-                  >
-                    <MaterialCommunityIcons
-                      name={spec.icon as any}
-                      size={18}
-                      color={spec.tone === 'warning' ? colors.warning : colors.accent}
-                    />
-                  </View>
+                  <IconTile icon={icon} size={44} iconSize={20} />
                   <View style={styles.rowText}>
-                    <Text style={styles.rowTitle}>{item.title}</Text>
+                    <Text style={[styles.rowTitle, !item.isRead && styles.rowTitleUnread]}>{item.title}</Text>
                     <Text style={styles.rowMessage}>{item.message}</Text>
                     <Text style={styles.rowTime}>{dateTime(item.createdAt)}</Text>
                   </View>
@@ -92,8 +85,7 @@ export const NotificationsScreen: React.FC = () => {
                 </Pressable>
               );
             })}
-          </CardContent>
-        </Card>
+        </View>
       ) : (
         <EmptyState
           icon="bell-outline"
@@ -106,7 +98,13 @@ export const NotificationsScreen: React.FC = () => {
 };
 
 const styles = themed((c) => ({
-  list: { paddingHorizontal: space.lg },
+  list: {
+    backgroundColor: c.card,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: radius.lg,
+    paddingHorizontal: space.lg,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -116,21 +114,14 @@ const styles = themed((c) => ({
     borderBottomColor: c.border,
   },
   rowLast: { borderBottomWidth: 0 },
-  rowUnread: { backgroundColor: c.accentSubtle },
   pressed: { opacity: 0.6 },
-  rowIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.pill,
-    backgroundColor: c.surfaceAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowText: { flex: 1, minWidth: 0, gap: 3 },
-  rowTitle: { fontSize: t.body, fontWeight: '700', color: c.foreground },
+  rowText: { flex: 1, minWidth: 0, gap: 4 },
+  rowTitle: { fontSize: t.body, fontWeight: '400', color: c.foreground },
+  rowTitleUnread: { fontWeight: '500' },
   rowMessage: { fontSize: t.small, color: c.mutedForeground, lineHeight: 19 },
-  rowTime: { fontSize: t.micro, color: c.mutedForeground, marginTop: 2 },
-  dot: { width: 8, height: 8, borderRadius: radius.pill, backgroundColor: c.accent, marginTop: 8 },
+  rowTime: { fontSize: t.caption, color: c.mutedForeground, marginTop: 2 },
+  // Unread: a small orange dot, never a tinted row.
+  dot: { width: 8, height: 8, borderRadius: radius.pill, backgroundColor: c.highlight, marginTop: 8 },
 }));
 
 export default NotificationsScreen;

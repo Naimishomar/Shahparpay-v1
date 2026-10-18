@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { hasCallbackKey } from '../utils/callbackKey.js';
 import Retailer from '../models/users/retailer.model.js';
 import MainWallet from '../models/mainWallet.model.js';
 import Transaction from '../models/transaction.model.js';
@@ -71,9 +72,13 @@ export const launchItrFiling = async (req, res) => {
  */
 export const checkAgentWallet = async (req, res) => {
   try {
+    // eSevaTech calls this unauthenticated; without the shared key anyone could
+    // read any retailer's balance. Register the URL with ?key=<ESEVATECH_CALLBACK_KEY>.
+    if (!hasCallbackKey(req, 'ESEVATECH_CALLBACK_KEY')) {
+      return res.status(401).json({ success: false, sufficient_balance: false, error_code: 'UNAUTHORIZED' });
+    }
     const payload = req.method === 'GET' ? req.query : req.body;
     const { partner_unique_id, agent_unique_id, required_amount } = payload;
-    console.log(`[ITR Wallet Check] Received check request (${req.method}):`, payload);
 
     if (!agent_unique_id || required_amount === undefined) {
       return res.status(200).json({
@@ -85,8 +90,8 @@ export const checkAgentWallet = async (req, res) => {
       });
     }
 
-    // Validate Partner ID
-    if (partner_unique_id !== process.env.ESEVATECH_PARTNER_UNIQUE_ID) {
+    // Validate Partner ID (an unset env var must not match a missing field)
+    if (!process.env.ESEVATECH_PARTNER_UNIQUE_ID || partner_unique_id !== process.env.ESEVATECH_PARTNER_UNIQUE_ID) {
       return res.status(200).json({
         success: true,
         sufficient_balance: false,
@@ -140,6 +145,10 @@ export const checkAgentWallet = async (req, res) => {
  */
 export const itrWebhook = async (req, res) => {
   try {
+    // This endpoint debits and credits wallets, so it must prove it is eSevaTech.
+    if (!hasCallbackKey(req, 'ESEVATECH_CALLBACK_KEY')) {
+      return res.status(401).json({ success: false, message: 'Unauthorized callback' });
+    }
     const payload = req.body;
     const event = req.headers['x-esevatech-event'] || payload.event || '';
     const service_type = payload.service_type || 'ITR';
@@ -179,40 +188,34 @@ export const itrWebhook = async (req, res) => {
         return res.status(404).json({ success: false, message: 'Retailer not found' });
       }
 
-      // Prevent duplicate refund (covers both historical REFUND- and REF- ids)
+      // A refund must reverse a debit we actually made for this retailer, exactly
+      // once, and never for more than was charged.
       const refundTxnId = `REF-ITR-${application_id}`;
-      const existingRefund = await Transaction.findOne({
-        $or: [
-          { transactionId: refundTxnId },
-          { transactionId: `REFUND-${service_type}-${application_id}` },
-        ],
-      });
-      if (existingRefund) {
+      const originalTxn = await Transaction.findOneAndUpdate(
+        {
+          $or: [
+            { transactionId: `${service_type}-${application_id}` },
+            { 'metadata.application_id': application_id, type: service_type },
+          ],
+          userId: retailer._id,
+          status: 'SUCCESS',
+        },
+        { $set: { status: 'REFUNDED' } },
+        { new: true }
+      );
+      if (!originalTxn) {
         return res
           .status(200)
-          .json({ success: true, message: 'Agent wallet already credited for refund' });
+          .json({ success: true, message: 'No refundable debit for this application (already refunded or unknown)' });
       }
-
-      // Mark original transaction as REFUNDED if it exists
-      const originalTxnId = `${service_type}-${application_id}`;
-      const originalTxn = await Transaction.findOne({
-        $or: [
-          { transactionId: originalTxnId },
-          { 'metadata.application_id': application_id, type: service_type },
-        ],
-      });
-
-      if (originalTxn && originalTxn.status !== 'REFUNDED') {
-        originalTxn.status = 'REFUNDED';
-        await originalTxn.save();
-      }
+      const refundAmount = Math.min(agent_charge_amount, Number(originalTxn.amount) || 0);
 
       // Credit retailer wallet atomically
-      await updateWalletAtomically(retailer._id, 'MAIN', agent_charge_amount, {
+      await updateWalletAtomically(retailer._id, 'MAIN', refundAmount, {
         transactionId: refundTxnId,
         userId: retailer._id,
         type: service_type,
-        amount: agent_charge_amount,
+        amount: refundAmount,
         status: 'REFUNDED',
         metadata: {
           application_id,
@@ -227,7 +230,7 @@ export const itrWebhook = async (req, res) => {
       });
 
       console.log(
-        `[ITR Webhook] Refund successful. Credited ₹${agent_charge_amount} to Retailer ${agent_unique_id}`
+        `[ITR Webhook] Refund successful. Credited ₹${refundAmount} to Retailer ${agent_unique_id}`
       );
 
       return res.status(200).json({

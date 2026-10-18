@@ -1,20 +1,23 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, Image, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, themed, radius, space, type as t } from '../theme/colors';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ImageField } from '@/components/ui/ImageField';
 import { Sheet } from '@/components/ui/Sheet';
+import { IconTile } from '@/components/ui/Gradient';
 import {
   Screen,
   EmptyState,
   ErrorBanner,
+  SectionTitle,
   Segmented,
-  StatusPill,
   dateTime,
+  SkeletonCard,
+  SkeletonRows,
+  SkeletonTitle,
 } from '@/components/ui/Screen';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import { useAuth } from '@/context/AuthContext';
@@ -29,6 +32,16 @@ const STATUS_OPTIONS = [
   { key: 'RESOLVED', label: 'Resolved' },
   { key: 'CLOSED', label: 'Closed' },
 ];
+
+/** Status reads as small coloured text, BHIM-style, never a filled pill. */
+const statusLabel = (status: string) =>
+  String(status || 'OPEN').charAt(0) + String(status || 'OPEN').slice(1).toLowerCase().replace('_', ' ');
+const statusColor = (status: string) =>
+  CLOSED.includes(String(status))
+    ? colors.success
+    : String(status) === 'IN_PROGRESS'
+      ? colors.warning
+      : colors.mutedForeground;
 
 const RECIPIENTS = [
   { key: 'distributor', label: 'My distributor' },
@@ -109,43 +122,56 @@ export const SupportScreen: React.FC = () => {
   return (
     <Screen
       loading={tickets.loading}
+      skeleton={<View style={{ gap: 16 }}><SkeletonCard><SkeletonRows count={1} amount={false} avatar={48} /></SkeletonCard><SkeletonCard><SkeletonRows count={2} amount={false} /></SkeletonCard><SkeletonTitle /><SkeletonCard><SkeletonRows count={3} /></SkeletonCard></View>}
       refreshing={tickets.refreshing}
       onRefresh={tickets.refresh}
       error={tickets.error}
       onRetry={tickets.reload}
     >
-      <Card>
-        <CardHeader>
-          <CardTitle icon="headset">How can we help?</CardTitle>
-        </CardHeader>
-        <CardContent style={styles.form}>
-          <Text style={styles.help}>
-            Raise an issue with a screenshot and track every reply here. Include the transaction
-            reference whenever the problem is about one.
-          </Text>
-          {isRetailer && (
-            <>
-              <Button onPress={() => navigation.navigate('PipeStatus')} variant="outline" icon="pipe" fullWidth>
-                AEPS pipe status
-              </Button>
-              <Button onPress={() => navigation.navigate('BiometricSupport')} variant="outline" icon="fingerprint-off" fullWidth>
-                Biometric support
-              </Button>
-            </>
-          )}
-          <Button onPress={() => setComposing(true)} icon="message-plus-outline" fullWidth>
-            New request
-          </Button>
-        </CardContent>
-      </Card>
+      <View style={styles.hero}>
+        <IconTile icon="headset" size={64} iconSize={28} />
+        <Text style={styles.heroTitle}>How can we help?</Text>
+        <Text style={styles.heroText}>
+          Raise an issue with a screenshot and track every reply here. Include the transaction
+          reference whenever the problem is about one.
+        </Text>
+      </View>
+      <Button onPress={() => setComposing(true)} fullWidth>
+        New request
+      </Button>
 
-      <Card>
-        <CardHeader>
-          <CardTitle icon="ticket-outline">My requests</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {tickets.data?.length ? (
-            tickets.data.map((ticket: any, index: number) => (
+      {isRetailer && (
+        <View style={styles.card}>
+          {[
+            { route: 'PipeStatus', icon: 'git-network-outline', title: 'AEPS pipe status', sub: 'Which bank pipes are live' },
+            { route: 'BiometricSupport', icon: 'finger-print-outline', title: 'Biometric support', sub: 'Device drivers and RD service' },
+          ].map((link) => (
+            <Pressable
+              key={link.route}
+              onPress={() => navigation.navigate(link.route)}
+              style={({ pressed }) => [styles.link, pressed && styles.itemPressed]}
+              accessibilityRole="button"
+              accessibilityLabel={link.title}
+            >
+              <View style={styles.lineIcon}>
+                <Ionicons name={link.icon as any} size={22} color={colors.foreground} />
+              </View>
+              <View style={styles.itemText}>
+                <Text style={styles.linkTitle}>{link.title}</Text>
+                <Text style={styles.linkSub}>{link.sub}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      <SectionTitle>My requests</SectionTitle>
+      {tickets.data?.length ? (
+        <View style={styles.card}>
+          {tickets.data.map((ticket: any, index: number) => {
+            const closed = CLOSED.includes(String(ticket.status));
+            return (
               <Pressable
                 key={ticket._id}
                 onPress={() => setSelectedId(ticket._id)}
@@ -157,6 +183,13 @@ export const SupportScreen: React.FC = () => {
                 accessibilityRole="button"
                 accessibilityLabel={`${ticket.subject}. ${ticket.status}`}
               >
+                <View style={styles.lineIcon}>
+                  <Ionicons
+                    name={closed ? 'checkmark-circle-outline' : 'chatbubble-ellipses-outline'}
+                    size={22}
+                    color={colors.foreground}
+                  />
+                </View>
                 <View style={styles.itemText}>
                   <Text style={styles.itemTitle} numberOfLines={1}>
                     {ticket.subject}
@@ -164,27 +197,29 @@ export const SupportScreen: React.FC = () => {
                   <Text style={styles.itemBody} numberOfLines={2}>
                     {ticket.description}
                   </Text>
-                  <Text style={styles.itemMeta}>Updated {dateTime(ticket.updatedAt)}</Text>
+                  <Text style={styles.itemMeta}>
+                    {`Updated ${dateTime(ticket.updatedAt)} · `}
+                    <Text style={{ color: statusColor(ticket.status) }}>{statusLabel(ticket.status)}</Text>
+                  </Text>
                 </View>
-                <StatusPill status={ticket.status} />
+                <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
               </Pressable>
-            ))
-          ) : (
-            <EmptyState
-              icon="message-outline"
-              title="No support requests yet"
-              subtitle="Open one whenever you need help"
-              action={{ label: 'New request', onPress: () => setComposing(true) }}
-            />
-          )}
-        </CardContent>
-      </Card>
+            );
+          })}
+        </View>
+      ) : (
+        <EmptyState
+          icon="message-outline"
+          title="No support requests yet"
+          subtitle="Open one whenever you need help"
+          action={{ label: 'New request', onPress: () => setComposing(true) }}
+        />
+      )}
 
       <Sheet
         visible={composing}
         onClose={() => setComposing(false)}
         title="New support request"
-        icon="message-plus-outline"
         dismissible={!create.pending}
       >
         <View style={styles.form}>
@@ -223,7 +258,6 @@ export const SupportScreen: React.FC = () => {
             onPress={onCreate}
             loading={create.pending}
             disabled={!subject.trim() || (!description.trim() && !attachment)}
-            icon="send"
             fullWidth
           >
             Submit request
@@ -235,8 +269,7 @@ export const SupportScreen: React.FC = () => {
         visible={!!selected}
         onClose={() => setSelectedId(null)}
         title={selected?.subject ?? 'Request'}
-        subtitle={selected ? String(selected.status).replace('_', ' ') : undefined}
-        icon="message-text-outline"
+        subtitle={selected ? statusLabel(selected.status) : undefined}
         dismissible={!send.pending}
       >
         {!!selected && (
@@ -279,7 +312,7 @@ export const SupportScreen: React.FC = () => {
                       />
                     ))}
                     <Text
-                      style={[styles.bubbleTime, item.senderRole === 'user' && styles.bubbleTextMine]}
+                      style={styles.bubbleTime}
                     >
                       {dateTime(item.createdAt)}
                     </Text>
@@ -290,11 +323,7 @@ export const SupportScreen: React.FC = () => {
 
             {CLOSED.includes(String(selected.status)) ? (
               <View style={styles.closed}>
-                <MaterialCommunityIcons
-                  name="lock-outline"
-                  size={16}
-                  color={colors.mutedForeground}
-                />
+                <Ionicons name="lock-closed-outline" size={16} color={colors.mutedForeground} />
                 <Text style={styles.help}>
                   This request is closed. Open a new one if you still need help.
                 </Text>
@@ -317,7 +346,6 @@ export const SupportScreen: React.FC = () => {
                   onPress={onReply}
                   loading={send.pending}
                   disabled={!reply.trim() && !replyPhoto}
-                  icon="send"
                   fullWidth
                 >
                   Send
@@ -334,41 +362,75 @@ export const SupportScreen: React.FC = () => {
 const styles = themed((c) => ({
   form: { gap: space.lg },
   field: { gap: 7 },
-  fieldLabel: { fontSize: t.caption, fontWeight: '600', color: c.mutedForeground },
-  help: { flex: 1, fontSize: t.caption, color: c.mutedForeground, lineHeight: 18 },
+  fieldLabel: { fontSize: t.small, fontWeight: '500', color: c.mutedForeground },
+  help: { flex: 1, fontSize: t.small, color: c.mutedForeground, lineHeight: 19 },
   textarea: { minHeight: 96, textAlignVertical: 'top', paddingTop: space.sm },
 
+  hero: { alignItems: 'center', gap: space.sm, paddingTop: space.md, paddingHorizontal: space.lg },
+  heroTitle: { fontSize: t.title, fontWeight: '500', color: c.foreground, marginTop: space.sm },
+  heroText: { fontSize: t.small, color: c.mutedForeground, lineHeight: 19, textAlign: 'center' },
+
+  card: {
+    backgroundColor: c.card,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: c.border,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.xs,
+  },
+  lineIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: c.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  link: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 72, paddingVertical: space.md },
+  linkTitle: { fontSize: t.bodyLg - 1, fontWeight: '400', color: c.foreground },
+  linkSub: { fontSize: t.small, color: c.mutedForeground },
   item: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: space.md,
-    paddingVertical: space.md,
+    paddingVertical: space.lg,
     borderBottomWidth: 1,
     borderBottomColor: c.border,
   },
   itemLast: { borderBottomWidth: 0 },
   itemPressed: { opacity: 0.6 },
-  itemText: { flex: 1, minWidth: 0, gap: 2 },
-  itemTitle: { fontSize: t.body, fontWeight: '700', color: c.foreground },
-  itemBody: { fontSize: t.caption, color: c.mutedForeground, lineHeight: 18 },
-  itemMeta: { fontSize: t.micro, color: c.mutedForeground, marginTop: 2 },
+  itemText: { flex: 1, minWidth: 0, gap: 3 },
+  itemTitle: { fontSize: t.bodyLg - 1, fontWeight: '500', color: c.foreground },
+  itemBody: { fontSize: t.small, color: c.mutedForeground, lineHeight: 18 },
+  itemMeta: { fontSize: t.caption, color: c.mutedForeground, marginTop: 2 },
 
   // Capped so the reply box stays on screen on a small handset; the thread
   // scrolls inside the sheet rather than pushing the composer off it.
   thread: { maxHeight: 320 },
   bubbleRow: { flexDirection: 'row', marginBottom: space.sm },
   bubbleRowMine: { justifyContent: 'flex-end' },
+  // Calm and dark: theirs a card on the sheet, mine one step lighter. No
+  // orange fill — colour stays for the one primary action.
   bubble: {
     maxWidth: '85%',
-    padding: space.md,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
     borderRadius: radius.lg,
-    backgroundColor: c.secondary,
+    borderBottomLeftRadius: 6,
+    backgroundColor: c.card,
+    borderWidth: 1,
+    borderColor: c.border,
     gap: 4,
   },
-  bubbleMine: { backgroundColor: c.primary },
-  bubbleText: { fontSize: t.small, color: c.foreground, lineHeight: 19 },
-  bubbleTextMine: { color: c.primaryForeground },
-  bubbleTime: { fontSize: t.micro, color: c.mutedForeground },
+  bubbleMine: {
+    backgroundColor: c.surfaceAlt,
+    borderColor: c.surfaceAlt,
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: 6,
+  },
+  bubbleText: { fontSize: t.body, color: c.foreground, lineHeight: 21 },
+  bubbleTextMine: { color: c.foreground },
+  bubbleTime: { fontSize: t.caption, color: c.mutedForeground },
   attachment: { width: 200, height: 140, borderRadius: radius.md, marginTop: 4 },
 
   closed: { flexDirection: 'row', alignItems: 'center', gap: space.sm },

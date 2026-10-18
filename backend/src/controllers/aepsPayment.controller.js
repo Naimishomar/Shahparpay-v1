@@ -20,6 +20,34 @@ import {
   queryAepsTransactionStatus,
 } from '../utils/wallet.util.js';
 
+// Only the full Aadhaar's last four digits are ever shown, and UIDAI rules forbid
+// storing the full number, so it is masked before it reaches the database.
+const maskAadhaar = (value) => {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  return digits ? `XXXXXXXX${digits.slice(-4)}` : null;
+};
+
+/**
+ * A client-supplied reference may only resume the caller's own AEPS withdrawal
+ * that is still PENDING. Returns the txn, null when the id is unused, or false
+ * when it belongs to anything else (a settled txn, another service): reopening
+ * those let a retailer re-run the credit on an already-paid transaction.
+ */
+const findReusableAepsTxn = async (transactionId, userId) => {
+  const id = String(transactionId);
+  const txn = await Transaction.findOne({
+    transactionId: id,
+    userId,
+    type: { $in: ['AEPS_WITHDRAWAL', 'AADHAAR_PAY'] },
+    status: 'PENDING',
+  });
+  if (txn) return txn;
+  return (await Transaction.exists({ transactionId: id })) ? false : null;
+};
+
+const refuseReference = (res) =>
+  res.status(409).json({ success: false, message: 'This transaction reference cannot be reused. Please start a new transaction.' });
+
 // AEPS transaction OTP is required when the withdrawal amount is greater
 // than this threshold (PaySprint rule). At or below it, no OTP is needed.
 export const AEPS_OTP_THRESHOLD = 5000;
@@ -304,7 +332,8 @@ export const initiateAepsTxnOtp = async (req, res) => {
     // so OTP retries (resend) don't leave orphaned PENDING transactions behind.
     let newTxn = null;
     if (txnReferenceNo) {
-      newTxn = await Transaction.findOne({ transactionId: txnReferenceNo, userId: req.user.id });
+      newTxn = await findReusableAepsTxn(txnReferenceNo, req.user.id);
+      if (newTxn === false) return refuseReference(res);
     }
     if (!newTxn) {
       newTxn = await Transaction.create({
@@ -314,7 +343,7 @@ export const initiateAepsTxnOtp = async (req, res) => {
         amount: Number(amount),
         status: 'PENDING',
         metadata: {
-          aadhaar: aadhaarNumber,
+          aadhaar: maskAadhaar(aadhaarNumber),
           bankIIN: bankIIN,
           mobile: mobileNumber,
           otpInitiated: true,
@@ -325,7 +354,7 @@ export const initiateAepsTxnOtp = async (req, res) => {
       newTxn.amount = Number(amount);
       newTxn.metadata = {
         ...newTxn.metadata,
-        aadhaar: aadhaarNumber,
+        aadhaar: maskAadhaar(aadhaarNumber),
         bankIIN: bankIIN,
         mobile: mobileNumber,
         otpInitiated: true,
@@ -458,7 +487,8 @@ export const cashWithdrawal = async (req, res) => {
     // the SAME referenceNo is reused so PaySprint's otp_refid matches this transaction.
     let newTxn = null;
     if (txnReferenceNo) {
-      newTxn = await Transaction.findOne({ transactionId: txnReferenceNo, userId: req.user.id });
+      newTxn = await findReusableAepsTxn(txnReferenceNo, req.user.id);
+      if (newTxn === false) return refuseReference(res);
     }
     if (!newTxn) {
       newTxn = await Transaction.create({
@@ -468,7 +498,7 @@ export const cashWithdrawal = async (req, res) => {
         amount: Number(amount),
         status: 'PENDING',
         metadata: {
-          aadhaar: aadhaarNumber,
+          aadhaar: maskAadhaar(aadhaarNumber),
           bankIIN: bankIIN,
           bankName: bankName,
           name: customerName,
@@ -479,7 +509,7 @@ export const cashWithdrawal = async (req, res) => {
       newTxn.amount = Number(amount);
       newTxn.metadata = {
         ...newTxn.metadata,
-        aadhaar: aadhaarNumber,
+        aadhaar: maskAadhaar(aadhaarNumber),
         bankIIN: bankIIN,
         bankName: bankName,
         name: customerName,
@@ -719,7 +749,7 @@ export const aadhaarPay = async (req, res) => {
       amount: Number(amount),
       status: 'PENDING',
       metadata: {
-        aadhaar: aadhaarNumber,
+        aadhaar: maskAadhaar(aadhaarNumber),
         bankIIN: bankIIN,
         bankName: bankName,
         name: customerName,
@@ -974,7 +1004,7 @@ export const cashDeposit = async (req, res) => {
         amount: amountNum,
         status: 'PENDING',
         metadata: {
-          aadhaar: aadhaarNumber,
+          aadhaar: maskAadhaar(aadhaarNumber),
           bankIIN: bankIIN,
           bankName: bankName,
           name: customerName,

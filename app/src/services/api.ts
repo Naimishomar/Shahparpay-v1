@@ -533,18 +533,6 @@ class ApiService {
     return this.post(API_ENDPOINTS.settlement.initiate, data);
   }
 
-  async initiateDirectPayout(data: {
-    accountNumber: string;
-    ifscCode: string;
-    accountHolderName: string;
-    bankName?: string;
-    amount: number;
-    pin: string;
-    mode?: string;
-  }) {
-    return this.post(API_ENDPOINTS.settlement.directPayout, data);
-  }
-
   async checkSettlementStatus(transactionId: string) {
     return this.post(API_ENDPOINTS.settlement.status, { transactionId });
   }
@@ -858,6 +846,10 @@ class ApiService {
     limit?: number;
     startDate?: string;
     endDate?: string;
+    /** Paged mode: the server filters, pages and totals (see TransactionReport). */
+    page?: number;
+    status?: string;
+    search?: string;
   }) {
     return this.get(API_ENDPOINTS.dashboard.recentTransactions, params);
   }

@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, Image, Pressable, Alert, Linking } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { IconTile } from '@/components/ui/Gradient';
+import { BrandMark } from '@/components/ui/BrandMark';
+import Constants from 'expo-constants';
 import { Input, SelectField } from '@/components/ui/Input';
 import { Sheet } from '@/components/ui/Sheet';
 import {
@@ -14,7 +17,6 @@ import {
   Row,
   StatusPill,
   SuccessBanner,
-  money,
   shortDate,
 } from '@/components/ui/Screen';
 import { MerchantKycSheet } from '@/components/aeps/MerchantKycSheet';
@@ -22,6 +24,7 @@ import { useAsync, useAction } from '@/hooks/useAsync';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { INDIAN_STATES } from '@/constants';
+import { useResponsive } from '@/hooks/useResponsive';
 import { pickImage, type PickedFile } from '@/services/imagePicker';
 import api from '@/services/api';
 
@@ -32,6 +35,7 @@ const distributorLabel = (value: unknown) =>
 export const ProfileScreen: React.FC = () => {
   const { user, logout, checkSession } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { padding } = useResponsive();
 
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.name ?? '');
@@ -56,6 +60,9 @@ export const ProfileScreen: React.FC = () => {
   const [notice, setNotice] = useState('');
   const [showKyc, setShowKyc] = useState(false);
   const [document, setDocument] = useState<{ title: string; uri: string } | null>(null);
+  const [personalOpen, setPersonalOpen] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
+  const navigation = useNavigation<any>();
 
   const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
   const isRetailer = user?.role === 'retailer';
@@ -65,6 +72,8 @@ export const ProfileScreen: React.FC = () => {
     [user?.retailerId],
     isRetailer
   );
+
+  const banks = useAsync<any[]>(async () => (await api.getSavedBanks()).data ?? [], [], isRetailer);
 
   const kycDone = !isRetailer || !!merchant.data?.isMerchantKycComplete;
 
@@ -144,123 +153,223 @@ export const ProfileScreen: React.FC = () => {
 
   const avatarUri = photo?.uri || user?.profilePicture;
 
+  const userId = user?.retailerId || user?.adminId || distributorLabel(user?.distributorId) || user?.code || '—';
+  const initials = (user?.name || 'U')
+    .split(' ')
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('');
+
+  const openSecurity = (mode: 'password' | 'pin') => {
+    resetSecurity();
+    setSecurityMode(mode);
+    setPasswordStep(1);
+  };
+
+  const firstBank = banks.data?.[0];
+  const themeLabel = theme[0].toUpperCase() + theme.slice(1);
+
+  const pickPhoto = () =>
+    Alert.alert('Profile photo', 'Choose a source', [
+      { text: 'Take a photo', onPress: () => changePhoto.run('camera') },
+      { text: 'Pick from gallery', onPress: () => changePhoto.run('library') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+
+  // Mockup 16: identity centred on the band, no app bar.
+  const [showId, setShowId] = useState(false);
+  // BHIM's profile header: back, avatar, name, and the masked ID that the eye
+  // reveals. Profile opens as a full-screen drawer, so this row is its only
+  // way back besides the swipe.
+  const masked = userId ? (showId ? userId : `${String(userId).slice(0, 2)}••••${String(userId).slice(-2)}`) : '';
+  const band = (
+    <View style={[styles.band, { paddingHorizontal: padding }]}>
+      <Pressable
+        onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Dashboard'))}
+        style={({ pressed }) => [styles.back, pressed && { opacity: 0.6 }]}
+        accessibilityRole="button"
+        accessibilityLabel="Close profile"
+        hitSlop={8}
+      >
+        <Ionicons name="arrow-back" size={26} color={colors.foreground} />
+      </Pressable>
+      <Pressable
+        onPress={() => setPersonalOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Personal details"
+        style={({ pressed }) => [styles.avatar, pressed && { opacity: 0.8 }]}
+      >
+        {avatarUri ? (
+          <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+        ) : (
+          <Text style={styles.avatarInitial}>{initials}</Text>
+        )}
+      </Pressable>
+      <View style={styles.who}>
+        <Text style={styles.userName} numberOfLines={1}>
+          {user?.name || 'User'}
+        </Text>
+        {!!userId && (
+          <Pressable
+            onPress={() => setShowId((v) => !v)}
+            style={styles.idRow}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={showId ? 'Hide user ID' : 'Show user ID'}
+          >
+            <MaterialCommunityIcons
+              name={showId ? 'eye-outline' : 'eye-off-outline'}
+              size={18}
+              color={colors.mutedForeground}
+            />
+            <Text style={styles.userMeta} numberOfLines={1}>
+              {masked}
+            </Text>
+          </Pressable>
+        )}
+      </View>
+    </View>
+  );
+
   return (
     <Screen
       refreshing={balances.refreshing}
       onRefresh={() => {
         balances.refresh();
-        if (isRetailer) merchant.refresh();
+        if (isRetailer) {
+          merchant.refresh();
+          banks.refresh();
+        }
       }}
       error={balances.error}
       onRetry={balances.reload}
+      header={band}
     >
-      <Card>
-        <CardContent style={styles.profileHeader}>
+      <View style={styles.body}>
+        {!!notice && <SuccessBanner message={notice} />}
+
+        {isRetailer && (
           <Pressable
-            onPress={() =>
-              editing
-                ? Alert.alert('Profile photo', 'Choose a source', [
-                    { text: 'Take a photo', onPress: () => changePhoto.run('camera') },
-                    { text: 'Pick from gallery', onPress: () => changePhoto.run('library') },
-                    { text: 'Cancel', style: 'cancel' },
-                  ])
-                : setEditing(true)
-            }
+            onPress={() => (kycDone ? navigation.navigate('KycStatus') : setShowKyc(true))}
+            style={({ pressed }) => [styles.card, styles.kycCard, pressed && { opacity: 0.85 }]}
             accessibilityRole="button"
-            accessibilityLabel={editing ? 'Change profile photo' : 'Edit profile'}
-            style={({ pressed }) => [styles.avatarWrap, pressed && { opacity: 0.8 }]}
+            accessibilityLabel={kycDone ? 'KYC verified. View KYC status' : 'KYC pending. Complete merchant eKYC'}
           >
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarInitial}>{user?.name?.charAt(0).toUpperCase() || 'U'}</Text>
-              </View>
-            )}
-            {editing && (
-              <View style={styles.avatarBadge}>
-                <MaterialCommunityIcons name="camera" size={13} color={colors.primaryForeground} />
-              </View>
-            )}
-          </Pressable>
-
-          <View style={styles.profileText}>
-            <Text style={styles.userName} numberOfLines={1}>
-              {user?.name || 'User'}
-            </Text>
-            <View style={styles.badgeRow}>
-              <View style={styles.roleBadge}>
-                <Text style={styles.roleText}>{(user?.role || 'user').toUpperCase()}</Text>
-              </View>
-              <StatusPill status={user?.isActive === false ? 'INACTIVE' : 'ACTIVE'} />
-            </View>
-            <Text style={styles.userMeta} numberOfLines={1}>
-              ID {user?.retailerId || user?.adminId || distributorLabel(user?.distributorId) || user?.code || '—'}
-            </Text>
-          </View>
-        </CardContent>
-      </Card>
-
-      {/* Full width rather than a two-up grid: an amount is the thing being
-          read here, and a wide row lets it sit at the end of the line where
-          the eye lands, instead of shrinking to fit half a screen. */}
-      <View style={styles.walletStack}>
-        {isAdmin ? (
-          <>
-            <Tile
-              icon="shield-account"
-              label="Admin wallet"
-              value={money(balances.data?.adminBalance)}
+            <MaterialCommunityIcons
+              name={kycDone ? 'check-decagram' : 'shield-alert'}
+              size={28}
+              color={kycDone ? colors.success : colors.warning}
             />
-          </>
-        ) : (
-          <>
-            <Tile
-              icon="fingerprint"
-              label="AEPS wallet"
-              value={money(balances.data?.aepsBalance)}
-            />
-            <Tile icon="wallet" label="Main wallet" value={money(balances.data?.mainBalance)} />
-          </>
-        )}
-      </View>
-
-      {!!notice && <SuccessBanner message={notice} />}
-
-      {isRetailer && (
-        <Card variant={kycDone ? 'default' : 'flat'}>
-          <CardContent style={styles.kycCard}>
-            <View style={[styles.kycIcon, kycDone ? styles.kycIconDone : styles.kycIconPending]}>
-              <MaterialCommunityIcons
-                name={kycDone ? 'shield-check' : 'shield-alert-outline'}
-                size={24}
-                color={kycDone ? colors.success : colors.warning}
-              />
-            </View>
             <View style={styles.kycText}>
               <Text style={styles.kycTitle}>{kycDone ? 'KYC verified' : 'KYC pending'}</Text>
               <Text style={styles.kycSubtitle}>
-                {kycDone
-                  ? 'Your merchant account is fully verified and unrestricted.'
-                  : 'Complete merchant eKYC to unlock AEPS transactions.'}
+                {kycDone ? 'Merchant eKYC complete' : 'Complete merchant eKYC to unlock AEPS'}
               </Text>
             </View>
-            {!kycDone && (
-              <Button size="sm" icon="arrow-right" onPress={() => setShowKyc(true)}>
-                Complete
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            <MaterialCommunityIcons name="chevron-right" size={22} color={colors.tabBarInactive} />
+          </Pressable>
+        )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle icon="account-details-outline">Personal information</CardTitle>
-        </CardHeader>
-        <CardContent style={styles.form}>
+        <View style={[styles.card, styles.menu]}>
+          <MenuRow icon="account-outline" title="Personal details" subtitle="Name, contact and documents" onPress={() => setPersonalOpen(true)} />
+          {isRetailer && (
+            <MenuRow
+              icon="bank-outline"
+              title="Settlement bank"
+              subtitle={
+                firstBank
+                  ? `${firstBank.bankName || 'Bank'} ·· ${String(firstBank.accountNumber).slice(-4)}`
+                  : banks.data
+                    ? 'Add a bank account'
+                    : undefined
+              }
+              onPress={() => navigation.navigate('AepsSettlement')}
+            />
+          )}
+          <MenuRow
+            icon="dialpad"
+            title="Wallet PIN"
+            subtitle={balances.data && !balances.data.hasPin ? 'Not set yet' : 'Change your 4-digit PIN'}
+            onPress={() => openSecurity('pin')}
+          />
+          <MenuRow icon="lock-outline" title="Change password" subtitle="Verified by email OTP" onPress={() => openSecurity('password')} />
+        </View>
+
+        <View style={[styles.card, styles.menu]}>
+          <MenuRow
+            icon="theme-light-dark"
+            title="Appearance"
+            subtitle={themeLabel}
+            onPress={() => setThemeOpen(true)}
+          />
+          <MenuRow icon="help-circle-outline" title="Help & support" subtitle="Raise or track a ticket" onPress={() => navigation.navigate('Support')} />
+        </View>
+
+        <Pressable
+          onPress={confirmLogout}
+          style={({ pressed }) => [styles.card, styles.logout, pressed && { opacity: 0.7 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Log out"
+        >
+          <Ionicons name="log-out-outline" size={24} color={colors.destructive} />
+          <Text style={styles.logoutText}>Logout</Text>
+        </Pressable>
+
+        <View style={styles.footer} accessibilityRole="text">
+          <BrandMark size={20} color={colors.foreground} />
+          <Text style={styles.footerBrand}>Shahparpay</Text>
+          <Text style={styles.footerVersion}>Version {Constants.expoConfig?.version ?? '1.0.0'}</Text>
+        </View>
+      </View>
+
+      <MerchantKycSheet visible={showKyc} onClose={() => setShowKyc(false)} onCompleted={merchant.refresh} />
+
+      {/* Personal details: view, edit and photo — hidden while a document is open over it. */}
+      <Sheet
+        visible={personalOpen && !document}
+        onClose={() => {
+          if (editing) cancelEdit();
+          setPersonalOpen(false);
+        }}
+        title="Personal details"
+        icon="account-outline"
+        footer={
+          editing ? (
+            <View style={styles.actionRow}>
+              <Button variant="secondary" onPress={cancelEdit} style={styles.flex}>
+                Cancel
+              </Button>
+              <Button
+                onPress={async () => {
+                  const res = await saveProfile.run();
+                  if (res) {
+                    setNotice('Profile updated.');
+                    setEditing(false);
+                    setPhoto(null);
+                    setPersonalOpen(false);
+                    checkSession();
+                  }
+                }}
+                loading={saveProfile.pending}
+                icon="content-save-outline"
+                style={styles.flex}
+              >
+                Save
+              </Button>
+            </View>
+          ) : (
+            <Button variant="outline" icon="pencil-outline" onPress={() => setEditing(true)} fullWidth>
+              Edit profile
+            </Button>
+          )
+        }
+      >
+        <View style={styles.form}>
           {editing ? (
             <>
+              <Button variant="outline" icon="camera-outline" onPress={pickPhoto} fullWidth>
+                {photo ? 'Photo selected — change' : 'Change profile photo'}
+              </Button>
               <Input label="Full name" value={name} onChangeText={setName} leftIcon="account-outline" />
               <Input
                 label="Email address"
@@ -278,41 +387,6 @@ export const ProfileScreen: React.FC = () => {
                 leftIcon="phone-outline"
                 autoComplete="tel"
               />
-            </>
-          ) : (
-            <>
-              <Row label="User ID" value={user?.code || user?.retailerId || user?.adminId || '—'} mono />
-              <Row label="Email" value={user?.email} />
-              <Row label="Mobile" value={user?.contactNumber} mono />
-              {isRetailer && !!distributorLabel(user?.distributorId) && (
-                <Row label="Distributor" value={distributorLabel(user?.distributorId)} mono />
-              )}
-              <Row
-                label="Wallet PIN"
-                value={<StatusPill status={balances.data?.hasPin ? 'ACTIVE' : 'PENDING'} />}
-              />
-              <Row label="Member since" value={shortDate(user?.createdAt)} last />
-              <Button
-                variant="outline"
-                icon="pencil-outline"
-                onPress={() => setEditing(true)}
-                style={{ marginTop: space.md }}
-                fullWidth
-              >
-                Edit profile
-              </Button>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle icon="storefront-outline">Business details</CardTitle>
-        </CardHeader>
-        <CardContent style={styles.form}>
-          {editing ? (
-            <>
               <Input
                 label="Business name"
                 value={businessName}
@@ -345,179 +419,104 @@ export const ProfileScreen: React.FC = () => {
                   ))}
                 </View>
               )}
-
               {!!saveProfile.error && <ErrorBanner message={saveProfile.error} />}
-              <View style={styles.actionRow}>
-                <Button variant="secondary" onPress={cancelEdit} style={styles.flex}>
-                  Cancel
-                </Button>
-                <Button
-                  onPress={async () => {
-                    const res = await saveProfile.run();
-                    if (res) {
-                      setNotice('Profile updated.');
-                      setEditing(false);
-                      setPhoto(null);
-                      checkSession();
-                    }
-                  }}
-                  loading={saveProfile.pending}
-                  icon="content-save-outline"
-                  style={styles.flex}
-                >
-                  Save
-                </Button>
-              </View>
             </>
           ) : (
             <>
-              <Row label="Business name" value={user?.businessName || '—'} />
-              <Row label="Business address" value={user?.businessAddress || '—'} />
-              <Row label="City" value={user?.address?.city || '—'} />
-              <Row label="District" value={user?.address?.district || '—'} />
-              <Row label="State" value={user?.address?.state || '—'} last={!user?.gstNumber} />
-              {!!user?.gstNumber && <Row label="GST number" value={user.gstNumber} mono last />}
+              <View>
+                <Row label="User ID" value={user?.code || user?.retailerId || user?.adminId || '—'} mono />
+                <Row label="Email" value={user?.email} />
+                <Row label="Mobile" value={user?.contactNumber} mono />
+                {isRetailer && !!distributorLabel(user?.distributorId) && (
+                  <Row label="Distributor" value={distributorLabel(user?.distributorId)} mono />
+                )}
+                <Row label="Role" value={(user?.role || 'user').toUpperCase()} />
+                <Row label="Status" value={<StatusPill status={user?.isActive === false ? 'INACTIVE' : 'ACTIVE'} />} />
+                <Row label="Member since" value={shortDate(user?.createdAt)} />
+                <Row label="Business name" value={user?.businessName || '—'} />
+                <Row label="Business address" value={user?.businessAddress || '—'} />
+                <Row label="City" value={user?.address?.city || '—'} />
+                <Row label="District" value={user?.address?.district || '—'} />
+                <Row label="State" value={user?.address?.state || '—'} last={!user?.gstNumber} />
+                {!!user?.gstNumber && <Row label="GST number" value={user.gstNumber} mono last />}
+              </View>
+              <Banner
+                tone="info"
+                message="Identity details cannot be edited here. Contact support to correct your KYC records."
+              />
+              <View style={styles.documentStack}>
+                <DocumentTile
+                  title="Aadhaar"
+                  number={user?.aadhaarNumber}
+                  uri={user?.aadhaarPicture}
+                  onPress={() =>
+                    user?.aadhaarPicture && setDocument({ title: 'Aadhaar document', uri: user.aadhaarPicture })
+                  }
+                />
+                <DocumentTile
+                  title="PAN"
+                  number={user?.panNumber}
+                  uri={user?.panPicture}
+                  onPress={() => user?.panPicture && setDocument({ title: 'PAN document', uri: user.panPicture })}
+                />
+              </View>
             </>
           )}
-        </CardContent>
-      </Card>
+        </View>
+      </Sheet>
 
-      <Card>
-        <CardHeader>
-          <CardTitle icon="shield-account-outline">Identity documents</CardTitle>
-        </CardHeader>
-        <CardContent style={styles.form}>
-          <Banner
-            tone="info"
-            message="Identity details cannot be edited here. Contact support to correct your KYC records."
-          />
-          <View style={styles.documentStack}>
-            <DocumentTile
-              title="Aadhaar"
-              number={user?.aadhaarNumber}
-              uri={user?.aadhaarPicture}
-              onPress={() =>
-                user?.aadhaarPicture &&
-                setDocument({ title: 'Aadhaar document', uri: user.aadhaarPicture })
-              }
-            />
-            <DocumentTile
-              title="PAN"
-              number={user?.panNumber}
-              uri={user?.panPicture}
-              onPress={() =>
-                user?.panPicture && setDocument({ title: 'PAN document', uri: user.panPicture })
-              }
-            />
-          </View>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle icon="theme-light-dark">Appearance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <View style={styles.themeRow}>
-            {(['light', 'dark', 'system'] as const).map((option) => {
-              const active = theme === option;
-              return (
-                <Pressable
-                  key={option}
-                  onPress={() => setTheme(option)}
-                  style={({ pressed }) => [
-                    styles.themeChip,
-                    active && styles.themeChipActive,
-                    pressed && { opacity: 0.75 },
-                  ]}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={`${option} theme`}
-                >
-                  <MaterialCommunityIcons
-                    name={
-                      option === 'light'
-                        ? 'white-balance-sunny'
-                        : option === 'dark'
-                          ? 'weather-night'
-                          : 'cellphone-cog'
-                    }
-                    size={17}
-                    color={active ? colors.primaryForeground : colors.foreground}
-                  />
-                  <Text style={[styles.themeText, active && styles.themeTextActive]}>
-                    {option[0].toUpperCase() + option.slice(1)}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle icon="lock-outline">Security</CardTitle>
-        </CardHeader>
-        <CardContent style={styles.form}>
-          {passwordStep === 0 && (
-            <>
-              <Button
-                variant="outline"
-                icon="key-outline"
-                onPress={() => {
-                  setSecurityMode('password');
-                  setPasswordStep(1);
-                }}
-                fullWidth
-              >
-                Change password
-              </Button>
-              <Button
-                variant="outline"
-                icon="dialpad"
-                onPress={() => {
-                  setSecurityMode('pin');
-                  setPasswordStep(1);
-                }}
-                fullWidth
-              >
-                Change wallet PIN
-              </Button>
-            </>
-          )}
-
-          {passwordStep === 1 && (
+      {/* Password and PIN share one OTP-gated flow. */}
+      <Sheet
+        visible={passwordStep > 0}
+        onClose={resetSecurity}
+        dismissible={!(requestOtp.pending || changePassword.pending || changePin.pending)}
+        title={securityMode === 'pin' ? 'Wallet PIN' : 'Change password'}
+        icon={securityMode === 'pin' ? 'form-textbox-password' : 'lock-outline'}
+        footer={
+          passwordStep === 1 ? (
+            <Button
+              onPress={async () => {
+                const res = await requestOtp.run();
+                if (res) setPasswordStep(2);
+              }}
+              loading={requestOtp.pending}
+              icon="email-outline"
+              fullWidth
+            >
+              Send OTP
+            </Button>
+          ) : (
+            <Button
+              onPress={async () => {
+                const isPin = securityMode === 'pin';
+                const res = isPin ? await changePin.run() : await changePassword.run();
+                if (res) {
+                  setNotice(isPin ? 'Wallet PIN updated.' : 'Password updated.');
+                  resetSecurity();
+                }
+              }}
+              disabled={securityMode === 'pin' ? !pinValid : !passwordValid}
+              loading={changePassword.pending || changePin.pending}
+              icon="shield-check-outline"
+              fullWidth
+            >
+              Update
+            </Button>
+          )
+        }
+      >
+        <View style={styles.form}>
+          {passwordStep === 1 ? (
             <>
               <Banner
                 tone="info"
                 message={`We will email a 6-digit code to ${user?.email ?? 'your registered address'} to confirm it is you.`}
               />
               {!!requestOtp.error && <ErrorBanner message={requestOtp.error} />}
-              <View style={styles.actionRow}>
-                <Button variant="secondary" onPress={resetSecurity} style={styles.flex}>
-                  Cancel
-                </Button>
-                <Button
-                  onPress={async () => {
-                    const res = await requestOtp.run();
-                    if (res) {
-                      setNotice('OTP sent to your email.');
-                      setPasswordStep(2);
-                    }
-                  }}
-                  loading={requestOtp.pending}
-                  icon="email-outline"
-                  style={styles.flex}
-                >
-                  Send OTP
-                </Button>
-              </View>
             </>
-          )}
-
-          {passwordStep === 2 && (
+          ) : (
             <>
+              <SuccessBanner message="OTP sent to your email." />
               <Input
                 label="Email OTP"
                 required
@@ -551,9 +550,7 @@ export const ProfileScreen: React.FC = () => {
                     secureTextEntry={!showPassword}
                     leftIcon="lock-check-outline"
                     error={
-                      confirmPassword && confirmPassword !== newPassword
-                        ? 'Passwords do not match'
-                        : undefined
+                      confirmPassword && confirmPassword !== newPassword ? 'Passwords do not match' : undefined
                     }
                   />
                 </>
@@ -588,42 +585,37 @@ export const ProfileScreen: React.FC = () => {
               )}
               {!!changePassword.error && <ErrorBanner message={changePassword.error} />}
               {!!changePin.error && <ErrorBanner message={changePin.error} />}
-              <View style={styles.actionRow}>
-                <Button variant="secondary" onPress={resetSecurity} style={styles.flex}>
-                  Cancel
-                </Button>
-                <Button
-                  onPress={async () => {
-                    const isPin = securityMode === 'pin';
-                    const res = isPin ? await changePin.run() : await changePassword.run();
-                    if (res) {
-                      setNotice(isPin ? 'Wallet PIN updated.' : 'Password updated.');
-                      resetSecurity();
-                    }
-                  }}
-                  disabled={securityMode === 'pin' ? !pinValid : !passwordValid}
-                  loading={changePassword.pending || changePin.pending}
-                  icon="shield-check-outline"
-                  style={styles.flex}
-                >
-                  Update
-                </Button>
-              </View>
             </>
           )}
-        </CardContent>
-      </Card>
+        </View>
+      </Sheet>
 
-      {/* Destructive action kept apart from everything above. */}
-      <Button variant="destructive" icon="logout" onPress={confirmLogout} fullWidth>
-        Log out
-      </Button>
-
-      <MerchantKycSheet
-        visible={showKyc}
-        onClose={() => setShowKyc(false)}
-        onCompleted={merchant.refresh}
-      />
+      <Sheet visible={themeOpen} onClose={() => setThemeOpen(false)} title="Appearance" icon="theme-light-dark">
+        <View style={styles.themeRow}>
+          {(['light', 'dark', 'system'] as const).map((option) => {
+            const active = theme === option;
+            return (
+              <Pressable
+                key={option}
+                onPress={() => setTheme(option)}
+                style={({ pressed }) => [styles.themeChip, active && styles.themeChipActive, pressed && { opacity: 0.75 }]}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`${option} theme`}
+              >
+                <MaterialCommunityIcons
+                  name={option === 'light' ? 'white-balance-sunny' : option === 'dark' ? 'weather-night' : 'cellphone-cog'}
+                  size={17}
+                  color={active ? colors.primaryForeground : colors.foreground}
+                />
+                <Text style={[styles.themeText, active && styles.themeTextActive]}>
+                  {option[0].toUpperCase() + option.slice(1)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </Sheet>
 
       <Sheet
         visible={!!document}
@@ -654,20 +646,29 @@ export const ProfileScreen: React.FC = () => {
   );
 };
 
-const Tile: React.FC<{ icon: string; label: string; value: string }> = ({
-  icon,
-  label,
-  value,
-}) => (
-  <View style={styles.tile}>
-    <IconTile icon={icon} size={36} iconSize={18} />
-    <Text style={styles.tileLabel} numberOfLines={1}>
-      {label}
-    </Text>
-    <Text style={styles.tileValue} numberOfLines={1} adjustsFontSizeToFit>
-      {value}
-    </Text>
-  </View>
+/** Mockup menu row: 40px rounded-square chip, title, optional sub-line, chevron. */
+/** BHIM's menu row: a grey circle with a line icon, title and hint, chevron. */
+const MenuRow: React.FC<{
+  icon: string;
+  title: string;
+  subtitle?: string;
+  onPress: () => void;
+}> = ({ icon, title, subtitle, onPress }) => (
+  <Pressable
+    onPress={onPress}
+    style={({ pressed }) => [styles.menuRow, pressed && { opacity: 0.7 }]}
+    accessibilityRole="button"
+    accessibilityLabel={subtitle ? `${title}. ${subtitle}` : title}
+  >
+    <IconTile icon={icon} size={48} iconSize={22} />
+    <View style={styles.menuText}>
+      <Text style={styles.menuTitle} numberOfLines={1}>
+        {title}
+      </Text>
+      {!!subtitle && <Text style={styles.menuSubtitle}>{subtitle}</Text>}
+    </View>
+    <Ionicons name="chevron-forward" size={22} color={colors.foreground} />
+  </Pressable>
 );
 
 /** Masked number + tappable thumbnail, or an explicit "not uploaded" state. */
@@ -709,84 +710,57 @@ const DocumentTile: React.FC<{
 );
 
 const styles = themed((c) => ({
-  profileHeader: { flexDirection: 'row', alignItems: 'center', gap: space.lg },
-  avatarWrap: { width: 62, height: 62 },
-  avatar: { width: 62, height: 62, borderRadius: radius.pill },
-  avatarPlaceholder: {
-    width: 62,
-    height: 62,
-    borderRadius: radius.pill,
-    backgroundColor: c.accentSubtle,
-    borderWidth: 1,
-    borderColor: c.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitial: { fontSize: t.h2, fontWeight: '700', color: c.accent },
-  avatarBadge: {
-    position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: 24,
-    height: 24,
-    borderRadius: radius.pill,
-    backgroundColor: c.primary,
-    borderWidth: 2,
-    borderColor: c.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileText: { flex: 1, minWidth: 0, gap: 5 },
-  userName: { fontSize: t.bodyLg, fontWeight: '700', color: c.foreground },
-  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' },
-  roleBadge: {
-    paddingHorizontal: space.sm,
-    paddingVertical: 3,
-    borderRadius: radius.pill,
-    backgroundColor: c.accentSubtle,
-  },
-  roleText: { fontSize: t.micro, fontWeight: '700', color: c.accent, letterSpacing: 0.3 },
-  userMeta: { fontSize: t.caption, color: c.mutedForeground, fontVariant: ['tabular-nums'] },
-  walletStack: { gap: space.sm },
-  // A row, not a block: label reads from the left, amount lands on the right
-  // edge where the eye already is when comparing two balances.
-  tile: {
+  band: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    paddingVertical: space.md,
-    paddingHorizontal: space.lg,
-    borderRadius: radius.md,
-    backgroundColor: c.card,
-    borderWidth: 1,
-    borderColor: c.border,
+    paddingTop: space.sm,
+    paddingBottom: space.lg,
   },
-  tileLabel: { flex: 1, fontSize: t.small, fontWeight: '600', color: c.mutedForeground },
-  tileValue: {
-    fontSize: t.title,
-    fontWeight: '700',
-    color: c.foreground,
-    fontVariant: ['tabular-nums'],
-  },
-  kycCard: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  kycIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.pill,
+  back: { width: 40, height: 44, justifyContent: 'center' },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: c.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  kycIconDone: { backgroundColor: c.successSubtle },
-  kycIconPending: { backgroundColor: c.warningSubtle },
+  avatarImage: { width: '100%', height: '100%' },
+  avatarInitial: { fontSize: 20, fontWeight: '600', color: c.foreground },
+  who: { flex: 1, minWidth: 0, gap: 4 },
+  userName: { fontSize: t.title + 1, fontWeight: '500', color: c.foreground },
+  idRow: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
+  userMeta: { fontSize: t.body, color: c.mutedForeground, fontVariant: ['tabular-nums'] },
+  body: { gap: space.lg, paddingTop: space.xs },
+  card: { backgroundColor: c.card, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border },
+  kycCard: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg },
   kycText: { flex: 1, minWidth: 0, gap: 2 },
-  kycTitle: { fontSize: t.body, fontWeight: '700', color: c.foreground },
-  kycSubtitle: { fontSize: t.caption, color: c.mutedForeground, lineHeight: 17 },
+  kycTitle: { fontSize: t.bodyLg, fontWeight: '500', color: c.foreground },
+  kycSubtitle: { fontSize: t.small, color: c.mutedForeground },
+  menu: { paddingVertical: space.xs, paddingHorizontal: space.lg },
+  menuRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, minHeight: 72 },
+  menuText: { flex: 1, minWidth: 0, gap: 3 },
+  menuTitle: { fontSize: t.bodyLg, fontWeight: '400', color: c.foreground },
+  menuSubtitle: { fontSize: t.small, color: c.mutedForeground },
+  logout: {
+    minHeight: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.md,
+  },
+  logoutText: { fontSize: t.bodyLg, fontWeight: '500', color: c.destructive },
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm, paddingVertical: space.xl },
+  footerBrand: { fontSize: t.body, fontWeight: '700', color: c.foreground, letterSpacing: 0.3 },
+  footerVersion: { fontSize: t.body, color: c.mutedForeground, marginLeft: space.sm },
   form: { gap: space.lg },
   actionRow: { flexDirection: 'row', gap: space.sm },
   flex: { flex: 1 },
   picker: { borderRadius: radius.md, backgroundColor: c.secondary, padding: space.xs },
   pickerItem: {
-    minHeight: 44,
+    minHeight: 48,
     justifyContent: 'center',
     paddingHorizontal: space.md,
     borderRadius: radius.sm,
@@ -832,7 +806,14 @@ const styles = themed((c) => ({
     justifyContent: 'center',
   },
   documentFull: { width: '100%', height: 320, borderRadius: radius.md, backgroundColor: c.secondary },
-  themeRow: { flexDirection: 'row', gap: space.sm },
+  // One pill track, like the mockup's segmented control.
+  themeRow: {
+    flexDirection: 'row',
+    gap: space.xs,
+    padding: space.xs,
+    borderRadius: radius.pill,
+    backgroundColor: c.surfaceAlt,
+  },
   themeChip: {
     flex: 1,
     minHeight: 48,
@@ -840,11 +821,9 @@ const styles = themed((c) => ({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: c.border,
+    borderRadius: radius.pill,
   },
-  themeChipActive: { backgroundColor: c.primary, borderColor: c.primary },
+  themeChipActive: { backgroundColor: c.primary },
   themeText: { fontSize: t.caption, fontWeight: '600', color: c.foreground },
   themeTextActive: { color: c.primaryForeground },
 }));

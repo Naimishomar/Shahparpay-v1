@@ -1,20 +1,22 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
-import { themed, radius, space, type as t } from '../../theme/colors';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { colors, themed, radius, space, type as t } from '../../theme/colors';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { IconTile } from '@/components/ui/Gradient';
 import { Input, SelectField } from '@/components/ui/Input';
 import {
   Screen,
+  SectionTitle,
   Banner,
   EmptyState,
   ErrorBanner,
   Row,
   Segmented,
-  StatusPill,
   SuccessBanner,
   money,
   shortDate,
+  SkeletonRows,
 } from '@/components/ui/Screen';
 import { PsaRegistrationSheet } from '@/components/pan/PsaRegistrationSheet';
 import { useAsync, useAction } from '@/hooks/useAsync';
@@ -23,11 +25,15 @@ import api from '@/services/api';
 
 const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
+// Biometric and Standard PSA are switched off, as on the website: only the
+// eSeva flow is offered. Their tabs below are kept intact for when the
+// provider brings them back — restore the tab bar and these two lines then.
 const TABS = [
-  { key: 'eseva', label: 'eSeva PAN' },
-  { key: 'bio', label: 'Biometric PSA' },
-  { key: 'std', label: 'Standard PSA' },
+  { key: 'eseva', label: 'eSeva' },
+  { key: 'bio', label: 'Biometric' },
+  { key: 'std', label: 'Standard' },
 ];
+const ENABLED_TABS = TABS.filter((t) => t.key === 'eseva');
 
 export const PanCardScreen: React.FC = () => {
   const [tab, setTab] = useState('eseva');
@@ -42,26 +48,30 @@ export const PanCardScreen: React.FC = () => {
       error={history.error}
       onRetry={history.reload}
     >
-      <Segmented options={TABS} value={tab} onChange={setTab} />
+      {ENABLED_TABS.length > 1 && (
+        <Segmented options={ENABLED_TABS} value={tab} onChange={setTab} scroll={false} />
+      )}
       {!!notice && <SuccessBanner message={notice} />}
 
       {tab === 'eseva' && <EsevaTab onNotice={setNotice} onDone={history.reload} />}
       {tab === 'bio' && <BiometricTab onNotice={setNotice} onDone={history.reload} />}
       {tab === 'std' && <StandardTab onNotice={setNotice} onDone={history.reload} />}
 
+      <SectionTitle>Application history</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="history">Application history</CardTitle>
-        </CardHeader>
         <CardContent>
-          {history.loading ? null : history.data?.length ? (
-            history.data.slice(0, 20).map((txn: any) => (
-              <View key={txn._id || txn.transactionId} style={styles.item}>
+          {history.loading ? <SkeletonRows count={3} /> : history.data?.length ? (
+            history.data.slice(0, 20).map((txn: any, index: number, shown: any[]) => (
+              <View
+                key={txn._id || txn.transactionId}
+                style={[styles.item, index === shown.length - 1 && styles.itemLast]}
+              >
                 <View style={styles.itemTop}>
+                  <IconTile icon="card-account-details-outline" size={44} iconSize={20} />
                   <Text style={styles.itemType}>
                     {String(txn.type || 'PAN').replace(/_/g, ' ')}
                   </Text>
-                  <StatusPill status={txn.status} />
+                  <StatusText status={txn.status} />
                 </View>
                 <Row label="Amount" value={money(txn.amount)} mono />
                 <Row label="Application" value={txn.metadata?.application_number} />
@@ -94,9 +104,11 @@ const EsevaTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void }> 
   const [stateQuery, setStateQuery] = useState('');
   const [statusQuery, setStatusQuery] = useState('');
   const [couponCount, setCouponCount] = useState('1');
-  const [agencyName, setAgencyName] = useState('');
 
   const psa = useAsync<any>(async () => await api.getMyPsaId(), []);
+  // The agency name eSeva expects on a coupon order is the retailer's own PSA
+  // ID, so it is filled from their PSA record instead of typed every time.
+  const agencyName = String(psa.data?.psa_id ?? '');
 
   const apply = useAction(async () => {
     const res = await api.applyPanService({
@@ -150,143 +162,153 @@ const EsevaTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void }> 
 
   return (
     <>
+      <SectionTitle>Your eSeva PSA</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="badge-account-outline">Your eSeva PSA</CardTitle>
-        </CardHeader>
         <CardContent>
+          {psa.loading ? (
+            <SkeletonRows count={1} amount={false} />
+          ) : (
+          <>
           <Row label="PSA ID" value={psa.data?.psa_id || 'Not issued yet'} />
-          <Row label="Status" value={<StatusPill status={psa.data?.status || 'PENDING'} />} />
+          <Row label="Status" value={<StatusText status={psa.data?.status || 'PENDING'} />} />
           <Row label="Application number" value={psa.data?.application_number} last />
+          </>
+          )}
         </CardContent>
       </Card>
 
-      {!hasPsa && (
-        <Card>
-          <CardHeader>
-            <CardTitle icon="store-plus-outline">Apply for PAN agency</CardTitle>
-          </CardHeader>
-          <CardContent style={styles.form}>
-            <Input
-              label="PAN number"
-              required
-              value={panNumber}
-              onChangeText={(v) => setPanNumber(v.toUpperCase().slice(0, 10))}
-              autoCapitalize="characters"
-              maxLength={10}
-              placeholder="ABCDE1234F"
-              leftIcon="card-account-details-outline"
-              error={panNumber.length === 10 && !panValid ? 'Invalid PAN format' : undefined}
-              helperText="5 letters, 4 digits, 1 letter"
-            />
-            <Input label="Shop name" required value={shopName} onChangeText={setShopName} leftIcon="storefront-outline" />
-            <Input
-              label="Shop address"
-              required
-              value={shopAddress}
-              onChangeText={setShopAddress}
-              multiline
-              leftIcon="map-marker-outline"
-            />
-            <Input label="District" required value={districtName} onChangeText={setDistrictName} leftIcon="city" />
-            <Input
-              label="Pincode"
-              required
-              value={pincode}
-              onChangeText={(v) => setPincode(v.replace(/\D/g, '').slice(0, 6))}
-              keyboardType="number-pad"
-              leftIcon="mailbox-outline"
-            />
-            <SelectField
-              label="State"
-              required
-              value={stateName}
-              placeholder="Select state"
-              open={showStates}
-              onPress={() => setShowStates(!showStates)}
-            />
-            {showStates && (
-              <View style={styles.picker}>
-                <Input placeholder="Search state" value={stateQuery} onChangeText={setStateQuery} leftIcon="magnify" />
-                <ScrollView style={styles.pickerList} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-                  {filteredStates.map((s) => (
-                    <Pressable
-                      key={s}
-                      onPress={() => {
-                        setStateName(s);
-                        setShowStates(false);
-                        setStateQuery('');
-                      }}
-                      style={({ pressed }) => [styles.pickerItem, pressed && styles.pickerItemPressed]}
-                      accessibilityRole="button"
-                    >
-                      <Text style={styles.pickerText}>{s}</Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-            {!!apply.error && <ErrorBanner message={apply.error} />}
-            <Button
-              onPress={async () => {
-                const res = await apply.run();
-                if (res) {
-                  onNotice(res.message || 'PAN agency application submitted.');
-                  psa.reload();
-                  onDone();
-                }
-              }}
-              disabled={!valid}
-              loading={apply.pending}
-              icon="send-outline"
-              size="lg"
-              fullWidth
-            >
-              Submit application
-            </Button>
-          </CardContent>
-        </Card>
+      {/* Registration only when the lookup has answered with no PSA ID — never
+          while it is still loading, or it flashes for retailers who have one. */}
+      {!psa.loading && !hasPsa && (
+        <>
+          <SectionTitle>Apply for PAN agency</SectionTitle>
+          <Card>
+            <CardContent style={styles.form}>
+              <Input
+                label="PAN number"
+                required
+                value={panNumber}
+                onChangeText={(v) => setPanNumber(v.toUpperCase().slice(0, 10))}
+                autoCapitalize="characters"
+                maxLength={10}
+                placeholder="ABCDE1234F"
+                leftIcon="card-account-details-outline"
+                error={panNumber.length === 10 && !panValid ? 'Invalid PAN format' : undefined}
+                helperText="5 letters, 4 digits, 1 letter"
+              />
+              <Input label="Shop name" required value={shopName} onChangeText={setShopName} leftIcon="storefront-outline" />
+              <Input
+                label="Shop address"
+                required
+                value={shopAddress}
+                onChangeText={setShopAddress}
+                multiline
+                leftIcon="map-marker-outline"
+              />
+              <Input label="District" required value={districtName} onChangeText={setDistrictName} leftIcon="city" />
+              <Input
+                label="Pincode"
+                required
+                value={pincode}
+                onChangeText={(v) => setPincode(v.replace(/\D/g, '').slice(0, 6))}
+                keyboardType="number-pad"
+                leftIcon="mailbox-outline"
+              />
+              <SelectField
+                label="State"
+                required
+                value={stateName}
+                placeholder="Select state"
+                open={showStates}
+                onPress={() => setShowStates(!showStates)}
+              />
+              {showStates && (
+                <View style={styles.picker}>
+                  <Input placeholder="Search state" value={stateQuery} onChangeText={setStateQuery} leftIcon="magnify" />
+                  <ScrollView style={styles.pickerList} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                    {filteredStates.map((s) => (
+                      <Pressable
+                        key={s}
+                        onPress={() => {
+                          setStateName(s);
+                          setShowStates(false);
+                          setStateQuery('');
+                        }}
+                        style={({ pressed }) => [styles.pickerItem, pressed && styles.pickerItemPressed]}
+                        accessibilityRole="button"
+                      >
+                        <Text style={styles.pickerText}>{s}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+              {!!apply.error && <ErrorBanner message={apply.error} />}
+              <Button
+                onPress={async () => {
+                  const res = await apply.run();
+                  if (res) {
+                    onNotice(res.message || 'PAN agency application submitted.');
+                    psa.reload();
+                    onDone();
+                  }
+                }}
+                disabled={!valid}
+                loading={apply.pending}
+                icon="send-outline"
+                size="lg"
+                fullWidth
+              >
+                Submit application
+              </Button>
+            </CardContent>
+          </Card>
+        </>
       )}
 
       {hasPsa && (
-        <Card>
-          <CardHeader>
-            <CardTitle icon="ticket-percent-outline">Buy PAN coupons</CardTitle>
-          </CardHeader>
-          <CardContent style={styles.form}>
-            <Input label="Agency name" required value={agencyName} onChangeText={setAgencyName} leftIcon="storefront-outline" />
-            <Input
-              label="Number of coupons"
-              required
-              value={couponCount}
-              onChangeText={(v) => setCouponCount(v.replace(/\D/g, '').slice(0, 3))}
-              keyboardType="number-pad"
-              leftIcon="numeric"
-            />
-            {!!buyCoupons.error && <ErrorBanner message={buyCoupons.error} />}
-            <Button
-              onPress={async () => {
-                const res = await buyCoupons.run();
-                if (res) {
-                  onNotice(res.message || 'Coupon request submitted.');
-                  onDone();
-                }
-              }}
-              disabled={!agencyName.trim() || Number(couponCount) < 1}
-              loading={buyCoupons.pending}
-              icon="cart-outline"
-              fullWidth
-            >
-              Buy coupons
-            </Button>
-          </CardContent>
-        </Card>
+        <>
+          <SectionTitle>Buy PAN coupons</SectionTitle>
+          <Card>
+            <CardContent style={styles.form}>
+              <Input
+                label="Agency name"
+                value={agencyName}
+                editable={false}
+                leftIcon="storefront-outline"
+                helperText="Your PSA ID, filled in automatically"
+              />
+              <Input
+                label="Number of coupons"
+                required
+                value={couponCount}
+                onChangeText={(v) => setCouponCount(v.replace(/\D/g, '').slice(0, 3))}
+                keyboardType="number-pad"
+                leftIcon="numeric"
+              />
+              {!!buyCoupons.error && <ErrorBanner message={buyCoupons.error} />}
+              <Button
+                onPress={async () => {
+                  const res = await buyCoupons.run();
+                  if (res) {
+                    onNotice(res.message || 'Coupon request submitted.');
+                    onDone();
+                  }
+                }}
+                disabled={!agencyName.trim() || Number(couponCount) < 1}
+                loading={buyCoupons.pending}
+                icon="cart-outline"
+                fullWidth
+              >
+                Buy coupons
+              </Button>
+            </CardContent>
+          </Card>
+        </>
       )}
 
+      <SectionTitle>Check application status</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="file-search-outline">Check application status</CardTitle>
-        </CardHeader>
         <CardContent style={styles.form}>
           <Input
             label="Application number"
@@ -369,13 +391,11 @@ const BiometricTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void
 
   return (
     <>
+      <SectionTitle>Biometric PSA</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="fingerprint">Biometric PSA</CardTitle>
-        </CardHeader>
         <CardContent>
           <Row label="PSA ID" value={existing?.psa_id || 'Not registered'} />
-          <Row label="Status" value={<StatusPill status={existing?.status || 'PENDING'} />} />
+          <Row label="Status" value={<StatusText status={existing?.status || 'PENDING'} />} />
           <Row label="Registered" value={shortDate(existing?.createdAt)} last />
         </CardContent>
       </Card>
@@ -388,7 +408,6 @@ const BiometricTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void
               message="Register once as a biometric PSA agent to start filing PAN applications. Already registered elsewhere? Link the PSA ID instead."
             />
             <Button
-              icon="account-plus-outline"
               onPress={() => setShowRegister(true)}
               size="lg"
               fullWidth
@@ -423,10 +442,8 @@ const BiometricTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void
         </Card>
       )}
 
+      <SectionTitle>Sync status</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="sync">Sync status</CardTitle>
-        </CardHeader>
         <CardContent style={styles.form}>
           <Segmented
             options={[
@@ -458,37 +475,37 @@ const BiometricTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void
       </Card>
 
       {hasPsa && (
-        <Card>
-          <CardHeader>
-            <CardTitle icon="ticket-percent-outline">Buy coupons</CardTitle>
-          </CardHeader>
-          <CardContent style={styles.form}>
-            <Input
-              label="Amount"
-              required
-              value={couponAmount}
-              onChangeText={(v) => setCouponAmount(v.replace(/[^0-9.]/g, ''))}
-              keyboardType="decimal-pad"
-              leftIcon="currency-inr"
-            />
-            {!!buy.error && <ErrorBanner message={buy.error} />}
-            <Button
-              onPress={async () => {
-                const res = await buy.run();
-                if (res) {
-                  onNotice(res.message || 'Coupon payment submitted.');
-                  onDone();
-                }
-              }}
-              disabled={Number(couponAmount) <= 0}
-              loading={buy.pending}
-              icon="cart-outline"
-              fullWidth
-            >
-              Buy coupons
-            </Button>
-          </CardContent>
-        </Card>
+        <>
+          <SectionTitle>Buy coupons</SectionTitle>
+          <Card>
+            <CardContent style={styles.form}>
+              <Input
+                label="Amount"
+                required
+                value={couponAmount}
+                onChangeText={(v) => setCouponAmount(v.replace(/[^0-9.]/g, ''))}
+                keyboardType="decimal-pad"
+                leftIcon="currency-inr"
+              />
+              {!!buy.error && <ErrorBanner message={buy.error} />}
+              <Button
+                onPress={async () => {
+                  const res = await buy.run();
+                  if (res) {
+                    onNotice(res.message || 'Coupon payment submitted.');
+                    onDone();
+                  }
+                }}
+                disabled={Number(couponAmount) <= 0}
+                loading={buy.pending}
+                icon="cart-outline"
+                fullWidth
+              >
+                Buy coupons
+              </Button>
+            </CardContent>
+          </Card>
+        </>
       )}
 
       <PsaRegistrationSheet
@@ -533,13 +550,11 @@ const StandardTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void 
 
   return (
     <>
+      <SectionTitle>Standard PSA</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="card-account-details-star-outline">Standard PSA</CardTitle>
-        </CardHeader>
         <CardContent>
           <Row label="PSA ID" value={existing?.psa_id || 'Not registered'} />
-          <Row label="Status" value={<StatusPill status={existing?.status || 'PENDING'} />} />
+          <Row label="Status" value={<StatusText status={existing?.status || 'PENDING'} />} />
           <Row label="Registered" value={shortDate(existing?.createdAt)} last />
           {/* The provider only accepts a resubmission after a rejection. */}
           {['REJECTED', 'FAILED'].includes(String(existing?.status).toUpperCase()) && (
@@ -564,7 +579,6 @@ const StandardTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void 
               message="Register as a standard PSA agent to file PAN applications through the PSA portal. Approval usually takes a working day."
             />
             <Button
-              icon="account-plus-outline"
               onPress={() => setShowRegister(true)}
               size="lg"
               fullWidth
@@ -575,10 +589,8 @@ const StandardTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void 
         </Card>
       ) : (
         <>
+          <SectionTitle>Portal password</SectionTitle>
           <Card>
-            <CardHeader>
-              <CardTitle icon="key-outline">Portal password</CardTitle>
-            </CardHeader>
             <CardContent style={styles.form}>
               {!!password.error && <ErrorBanner message={password.error} />}
               {!!password.pending === false && null}
@@ -597,10 +609,8 @@ const StandardTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void 
             </CardContent>
           </Card>
 
+          <SectionTitle>Buy coupons</SectionTitle>
           <Card>
-            <CardHeader>
-              <CardTitle icon="ticket-percent-outline">Buy coupons</CardTitle>
-            </CardHeader>
             <CardContent style={styles.form}>
               <Input
                 label="Amount"
@@ -645,14 +655,36 @@ const StandardTab: React.FC<{ onNotice: (m: string) => void; onDone: () => void 
   );
 };
 
+/** BHIM status: small coloured text, never a filled pill. */
+const StatusText: React.FC<{ status?: string | null }> = ({ status }) => {
+  const s = String(status || 'PENDING').toUpperCase();
+  const color = /SUCCESS|COMPLETE|APPROVED|ACTIVE|ACCEPTED|CONVERTED/.test(s)
+    ? colors.success
+    : /FAIL|REJECT/.test(s)
+      ? colors.destructive
+      : colors.warning;
+  return (
+    <Text style={{ fontSize: t.small, fontWeight: '500', color }}>
+      {s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, ' ')}
+    </Text>
+  );
+};
+
 const styles = themed((c) => ({
   statusRow: { flexDirection: 'row', gap: space.sm },
   flex: { flex: 1 },
   form: { gap: space.lg },
-  picker: { gap: space.sm, padding: space.sm, borderRadius: radius.md, backgroundColor: c.secondary },
+  picker: {
+    gap: space.sm,
+    padding: space.sm,
+    borderRadius: radius.md,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
   pickerList: { maxHeight: 220 },
   pickerItem: {
-    minHeight: 44,
+    minHeight: 48,
     justifyContent: 'center',
     paddingHorizontal: space.md,
     borderRadius: radius.sm,
@@ -660,14 +692,14 @@ const styles = themed((c) => ({
   pickerItemPressed: { backgroundColor: c.surfaceAlt },
   pickerText: { fontSize: t.small, color: c.foreground },
   item: { paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
+  itemLast: { borderBottomWidth: 0 },
   itemTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     gap: space.md,
     marginBottom: 2,
   },
-  itemType: { flex: 1, minWidth: 0, fontSize: t.small, fontWeight: '700', color: c.foreground },
+  itemType: { flex: 1, minWidth: 0, fontSize: t.body + 1, fontWeight: '500', color: c.foreground },
 }));
 
 export default PanCardScreen;

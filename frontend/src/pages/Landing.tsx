@@ -5,17 +5,21 @@ import {
     ArrowUpRight,
     Award,
     Banknote,
-    Building,
+    Car,
     Check,
     CheckCircle2,
     ChevronRight,
-    Clock,
     Copy,
+    Droplets,
     CreditCard,
     FileText,
+    Flame,
     Fingerprint,
     Headset,
+    HeartPulse,
     HelpCircle,
+    IdCard,
+    Landmark,
     Layers,
     Lock,
     Mail,
@@ -35,18 +39,19 @@ import {
     Star,
     Sun,
     TrendingUp,
+    Tv,
     Users,
-    Wallet,
+    Wifi,
     X,
     Zap
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import './landing.css';
-import MacbookScrollDemo from '@/components/macbook-scroll-demo';
 import LandingNav from '@/components/landing/LandingNav';
 import LandingFooter from '@/components/landing/LandingFooter';
+import heroCspBg from '../assets/hero-csp-bg.svg';
 
-// --- DATA STRUCTURES FOR CASHFREE-MATCHED MEGA MENUS ---
+// --- DATA STRUCTURES FOR MEGA MENUS ---
 function Reveal({ children, delay = 0, className = '' }: { children: React.ReactNode; delay?: number; className?: string }) {
     const ref = useRef<HTMLDivElement>(null);
     const [visible, setVisible] = useState(false);
@@ -83,6 +88,128 @@ function Reveal({ children, delay = 0, className = '' }: { children: React.React
 }
 
 
+
+const START_STEPS = [
+    {
+        icon: Users,
+        title: 'Get your retailer ID',
+        text: 'Call us or meet your local distributor with your PAN, Aadhaar and shop details. We create your retailer account.',
+    },
+    {
+        icon: Fingerprint,
+        title: 'Finish KYC and connect a scanner',
+        text: 'Complete e-KYC from the dashboard and plug in an RD-certified fingerprint device. Our team helps you set it up.',
+    },
+    {
+        icon: Banknote,
+        title: 'Serve customers and earn',
+        text: 'Start AEPS, money transfer, recharge and bill payments. Commission lands in your wallet and settles to your bank.',
+    },
+];
+
+const TRANSFER_AND_BILL_SERVICES = [
+    { label: 'IMPS', icon: Send },
+    { label: 'NEFT', icon: Landmark },
+    { label: 'Electricity', icon: Zap },
+    { label: 'Water', icon: Droplets },
+    { label: 'Gas & LPG', icon: Flame },
+    { label: 'Broadband', icon: Wifi },
+    { label: 'Mobile', icon: Smartphone },
+    { label: 'DTH', icon: Tv },
+    { label: 'FASTag', icon: Car },
+    { label: 'Insurance', icon: HeartPulse },
+    { label: 'Card bills', icon: CreditCard },
+    { label: 'Loan EMIs', icon: Receipt },
+];
+
+const mockCard = 'w-full max-w-[280px] sm:max-w-[320px] lg:max-w-[340px] rounded-3xl bg-white border border-slate-200 shadow-xl p-5 text-left';
+
+function BillReceiptMockup() {
+    return (
+        <div className={mockCard}>
+            <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">Electricity bill</span>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">BBPS</span>
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center"><Zap className="w-5 h-5" /></div>
+                <div>
+                    <p className="text-sm font-extrabold text-slate-900">WBSEDCL</p>
+                    <p className="text-[11px] text-slate-500">Consumer no. 1023 4567 89</p>
+                </div>
+            </div>
+            <div className="mt-4 rounded-2xl bg-slate-50 border border-slate-200 p-3 space-y-1.5 text-xs">
+                <div className="flex justify-between"><span className="text-slate-500">Bill amount</span><span className="font-bold text-slate-900">₹1,186.00</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Due date</span><span className="font-bold text-slate-900">18 Oct</span></div>
+            </div>
+            <div className="mt-4 flex items-center justify-between rounded-2xl bg-[#00381e] text-white px-4 py-3">
+                <span className="flex items-center gap-1.5 text-xs font-bold"><CheckCircle2 className="w-4 h-4 text-lime-300" /> Paid · receipt sent</span>
+                <span className="text-xs font-extrabold text-lime-300">+₹4.50</span>
+            </div>
+        </div>
+    );
+}
+
+const RECHARGE_PLANS = [
+    { price: '₹239', detail: '1.5 GB/day · 28 days' },
+    { price: '₹299', detail: '2 GB/day · 28 days' },
+    { price: '₹719', detail: '1.5 GB/day · 84 days' },
+];
+
+function RechargePlansMockup() {
+    return (
+        <div className={mockCard}>
+            <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center"><Smartphone className="w-5 h-5" /></div>
+                <div>
+                    <p className="text-sm font-extrabold text-slate-900">98XXX XXX21</p>
+                    <p className="text-[11px] text-slate-500">Prepaid · West Bengal</p>
+                </div>
+            </div>
+            <div className="mt-4 space-y-2">
+                {RECHARGE_PLANS.map((plan, i) => (
+                    <div key={plan.price} className={`flex items-center justify-between rounded-2xl border px-3 py-2.5 ${i === 1 ? 'border-[#008c46] bg-emerald-50' : 'border-slate-200 bg-white'}`}>
+                        <div>
+                            <p className="text-sm font-extrabold text-slate-900">{plan.price}</p>
+                            <p className="text-[11px] text-slate-500">{plan.detail}</p>
+                        </div>
+                        {i === 1 && <span className="text-[10px] font-bold text-white bg-[#008c46] px-2 py-0.5 rounded-full">Selected</span>}
+                    </div>
+                ))}
+            </div>
+            <button className="mt-4 w-full rounded-2xl bg-[#18181b] text-white text-xs font-bold py-3">Recharge ₹299</button>
+        </div>
+    );
+}
+
+const LEDGER_ROWS = [
+    { label: 'AEPS withdrawal', amount: '+₹12.00', credit: true },
+    { label: 'Money transfer', amount: '-₹5,000', credit: false },
+    { label: 'Recharge commission', amount: '+₹6.25', credit: true },
+    { label: 'Electricity bill', amount: '-₹1,186', credit: false },
+    { label: 'Settled to bank', amount: '-₹25,000', credit: false },
+];
+
+function LedgerPhoneScreen() {
+    return (
+        <div className="pt-10 pb-6 px-4 text-left bg-gradient-to-b from-[#f0fdf4] to-white min-h-[460px]">
+            <p className="text-[11px] font-bold text-slate-500">Wallet balance</p>
+            <p className="text-2xl font-black text-slate-900 tracking-tight">₹48,250.00</p>
+            <div className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                <TrendingUp className="w-3 h-3" /> ₹1,240 commission today
+            </div>
+            <p className="mt-5 mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">Today</p>
+            <div className="space-y-2">
+                {LEDGER_ROWS.map((row) => (
+                    <div key={row.label} className="flex items-center justify-between rounded-xl bg-white border border-slate-100 px-3 py-2.5 shadow-xs">
+                        <span className="text-xs font-semibold text-slate-700">{row.label}</span>
+                        <span className={`text-xs font-extrabold ${row.credit ? 'text-emerald-700' : 'text-slate-900'}`}>{row.amount}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
 
 const FAQ_DATA = {
     support: [
@@ -183,60 +310,50 @@ const Landing: React.FC = () => {
 
     return (
         <div id="top" className="landing-page relative overflow-x-clip bg-white text-slate-900">
-            {/* ---------------------------------------------------------- NAVBAR (EXACT CASHFREE TOP MATCH) */}
+            {/* ---------------------------------------------------------- NAVBAR */}
             <LandingNav />
 
             {/* --------------------------------------------------------- HERO SECTION (FULL SCREEN MATCH) */}
-            <section className="relative z-10 w-full min-h-0 lg:min-h-[calc(100vh-80px)] flex flex-col items-center justify-center py-8 sm:py-12 lg:py-16 px-4 sm:px-6 overflow-hidden bg-white">
-                {/* Background MP4 Video framing the content */}
-                <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none select-none flex justify-center items-end z-0">
-                    <video
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        className="w-full h-full object-cover object-bottom opacity-90 sm:opacity-95"
-                    >
-                        <source
-                            src="https://cashfreelogo.cashfree.com/website/hero/Homepage_Hero_Cashfree%20revamp_v4%20Mp4.mp4"
-                            type="video/mp4"
-                        />
-                        Your browser does not support the video tag.
-                    </video>
-                </div>
+            <section className="relative z-10 w-full min-h-0 lg:min-h-screen -mt-[72px] flex flex-col items-center justify-center pt-[96px] sm:pt-[110px] lg:pt-[88px] pb-8 sm:pb-12 lg:pb-8 px-4 sm:px-6 overflow-hidden bg-white">
+                {/* Background illustration: neighbourhood shops with a CSP banking point */}
+                <img
+                    src={heroCspBg}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover object-bottom pointer-events-none select-none z-0"
+                />
 
-                {/* Centered Hero Header Text & Offer Card sitting OVER top of background video */}
+                {/* Centered Hero Header Text & Offer Card sitting over the background illustration */}
                 <div className="relative z-10 mx-auto max-w-5xl 2xl:max-w-6xl text-center flex flex-col items-center justify-center w-full">
                     {/* Eyebrow Pill Badge */}
-                    <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 sm:px-4 py-1.5 rounded-full text-[0.7rem] sm:text-xs font-bold mb-3 sm:mb-4 shadow-2xs">
+                    <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-bold mb-3 sm:mb-4 shadow-2xs">
                         <Sparkles className="w-3.5 h-3.5 text-[#008c46]" />
                         <span>Digital banking services for your shop</span>
                     </div>
 
-                    <h1 className="text-3xl sm:text-5xl lg:text-7xl 2xl:text-8xl font-extrabold text-slate-900 tracking-tight leading-[1.12] sm:leading-[1.08] max-w-4xl 2xl:max-w-5xl text-center mx-auto">
+                    <h1 className="text-3xl sm:text-5xl lg:text-[min(4.5rem,8.5vh)] 2xl:text-[min(6rem,9.5vh)] font-extrabold text-slate-900 tracking-tight leading-[1.12] sm:leading-[1.08] max-w-4xl 2xl:max-w-5xl text-center mx-auto">
                         Turn Your Shop Into A Banking Point For Your Neighbourhood
                     </h1>
 
                     {/* Soft Lime/Yellow Offer Card matching screenshot */}
                     <div
-                        className="my-4 sm:my-8 2xl:my-10 rounded-2xl sm:rounded-3xl p-4 sm:p-8 2xl:p-10 max-w-2xl 2xl:max-w-3xl w-full border border-lime-300/80 shadow-md text-center relative overflow-hidden mx-auto flex flex-col items-center justify-center backdrop-blur-xs"
+                        className="my-4 sm:my-8 lg:my-[min(2rem,3vh)] 2xl:my-[min(2.5rem,3.5vh)] rounded-2xl sm:rounded-3xl p-4 sm:p-8 lg:p-[min(2rem,3vh)] 2xl:p-[min(2.5rem,3.5vh)] max-w-2xl 2xl:max-w-3xl w-full border border-lime-300/80 shadow-md text-center relative overflow-hidden mx-auto flex flex-col items-center justify-center backdrop-blur-xs"
                         style={{
                             background: 'linear-gradient(180deg, rgba(228, 250, 173, 0.94) 0%, rgba(254, 248, 184, 0.94) 100%)'
                         }}
                     >
-                        <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-3 text-slate-900">
-                            <span className="text-4xl sm:text-6xl font-black tracking-tight text-[#00502b]">
+                        <div className="flex flex-wrap sm:flex-col items-center justify-center gap-1.5 sm:gap-1 text-slate-900">
+                            <span className="text-4xl sm:text-6xl lg:text-[min(3.75rem,7vh)] leading-none font-black tracking-tight text-[#00502b]">
                                 ₹0
                             </span>
-                            <span className="text-xs sm:text-xl font-extrabold text-[#00502b] ml-0.5 sm:ml-1">
+                            <span className="text-xs sm:text-xl font-extrabold text-[#00502b] ml-0.5 sm:ml-0">
                                 to join. You earn a commission on every transaction.
                             </span>
                         </div>
 
-                        <div className="w-full h-px bg-slate-900/10 my-3.5 sm:my-5" />
+                        <div className="w-full h-px bg-slate-900/10 my-3.5 sm:my-5 lg:my-[min(1.25rem,2vh)]" />
 
                         {/* 3 Checkmark Features */}
-                        <div className="flex flex-wrap items-center justify-center gap-y-2 gap-x-3 sm:gap-x-6 text-[0.7rem] sm:text-sm font-bold text-slate-800 text-center w-full">
+                        <div className="flex flex-wrap items-center justify-center gap-y-2 gap-x-3 sm:gap-x-6 text-xs sm:text-sm font-bold text-slate-800 text-center w-full">
                             <span className="flex items-center gap-1.5">
                                 <span className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-slate-700 text-slate-800 flex items-center justify-center text-[0.55rem] sm:text-[0.6rem] font-black shrink-0">✓</span> Settle to your bank daily
                             </span>
@@ -246,7 +363,7 @@ const Landing: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Action Buttons matching Cashfree screenshot */}
+                    {/* Action Buttons */}
                     <div className="flex flex-row items-center justify-center gap-2.5 sm:gap-4 relative z-20 mx-auto w-full sm:w-auto">
                         <Link
                             to="/login"
@@ -266,7 +383,7 @@ const Landing: React.FC = () => {
                     </div>
 
                     {/* Trust Badges Bar */}
-                    <div className="pt-4 sm:pt-6 flex flex-wrap items-center justify-center gap-y-1.5 gap-x-4 sm:gap-x-6 text-[0.68rem] sm:text-xs font-bold text-slate-600">
+                    <div className="pt-4 sm:pt-6 lg:pt-[min(1.5rem,2.5vh)] flex flex-wrap items-center justify-center gap-y-1.5 gap-x-4 sm:gap-x-6 text-xs font-bold text-slate-600">
                         <span className="flex items-center gap-1.2"><ShieldCheck className="w-3.5 h-3.5 text-[#008c46]" /> Aadhaar data never stored</span>
                         <span className="text-slate-300 hidden sm:inline">•</span>
                         <span className="flex items-center gap-1.2"><Zap className="w-3.5 h-3.5 text-[#008c46]" /> Runs on NPCI rails</span>
@@ -276,10 +393,53 @@ const Landing: React.FC = () => {
                 </div>
             </section>
 
-            {/* --------------------------------------------------- DASHBOARD ON A LAPTOP (SCROLL-DRIVEN) */}
-            <MacbookScrollDemo />
+            {/* --------------------------------------------------- HOW TO START: THREE STEPS */}
+            <section className="relative py-20 sm:py-28 px-4 sm:px-6 bg-white">
+                <div className="mx-auto max-w-6xl">
+                    <div className="text-center max-w-2xl mx-auto">
+                        <span className="inline-block bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 py-1 rounded-full text-xs font-bold">
+                            Get started
+                        </span>
+                        <h2 className="mt-4 text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-[1.1]">
+                            Open your banking point in three steps
+                        </h2>
+                        <p className="mt-4 text-base sm:text-lg text-slate-600 font-medium">
+                            No joining fee, no monthly charge, and our team helps you at every step.
+                        </p>
+                    </div>
 
-            {/* FLOATING CASHFREE-STYLE GREEN CHAT BUBBLE BUTTON IN BOTTOM RIGHT */}
+                    <div className="relative mt-14 grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Connector line behind the step badges */}
+                        <div className="hidden md:block absolute top-7 left-[16.6%] right-[16.6%] h-0.5 bg-gradient-to-r from-[#bbf7d0] via-[#008c46] to-[#bbf7d0]" />
+                        {START_STEPS.map(({ title, text, icon: Icon }, i) => (
+                            <Reveal key={title} delay={i * 0.12} className="relative flex flex-col items-center text-center">
+                                <div className="relative z-10 w-14 h-14 rounded-full bg-[#008c46] text-white flex items-center justify-center text-lg font-black shadow-lg ring-8 ring-white">
+                                    {i + 1}
+                                </div>
+                                <div className="mt-6 w-full rounded-3xl border border-slate-200 bg-[#f8fafc] p-6 sm:p-7 text-left shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="w-11 h-11 rounded-2xl bg-[#ecfccb] text-[#00502b] flex items-center justify-center">
+                                        <Icon className="w-5 h-5" />
+                                    </div>
+                                    <h3 className="mt-4 text-xl font-extrabold text-slate-900 tracking-tight">{title}</h3>
+                                    <p className="mt-2 text-sm sm:text-base text-slate-600 leading-relaxed">{text}</p>
+                                </div>
+                            </Reveal>
+                        ))}
+                    </div>
+
+                    <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <a
+                            href="tel:+918240039776"
+                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#18181b] hover:bg-black text-white px-7 text-sm sm:text-base font-bold shadow-md"
+                        >
+                            <Phone className="w-4 h-4" /> Call +91 8240039776
+                        </a>
+                        <span className="text-sm font-semibold text-slate-600">or ask your local Shahparpay distributor</span>
+                    </div>
+                </div>
+            </section>
+
+            {/* FLOATING GREEN CHAT BUBBLE BUTTON IN BOTTOM RIGHT */}
             <a
                 href="#contact"
                 aria-label="Open support chat"
@@ -294,23 +454,19 @@ const Landing: React.FC = () => {
 
             {/* --------------------------------------------------- THE WHOLE PAYMENTS STACK, ON ONE PLATFORM ---------------- */}
             <section className="relative py-28 px-6 bg-white overflow-hidden select-none">
-                {/* Official Cashfree Platform Background Image Asset & Soft Emerald Ambient Glow */}
-                <img
-                    src="https://cdn.prod.website-files.com/6a60525e5f4d2e4f1faed952/6a9462804c0231fefd408efe_platform-bg-p-1600.png"
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-95"
-                />
+                {/* Soft brand glows */}
+                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_10%_50%,#dcfce7_0%,transparent_45%),radial-gradient(ellipse_at_90%_50%,#ecfccb_0%,transparent_45%)]" />
 
                 <div className="mx-auto max-w-7xl relative z-10">
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center min-h-[600px]">
                         {/* Left Column Floating Tiles */}
                         <div className="lg:col-span-4 flex flex-col items-center lg:items-end justify-between gap-14">
-                            {/* Top Left: Live Analytics Chart Card (Matching Cashfree exact green lime box) */}
+                            {/* Top Left: Live Analytics Chart Card */}
                             <div className="bg-[#ccf788] border border-lime-300 rounded-3xl p-4 shadow-lg w-full max-w-xs transform -rotate-2 hover:rotate-0 transition-transform">
                                 <div className="bg-white rounded-2xl p-4 shadow-sm">
                                     <div className="flex items-center justify-between text-[0.65rem] font-bold text-slate-500 mb-1">
                                         <span className="flex items-center gap-1">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" /> • Live Payment Transactions
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" /> Transactions this week
                                         </span>
                                     </div>
                                     <div className="flex items-baseline justify-between mb-2">
@@ -335,14 +491,16 @@ const Landing: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Bottom Left: Assisted Onboarding Support Card (Exact Cashfree Support Photo) */}
-                            <div className="relative rounded-3xl overflow-hidden border border-slate-200 shadow-xl w-full max-w-xs h-64 transform rotate-1 hover:rotate-0 transition-transform group">
-                                <img
-                                    src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80"
-                                    alt="Support Specialist"
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                            {/* Bottom Left: Assisted Onboarding Support Card */}
+                            <div className="relative rounded-3xl overflow-hidden border border-emerald-200 shadow-xl w-full max-w-xs h-64 transform rotate-1 hover:rotate-0 transition-transform bg-gradient-to-br from-[#008c46] to-[#00502b]">
+                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_25%,rgba(163,230,53,0.35),transparent_55%)]" />
+                                <div className="absolute top-6 left-6 right-6 text-white">
+                                    <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center">
+                                        <Headset className="w-7 h-7 text-lime-300" />
+                                    </div>
+                                    <p className="mt-4 text-lg font-extrabold leading-tight">Our team sets up your counter with you</p>
+                                    <p className="mt-1 text-xs font-semibold text-emerald-100">Call +91 8240039776 · Mon–Sat</p>
+                                </div>
                                 <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-white/80 text-xs shadow-lg">
                                     <p className="font-bold text-slate-800 text-[0.7rem]">Welcome onboard</p>
                                     <div className="flex items-center justify-between mt-1 text-emerald-700 font-extrabold text-[0.7rem]">
@@ -360,7 +518,7 @@ const Landing: React.FC = () => {
                                 Every service your customers ask for, on one login.
                             </h2>
 
-                            {/* Bottom Center: Instant Disbursal & Global Remittance Card */}
+                            {/* Bottom Center: Retailer transaction card */}
                             <div className="bg-[#00381e] text-white p-5 rounded-3xl shadow-2xl w-full max-w-xs border border-emerald-800/60">
                                 <div className="flex items-center gap-3 mb-4">
                                     <div className="w-9 h-9 rounded-full bg-emerald-700 border border-emerald-500 flex items-center justify-center font-bold text-white text-xs shadow-inner">
@@ -373,41 +531,35 @@ const Landing: React.FC = () => {
                                     <span className="ml-auto text-sm font-black text-emerald-400">₹11,000.00</span>
                                 </div>
                                 <div className="bg-[#002715] p-2.5 rounded-2xl flex items-center justify-between text-xs border border-emerald-800/60">
-                                    <div className="flex items-center gap-1.5 font-extrabold text-[0.7rem] text-white">
-                                        <span>🇮🇳 INR</span>
-                                        <span className="text-emerald-400">⇄</span>
+                                    <div className="flex items-center gap-1.5 font-extrabold text-xs text-white">
+                                        <Fingerprint className="w-4 h-4 text-emerald-400" />
+                                        <span>AEPS cash withdrawal</span>
                                     </div>
-                                    <div className="flex items-center gap-1 text-sm">
-                                        <span>🇺🇸</span>
-                                        <span>🇬🇧</span>
-                                        <span>🇧🇷</span>
-                                        <span>🇹🇭</span>
-                                    </div>
+                                    <span className="text-xs font-bold text-emerald-300">Settled</span>
                                 </div>
                             </div>
                         </div>
 
                         {/* Right Column Floating Tiles */}
                         <div className="lg:col-span-4 flex flex-col items-center lg:items-start justify-between gap-14">
-                            {/* Top Right: Merchant Photo Card with Floating Glass Payment Logos */}
-                            <div className="relative rounded-3xl overflow-hidden border border-slate-200 shadow-xl w-full max-w-xs h-64 transform rotate-2 hover:rotate-0 transition-transform group">
+                            {/* Top Right: Banking point shop card with the services it offers */}
+                            <div className="relative rounded-3xl overflow-hidden border border-slate-200 shadow-xl w-full max-w-xs h-64 transform rotate-2 hover:rotate-0 transition-transform group bg-[#f4fbf6]">
                                 <img
-                                    src="https://images.unsplash.com/photo-1556740758-90de374c12ad?auto=format&fit=crop&w=600&q=80"
-                                    alt="Retailer serving a customer"
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                    src={heroCspBg}
+                                    alt="Shahparpay banking point shop"
+                                    className="w-full h-full object-cover object-[100%_100%] scale-[2.1] origin-[100%_100%] group-hover:scale-[2.2] transition-transform duration-300"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-transparent to-transparent" />
-                                {/* Floating Payment Badges Glass Overlay */}
+                                {/* Floating Service Badges Glass Overlay */}
                                 <div className="absolute inset-3 flex items-end">
                                     <div className="bg-white/85 backdrop-blur-md p-2 rounded-2xl border border-white/90 w-full grid grid-cols-4 gap-1.5 text-center shadow-lg">
-                                        <span className="text-[0.55rem] font-bold py-1 bg-purple-100 text-purple-800 rounded">PhonePe</span>
-                                        <span className="text-[0.55rem] font-bold py-1 bg-blue-100 text-blue-800 rounded">GPay</span>
-                                        <span className="text-[0.55rem] font-bold py-1 bg-emerald-100 text-emerald-800 rounded">UPI</span>
-                                        <span className="text-[0.55rem] font-bold py-1 bg-amber-100 text-amber-900 rounded">RuPay</span>
-                                        <span className="text-[0.55rem] font-bold py-1 bg-indigo-100 text-indigo-800 rounded">Visa</span>
-                                        <span className="text-[0.55rem] font-bold py-1 bg-slate-100 text-slate-800 rounded">Paytm</span>
-                                        <span className="text-[0.55rem] font-bold py-1 bg-rose-100 text-rose-800 rounded">Master</span>
-                                        <span className="text-[0.55rem] font-bold py-1 bg-[#008c46] text-white rounded">AEPS</span>
+                                        <span className="text-[0.6rem] font-bold py-1 bg-[#008c46] text-white rounded">AEPS</span>
+                                        <span className="text-[0.6rem] font-bold py-1 bg-emerald-100 text-emerald-800 rounded">mATM</span>
+                                        <span className="text-[0.6rem] font-bold py-1 bg-lime-100 text-lime-900 rounded">DMT</span>
+                                        <span className="text-[0.6rem] font-bold py-1 bg-amber-100 text-amber-900 rounded">BBPS</span>
+                                        <span className="text-[0.6rem] font-bold py-1 bg-sky-100 text-sky-800 rounded">UPI</span>
+                                        <span className="text-[0.6rem] font-bold py-1 bg-slate-100 text-slate-800 rounded">Recharge</span>
+                                        <span className="text-[0.6rem] font-bold py-1 bg-rose-100 text-rose-800 rounded">PAN</span>
+                                        <span className="text-[0.6rem] font-bold py-1 bg-indigo-100 text-indigo-800 rounded">ITR</span>
                                     </div>
                                 </div>
                             </div>
@@ -427,7 +579,7 @@ const Landing: React.FC = () => {
                 </div>
             </section>
 
-            {/* -------------------------------------------------- EVERY WAY YOUR CUSTOMER WANTS TO PAY (CASHFREE BENTO GRID) */}
+            {/* -------------------------------------------------- EVERY WAY YOUR CUSTOMER WANTS TO PAY (BENTO GRID) */}
             <section className="w-full bg-[#f8fafc] py-20 px-4 sm:px-6 lg:px-8 border-y border-slate-100">
                 <div className="mx-auto max-w-7xl">
                     {/* Centered Main Title */}
@@ -602,97 +754,16 @@ const Landing: React.FC = () => {
                                 </p>
                             </div>
 
-                            {/* Floating Payment Method Glass Pills Grid */}
+                            {/* Floating Service Pills Grid */}
                             <div className="mt-10 sm:mt-12 grid grid-cols-2 sm:grid-cols-3 gap-3.5 relative z-10">
-                                {/* VISA */}
-                                <div className="bg-white/85 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-white/90 flex items-center justify-center group-hover:scale-105 transition-all">
-                                    <span className="font-black text-blue-900 tracking-tighter text-base italic">VISA</span>
-                                </div>
-
-                                {/* Cards */}
-                                <div className="bg-white/85 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-white/90 flex items-center gap-2.5 font-bold text-slate-800 text-sm group-hover:scale-105 transition-all">
-                                    <div className="w-7 h-7 rounded-lg bg-[#008c46] text-white flex items-center justify-center shadow-sm">
-                                        <CreditCard className="w-4 h-4" />
+                                {TRANSFER_AND_BILL_SERVICES.map(({ label, icon: Icon }) => (
+                                    <div key={label} className="bg-white/85 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-white/90 flex items-center gap-2.5 font-bold text-slate-800 text-sm group-hover:scale-105 transition-all">
+                                        <div className="w-7 h-7 rounded-lg bg-[#008c46] text-white flex items-center justify-center shadow-sm shrink-0">
+                                            <Icon className="w-4 h-4" />
+                                        </div>
+                                        <span>{label}</span>
                                     </div>
-                                    <span>Cards</span>
-                                </div>
-
-                                {/* Paytm */}
-                                <div className="bg-white/85 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-white/90 flex items-center justify-center group-hover:scale-105 transition-all">
-                                    <span className="font-black text-sky-600 tracking-tight text-sm">pay<span className="text-blue-900">tm</span></span>
-                                </div>
-
-                                {/* RuPay */}
-                                <div className="bg-white/85 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-white/90 flex items-center justify-center group-hover:scale-105 transition-all">
-                                    <span className="font-black text-slate-800 tracking-tight text-sm">
-                                        RuPay<span className="text-orange-500 font-extrabold ml-0.5">❯</span>
-                                    </span>
-                                </div>
-
-                                {/* Wallets */}
-                                <div className="bg-white/85 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-white/90 flex items-center gap-2.5 font-bold text-slate-800 text-sm group-hover:scale-105 transition-all">
-                                    <div className="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center shadow-sm">
-                                        <Wallet className="w-4 h-4" />
-                                    </div>
-                                    <span>Wallets</span>
-                                </div>
-
-                                {/* GPay */}
-                                <div className="bg-white/85 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-white/90 flex items-center justify-center group-hover:scale-105 transition-all">
-                                    <span className="font-extrabold text-slate-700 text-sm flex items-center gap-1">
-                                        <span className="text-blue-500">G</span>
-                                        <span className="text-red-500">P</span>
-                                        <span className="text-amber-500">a</span>
-                                        <span className="text-green-500">y</span>
-                                    </span>
-                                </div>
-
-                                {/* Net Banking */}
-                                <div className="bg-white/85 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-white/90 flex items-center gap-2.5 font-bold text-slate-800 text-sm group-hover:scale-105 transition-all">
-                                    <div className="w-7 h-7 rounded-lg bg-[#008c46] text-white flex items-center justify-center shadow-sm">
-                                        <Building className="w-4 h-4" />
-                                    </div>
-                                    <span>Net Banking</span>
-                                </div>
-
-                                {/* Mastercard */}
-                                <div className="bg-white/85 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-white/90 flex items-center justify-center group-hover:scale-105 transition-all">
-                                    <div className="flex items-center -space-x-2">
-                                        <div className="w-5 h-5 rounded-full bg-red-500 opacity-90" />
-                                        <div className="w-5 h-5 rounded-full bg-amber-400 opacity-90" />
-                                    </div>
-                                </div>
-
-                                {/* PhonePe */}
-                                <div className="bg-white/85 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-white/90 flex items-center justify-center group-hover:scale-105 transition-all">
-                                    <div className="w-7 h-7 rounded-full bg-purple-600 text-white flex items-center justify-center font-black text-xs shadow-sm">
-                                        पे
-                                    </div>
-                                </div>
-
-                                {/* Pay Later */}
-                                <div className="bg-white/85 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-white/90 flex items-center gap-2.5 font-bold text-slate-800 text-sm group-hover:scale-105 transition-all">
-                                    <div className="w-7 h-7 rounded-lg bg-[#008c46] text-white flex items-center justify-center shadow-sm">
-                                        <Clock className="w-4 h-4" />
-                                    </div>
-                                    <span>Pay Later</span>
-                                </div>
-
-                                {/* BHIM / Indian Flag */}
-                                <div className="bg-white/85 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-white/90 flex items-center justify-center group-hover:scale-105 transition-all">
-                                    <div className="flex items-center gap-1.5 font-black text-xs text-slate-800">
-                                        <span className="w-3.5 h-3.5 rounded-sm bg-gradient-to-b from-orange-500 via-white to-green-600 border border-slate-300 inline-block shadow-xs" />
-                                        <span>BHIM</span>
-                                    </div>
-                                </div>
-
-                                {/* EMIs */}
-                                <div className="bg-white/85 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-white/90 flex items-center gap-2.5 font-bold text-slate-800 text-sm group-hover:scale-105 transition-all">
-                                    <div className="w-7 h-7 rounded-lg bg-[#008c46] text-white flex items-center justify-center shadow-sm">
-                                        <Receipt className="w-4 h-4" />
-                                    </div>
-                                    <span>EMIs</span>
-                                </div>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -730,10 +801,10 @@ const Landing: React.FC = () => {
                                             Powered by Shahparpay
                                         </span>
                                         <div className="flex items-center justify-center gap-1.5 pt-1">
-                                            <div className="w-6 h-6 rounded-full bg-[#008c46] text-white flex items-center justify-center text-xs font-black">
-                                                🍃
+                                            <div className="w-6 h-6 rounded-full bg-[#008c46] text-white flex items-center justify-center">
+                                                <IdCard className="w-3.5 h-3.5" />
                                             </div>
-                                            <span className="text-base font-extrabold text-slate-900 tracking-tight">TrueHelp</span>
+                                            <span className="text-base font-extrabold text-slate-900 tracking-tight">PAN Card Application</span>
                                         </div>
                                     </div>
 
@@ -742,12 +813,12 @@ const Landing: React.FC = () => {
                                         {/* Left Column Placeholders */}
                                         <div className="space-y-2 text-[10px]">
                                             <div>
-                                                <p className="font-bold text-slate-800">About</p>
+                                                <p className="font-bold text-slate-800">New PAN · Form 49A</p>
                                                 <div className="h-1.5 bg-slate-200 rounded w-full mt-1" />
                                                 <div className="h-1.5 bg-slate-100 rounded w-4/5 mt-1" />
                                             </div>
                                             <div className="pt-2">
-                                                <p className="font-bold text-slate-800">Tax Exemption Details</p>
+                                                <p className="font-bold text-slate-800">Aadhaar · Photo · Signature</p>
                                                 <div className="h-1.5 bg-slate-200 rounded w-full mt-1" />
                                                 <div className="h-1.5 bg-slate-100 rounded w-3/4 mt-1" />
                                             </div>
@@ -760,39 +831,39 @@ const Landing: React.FC = () => {
                                                 <div className="bg-slate-100/90 rounded-lg p-2 text-[10px] font-semibold text-slate-700 border border-slate-200 flex items-center gap-1 mt-0.5">
                                                     <span className="text-slate-500">+91</span>
                                                     <span className="text-slate-300">|</span>
-                                                    <span>9876 5432 10</span>
+                                                    <span>98XXX XXX10</span>
                                                 </div>
                                             </div>
 
                                             <div>
-                                                <label className="text-[10px] font-bold text-slate-800 block">Name</label>
+                                                <label className="text-[10px] font-bold text-slate-800 block">Applicant name</label>
                                                 <div className="bg-slate-100/90 rounded-lg p-2 text-[10px] font-semibold text-slate-800 border border-slate-200 mt-0.5">
                                                     Samar Ahuja
                                                 </div>
                                             </div>
 
                                             <div>
-                                                <label className="text-[10px] font-bold text-slate-800 block">Donation amount</label>
+                                                <label className="text-[10px] font-bold text-slate-800 block">Service fee</label>
                                                 <div className="bg-slate-100/90 rounded-lg p-2 text-[10px] font-extrabold text-slate-900 border border-slate-200 flex items-center gap-1 mt-0.5">
                                                     <span className="text-slate-400 font-bold">₹</span>
                                                     <span className="text-slate-300">|</span>
-                                                    <span>1,500</span>
+                                                    <span>107</span>
                                                 </div>
                                             </div>
 
                                             <button className="bg-[#008c46] hover:bg-[#007339] text-white font-extrabold py-2 px-3 rounded-xl text-[10px] shadow-sm flex items-center justify-center gap-1.5 w-full transition-colors mt-2">
-                                                <span>Proceed to Pay</span>
+                                                <span>Submit application</span>
                                                 <ArrowRight className="w-3 h-3" />
                                             </button>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Gold Trophy Accent Graphic */}
+                                {/* Gold PAN Card Accent Graphic */}
                                 <div className="hidden sm:flex flex-col items-center justify-center ml-4 opacity-90">
                                     <div className="w-20 h-32 rounded-3xl bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 shadow-xl border-2 border-amber-200/80 flex flex-col items-center justify-center p-2 transform rotate-6">
-                                        <div className="w-12 h-12 rounded-full bg-amber-100/60 border border-amber-200 flex items-center justify-center text-xl shadow-inner">
-                                            🏆
+                                        <div className="w-12 h-12 rounded-full bg-amber-100/60 border border-amber-200 flex items-center justify-center shadow-inner">
+                                            <IdCard className="w-6 h-6 text-amber-800" />
                                         </div>
                                         <div className="w-10 h-2 bg-amber-600/40 rounded-full mt-2" />
                                         <div className="w-8 h-2 bg-amber-600/40 rounded-full mt-1" />
@@ -861,10 +932,10 @@ const Landing: React.FC = () => {
                                     {/* Pill 2 */}
                                     <div className="bg-white text-slate-900 p-3 rounded-2xl shadow-md border border-slate-200/80 flex items-center justify-between gap-3 text-xs font-bold hover:scale-105 transition-all transform sm:translate-x-2">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-base">🌐</span>
+                                            <span className="text-base">📲</span>
                                             <div>
-                                                <p className="text-slate-900 font-extrabold text-xs">$1,800</p>
-                                                <p className="text-[9px] text-slate-400 font-medium">Cross-border</p>
+                                                <p className="text-slate-900 font-extrabold text-xs">₹1,800</p>
+                                                <p className="text-[9px] text-slate-400 font-medium">Money transfer</p>
                                             </div>
                                         </div>
                                         <span className="bg-[#008c46] text-white px-2.5 py-1 rounded-full text-[9px] font-extrabold shadow-sm">
@@ -948,14 +1019,10 @@ const Landing: React.FC = () => {
                 </div>
             </section>
 
-            {/* -------------------------------------------------- GO GLOBAL, BOTH WAYS SECTION */}
+            {/* -------------------------------------------------- BILLS & RECHARGE SECTION */}
             <section className="relative w-full py-24 px-4 sm:px-6 lg:px-8 overflow-hidden bg-white border-b border-slate-100">
-                {/* Background Image asset with green radial contour lines */}
-                <img
-                    src="https://cdn.prod.website-files.com/6a60525e5f4d2e4f1faed952/6a94336d185276914cb559d0_go-global-bg.webp"
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
-                />
+                {/* Soft brand glow */}
+                <div className="absolute inset-0 pointer-events-none z-0 bg-[radial-gradient(ellipse_at_50%_100%,#dcfce7_0%,transparent_60%)]" />
 
                 {/* Soft Subtle Green Glow on Far Left & Right Edges Only */}
                 <div className="absolute top-0 bottom-0 left-0 w-72 bg-gradient-to-r from-emerald-300/10 via-emerald-100/5 to-transparent pointer-events-none z-0" />
@@ -971,15 +1038,11 @@ const Landing: React.FC = () => {
 
                     {/* Two Phone Cards Grid (Compact & Small) */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start max-w-4xl lg:max-w-5xl mx-auto">
-                        {/* LEFT COLUMN: International Payment Gateway */}
+                        {/* LEFT COLUMN: BBPS bill payments */}
                         <div className="flex flex-col items-center text-center space-y-6 group">
-                            {/* Official Image Asset 1: IPG */}
+                            {/* BBPS receipt mockup */}
                             <div className="w-full flex justify-center">
-                                <img
-                                    src="https://cdn.prod.website-files.com/6a60525e5f4d2e4f1faed952/6a9a6b3d5840c0321cae2e62_4322444dda0a1a831988285622c076a6_IPG-1.webp"
-                                    alt="BBPS bill payments"
-                                    className="w-full max-w-[280px] sm:max-w-[320px] lg:max-w-[340px] h-auto object-contain"
-                                />
+                                <BillReceiptMockup />
                             </div>
 
                             {/* Description & Link */}
@@ -1000,15 +1063,11 @@ const Landing: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* RIGHT COLUMN: Sell into India */}
+                        {/* RIGHT COLUMN: Mobile & DTH recharge */}
                         <div className="flex flex-col items-center text-center space-y-6 group">
-                            {/* Official Image Asset 2: Imports / Sell into India */}
+                            {/* Recharge plans mockup */}
                             <div className="w-full flex justify-center">
-                                <img
-                                    src="https://cdn.prod.website-files.com/6a60525e5f4d2e4f1faed952/6a93f884e4d791d307c3ae4b_828c5caa8cbe5480e59d6489339c4a03_imports.png"
-                                    alt="Mobile and DTH recharge"
-                                    className="w-full max-w-[280px] sm:max-w-[320px] lg:max-w-[340px] h-auto object-contain"
-                                />
+                                <RechargePlansMockup />
                             </div>
 
                             {/* Description & Link */}
@@ -1064,34 +1123,22 @@ const Landing: React.FC = () => {
                             </a>
                         </div>
 
-                        {/* Center Column: Phone Mockup Video (Slim & Perfect Fit) */}
+                        {/* Center Column: Phone mockup with the wallet ledger */}
                         <div className="lg:col-span-4 flex justify-center">
                             <div className="relative w-[250px] sm:w-[270px] rounded-[42px] bg-black p-2 shadow-2xl border-2 border-slate-800/80 overflow-hidden group hover:scale-[1.02] transition-transform duration-500">
                                 {/* Dynamic Island Notch */}
                                 <div className="absolute top-3.5 left-1/2 -translate-x-1/2 w-16 h-3.5 bg-black rounded-full z-30 border border-slate-900" />
 
-                                {/* Video Player (Perfect Native Fit) */}
-                                <div className="rounded-[34px] overflow-hidden bg-black relative flex items-center justify-center">
-                                    <video
-                                        src="https://thunderclap-assets.s3.ap-south-1.amazonaws.com/Cashfree+Assets/Section+Animations/Cashfree+Here/cashfree-here.webm"
-                                        autoPlay
-                                        loop
-                                        muted
-                                        playsInline
-                                        className="w-full h-auto object-contain rounded-[34px]"
-                                    />
+                                {/* Wallet ledger screen */}
+                                <div className="rounded-[34px] overflow-hidden bg-white relative">
+                                    <LedgerPhoneScreen />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Right Column: Description Text & Claude Decorator */}
+                        {/* Right Column: Description Text */}
                         <div className="lg:col-span-4 flex flex-col items-center lg:items-start text-center lg:text-left space-y-4 relative">
-                            {/* Claude Decorator WebP Asset */}
-                            <img
-                                src="https://cdn.prod.website-files.com/6a60525e5f4d2e4f1faed952/6a973f940a72752aad8f92a4_claude.webp"
-                                alt=""
-                                className="w-32 sm:w-40 h-auto opacity-80 pointer-events-none mb-1 lg:-mt-10"
-                            />
+                                                        
 
                             <p className="text-sm sm:text-base text-slate-700 leading-relaxed font-medium">
                                 One wallet across every service, with a running balance and a line for each credit and debit. Separate reports for AEPS, money transfer, recharge, bills, PAN and ITR, filterable by date and exportable whenever your accountant asks.
@@ -1152,46 +1199,31 @@ const Landing: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Right Column: Official 3D Graphic Asset */}
+                            {/* Right Column: Banking point shop illustration */}
                             <div className="lg:col-span-5 flex justify-center lg:justify-end">
-                                <img
-                                    src="https://cdn.prod.website-files.com/6a60525e5f4d2e4f1faed952/6aa43a038982095797f7dd58_fac8573131811123344e92997762f76d_home-cta-img.webp"
-                                    alt="Build payments to match"
-                                    className="w-full max-w-md lg:max-w-lg h-auto object-contain transform lg:scale-110 drop-shadow-2xl hover:scale-105 transition-transform duration-500"
-                                />
+                                <div className="w-full max-w-md lg:max-w-lg aspect-[4/3] rounded-3xl overflow-hidden bg-[#f4fbf6] border-4 border-white/25 shadow-2xl rotate-1 hover:rotate-0 transition-transform duration-500">
+                                    <img
+                                        src={heroCspBg}
+                                        alt="A Shahparpay banking point shop in the neighbourhood"
+                                        className="w-full h-full object-cover object-[100%_100%] scale-[1.9] origin-[100%_100%]"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* Floating WhatsApp Action Button */}
-            <a
-                href="https://wa.me/919876543210"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Chat on WhatsApp"
-                className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-[#00a859] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform duration-200 border-2 border-white cursor-pointer"
-            >
-                <MessageCircle className="w-7 h-7 fill-current" />
-            </a>
 
 
 
-            {/* --------------------------------------------------- FREQUENTLY ASKED QUESTIONS (CASHFREE MATCH) */}
+            {/* --------------------------------------------------- FREQUENTLY ASKED QUESTIONS */}
             <section 
                 id="faq" 
-                className="relative py-20 sm:py-28 px-4 sm:px-6 overflow-hidden bg-white select-none bg-cover bg-center"
-                style={{
-                    backgroundImage: "url('https://cdn.prod.website-files.com/6a60525e5f4d2e4f1faed952/6a69ce5408c89730990868d8_865afa08fb2d072c7efed594006c6ffc_faq-bg-gradient.webp')"
-                }}
+                className="relative py-20 sm:py-28 px-4 sm:px-6 overflow-hidden bg-white select-none"
             >
-                {/* Official Cashfree FAQ Background Gradient Texture */}
-                <img
-                    src="https://cdn.prod.website-files.com/6a60525e5f4d2e4f1faed952/6a69ce5408c89730990868d8_865afa08fb2d072c7efed594006c6ffc_faq-bg-gradient.webp"
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none opacity-100 select-none z-0"
-                />
+                {/* Soft brand glows */}
+                <div className="absolute inset-0 pointer-events-none z-0 bg-[radial-gradient(ellipse_at_0%_60%,#bbf7d0_0%,transparent_40%),radial-gradient(ellipse_at_100%_40%,#d9f99d_0%,transparent_40%)]" />
 
                 <div className="relative z-10 max-w-5xl mx-auto space-y-8 sm:space-y-10">
                     {/* Centered Heading */}
@@ -1252,7 +1284,7 @@ const Landing: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* FAQ Items Grid (2 Column Responsive Layout matching Cashfree screenshot) */}
+                    {/* FAQ Items Grid (2 Column Responsive Layout) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start pt-2">
                         {FAQ_DATA[faqCategory].map((item, index) => {
                             const isOpen = openFaqIndex === index;
@@ -1291,7 +1323,7 @@ const Landing: React.FC = () => {
 
             {/* Floating WhatsApp Action Button */}
             <a
-                href="https://wa.me/919876543210"
+                href="https://wa.me/918240039776?text=Hi%20Shahparpay%2C%20I%20need%20help%20with%20my%20retailer%20account."
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Chat on WhatsApp"

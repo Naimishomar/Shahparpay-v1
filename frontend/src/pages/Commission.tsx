@@ -37,7 +37,7 @@ const Card: React.FC<{
             </div>
             <div>
                 <h2 className="text-lg font-extrabold tracking-tight text-slate-900">{title}</h2>
-                {note && <p className="text-[0.8rem] text-slate-500 mt-0.5 leading-relaxed">{note}</p>}
+                {note && <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{note}</p>}
             </div>
         </div>
         <div className="mt-5">{children}</div>
@@ -46,10 +46,10 @@ const Card: React.FC<{
 
 const RateRow: React.FC<{ left: string; right: string; muted?: boolean }> = ({ left, right, muted }) => (
     <div className="flex items-center justify-between gap-4 py-2.5 border-b border-slate-100 last:border-0">
-        <span className={`text-sm ${muted ? 'text-slate-400' : 'text-slate-700'}`}>{left}</span>
+        <span className={`text-sm ${muted ? 'text-slate-500' : 'text-slate-700'}`}>{left}</span>
         <span
             className={`text-sm font-extrabold tabular-nums shrink-0 ${
-                muted ? 'text-slate-400' : 'text-[#008c46]'
+                muted ? 'text-slate-500' : 'text-[#008c46]'
             }`}
         >
             {right}
@@ -85,7 +85,7 @@ const Commission: React.FC = () => {
 
             <section className="relative w-full border-b border-slate-100 bg-gradient-to-b from-[#f7fee7]/80 via-[#ecfccb]/30 to-white px-4 sm:px-6 py-14 sm:py-20">
                 <div className="mx-auto max-w-3xl text-center">
-                    <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 sm:px-4 py-1.5 rounded-full text-[0.7rem] sm:text-xs font-bold mb-4 shadow-2xs">
+                    <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-bold mb-4 shadow-2xs">
                         <Banknote className="w-3.5 h-3.5 text-[#008c46]" />
                         <span>The same rates that credit your wallet</span>
                     </div>

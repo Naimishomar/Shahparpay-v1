@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import TransactionDetailModal from "../components/TransactionDetailModal"
 import { Download, FileDown, FileText, Loader2, Search } from "lucide-react";
 import axios from "axios";
 import jsPDF from "jspdf";
@@ -28,6 +29,7 @@ const reasonOf = (tx: any) =>
 const ServiceReport = ({ kind, title, description }: ServiceReportProps) => {
     const { user } = useAuth();
     const [transactions, setTransactions] = useState<any[]>([]);
+    const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [status, setStatus] = useState("ALL");
@@ -123,6 +125,7 @@ const ServiceReport = ({ kind, title, description }: ServiceReportProps) => {
 
     return (
         <div className="flex-1 w-full flex flex-col p-4 md:p-6 max-w-[1600px] mx-auto h-[calc(100vh-64px)] overflow-hidden">
+            <TransactionDetailModal tx={selectedTransaction} onClose={() => setSelectedTransaction(null)} />
             <div className="flex flex-col gap-5 h-full">
                 <div className="relative isolate overflow-hidden flex flex-col xl:flex-row xl:items-center justify-between gap-4 shrink-0 rounded-3xl border bg-card p-5 md:p-6 shadow-sm"><div aria-hidden className="pointer-events-none absolute -top-32 -right-24 -z-10 h-72 w-72 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" /><div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 -z-10 h-72 w-72 rounded-full bg-slate-200/70 dark:bg-slate-400/10 blur-3xl" />
                     <div className="flex items-center gap-3">
@@ -170,7 +173,7 @@ const ServiceReport = ({ kind, title, description }: ServiceReportProps) => {
                             </thead>
                             <tbody>
                                 {loading ? <tr><td colSpan={9} className="h-64 text-center"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground inline" /></td></tr> : rows.length === 0 ? <tr><td colSpan={9} className="h-64 text-center text-muted-foreground">No {kind} transactions found.</td></tr> : rows.map((tx, index) => (
-                                    <tr key={tx._id || tx.transactionId} className="border-t hover:bg-black/[0.02] dark:hover:bg-white/[0.03]">
+                                    <tr key={tx._id || tx.transactionId} onClick={() => setSelectedTransaction(tx)} className="border-t cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.03]">
                                         <td className="px-4 py-3 text-muted-foreground">{(page - 1) * pageSize + index + 1}</td>
                                         <td className="px-4 py-3 font-medium">{tx.transactionId || tx._id}</td>
                                         <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{new Date(tx.createdAt).toLocaleString()}</td>

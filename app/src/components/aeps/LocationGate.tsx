@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, themed, radius, space, type as t, TOUCH } from '../../theme/colors';
 import { openLocationSettings, requireCoords, type LocationFailure } from '@/services/location';
 import { useLocationReady } from '@/hooks/useLocationReady';
@@ -64,7 +64,7 @@ export const LocationGate: React.FC = () => {
 
   return (
     <View style={styles.banner} accessibilityRole="alert" accessibilityLiveRegion="polite">
-      <MaterialCommunityIcons name="map-marker-alert" size={20} color={colors.warning} />
+      <Ionicons name="location-outline" size={20} color={colors.warning} />
       <View style={styles.text}>
         <Text style={styles.title}>{copy.title}</Text>
         <Text style={styles.body}>{copy.body}</Text>
@@ -87,17 +87,18 @@ const styles = themed((c) => ({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: space.sm,
-    padding: space.md,
-    borderLeftWidth: 3,
-    borderLeftColor: c.warning,
+    // BHIM's info note: a quiet card; only the icon carries the warning hue.
+    padding: space.lg,
     borderRadius: radius.md,
-    backgroundColor: c.warningSubtle,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.card,
   },
-  text: { flex: 1, minWidth: 0, gap: 2 },
-  title: { fontSize: t.small, fontWeight: '700', color: c.warning },
-  body: { fontSize: t.caption, color: c.warning, lineHeight: 18, opacity: 0.9 },
+  text: { flex: 1, minWidth: 0, gap: 3 },
+  title: { fontSize: t.body, fontWeight: '500', color: c.foreground },
+  body: { fontSize: t.small, color: c.mutedForeground, lineHeight: 19 },
   action: { minHeight: TOUCH, justifyContent: 'center', paddingLeft: space.sm },
-  actionText: { fontSize: t.caption, fontWeight: '800', color: c.warning, textAlign: 'right' },
+  actionText: { fontSize: t.small, fontWeight: '500', color: c.accent, textAlign: 'right' },
 }));
 
 export default LocationGate;

@@ -1,19 +1,21 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { themed, space, type as t, radius, colors } from '../../theme/colors';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { IconTile } from '@/components/ui/Gradient';
 import { Input, SelectField } from '@/components/ui/Input';
 import {
   Screen,
+  SectionTitle,
   EmptyState,
   ErrorBanner,
   SuccessBanner,
   Grid,
   Row,
   Segmented,
-  StatusPill,
   shortDate,
+  SkeletonRows,
 } from '@/components/ui/Screen';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import { INDIAN_STATES } from '@/constants';
@@ -114,16 +116,14 @@ export const LeadGenerationScreen: React.FC = () => {
       onRetry={leads.reload}
     >
       <Grid columns={2}>
-        <Tile label="Total leads" value={String(stats.total)} />
-        <Tile label="Converted" value={String(stats.converted)} tone="success" />
-        <Tile label="Pending" value={String(stats.pending)} tone="warning" />
-        <Tile label="Rejected" value={String(stats.rejected)} tone="error" />
+        <Tile icon="account-group-outline" label="Total leads" value={String(stats.total)} />
+        <Tile icon="check-circle-outline" label="Converted" value={String(stats.converted)} tone="success" />
+        <Tile icon="clock-outline" label="Pending" value={String(stats.pending)} tone="warning" />
+        <Tile icon="close-circle-outline" label="Rejected" value={String(stats.rejected)} tone="error" />
       </Grid>
 
+      <SectionTitle>New lead</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="account-plus-outline">New lead</CardTitle>
-        </CardHeader>
         <CardContent style={styles.form}>
           <View style={styles.field}>
             <Text style={styles.label}>
@@ -213,7 +213,6 @@ export const LeadGenerationScreen: React.FC = () => {
             onPress={onSubmit}
             disabled={!valid}
             loading={submit.pending}
-            icon="send-outline"
             size="lg"
             fullWidth
           >
@@ -222,20 +221,22 @@ export const LeadGenerationScreen: React.FC = () => {
         </CardContent>
       </Card>
 
+      <SectionTitle>Lead history</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="history">Lead history</CardTitle>
-        </CardHeader>
         <CardContent>
           {!!refreshStatus.error && <ErrorBanner message={refreshStatus.error} />}
-          {leads.loading ? null : leads.data?.length ? (
-            leads.data.slice(0, 25).map((lead: any) => (
-              <View key={lead._id || lead.refid} style={styles.item}>
+          {leads.loading ? <SkeletonRows count={3} /> : leads.data?.length ? (
+            leads.data.slice(0, 25).map((lead: any, index: number, shown: any[]) => (
+              <View
+                key={lead._id || lead.refid}
+                style={[styles.item, index === shown.length - 1 && styles.itemLast]}
+              >
                 <View style={styles.itemTop}>
+                  <IconTile icon="account-outline" size={44} iconSize={20} />
                   <Text style={styles.itemName} numberOfLines={1}>
                     {lead.name}
                   </Text>
-                  <StatusPill status={lead.executive_status || lead.status} />
+                  <StatusText status={lead.executive_status || lead.status} />
                 </View>
                 <Row label="Product" value={lead.product} />
                 <Row label="Mobile" value={lead.mobile_no || lead.mobile} />
@@ -264,12 +265,14 @@ export const LeadGenerationScreen: React.FC = () => {
   );
 };
 
-const Tile: React.FC<{ label: string; value: string; tone?: 'success' | 'warning' | 'error' }> = ({
-  label,
-  value,
-  tone,
-}) => (
+const Tile: React.FC<{
+  icon: string;
+  label: string;
+  value: string;
+  tone?: 'success' | 'warning' | 'error';
+}> = ({ icon, label, value, tone }) => (
   <View style={styles.tile}>
+    <IconTile icon={icon} size={40} iconSize={18} />
     <Text style={styles.tileLabel} numberOfLines={1}>
       {label}
     </Text>
@@ -286,35 +289,52 @@ const Tile: React.FC<{ label: string; value: string; tone?: 'success' | 'warning
   </View>
 );
 
+/** BHIM status: small coloured text, never a filled pill. */
+const StatusText: React.FC<{ status?: string | null }> = ({ status }) => {
+  const s = String(status || 'PENDING').toUpperCase();
+  const color = /SUCCESS|COMPLETE|APPROVED|ACTIVE|ACCEPTED|CONVERTED/.test(s)
+    ? colors.success
+    : /FAIL|REJECT/.test(s)
+      ? colors.destructive
+      : colors.warning;
+  return (
+    <Text style={{ fontSize: t.small, fontWeight: '500', color }}>
+      {s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, ' ')}
+    </Text>
+  );
+};
+
 const styles = themed((c) => ({
   tile: {
-    padding: space.md,
-    borderRadius: radius.md,
+    padding: space.lg,
+    borderRadius: radius.lg,
     backgroundColor: c.card,
     borderWidth: 1,
     borderColor: c.border,
-    gap: 3,
+    gap: 6,
   },
-  tileLabel: { fontSize: t.micro, fontWeight: '600', color: c.mutedForeground },
+  tileLabel: { fontSize: t.small, color: c.mutedForeground },
   tileValue: {
-    fontSize: t.title,
-    fontWeight: '700',
+    fontSize: t.h2,
+    fontWeight: '400',
     color: c.foreground,
     fontVariant: ['tabular-nums'],
   },
   form: { gap: space.lg },
   field: { gap: space.sm },
-  label: { fontSize: t.caption, fontWeight: '600', color: c.mutedForeground },
+  label: { fontSize: t.small, fontWeight: '500', color: c.mutedForeground },
   required: { color: c.destructive },
   picker: {
     gap: space.sm,
     padding: space.sm,
     borderRadius: radius.md,
-    backgroundColor: c.secondary,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
   },
   pickerList: { maxHeight: 220 },
   pickerItem: {
-    minHeight: 44,
+    minHeight: 48,
     justifyContent: 'center',
     paddingHorizontal: space.md,
     borderRadius: radius.sm,
@@ -323,14 +343,14 @@ const styles = themed((c) => ({
   pickerText: { fontSize: t.small, color: c.foreground },
   pickerEmpty: { fontSize: t.caption, color: c.mutedForeground, padding: space.md },
   item: { paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
+  itemLast: { borderBottomWidth: 0 },
   itemTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     gap: space.md,
     marginBottom: 2,
   },
-  itemName: { flex: 1, minWidth: 0, fontSize: t.body, fontWeight: '700', color: c.foreground },
+  itemName: { flex: 1, minWidth: 0, fontSize: t.bodyLg, fontWeight: '500', color: c.foreground },
   statusButton: { alignSelf: 'flex-start', marginTop: space.xs },
 }));
 

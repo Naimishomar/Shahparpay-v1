@@ -40,6 +40,17 @@ const getRetailerWithWallet = async (userId) => {
   return { retailer, balance };
 };
 
+// Takes the fee before the provider is called. Checking the balance and debiting
+// only after eSevaTech answered let parallel requests buy on one balance.
+const holdFee = (retailer, fee) =>
+  MainWallet.findOneAndUpdate(
+    { userId: retailer._id, balance: { $gte: fee } },
+    { $inc: { balance: -fee } },
+    { returnDocument: 'after' }
+  );
+const releaseFee = (retailer, fee) =>
+  MainWallet.updateOne({ userId: retailer._id }, { $inc: { balance: fee } });
+
 // Map eSevaTech status strings to our Transaction status enum
 const mapEsevaStatus = (status) => {
   if (!status) return 'PENDING';
@@ -57,6 +68,7 @@ const mapEsevaStatus = (status) => {
 // coupon. The provider's own net_commission is kept in metadata only.
 const applyWalletImpact = async ({
   retailer,
+  heldWallet,
   finalAmount,
   units,
   transactionId,
@@ -66,11 +78,13 @@ const applyWalletImpact = async ({
 }) => {
   const fee = Number(finalAmount) || 0;
 
-  const updatedWallet = await MainWallet.findOneAndUpdate(
-    { userId: retailer._id, balance: { $gte: fee } },
-    { $inc: { balance: -fee } },
-    { returnDocument: 'after' }
-  );
+  const updatedWallet =
+    heldWallet ||
+    (await MainWallet.findOneAndUpdate(
+      { userId: retailer._id, balance: { $gte: fee } },
+      { $inc: { balance: -fee } },
+      { returnDocument: 'after' }
+    ));
 
   if (!updatedWallet) {
     return { error: 'Insufficient wallet balance' };
@@ -129,7 +143,8 @@ export const applyPanService = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Retailer not found' });
     }
 
-    if (balance < PAN_APPLICATION_FEE) {
+    const heldWallet = await holdFee(retailer, PAN_APPLICATION_FEE);
+    if (!heldWallet) {
       return res.status(400).json({
         success: false,
         message: `Insufficient wallet balance. Required at least ₹${PAN_APPLICATION_FEE}.`,
@@ -164,6 +179,7 @@ export const applyPanService = async (req, res) => {
     console.log('[eSeva PAN Service] Response:', response.status, result);
 
     if (!result || !result.success) {
+      await releaseFee(retailer, PAN_APPLICATION_FEE);
       return res.status(400).json({
         success: false,
         message: result?.message || 'Failed to submit PAN Service application',
@@ -181,6 +197,7 @@ export const applyPanService = async (req, res) => {
 
     const impact = await applyWalletImpact({
       retailer,
+      heldWallet,
       finalAmount,
       units: 1,
       transactionId: `PAN-SERVICE-${applicationNumber}`,
@@ -274,7 +291,11 @@ export const applyPanCoupon = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Retailer not found' });
     }
 
-    if (balance < PAN_APPLICATION_FEE * Number(number_of_coupons)) {
+    if (!Number.isInteger(Number(number_of_coupons))) {
+      return res.status(400).json({ success: false, message: 'Number of coupons must be a whole number' });
+    }
+    const heldWallet = await holdFee(retailer, PAN_APPLICATION_FEE * Number(number_of_coupons));
+    if (!heldWallet) {
       return res.status(400).json({
         success: false,
         message: `Insufficient wallet balance. Required at least ₹${PAN_APPLICATION_FEE * Number(number_of_coupons)}.`,
@@ -306,6 +327,7 @@ export const applyPanCoupon = async (req, res) => {
     console.log('[eSeva PAN Coupon] Response:', response.status, result);
 
     if (!result || !result.success) {
+      await releaseFee(retailer, PAN_APPLICATION_FEE * Number(number_of_coupons));
       return res.status(400).json({
         success: false,
         message: result?.message || 'Failed to submit PAN Coupon request',
@@ -323,6 +345,7 @@ export const applyPanCoupon = async (req, res) => {
 
     const impact = await applyWalletImpact({
       retailer,
+      heldWallet,
       finalAmount,
       units: Number(number_of_coupons),
       transactionId: `PAN-COUPON-${applicationNumber}`,

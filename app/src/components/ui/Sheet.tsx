@@ -64,7 +64,7 @@ export const Sheet: React.FC<SheetProps> = ({
           <View style={[styles.header, { paddingHorizontal: padding }]}>
             {!!icon && (
               <View style={styles.headerIcon}>
-                <MaterialCommunityIcons name={icon as any} size={20} color={colors.accent} />
+                <MaterialCommunityIcons name={icon as any} size={20} color={colors.foreground} />
               </View>
             )}
             <View style={styles.headerText}>
@@ -174,16 +174,17 @@ const styles = themed((c) => ({
     borderBottomWidth: 1,
     borderBottomColor: c.border,
   },
+  // BHIM: a neutral grey circle, never a tinted square.
   headerIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.md,
-    backgroundColor: c.accentSubtle,
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: c.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerText: { flex: 1, minWidth: 0, gap: 2 },
-  title: { fontSize: t.bodyLg, fontWeight: '700', color: c.popoverForeground },
+  title: { fontSize: t.title, fontWeight: '500', color: c.popoverForeground },
   subtitle: { fontSize: t.caption, color: c.mutedForeground },
   close: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   scroll: { flexGrow: 0 },
@@ -201,13 +202,13 @@ const styles = themed((c) => ({
     minHeight: TOUCH,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     borderWidth: 1,
   },
-  cancelButton: { backgroundColor: c.secondary, borderColor: c.secondary },
+  cancelButton: { backgroundColor: 'transparent', borderColor: c.borderStrong },
   acceptButton: { backgroundColor: c.primary, borderColor: c.primary },
-  cancelText: { fontSize: t.body, fontWeight: '700', color: c.secondaryForeground },
-  acceptText: { fontSize: t.body, fontWeight: '700', color: c.primaryForeground },
+  cancelText: { fontSize: t.body, fontWeight: '600', color: c.foreground },
+  acceptText: { fontSize: t.body, fontWeight: '600', color: c.primaryForeground },
 }));
 
 export default Sheet;

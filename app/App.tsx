@@ -4,10 +4,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
-import { IBMPlexSans_400Regular } from '@expo-google-fonts/ibm-plex-sans/400Regular';
-import { IBMPlexSans_500Medium } from '@expo-google-fonts/ibm-plex-sans/500Medium';
-import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans/600SemiBold';
-import { IBMPlexSans_700Bold } from '@expo-google-fonts/ibm-plex-sans/700Bold';
+import { Figtree_300Light } from '@expo-google-fonts/figtree/300Light';
+import { Figtree_400Regular } from '@expo-google-fonts/figtree/400Regular';
+import { Figtree_500Medium } from '@expo-google-fonts/figtree/500Medium';
+import { Figtree_600SemiBold } from '@expo-google-fonts/figtree/600SemiBold';
+import { Figtree_700Bold } from '@expo-google-fonts/figtree/700Bold';
 import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { AppNavigator } from '@/navigation/AppNavigator';
@@ -35,7 +36,8 @@ const AppContent: React.FC = () => {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: palette.background }}>
       <StatusBar
         barStyle={resolvedTheme === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor={palette.background}
+        translucent
+        backgroundColor="transparent"
       />
       <AppNavigator />
     </GestureHandlerRootView>
@@ -44,10 +46,11 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   const [fontsLoaded, fontError] = useFonts({
-    IBMPlexSans_400Regular,
-    IBMPlexSans_500Medium,
-    IBMPlexSans_600SemiBold,
-    IBMPlexSans_700Bold,
+    Figtree_300Light,
+    Figtree_400Regular,
+    Figtree_500Medium,
+    Figtree_600SemiBold,
+    Figtree_700Bold,
   });
 
   const onReady = useCallback(() => {
@@ -59,7 +62,7 @@ const App: React.FC = () => {
   // face the handset defaults to, which is exactly what this exists to avoid.
   if (fontError) {
     console.warn(
-      '[fonts] IBM Plex Sans failed to load; falling back to the system face.',
+      '[fonts] Figtree failed to load; falling back to the system face.',
       fontError
     );
   }

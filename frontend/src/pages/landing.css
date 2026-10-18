@@ -1,6 +1,6 @@
 /*
  * Shahparpay Landing Page Design System & Styles
- * Modern, high-converting Cashfree style fintech interface styling
+ * Public pages: brand tokens and shared styles
  */
 .landing-page {
   --lp-bg: #ffffff;
@@ -251,5 +251,12 @@ input[type='range'] {
   }
   .lp-marquee {
     overflow-x: auto;
+  }
+}
+
+/* Mobile readability: Tailwind's text-xs (12px) reads too small on phones, so lift it to 14px on public pages. */
+@media (max-width: 639px) {
+  .landing-page {
+    --text-xs: 0.875rem;
   }
 }

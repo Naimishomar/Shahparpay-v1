@@ -114,6 +114,8 @@ export interface TabEntry {
   route: string;
   icon: string;
   iconActive: string;
+  /** Drawn as the raised centre button. */
+  raised?: boolean;
 }
 
 /**
@@ -121,17 +123,17 @@ export interface TabEntry {
  * Everything else lives one level down under Services or Reports, so the bar
  * never carries sub-navigation.
  *
- * Account is deliberately NOT a tab — the header avatar opens it, which frees
- * the slot for AEPS, the service retailers open many times a day.
+ * Withdraw is not a tab: it is the wallet card's own button on Home. Profile
+ * is not a tab either: it opens as a full-screen drawer from Home's avatar.
  */
 export const RETAILER_TABS: TabEntry[] = [
+  // Ionicons names: BHIM's nav uses thin line glyphs.
   { key: 'home', name: 'Home', route: 'Dashboard', icon: 'home-outline', iconActive: 'home' },
-  // Same glyph either way: MaterialCommunityIcons has no outline fingerprint,
-  // and the active pill plus colour already carry the selected state.
-  { key: 'aeps', name: 'AEPS', route: 'AEPS', icon: 'fingerprint', iconActive: 'fingerprint' },
-  { key: 'services', name: 'Services', route: 'Services', icon: 'apps', iconActive: 'apps' },
-  { key: 'reports', name: 'Reports', route: 'Reports', icon: 'chart-box-outline', iconActive: 'chart-box' },
-  { key: 'settlement', name: 'Withdraw', route: 'AepsSettlement', icon: 'bank-outline', iconActive: 'bank' },
+  { key: 'services', name: 'Services', route: 'Services', icon: 'grid-outline', iconActive: 'grid' },
+  // Centre slot: the raised orange button, BHIM's scan position.
+  { key: 'aeps', name: 'AEPS', route: 'AEPS', icon: 'finger-print', iconActive: 'finger-print', raised: true },
+  { key: 'reports', name: 'History', route: 'Reports', icon: 'time-outline', iconActive: 'time' },
+  { key: 'support', name: 'Help', route: 'Support', icon: 'help-circle-outline', iconActive: 'help-circle' },
 ];
 
 export const ADMIN_TABS: TabEntry[] = [
@@ -152,7 +154,6 @@ export const SERVICE_ITEMS: MenuEntry[] = [
   { name: 'AEPS', route: 'AEPS', icon: 'fingerprint', hint: 'Aadhaar banking', group: 'Banking' },
   { name: 'MATM', route: 'MATM', icon: 'credit-card-outline', hint: 'Micro ATM withdrawal', group: 'Banking' },
   { name: 'DMT', route: 'DMT', icon: 'bank-transfer', hint: 'Money transfer', group: 'Banking' },
-  { name: 'Direct Payout', route: 'DirectPayout', icon: 'cash-fast', hint: 'Pay any account', group: 'Banking' },
 
   { name: 'Recharge', route: 'Recharge', icon: 'cellphone', hint: 'Mobile & DTH', group: 'Payments' },
   { name: 'BBPS', route: 'BBPS', icon: 'receipt', hint: 'Utility bills', group: 'Payments' },
@@ -203,14 +204,6 @@ export const SERVICE_METRICS: { key: string; label: string; icon: string }[] = [
   { key: 'BILL_PAYMENT', label: 'Bill payments', icon: 'receipt' },
   { key: 'AEPS_SETTLEMENT', label: 'Payouts', icon: 'cash-fast' },
   { key: 'WALLET_TOPUP', label: 'UPI collected', icon: 'qrcode' },
-];
-
-/** Home screen shortcuts. */
-export const QUICK_ACTIONS: MenuEntry[] = [
-  { name: 'AEPS', route: 'AEPS', icon: 'fingerprint' },
-  { name: 'Recharge', route: 'Recharge', icon: 'cellphone' },
-  { name: 'DMT', route: 'DMT', icon: 'bank-transfer' },
-  { name: 'Payout', route: 'DirectPayout', icon: 'cash-fast' },
 ];
 
 export const API_ENDPOINTS = {
@@ -270,7 +263,6 @@ export const API_ENDPOINTS = {
     deleteBank: '/api/settlement/bank', // append /:id
     accountStatus: '/api/settlement/account-status', // append /:id
     initiate: '/api/settlement/initiate',
-    directPayout: '/api/settlement/direct-payout',
     status: '/api/settlement/status',
     history: '/api/settlement/history',
     uploadDocument: '/api/settlement/upload-document',

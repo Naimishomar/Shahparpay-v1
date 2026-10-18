@@ -3,6 +3,7 @@ import Retailer from '../models/users/retailer.model.js';
 import MainWallet from '../models/mainWallet.model.js';
 import axios from 'axios';
 import { PAN_RATES, setCommissions, settleCommissions } from '../utils/wallet.util.js';
+import { hasCallbackKey } from '../utils/callbackKey.js';
 
 // Standard UTI PAN token charge per PAN card application / coupon.
 const PAN_COUPON_FEE = 107;
@@ -157,7 +158,9 @@ export const syncPsaStatus = async (req, res) => {
     let txn = await Transaction.findOne({
       userId: retailer._id,
       type: 'PAN_CARD',
-      'metadata.psa_id': psa_id,
+      'metadata.psa_id': String(psa_id),
+      // Payment rows carry psa_id too; their status is the provider's to set, not the retailer's.
+      'metadata.action': { $ne: 'PAYMENT_REQUEST' },
     });
 
     if (!txn) {
@@ -373,13 +376,13 @@ export const buyPsaCoupons = async (req, res) => {
 
     const couponAmount = Number(amount);
 
-    // Verify the retailer has enough Main Wallet balance BEFORE hitting the
-    // provider, so coupons are never bought without the wallet being debited.
-    const mainWallet = await MainWallet.findOne({ userId: retailer._id });
-    if (!mainWallet || mainWallet.balance < couponAmount) {
+    // Debit first: the debit's own balance check is atomic. Checking the balance
+    // and debiting after the provider let parallel requests get coupons unpaid.
+    const debited = await debitMainWallet(retailer._id, couponAmount);
+    if (!debited) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient Main Wallet balance. Required ₹${couponAmount}, available ₹${mainWallet?.balance || 0}.`,
+        message: `Insufficient Main Wallet balance. Required ₹${couponAmount}.`,
       });
     }
 
@@ -432,21 +435,7 @@ export const buyPsaCoupons = async (req, res) => {
 
     if (data && data.success === 1) {
       // Payment request submitted successfully — cut the amount from the Main Wallet.
-      const wallet = await debitMainWallet(retailer._id, couponAmount);
-      if (!wallet) {
-        transaction.status = 'FAILED';
-        transaction.metadata = {
-          ...transaction.metadata,
-          gatewayMessage: 'Insufficient Main Wallet balance for coupon purchase',
-        };
-        transaction.markModified('metadata');
-        await transaction.save();
-
-        return res.status(400).json({
-          success: false,
-          message: 'Insufficient Main Wallet balance for coupon purchase.',
-        });
-      }
+      const wallet = debited;
 
       transaction.status = data.data?.status || 'SUCCESS';
       // ponytail: the PSA purchase is priced in rupees, so coupons are counted at
@@ -470,6 +459,8 @@ export const buyPsaCoupons = async (req, res) => {
     } else {
       transaction.status = 'FAILED';
       await transaction.save();
+      // The provider refused, so the held amount goes back.
+      await MainWallet.updateOne({ userId: retailer._id }, { $inc: { balance: couponAmount } });
 
       let cleanMsg = data?.message || 'Payment request failed';
       if (typeof cleanMsg === 'string') {
@@ -495,18 +486,24 @@ export const buyPsaCoupons = async (req, res) => {
 // @access Public
 export const panCallback = async (req, res) => {
   try {
+    // Public endpoint that rewrites PAN transaction status: BharatPays must send
+    // the shared key. Register the URL as /api/pan/callback?key=<BHARATPAYS_CALLBACK_KEY>.
+    if (!hasCallbackKey(req, 'BHARATPAYS_CALLBACK_KEY')) {
+      return res.status(401).json({ success: false, message: 'Unauthorized callback' });
+    }
     const { success, message, data } = req.body;
     console.log(`[PSA Callback] Received webhook:`, req.body);
 
     if (data && (data.psa_id || data.order_id)) {
       const query = data.psa_id
-        ? { 'metadata.psa_id': data.psa_id, type: 'PAN_CARD' }
-        : { 'metadata.order_id': data.order_id, type: 'PAN_CARD' };
+        ? { 'metadata.psa_id': String(data.psa_id), type: 'PAN_CARD' }
+        : { 'metadata.order_id': String(data.order_id), type: 'PAN_CARD' };
 
       const transaction = await Transaction.findOne(query);
 
       if (transaction) {
-        transaction.status = data.status || transaction.status;
+        const CALLBACK_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'FAILED', 'SUCCESS'];
+        if (CALLBACK_STATUSES.includes(data.status)) transaction.status = data.status;
         transaction.metadata = {
           ...transaction.metadata,
           callback_data: data,
@@ -856,15 +853,18 @@ export const purchaseStdCoupons = async (req, res) => {
     }
 
     const couponQty = Number(coupon);
+    if (!Number.isInteger(couponQty)) {
+      return res.status(400).json({ success: false, message: 'Number of coupons must be a whole number' });
+    }
     const totalAmount = couponQty * PAN_COUPON_FEE;
 
-    // Verify the retailer has enough Main Wallet balance BEFORE hitting the
-    // provider, so coupons are never bought without the wallet being debited.
-    const mainWallet = await MainWallet.findOne({ userId: retailer._id });
-    if (!mainWallet || mainWallet.balance < totalAmount) {
+    // Debit first: the debit's own balance check is atomic. Checking the balance
+    // and debiting after the provider let parallel requests get coupons unpaid.
+    const debited = await debitMainWallet(retailer._id, totalAmount);
+    if (!debited) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient Main Wallet balance. Required ₹${totalAmount}, available ₹${mainWallet?.balance || 0}.`,
+        message: `Insufficient Main Wallet balance. Required ₹${totalAmount}.`,
       });
     }
 
@@ -912,21 +912,7 @@ export const purchaseStdCoupons = async (req, res) => {
 
     if (data && data.success === 1) {
       // Coupon purchase succeeded — cut ₹107 per coupon from the Main Wallet.
-      const wallet = await debitMainWallet(retailer._id, totalAmount);
-      if (!wallet) {
-        transaction.status = 'FAILED';
-        transaction.metadata = {
-          ...transaction.metadata,
-          gatewayMessage: 'Insufficient Main Wallet balance for coupon purchase',
-        };
-        transaction.markModified('metadata');
-        await transaction.save();
-
-        return res.status(400).json({
-          success: false,
-          message: 'Insufficient Main Wallet balance for coupon purchase.',
-        });
-      }
+      const wallet = debited;
 
       transaction.status = data.data?.status || 'SUCCESS';
       await payCouponCommission(transaction, couponQty);
@@ -948,6 +934,8 @@ export const purchaseStdCoupons = async (req, res) => {
     } else {
       transaction.status = 'FAILED';
       await transaction.save();
+      // The provider refused, so the held amount goes back.
+      await MainWallet.updateOne({ userId: retailer._id }, { $inc: { balance: totalAmount } });
 
       let cleanMsg = data?.message || 'Coupon purchase failed';
       if (typeof cleanMsg === 'string') {

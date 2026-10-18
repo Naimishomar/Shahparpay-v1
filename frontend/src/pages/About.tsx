@@ -159,7 +159,7 @@ const About: React.FC = () => {
             {/* ------------------------------------------------------------- HERO HEADER */}
             <section className="relative w-full border-b border-slate-100 bg-gradient-to-b from-[#f7fee7]/80 via-[#ecfccb]/30 to-white px-4 sm:px-6 py-14 sm:py-20">
                 <div className="mx-auto max-w-4xl text-center">
-                    <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 sm:px-4 py-1.5 rounded-full text-[0.7rem] sm:text-xs font-bold mb-4 shadow-2xs">
+                    <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-bold mb-4 shadow-2xs">
                         <Sparkles className="w-3.5 h-3.5 text-[#008c46]" />
                         <span>Shahparpay Solutions Private Limited</span>
                     </div>
@@ -273,16 +273,16 @@ const About: React.FC = () => {
                                         <div className="w-10 h-10 rounded-xl bg-[#f0fdf4] border border-[#bbf7d0] flex items-center justify-center">
                                             <srv.icon className="h-5 w-5 text-[#008c46]" />
                                         </div>
-                                        <span className="text-[0.65rem] font-extrabold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                                        <span className="text-xs font-extrabold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                                             {srv.badge}
                                         </span>
                                     </div>
                                     <h3 className="text-lg font-extrabold text-slate-900">{srv.title}</h3>
                                     <p className="mt-2 text-xs text-slate-600 leading-relaxed">{srv.desc}</p>
                                 </div>
-                                <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-[0.72rem] font-bold text-[#008c46]">
+                                <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-[#008c46]">
                                     <span>{srv.price}</span>
-                                    <span className="text-slate-400">#{srv.id}</span>
+                                    <span className="text-slate-600">#{srv.id}</span>
                                 </div>
                             </div>
                         ))}
@@ -310,7 +310,7 @@ const About: React.FC = () => {
                             <div className="p-4 rounded-2xl bg-white border border-slate-200 flex items-start gap-3">
                                 <Phone className="h-5 w-5 text-[#008c46] shrink-0 mt-0.5" />
                                 <div>
-                                    <div className="text-xs font-bold text-slate-400 uppercase">Support Care Line</div>
+                                    <div className="text-xs font-bold text-slate-600 uppercase">Support Care Line</div>
                                     <a href="tel:+918240039776" className="text-sm font-extrabold text-slate-900 hover:text-[#008c46]">+91 8240039776</a>
                                 </div>
                             </div>
@@ -318,7 +318,7 @@ const About: React.FC = () => {
                             <div className="p-4 rounded-2xl bg-white border border-slate-200 flex items-start gap-3">
                                 <Mail className="h-5 w-5 text-[#008c46] shrink-0 mt-0.5" />
                                 <div>
-                                    <div className="text-xs font-bold text-slate-400 uppercase">Support Email</div>
+                                    <div className="text-xs font-bold text-slate-600 uppercase">Support Email</div>
                                     <a href="mailto:shahparpay@gmail.com" className="text-sm font-extrabold text-slate-900 hover:text-[#008c46]">shahparpay@gmail.com</a>
                                 </div>
                             </div>

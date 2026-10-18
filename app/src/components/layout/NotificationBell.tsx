@@ -1,7 +1,8 @@
 import React, { useCallback } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, themed, radius } from '../../theme/colors';
 import { useAsync } from '@/hooks/useAsync';
 import api from '@/services/api';
@@ -46,49 +47,45 @@ export const NotificationBell: React.FC<Props> = ({ onBand, style }) => {
   return (
     <Pressable
       onPress={() => navigation.navigate('Notifications')}
-      style={({ pressed }) => [styles.button, style, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.button, onBand && styles.buttonOnBand, style, pressed && styles.pressed]}
       accessibilityRole="button"
       accessibilityLabel={unread ? `Notifications, ${unread} unread` : 'Notifications'}
       hitSlop={8}
     >
-      <MaterialCommunityIcons
-        name="bell-outline"
-        size={19}
+      <Ionicons
+        name="notifications-outline"
+        size={24}
         color={onBand ? colors.bandForeground : colors.foreground}
       />
-      {unread > 0 && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText} numberOfLines={1}>
-            {unread > 99 ? '99+' : unread}
-          </Text>
-        </View>
-      )}
+      {/* A dot, not a count: the number is in the accessibility label. */}
+      {unread > 0 && <View style={[styles.dot, onBand && styles.dotOnBand]} />}
     </Pressable>
   );
 };
 
 const styles = themed((c) => ({
+  // A bare glyph, as in BHIM's top row — no chip behind it.
   button: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  buttonOnBand: {},
   pressed: { opacity: 0.6 },
-  badge: {
+  dot: {
     position: 'absolute',
-    top: 3,
-    right: 3,
-    minWidth: 16,
-    height: 16,
-    paddingHorizontal: 3,
+    top: 9,
+    right: 10,
+    width: 9,
+    height: 9,
     borderRadius: radius.pill,
-    backgroundColor: c.destructive,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: c.highlight,
+    borderWidth: 2,
+    borderColor: c.background,
   },
-  badgeText: { fontSize: 9, fontWeight: '800', color: '#FFFFFF' },
+  dotOnBand: {},
 }));
 
 export default NotificationBell;

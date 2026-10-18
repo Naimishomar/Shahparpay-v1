@@ -84,6 +84,27 @@ export const getDistributorFundRequests = async (req, res) => {
   }
 };
 
+/**
+ * Moves a fund request out of PENDING in one atomic step, so two approvals
+ * racing each other (double click, retry) cannot both credit the wallet.
+ * Returns the claimed request, or a ready error response.
+ */
+const claimPendingRequest = async (filter, status, res) => {
+  const claimed = await FundRequest.findOneAndUpdate(
+    { ...filter, status: 'PENDING' },
+    { $set: { status } },
+    { new: true }
+  );
+  if (claimed) return claimed;
+  const existing = await FundRequest.findOne(filter);
+  res
+    .status(existing ? 400 : 404)
+    .json({ success: false, message: existing ? `Fund request is already ${existing.status}` : 'Fund request not found' });
+  return null;
+};
+
+const releaseClaim = (id) => FundRequest.updateOne({ _id: id }, { $set: { status: 'PENDING' } });
+
 export const updateFundRequestStatus = async (req, res) => {
   try {
     const { requestId, status, adminRemarks } = req.body;
@@ -92,24 +113,18 @@ export const updateFundRequestStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid status' });
     }
 
-    const fundRequest = await FundRequest.findOne({
-      _id: requestId,
-      distributorId: req.user.id,
-      requestType: 'RETAILER',
-    });
-    if (!fundRequest) {
-      return res.status(404).json({ success: false, message: 'Fund request not found' });
-    }
-
-    if (fundRequest.status !== 'PENDING') {
-      return res
-        .status(400)
-        .json({ success: false, message: `Fund request is already ${fundRequest.status}` });
-    }
+    const fundRequest = await claimPendingRequest(
+      { _id: String(requestId), distributorId: req.user.id, requestType: 'RETAILER' },
+      status,
+      res
+    );
+    if (!fundRequest) return;
 
     if (status === 'APPROVED') {
+      // Keyed on the request, so even a second claim could not write a second credit.
+      const transactionId = `FR${fundRequest._id}`;
+      let deducted = false;
       try {
-        const transactionId = `FR${Date.now()}`;
 
         // 1. Deduct from Distributor
         await updateWalletAtomically(fundRequest.distributorId, 'MAIN', -fundRequest.amount, {
@@ -124,6 +139,7 @@ export const updateFundRequestStatus = async (req, res) => {
             note: 'Fund Request Approval Deduction for Retailer',
           },
         });
+        deducted = true;
 
         // 2. Credit to Retailer
         await updateWalletAtomically(fundRequest.retailerId, 'MAIN', fundRequest.amount, {
@@ -139,6 +155,18 @@ export const updateFundRequestStatus = async (req, res) => {
           },
         });
       } catch (err) {
+        // Credit failed after the deduction: give the distributor their money back.
+        if (deducted) {
+          await updateWalletAtomically(fundRequest.distributorId, 'MAIN', fundRequest.amount, {
+            transactionId: `${transactionId}_REV`,
+            userId: fundRequest.distributorId,
+            type: 'FUND_TRANSFER',
+            amount: fundRequest.amount,
+            status: 'SUCCESS',
+            metadata: { fundRequestId: fundRequest._id, note: 'Reversal: retailer credit failed' },
+          }).catch((e) => console.error('[FundRequest] reversal failed', fundRequest._id, e));
+        }
+        await releaseClaim(fundRequest._id);
         return res.status(400).json({
           success: false,
           message: err.message || 'Failed to process funds (insufficient balance?)',
@@ -255,24 +283,16 @@ export const updateAdminFundRequestStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid status' });
     }
 
-    const fundRequest = await FundRequest.findOne({
-      _id: requestId,
-      adminId: req.user.id,
-      requestType: 'DISTRIBUTOR',
-    });
-    if (!fundRequest) {
-      return res.status(404).json({ success: false, message: 'Fund request not found' });
-    }
-
-    if (fundRequest.status !== 'PENDING') {
-      return res
-        .status(400)
-        .json({ success: false, message: `Fund request is already ${fundRequest.status}` });
-    }
+    const fundRequest = await claimPendingRequest(
+      { _id: String(requestId), adminId: req.user.id, requestType: 'DISTRIBUTOR' },
+      status,
+      res
+    );
+    if (!fundRequest) return;
 
     if (status === 'APPROVED') {
       try {
-        const transactionId = `FR_ADM_${Date.now()}`;
+        const transactionId = `FR_ADM_${fundRequest._id}`;
 
         // Credit Distributor directly (Admin does not deduct from a strict wallet in this simplified flow)
         await updateWalletAtomically(fundRequest.distributorId, 'MAIN', fundRequest.amount, {
@@ -288,6 +308,7 @@ export const updateAdminFundRequestStatus = async (req, res) => {
           },
         });
       } catch (err) {
+        await releaseClaim(fundRequest._id);
         return res
           .status(400)
           .json({ success: false, message: err.message || 'Failed to process funds' });

@@ -154,10 +154,6 @@ const EditRetailerModal: React.FC<EditRetailerModalProps> = ({ retailer, onClose
                                 <input name="dob" type="date" value={formData.dob} onChange={handleChange} className={inputCls} />
                             </div>
                             <div className="space-y-2">
-                                <label className={labelCls}>New Password (leave blank to keep)</label>
-                                <input name="password" type="password" value={formData.password} onChange={handleChange} placeholder="Leave blank to keep" className={inputCls} />
-                            </div>
-                            <div className="space-y-2">
                                 <label className={labelCls}>Profile Picture</label>
                                 <label className="w-full p-3 rounded-xl bg-background border border-dashed border-border focus:border-primary outline-none transition-colors cursor-pointer block text-muted-foreground text-sm truncate">
                                     {profilePicture ? profilePicture.name : 'Choose new file...'}

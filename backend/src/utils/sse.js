@@ -10,6 +10,8 @@ export const addClient = (req, res) => {
 
   // Send initial data to establish connection quickly
   res.write('data: {"message": "Connected"}\n\n');
+  // compression() buffers output; without a flush the live feed would sit in its buffer.
+  res.flush?.();
 
   const clientId = Date.now();
 
@@ -46,6 +48,7 @@ export const broadcastTransaction = async (transaction) => {
     clients.forEach((client) => {
       try {
         client.res.write(data);
+        client.res.flush?.();
       } catch (e) {
         console.error('Error broadcasting to client', client.id, e);
       }

@@ -1,7 +1,8 @@
 import MarqueePkg from "react-fast-marquee";
 import { useTheme } from "next-themes";
 import { useAuth } from '../context/AuthContext';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useVisiblePolling } from '../hooks/use-visible-polling';
 import axios from 'axios';
  
 // Handle CommonJS interop issue with Vite
@@ -12,18 +13,12 @@ const News = ()=>{
     const currentTheme = theme === "system" ? systemTheme : theme;
     const { token } = useAuth();
     const [updates, setUpdates] = useState<any[]>([]);
-    useEffect(() => {
-        if (!token) return;
-        const load = async () => {
-            try {
-                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/notifications/ticker`, { headers: { Authorization: `Bearer ${token}` } });
-                if (res.data.success) setUpdates(res.data.data || []);
-            } catch { /* Keep the ticker usable if announcements are unavailable. */ }
-        };
-        load();
-        const timer = window.setInterval(load, 60000);
-        return () => window.clearInterval(timer);
-    }, [token]);
+    useVisiblePolling(async () => {
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/notifications/ticker`, { headers: { Authorization: `Bearer ${token}` } });
+            if (res.data.success) setUpdates(res.data.data || []);
+        } catch { /* Keep the ticker usable if announcements are unavailable. */ }
+    }, 5 * 60000, Boolean(token));
     
     // Background colors corresponding to our light and dark theme background CSS variables
     const gradientColor = currentTheme === "dark" ? "#111111" : "#EAEAEA";

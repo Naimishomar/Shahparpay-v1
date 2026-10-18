@@ -1,5 +1,5 @@
 import React from 'react';
-import { TransactionReport } from '@/components/ui/TransactionReport';
+import { TransactionReport, PageArgs, PageResult } from '@/components/ui/TransactionReport';
 import { money, shortDate } from '@/components/ui/Screen';
 import api from '@/services/api';
 
@@ -9,8 +9,58 @@ const txnSearch = (i: any) =>
     .join(' ');
 
 /** Transactions filtered by `type` prefix on /api/dashboard/recent-transactions. */
-const byType = (type: string) => async (range: { startDate?: string; endDate?: string }) =>
-  (await api.getRecentTransactions({ type, limit: 1000, ...range })).data ?? [];
+/** Rows per page. Enough to fill a tall phone twice over. */
+export const PAGE_SIZE = 30;
+
+/**
+ * A server that predates paging answers without `page`: it ignored the paging,
+ * search and status, and sent no totals. Until the new backend is deployed the
+ * reports would otherwise show only the first rows and ₹ 0.00 tiles, so the
+ * whole range is fetched once and filtered and totalled here instead.
+ */
+const isLegacy = (res: any) => res?.page === undefined;
+
+const matches = (row: any, search: string, text: (r: any) => string) =>
+  !search || text(row).toLowerCase().includes(search.toLowerCase());
+
+/** One page of transactions of a type, filtered and totalled by the server. */
+export const pagedTransactions =
+  (type?: string) =>
+  async ({ range, page, search, status }: PageArgs): Promise<PageResult> => {
+    const res = await api.getRecentTransactions({
+      ...range,
+      type,
+      page,
+      limit: PAGE_SIZE,
+      search: search || undefined,
+      status: status === 'ALL' ? undefined : status,
+    });
+    if (!isLegacy(res)) return { rows: res.data ?? [], hasMore: !!res.hasMore, summary: res.summary };
+
+    const all: any[] = (await api.getRecentTransactions({ ...range, type, limit: 1000 })).data ?? [];
+    const rows = all.filter(
+      (r) => (status === 'ALL' || String(r?.status).toUpperCase() === status) && matches(r, search, legacyTxnText)
+    );
+    const summary = rows.reduce(
+      (acc, r) => {
+        const amount = Number(r?.amount ?? 0);
+        acc.count += 1;
+        acc.volume += amount;
+        if (r?.status === 'SUCCESS') acc.success += amount;
+        if (r?.status === 'FAILED') acc.failed += 1;
+        return acc;
+      },
+      { count: 0, volume: 0, success: 0, failed: 0 }
+    );
+    return { rows, hasMore: false, summary };
+  };
+
+const legacyTxnText = (i: any) =>
+  [i?.transactionId, i?.type, i?.status, i?.metadata?.utr, i?.metadata?.rrn, i?.metadata?.mobile, i?.metadata?.name, i?.metadata?.beneficiaryName, i?.metadata?.caNumber, i?.metadata?.operatorName]
+    .filter(Boolean)
+    .join(' ');
+
+const byType = pagedTransactions;
 
 /**
  * Why a transaction ended the way it did. The AEPS and PAN flows write the
@@ -24,6 +74,9 @@ const txnReason = (i: any) =>
 
 /** Rows the gateway rejected — the ones whose reason is worth surfacing. */
 const txnFailed = (i: any) => /FAIL|REJECT/i.test(String(i?.status ?? ''));
+
+/** Wallet debits: the fee or amount a service takes out. */
+const out = () => 'out' as const;
 
 const txnDetails = [
   { label: 'Reference', value: (i: any) => i?.transactionId ?? '—' },
@@ -44,8 +97,10 @@ const maskAadhaar = (v: any) => {
 
 export const AepsReport: React.FC = () => (
   <TransactionReport
-    fetcher={byType('AEPS')}
+    pageFetcher={byType('AEPS')}
     searchFields={txnSearch}
+    // A withdrawal credits the wallet; enquiries and statements carry no amount.
+    flowOf={(i) => (Number(i?.amount) > 0 ? 'in' : undefined)}
     titleOf={(i) => String(i?.type ?? 'AEPS').replace(/_/g, ' ')}
     subtitleOf={(i) => (txnFailed(i) && txnReason(i)) || i?.transactionId || ''}
     details={[
@@ -66,8 +121,9 @@ export const AepsReport: React.FC = () => (
 
 export const DmtReport: React.FC = () => (
   <TransactionReport
-    fetcher={byType('DMT')}
+    pageFetcher={byType('DMT')}
     searchFields={txnSearch}
+    flowOf={out}
     titleOf={(i) => i?.metadata?.benename ?? 'Money transfer'}
     subtitleOf={(i) => i?.transactionId ?? ''}
     details={[
@@ -82,8 +138,9 @@ export const DmtReport: React.FC = () => (
 
 export const RechargeReport: React.FC = () => (
   <TransactionReport
-    fetcher={byType('RECHARGE')}
+    pageFetcher={byType('RECHARGE')}
     searchFields={txnSearch}
+    flowOf={out}
     titleOf={(i) => i?.metadata?.caNumber ?? 'Recharge'}
     subtitleOf={(i) => [i?.metadata?.operatorName, i?.metadata?.mode].filter(Boolean).join(' · ') || i?.transactionId || ''}
     details={[
@@ -103,8 +160,9 @@ export const RechargeReport: React.FC = () => (
  */
 export const BbpsReport: React.FC = () => (
   <TransactionReport
-    fetcher={byType('BILL_PAYMENT')}
+    pageFetcher={byType('BILL_PAYMENT')}
     searchFields={txnSearch}
+    flowOf={out}
     titleOf={(i) => (i?.metadata?.mode ? `${i.metadata.mode} Bill` : 'Bill payment')}
     subtitleOf={(i) =>
       (txnFailed(i) && txnReason(i)) ||
@@ -127,8 +185,9 @@ export const BbpsReport: React.FC = () => (
 
 export const UpiReport: React.FC = () => (
   <TransactionReport
-    fetcher={byType('WALLET_TOPUP')}
+    pageFetcher={byType('WALLET_TOPUP')}
     searchFields={txnSearch}
+    flowOf={() => 'in'}
     titleOf={(i) => i?.metadata?.mobile ?? 'UPI collection'}
     subtitleOf={(i) => i?.transactionId ?? ''}
     details={txnDetails}
@@ -141,6 +200,7 @@ export const ItrReport: React.FC = () => (
   <TransactionReport
     fetcher={async () => (await api.getItrHistory()).data ?? []}
     searchFields={txnSearch}
+    flowOf={out}
     titleOf={(i) => i?.metadata?.client_name ?? 'ITR filing'}
     subtitleOf={(i) => i?.metadata?.pan ?? i?.transactionId ?? ''}
     details={[
@@ -156,6 +216,7 @@ export const ItrReport: React.FC = () => (
 export const PanReport: React.FC = () => (
   <TransactionReport
     fetcher={async () => (await api.getPanHistory()).data ?? []}
+    flowOf={out}
     searchFields={(i) =>
       [i?.transactionId, i?.type, i?.metadata?.application_number, i?.metadata?.psa_id]
         .filter(Boolean)
@@ -176,6 +237,7 @@ export const PanReport: React.FC = () => (
 export const PayoutReport: React.FC = () => (
   <TransactionReport
     fetcher={async () => (await api.getSettlementHistory()).data ?? []}
+    flowOf={out}
     searchFields={(i) =>
       [i?.transactionId, i?.type, i?.status, i?.metadata?.accountNumber, i?.metadata?.bankName]
         .filter(Boolean)
@@ -235,17 +297,16 @@ const ledgerAmount = (i: any) =>
  * nothing on either to explain the gap, so the earned line leads with the
  * number that actually reached the wallet and the gross sits beside it.
  */
-const ledgerSummary = (rows: any[]) => {
-  const sum = (key: string) => rows.reduce((acc, r) => acc + Number(r?.[key] ?? 0), 0);
-  const net = rows.reduce((acc, r) => acc + ledgerAmount(r), 0);
-  const gross = sum('COMMISSION');
-  const tds = sum('TDS');
+const ledgerTiles = (s: { net?: number; commission?: number; tds?: number; gst?: number }) => {
+  const net = Number(s.net ?? 0);
+  const gross = Number(s.commission ?? 0);
+  const tds = Number(s.tds ?? 0);
   return [
     { label: 'Net amount', value: money(net), tone: net >= 0 ? ('success' as const) : ('error' as const) },
     { label: 'Commission earned', value: money(gross - tds), tone: 'success' as const },
     { label: 'Commission (gross)', value: money(gross) },
     { label: 'TDS withheld', value: money(tds), tone: 'warning' as const },
-    { label: 'GST', value: money(sum('GST')), tone: 'warning' as const },
+    { label: 'GST', value: money(Number(s.gst ?? 0)), tone: 'warning' as const },
   ];
 };
 
@@ -263,7 +324,36 @@ const ledgerFailed = (i: any) => /FAIL|REJECT/i.test(String(i?.remarks ?? ''));
  */
 export const WalletLedgerReport: React.FC = () => (
   <TransactionReport
-    fetcher={async (range) => (await api.getWalletLedger(range)).data ?? []}
+    pageFetcher={async ({ range, page, search, status }) => {
+      const res = await api.getWalletLedger({
+        ...range,
+        page,
+        limit: PAGE_SIZE,
+        search: search || undefined,
+        type: status === 'ALL' ? undefined : status.toLowerCase(),
+      });
+      if (!isLegacy(res)) return { rows: res.data ?? [], hasMore: !!res.hasMore, summary: res.summary };
+
+      // Older server: it returned only the first rows and no totals.
+      const all: any[] = (await api.getWalletLedger(range)).data ?? [];
+      const rows = all.filter(
+        (r) =>
+          (status === 'ALL' || String(r?.TYPE).toUpperCase() === status) &&
+          matches(r, search, (x) => [x?.UTR, x?.TXNTYPE, x?.WALLET, x?.NARRATION, x?.remarks, x?.REASON, x?.OPERATOR].join(' '))
+      );
+      const sum = (key: string) => rows.reduce((acc, r) => acc + Number(r?.[key] ?? 0), 0);
+      return {
+        rows,
+        hasMore: false,
+        summary: {
+          net: rows.reduce((acc, r) => acc + ledgerAmount(r), 0),
+          commission: sum('COMMISSION'),
+          tds: sum('TDS'),
+          gst: sum('GST'),
+        },
+      };
+    }}
+    summaryFrom={ledgerTiles}
     searchFields={(i) =>
       [i?.UTR, i?.TXNTYPE, i?.WALLET, i?.NARRATION, i?.remarks, i?.REASON]
         .filter(Boolean)
@@ -271,7 +361,6 @@ export const WalletLedgerReport: React.FC = () => (
     }
     // Signed: a ledger that renders debits as positive does not add up.
     amountOf={ledgerAmount}
-    summary={ledgerSummary}
     statuses={LEDGER_STATUSES}
     // Direction is what a ledger row is filtered and coloured by; the
     // underlying transaction status stays available in the detail sheet.

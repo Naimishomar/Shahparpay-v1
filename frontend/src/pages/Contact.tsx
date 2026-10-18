@@ -80,7 +80,7 @@ const Contact: React.FC = () => {
             {/* ------------------------------------------------------------- HEADER BAND */}
             <section className="relative w-full border-b border-slate-100 bg-gradient-to-b from-[#f7fee7]/80 via-[#ecfccb]/30 to-white px-4 sm:px-6 py-14 sm:py-20">
                 <div className="mx-auto max-w-3xl text-center">
-                    <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 sm:px-4 py-1.5 rounded-full text-[0.7rem] sm:text-xs font-bold mb-4 shadow-2xs">
+                    <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-bold mb-4 shadow-2xs">
                         <Headset className="w-3.5 h-3.5 text-[#008c46]" />
                         <span>We answer in your language</span>
                     </div>
@@ -242,7 +242,7 @@ const Contact: React.FC = () => {
                         </div>
 
                         <div className="rounded-[28px] border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
-                            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400">
+                            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-600">
                                 What people ask us
                             </h2>
                             <div className="mt-5 space-y-5">
@@ -255,7 +255,7 @@ const Contact: React.FC = () => {
                                             <p className="text-sm font-extrabold text-slate-900">
                                                 {reason.title}
                                             </p>
-                                            <p className="text-[0.8rem] text-slate-500 leading-relaxed mt-0.5">
+                                            <p className="text-xs text-slate-500 leading-relaxed mt-0.5">
                                                 {reason.desc}
                                             </p>
                                         </div>

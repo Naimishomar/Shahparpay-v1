@@ -233,7 +233,7 @@ export const getRecentTransactions = async (req, res) => {
   try {
     const userId = req.user.id;
     const role = req.user.role;
-    const { type, limit, startDate, endDate } = req.query;
+    const { type, limit, startDate, endDate, page, status, search } = req.query;
 
     let query = {};
     if (role !== 'admin') {
@@ -264,11 +264,47 @@ export const getRecentTransactions = async (req, res) => {
       };
     }
 
+    // Paged mode (the app's reports): filtering happens here rather than over a
+    // thousand rows on the phone, and one page goes back at a time. Without
+    // `page` the endpoint answers exactly as before, for the web portal.
+    const paged = page !== undefined;
+    if (paged) {
+      const wanted = String(status || '').toUpperCase();
+      if (wanted === 'REFUNDED') {
+        query.status = { $in: ['FAILED', 'REFUNDED'] };
+        query['metadata.refundStatus'] = 'COMPLETED';
+      } else if (['SUCCESS', 'FAILED', 'PENDING', 'PROCESSING'].includes(wanted)) {
+        query.status = wanted;
+      }
+      const term = String(search || '').trim().slice(0, 64);
+      if (term) {
+        const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        query.$or = [
+          'transactionId',
+          'metadata.utr',
+          'metadata.rrn',
+          'metadata.mobile',
+          'metadata.name',
+          'metadata.beneficiaryName',
+          'metadata.benename',
+          'metadata.caNumber',
+          'metadata.operatorName',
+        ].map((field) => ({ [field]: re }));
+      }
+    }
+
+    const pageSize = paged ? Math.min(Math.max(Number(limit) || 30, 1), 100) : null;
+    const pageNo = paged ? Math.max(Number(page) || 1, 1) : 1;
+
     const transactions = await Transaction.find(query)
       .sort({ createdAt: -1 })
-      .limit(Number(limit) || 10)
+      .skip(paged ? (pageNo - 1) * pageSize : 0)
+      // One extra row says whether another page exists without a count query.
+      .limit(paged ? pageSize + 1 : Math.min(Math.max(Number(limit) || 10, 1), 1000))
       .populate('userId', 'name businessName retailerId')
       .lean();
+    const hasMore = paged && transactions.length > pageSize;
+    if (hasMore) transactions.pop();
 
     // A failed transaction can be fully refunded after the provider rejects it.
     // Reports must show the final wallet outcome, otherwise retailers see a
@@ -282,7 +318,36 @@ export const getRecentTransactions = async (req, res) => {
         : transaction;
     });
 
-    return res.status(200).json({ success: true, data: reportTransactions });
+    if (!paged) return res.status(200).json({ success: true, data: reportTransactions });
+
+    // Totals for the whole filtered set, not just this page; only the first
+    // page needs them.
+    let summary;
+    if (pageNo === 1) {
+      // aggregate() does not cast like find() does: the user id must be an ObjectId.
+      const match = query.userId ? { ...query, userId: new mongoose.Types.ObjectId(String(query.userId)) } : query;
+      const [agg] = await Transaction.aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: null,
+            count: { $sum: 1 },
+            volume: { $sum: { $toDouble: { $ifNull: ['$amount', 0] } } },
+            success: {
+              $sum: { $cond: [{ $eq: ['$status', 'SUCCESS'] }, { $toDouble: { $ifNull: ['$amount', 0] } }, 0] },
+            },
+            failed: { $sum: { $cond: [{ $eq: ['$status', 'FAILED'] }, 1, 0] } },
+          },
+        },
+      ]);
+      summary = {
+        count: agg?.count ?? 0,
+        volume: agg?.volume ?? 0,
+        success: agg?.success ?? 0,
+        failed: agg?.failed ?? 0,
+      };
+    }
+    return res.status(200).json({ success: true, data: reportTransactions, page: pageNo, hasMore, summary });
   } catch (error) {
     console.error('Fetch transactions error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });

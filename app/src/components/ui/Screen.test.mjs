@@ -19,7 +19,7 @@ const money = new Function(
 
 /** Exactly what the previous implementation produced. */
 const reference = (value) =>
-  `₹${Number(value ?? 0).toLocaleString('en-IN', {
+  `₹\u00A0${Number(value ?? 0).toLocaleString('en-IN', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -36,9 +36,9 @@ for (const value of CASES) {
 }
 
 // Indian grouping specifically: three digits, then pairs — not thousands.
-assert.strictEqual(money(1234567.5), '₹12,34,567.50');
-assert.strictEqual(money(100000), '₹1,00,000.00');
-assert.strictEqual(money(999), '₹999.00');
+assert.strictEqual(money(1234567.5), '₹\u00A012,34,567.50');
+assert.strictEqual(money(100000), '₹\u00A01,00,000.00');
+assert.strictEqual(money(999), '₹\u00A0999.00');
 
 // Rows arrive from the API with missing or junk amounts; none may render NaN.
 for (const junk of [null, undefined, '', 'abc', NaN, Infinity, -Infinity, {}]) {
@@ -46,12 +46,12 @@ for (const junk of [null, undefined, '', 'abc', NaN, Infinity, -Infinity, {}]) {
   assert.ok(!out.includes('NaN'), `money(${String(junk)}) rendered NaN`);
   assert.ok(out.startsWith('₹'), `money(${String(junk)}) lost its symbol`);
 }
-assert.strictEqual(money(null), '₹0.00');
-assert.strictEqual(money(undefined), '₹0.00');
+assert.strictEqual(money(null), '₹\u00A00.00');
+assert.strictEqual(money(undefined), '₹\u00A00.00');
 
 // Numeric strings are common in PaySprint payloads.
-assert.strictEqual(money('1234.5'), '₹1,234.50');
-assert.strictEqual(money('1234567'), '₹12,34,567.00');
+assert.strictEqual(money('1234.5'), '₹\u00A01,234.50');
+assert.strictEqual(money('1234567'), '₹\u00A012,34,567.00');
 
 // A deterministic sweep across every magnitude the app renders — a lakh-scale
 // amount and a crore-scale one round differently, and a single paisa of drift

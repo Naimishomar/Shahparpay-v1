@@ -1,9 +1,19 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, Linking, Platform } from 'react-native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { colors, themed, radius, space, type as t } from '../../theme/colors';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Screen, Row, StatusPill, SuccessBanner, shortDate } from '@/components/ui/Screen';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { colors, themed, space, type as t } from '../../theme/colors';
+import { Card, CardContent } from '@/components/ui/Card';
+import { IconTile } from '@/components/ui/Gradient';
+import {
+  Screen,
+  SectionTitle,
+  Row,
+  SuccessBanner,
+  shortDate,
+  SkeletonCard,
+  SkeletonRows,
+  SkeletonTitle,
+} from '@/components/ui/Screen';
 import { BiometricCapture, useBiometricDevice } from '@/components/aeps/BiometricCapture';
 import { useAsync } from '@/hooks/useAsync';
 import { useAuth } from '@/context/AuthContext';
@@ -55,33 +65,30 @@ export const BiometricSupportScreen: React.FC = () => {
   return (
     <Screen
       loading={status.loading}
+      skeleton={<View style={{ gap: 16 }}><SkeletonTitle /><SkeletonCard><SkeletonRows count={3} amount={false} /></SkeletonCard><SkeletonTitle /><SkeletonCard><SkeletonRows count={3} amount={false} /></SkeletonCard></View>}
       refreshing={status.refreshing}
       onRefresh={status.refresh}
       error={status.error}
       onRetry={status.reload}
     >
+      <SectionTitle>Biometric readiness</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="shield-check-outline">Biometric readiness</CardTitle>
-        </CardHeader>
         <CardContent>
           <Row
             label="Merchant eKYC"
-            value={<StatusPill status={status.data?.isMerchantKycComplete ? 'COMPLETED' : 'PENDING'} />}
+            value={<StatusText status={status.data?.isMerchantKycComplete ? 'COMPLETED' : 'PENDING'} />}
           />
           <Row
             label="Daily 2FA today"
-            value={<StatusPill status={status.data?.isDailyAuthDoneToday ? 'SUCCESS' : 'PENDING'} />}
+            value={<StatusText status={status.data?.isDailyAuthDoneToday ? 'SUCCESS' : 'PENDING'} />}
           />
           <Row label="Last daily auth" value={shortDate(status.data?.lastDailyAuthDate)} />
           <Row label="Active pipes" value={activePipes.length ? activePipes.join(', ') : 'None'} last />
         </CardContent>
       </Card>
 
+      <SectionTitle>RD service apps</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="fingerprint">RD service apps</CardTitle>
-        </CardHeader>
         <CardContent>
           <Text style={styles.help}>
             Install the RD service matching your fingerprint scanner, then register the device once.
@@ -99,25 +106,21 @@ export const BiometricSupportScreen: React.FC = () => {
               accessibilityRole="link"
               accessibilityLabel={`Open ${rd.name} in the Play Store`}
             >
-              <View style={styles.rdIcon}>
-                <MaterialCommunityIcons name="fingerprint" size={18} color={colors.accent} />
-              </View>
+              <IconTile icon="fingerprint" size={44} iconSize={20} />
               <View style={styles.rdText}>
                 <Text style={styles.rdTitle}>{rd.name}</Text>
                 <Text style={styles.rdPkg} numberOfLines={1}>
                   {rd.pkg}
                 </Text>
               </View>
-              <MaterialCommunityIcons name="open-in-new" size={17} color={colors.mutedForeground} />
+              <Ionicons name="open-outline" size={18} color={colors.mutedForeground} />
             </Pressable>
           ))}
         </CardContent>
       </Card>
 
+      <SectionTitle>Test your scanner</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="fingerprint-off">Test your scanner</CardTitle>
-        </CardHeader>
         <CardContent style={styles.test}>
           <Text style={styles.help}>
             Runs one real capture through the RD service and throws the result away. Use it to
@@ -137,14 +140,12 @@ export const BiometricSupportScreen: React.FC = () => {
         </CardContent>
       </Card>
 
+      <SectionTitle>Troubleshooting</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="lifebuoy">Troubleshooting</CardTitle>
-        </CardHeader>
         <CardContent>
           {TIPS.map((tip, i) => (
-            <View key={i} style={styles.tip}>
-              <MaterialCommunityIcons name="information" size={15} color={colors.info} />
+            <View key={i} style={[styles.tip, i === TIPS.length - 1 && styles.tipLast]}>
+              <Ionicons name="bulb-outline" size={18} color={colors.mutedForeground} />
               <Text style={styles.tipText}>{tip}</Text>
             </View>
           ))}
@@ -155,9 +156,24 @@ export const BiometricSupportScreen: React.FC = () => {
   );
 };
 
+/** BHIM status: small coloured text, never a filled pill. */
+const StatusText: React.FC<{ status?: string | null }> = ({ status }) => {
+  const s = String(status || 'PENDING').toUpperCase();
+  const color = /SUCCESS|COMPLETE|APPROVED|ACTIVE|ACCEPTED|CONVERTED/.test(s)
+    ? colors.success
+    : /FAIL|REJECT/.test(s)
+      ? colors.destructive
+      : colors.warning;
+  return (
+    <Text style={{ fontSize: t.small, fontWeight: '500', color }}>
+      {s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, ' ')}
+    </Text>
+  );
+};
+
 const styles = themed((c) => ({
   test: { gap: space.lg },
-  help: { fontSize: t.caption, color: c.mutedForeground, lineHeight: 18, marginBottom: space.md },
+  help: { fontSize: t.small, color: c.mutedForeground, lineHeight: 19, marginBottom: space.sm },
   rdItem: {
     minHeight: 60,
     flexDirection: 'row',
@@ -168,19 +184,18 @@ const styles = themed((c) => ({
     borderBottomColor: c.border,
   },
   rdItemLast: { borderBottomWidth: 0 },
-  rdIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.md,
-    backgroundColor: c.accentSubtle,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   rdText: { flex: 1, minWidth: 0, gap: 2 },
-  rdTitle: { fontSize: t.small, fontWeight: '600', color: c.foreground },
-  rdPkg: { fontSize: t.micro, color: c.mutedForeground },
-  tip: { flexDirection: 'row', gap: space.sm, paddingVertical: space.sm },
-  tipText: { flex: 1, fontSize: t.caption, color: c.foreground, lineHeight: 18 },
+  rdTitle: { fontSize: t.body + 1, fontWeight: '400', color: c.foreground },
+  rdPkg: { fontSize: t.small, color: c.mutedForeground },
+  tip: {
+    flexDirection: 'row',
+    gap: space.md,
+    paddingVertical: space.md,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  tipLast: { borderBottomWidth: 0 },
+  tipText: { flex: 1, fontSize: t.small, color: c.foreground, lineHeight: 19 },
 }));
 
 export default BiometricSupportScreen;

@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { Header } from './Header';
 import { BottomTabBar } from './BottomTabBar';
+import { TopGlow } from '../ui/TopGlow';
 import {
   RETAILER_TABS,
   ADMIN_TABS,
@@ -19,17 +20,26 @@ interface MainLayoutProps {
   children: React.ReactNode;
 }
 
-/** Route -> human title, so the header never shows a PascalCase route name. */
-const TITLES: Record<string, { title: string; subtitle?: string }> = {
-  Dashboard: { title: 'Home' },
-  Services: { title: 'Services', subtitle: 'Everything you can sell' },
-  Reports: { title: 'Reports', subtitle: 'Transaction history' },
-  AepsSettlement: { title: 'Withdraw', subtitle: 'AEPS wallet to your bank' },
-  AdminPortal: { title: 'Overview' },
-  DistributorPortal: { title: 'Overview' },
-  DistributorRetailers: { title: 'Retailers', subtitle: 'Your network' },
-  Notifications: { title: 'Notifications', subtitle: 'Latest announcements' },
+/** Route -> title, as the mockup names each screen. */
+const TITLES: Record<string, string> = {
+  Dashboard: 'Home',
+  Services: 'Services',
+  Reports: 'History',
+  AEPS: 'Aadhaar banking',
+  DMT: 'Money transfer',
+  Recharge: 'Mobile recharge',
+  BBPS: 'Pay bills',
+  Collect: 'Collect payment',
+  AddMoney: 'Add money',
+  AepsSettlement: 'Withdraw',
+  AdminPortal: 'Overview',
+  DistributorPortal: 'Overview',
+  DistributorRetailers: 'Retailers',
+  Notifications: 'Notifications',
 };
+
+/** Screens that draw their own top row: Home, and Profile (a drawer). */
+const BARE = new Set(['Dashboard', 'Profile']);
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const { token, isInitializing, user } = useAuth();
@@ -45,28 +55,17 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         ? DISTRIBUTOR_TABS
         : RETAILER_TABS;
 
-  // No back chevron anywhere: the bottom bar is always present, and the stack
-  // sets gestureEnabled, so the Android back button and the iOS swipe-back
-  // gesture still pop every screen. Nothing is unreachable without it.
-
   // A screen opened for one item names itself through its params — the route
   // is BbpsService for every category, so the route name cannot say which.
   const fromParams = (route.params as any)?.title;
-
-  const named =
-    (fromParams ? { title: String(fromParams), subtitle: 'Bill payment' } : null) ??
+  const title =
+    (fromParams ? String(fromParams) : null) ??
     TITLES[route.name] ??
-    (() => {
-      const service = SERVICE_ITEMS.find((s) => s.route === route.name);
-      if (service) return { title: service.name, subtitle: service.hint };
-      const report = REPORT_ITEMS.find((r) => r.route === route.name);
-      if (report) return { title: report.name, subtitle: report.hint };
-      // Tab destinations that are not in either catalogue (e.g. Wallet).
-      const tab = tabs.find((tb) => tb.route === route.name);
-      if (tab) return { title: tab.name };
-      // Last resort: split the PascalCase route so it never shows raw.
-      return { title: route.name.replace(/([a-z])([A-Z])/g, '$1 $2') };
-    })();
+    SERVICE_ITEMS.find((s) => s.route === route.name)?.name ??
+    REPORT_ITEMS.find((r) => r.route === route.name)?.name ??
+    tabs.find((tb) => tb.route === route.name)?.name ??
+    // Last resort: split the PascalCase route so it never shows raw.
+    route.name.replace(/([a-z])([A-Z])/g, '$1 $2');
 
   if (isInitializing) {
     return (
@@ -79,47 +78,39 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   // AppNavigator swaps to the auth stack when the token goes away.
   if (!token) return null;
 
-  // Only the portal screen still opens on a brand band and continues the
-  // header in its own ink; anywhere else a black bar pinned above a white page
-  // just reads as a slab.
-  const onBand = route.name === 'DistributorPortal';
-
-  // Home owns its own top row (avatar, identity, actions), so the app header
-  // would only stack a second, redundant bar above it. The safe-area inset
-  // moves onto the content instead.
-  const bare = route.name === 'Dashboard';
+  const bare = BARE.has(route.name);
+  // A flat tab destination: large title, no back arrow, and the bottom bar.
+  const root = tabs.some((tb) => tb.route === route.name && !tb.raised);
 
   return (
     <View style={styles.container}>
-      {/* The band screen needs light status-bar content over its own ink;
-          everywhere else the page ground and the theme decide. */}
       <StatusBar
-        barStyle={onBand || resolvedTheme === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor={onBand ? colors.band : colors.background}
+        barStyle={resolvedTheme === 'dark' ? 'light-content' : 'dark-content'}
+        translucent
+        backgroundColor="transparent"
       />
+      {/* BHIM's orange/green light behind the top of every screen. */}
+      <TopGlow />
 
-      {!bare && <Header
-        onBand={onBand}
-        topInset={insets.top}
-        title={named.title}
-        subtitle={named.subtitle}
-        showBell={route.name !== 'Notifications'}
-        onAccount={route.name === 'Profile' ? undefined : () => navigation.navigate('Profile')}
-      />}
+      {!bare && <Header root={root} topInset={insets.top} title={title} />}
 
       {/* minHeight 0: on react-native-web a flex child defaults to
           min-height:auto and grows past the viewport instead of letting the
           inner ScrollView scroll. No-op on native. */}
       <View style={[styles.content, bare && { paddingTop: insets.top }]}>{children}</View>
 
-      <BottomTabBar
-        tabs={tabs}
-        activeRoute={route.name}
-        onNavigate={(target) => {
-          if (target === route.name) return;
-          navigation.navigate(target);
-        }}
-      />
+      {/* Only the flat tab destinations carry the bar (mockup 03, 05, 15, 16);
+          a task screen keeps the whole height for its own form and button. */}
+      {root && (
+        <BottomTabBar
+          tabs={tabs}
+          activeRoute={route.name}
+          onNavigate={(target) => {
+            if (target === route.name) return;
+            navigation.navigate(target);
+          }}
+        />
+      )}
     </View>
   );
 };

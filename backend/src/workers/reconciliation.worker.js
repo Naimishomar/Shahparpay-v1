@@ -32,27 +32,19 @@ const verifyPayoutStatus = async (transaction) => {
   try {
     const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
 
-    // This is a common PaySprint status endpoint pattern.
-    // It might need adjustment based on their actual docs.
-    const response = await axios.post(
-      `${baseUrl}/service/payout/payout/status`,
-      {
-        reference_id: transaction.transactionId,
-      },
-      { headers: getPaySprintHeaders() }
-    );
+    // Same contract as the manual status check: { refid, ackno } in, and the
+    // verdict is data.txn_status (1 success, 0 failed & refunded, 2/3/4 pending).
+    // `status:false` only means the enquiry itself failed, which proves nothing
+    // about the payout, so it must never trigger a refund.
+    const payload = { refid: transaction.metadata?.refid || transaction.transactionId };
+    if (transaction.metadata?.ackno) payload.ackno = transaction.metadata.ackno;
+    const response = await axios.post(`${baseUrl}/service/payout/payout/status`, payload, {
+      headers: getPaySprintHeaders(),
+    });
 
-    // If PaySprint confirms it's SUCCESS
-    if (response.data?.status === true || response.data?.response_code === 1) {
-      return 'SUCCESS';
-    }
-
-    // If PaySprint explicitly says it failed
-    if (response.data?.status === false || response.data?.response_code === 0) {
-      return 'FAILED';
-    }
-
-    // If status is pending at PaySprint side, keep it PROCESSING here
+    const txnStatus = response.data?.data?.txn_status;
+    if (txnStatus === 1) return 'SUCCESS';
+    if (txnStatus === 0) return 'FAILED';
     return 'PROCESSING';
   } catch (error) {
     // If API fails to respond (e.g. 404/500), we cannot safely refund yet.
@@ -213,6 +205,9 @@ const resolveAepsDeposit = async (txn) => {
  * The main Reconciliation Job
  * Runs every 5 minutes
  */
+/** How long an unpaid payment link is still asked about. */
+const COLLECTION_WATCH_MS = 24 * 60 * 60 * 1000;
+
 export const startReconciliationWorker = () => {
   console.log('CRON: Transaction Reconciliation Worker started.');
 
@@ -227,8 +222,18 @@ export const startReconciliationWorker = () => {
       // confirms — without the second clause the PG_COLLECTION branch below
       // never runs and a paid link is only credited when the retailer reopens
       // the Collect page.
+      //
+      // Most payment links are simply never paid, and each one costs a provider
+      // call per pass, so they are watched on a back-off: every pass for the
+      // first hour, then once an hour (the top-of-hour pass) for a day, then
+      // never. A link paid later still settles when the retailer opens Collect.
+      const topOfHour = new Date().getMinutes() < 5;
+      const collectionWindow = new Date(Date.now() - (topOfHour ? COLLECTION_WATCH_MS : 60 * 60 * 1000));
       const stuckTransactions = await Transaction.find({
-        $or: [{ status: 'PROCESSING' }, { status: 'PENDING', type: 'PG_COLLECTION' }],
+        $or: [
+          { status: 'PROCESSING' },
+          { status: 'PENDING', type: 'PG_COLLECTION', createdAt: { $gt: collectionWindow } },
+        ],
         createdAt: { $lt: fiveMinutesAgo },
       });
 

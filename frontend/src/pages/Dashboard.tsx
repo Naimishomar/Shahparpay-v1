@@ -193,7 +193,7 @@ const Dashboard = () => {
     }, [token, range]);
     useEffect(() => {
         const refresh = () => { if (document.visibilityState === 'visible') refreshRef.current(); };
-        const timer = window.setInterval(refresh, 60000);
+        const timer = window.setInterval(refresh, 5 * 60000);
         window.addEventListener('wallet-updated', refresh);
         document.addEventListener('visibilitychange', refresh);
         return () => {

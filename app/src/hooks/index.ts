@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function useAppState() {
   const [appState, setAppState] = useState(AppState.currentState);
@@ -60,3 +61,13 @@ export { useResponsive } from './useResponsive';
 export { useAsync, useAction } from './useAsync';
 export { useKycCallback } from './useKycCallback';
 export { useLocationReady } from './useLocationReady';
+
+/**
+ * Safe-area insets for a full-screen `<Modal statusBarTranslucent>`. On Android
+ * the modal is a separate window drawn under the status bar, where the
+ * provider's top inset reads 0 — so the status bar height is taken directly.
+ */
+export function useModalInsets() {
+  const insets = useSafeAreaInsets();
+  return { ...insets, top: Math.max(insets.top, StatusBar.currentHeight ?? 0) };
+}

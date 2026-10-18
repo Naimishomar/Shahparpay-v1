@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { colors, themed, lift, radius, space, type as t } from '../../theme/colors';
+import { colors, themed, radius, space, type as t } from '../../theme/colors';
 
 interface CardProps {
   children: React.ReactNode;
@@ -61,7 +61,7 @@ export const CardTitle: React.FC<{
 }> = ({ children, icon, style }) => (
   <View style={styles.titleRow}>
     {!!icon && (
-      <MaterialCommunityIcons name={icon as any} size={17} color={colors.accent} />
+      <MaterialCommunityIcons name={icon as any} size={18} color={colors.mutedForeground} />
     )}
     <Text style={[styles.title, style]} accessibilityRole="header">
       {children}
@@ -84,7 +84,7 @@ export const CardFooter: React.FC<{
   style?: StyleProp<ViewStyle>;
 }> = ({ children, style }) => <View style={[styles.footer, style]}>{children}</View>;
 
-const styles = themed((c, isDark) => ({
+const styles = themed((c) => ({
   base: { borderRadius: radius.lg, overflow: 'hidden' },
   default: {
     backgroundColor: c.card,
@@ -92,14 +92,12 @@ const styles = themed((c, isDark) => ({
     // than the page, so the hairline is what separates them.
     borderWidth: 1,
     borderColor: c.border,
-    ...lift('sm', isDark),
   },
   /** Lifted off the page — summary tiles, anything that invites a tap. */
   elevated: {
     backgroundColor: c.card,
     borderWidth: 1,
     borderColor: c.border,
-    ...lift('md', isDark),
   },
   flat: { backgroundColor: c.secondary, borderWidth: 1, borderColor: c.border },
   /** Border only: groups content without adding another filled plane. */
@@ -111,7 +109,6 @@ const styles = themed((c, isDark) => ({
     backgroundColor: c.accent,
     borderWidth: 1,
     borderColor: c.accent,
-    ...lift('md', isDark),
   },
   // Opacity only: scaling a card shifts everything below it.
   pressed: { opacity: 0.75 },
@@ -119,7 +116,7 @@ const styles = themed((c, isDark) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   headerMain: { flex: 1, minWidth: 0 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  title: { flex: 1, fontSize: t.bodyLg, fontWeight: '700', color: c.cardForeground, letterSpacing: -0.2 },
+  title: { flex: 1, fontSize: t.bodyLg, fontWeight: '600', color: c.cardForeground },
   description: { fontSize: t.caption, color: c.mutedForeground, marginTop: 3, lineHeight: 17 },
   content: {},
   footer: {

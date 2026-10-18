@@ -1,20 +1,26 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import Svg, { Circle } from 'react-native-svg';
 import { colors, themed, radius, space, type as t } from '../theme/colors';
 import {
   Screen,
   Segmented,
   SectionTitle,
+  ErrorBanner,
   money,
   isoDate,
+  Skeleton,
 } from '@/components/ui/Screen';
+import { IconTile } from '@/components/ui/Gradient';
+import { TransactionReport } from '@/components/ui/TransactionReport';
 import { useAsync } from '@/hooks/useAsync';
 import { useAuth } from '@/context/AuthContext';
 import { REPORT_ITEMS, ReportEntry, SERVICE_METRICS } from '@/constants';
 import api from '@/services/api';
+import { pagedTransactions } from './reports';
+import { CREDIT_TYPES, typeOf, labelFor, txnTitle, txnSubtitle, txnIcon } from './transactionText';
 
 type Period = 'day' | 'week' | 'month' | 'year';
 
@@ -93,20 +99,119 @@ export const arcAtPoint = <T extends DonutArc>(arcs: T[], x: number, y: number):
   return arcs.find((arc) => along >= arc.offset && along < arc.offset + arc.span) ?? null;
 };
 
+/** Money into the wallet; everything else that moved went out. */
+const startsWith = (...prefixes: string[]) => (i: any) => prefixes.some((p) => typeOf(i).startsWith(p));
+
+/** The server-side type filter behind each chip (prefixes, comma-separated). */
+const CHIP_TYPES: Record<string, string | undefined> = {
+  all: undefined,
+  aeps: 'AEPS,AADHAAR_PAY',
+  dmt: 'DMT',
+  bills: 'BILL_PAYMENT,RECHARGE',
+};
+
+const HISTORY_CHIPS = [
+  { key: 'all', label: 'All', match: () => true },
+  { key: 'aeps', label: 'AEPS', match: startsWith('AEPS', 'AADHAAR_PAY') },
+  { key: 'dmt', label: 'DMT', match: startsWith('DMT') },
+  { key: 'bills', label: 'Bills', match: startsWith('BILL_PAYMENT', 'RECHARGE') },
+];
+
+const historySearch = (i: any) =>
+  [
+    i?.transactionId,
+    i?.type,
+    i?.status,
+    txnTitle(i),
+    i?.metadata?.utr,
+    i?.metadata?.rrn,
+    i?.metadata?.caNumber,
+    i?.metadata?.mobile,
+    i?.metadata?.name,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+const historyDetails = [
+  { label: 'Reference', value: (i: any) => i?.transactionId ?? '—' },
+  { label: 'Type', value: (i: any) => labelFor(typeOf(i)) },
+  { label: 'UTR', value: (i: any) => i?.metadata?.utr || i?.metadata?.rrn || '—' },
+  {
+    label: 'Reason',
+    value: (i: any) => i?.metadata?.gatewayMessage || i?.metadata?.apiMessage || i?.metadata?.note || '—',
+  },
+];
+
+/**
+ * The retailer's History tab (mockup 15): every transaction, newest first,
+ * narrowed by the type chips and the search, under the period breakdown ring
+ * and the per-service reports (ledger first).
+ */
+const History: React.FC = () => {
+  const navigation = useNavigation<any>();
+  return (
+    <TransactionReport
+      pageFetcher={(args) => pagedTransactions(CHIP_TYPES[args.chip])(args)}
+      searchFields={historySearch}
+      searchPlaceholder="Search name, ID or UTR"
+      chips={HISTORY_CHIPS}
+      iconOf={txnIcon}
+      flowOf={(i) => (!Number(i?.amount) ? undefined : CREDIT_TYPES.has(typeOf(i)) ? 'in' : 'out')}
+      titleOf={txnTitle}
+      subtitleOf={txnSubtitle}
+      details={historyDetails}
+      emptyIcon="history"
+      emptyTitle="No transactions yet"
+      header={
+        <>
+          <SectionTitle>By service</SectionTitle>
+          <ServiceSummary />
+          <ReportList onOpen={(route) => navigation.navigate(route)} />
+        </>
+      }
+    />
+  );
+};
+
 export const ReportsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
+  // Admin and distributor share this route; their totals come from their own
+  // portals, so they keep the plain list of reports.
+  const isRetailer = user?.role !== 'admin' && user?.role !== 'distributor';
+  if (isRetailer) return <History />;
+  return (
+    <Screen>
+      <ReportList onOpen={(route) => navigation.navigate(route)} />
+    </Screen>
+  );
+};
+
+const ReportList: React.FC<{ onOpen: (route: string) => void }> = ({ onOpen }) => (
+  <>
+    <SectionTitle>All reports</SectionTitle>
+    <View style={styles.list}>
+      {REPORT_ITEMS.map((item, index) => (
+        <ReportRow
+          key={item.route}
+          item={item}
+          last={index === REPORT_ITEMS.length - 1}
+          onPress={() => onOpen(item.route)}
+        />
+      ))}
+    </View>
+  </>
+);
+
+/** Per-service totals for a period, as a tappable ring. Retailers only. */
+const ServiceSummary: React.FC = () => {
   const [period, setPeriod] = useState<Period>('month');
   // Which service the ring is broken out for. Null shows the period total.
   const [selected, setSelected] = useState<string | null>(null);
 
-  // Only retailers have per-service totals; the same tab serves admin and
-  // distributor, whose stats come from other endpoints entirely.
-  const isRetailer = user?.role !== 'admin' && user?.role !== 'distributor';
-
   const summary = useAsync<any>(
-    async () => (isRetailer ? (await api.getRetailerDashboard(rangeFor(period))).data : null),
-    [period, isRetailer]
+    async () => (await api.getRetailerDashboard(rangeFor(period))).data,
+    [period]
   );
 
   const stats = summary.data?.stats;
@@ -138,14 +243,8 @@ export const ReportsScreen: React.FC = () => {
   const active = arcs.find((arc) => arc.label === selected) ?? null;
 
   return (
-    <Screen
-      refreshing={summary.refreshing}
-      onRefresh={summary.refresh}
-      error={summary.error}
-      onRetry={summary.reload}
-    >
-      {isRetailer && (
-        <>
+        <View style={styles.summary}>
+          {!!summary.error && <ErrorBanner message={summary.error} />}
           <View style={styles.donutWrap}>
             <Pressable
               onPress={(event) => {
@@ -202,16 +301,22 @@ export const ReportsScreen: React.FC = () => {
               <Text style={styles.donutLabel} numberOfLines={1}>
                 {active ? active.label : period === 'day' ? 'Today' : `This ${period}`}
               </Text>
-              <Text
-                style={styles.donutValue}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                // Floor the shrink: past this the amount is smaller than the
-                // legend under it and stops being the thing the ring is for.
-                minimumFontScale={0.5}
-              >
-                {money(active ? active.value : total)}
-              </Text>
+              {summary.loading ? (
+                // The total's own footprint while it loads — not a "₹ 0.00"
+                // that reads as a real zero.
+                <Skeleton width={120} height={26} style={{ marginTop: 6 }} />
+              ) : (
+                <Text
+                  style={styles.donutValue}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  // Floor the shrink: past this the amount is smaller than the
+                  // legend under it and stops being the thing the ring is for.
+                  minimumFontScale={0.5}
+                >
+                  {money(active ? active.value : total)}
+                </Text>
+              )}
               {!!active && (
                 <Text style={styles.donutShare} numberOfLines={1}>
                   {((active.value / total) * 100).toFixed(1)}% of {money(total)}
@@ -258,22 +363,7 @@ export const ReportsScreen: React.FC = () => {
               ))}
             </View>
           )}
-
-        </>
-      )}
-
-      <SectionTitle>All reports</SectionTitle>
-      <View style={styles.list}>
-        {REPORT_ITEMS.map((item, index) => (
-          <ReportRow
-            key={item.route}
-            item={item}
-            last={index === REPORT_ITEMS.length - 1}
-            onPress={() => navigation.navigate(item.route)}
-          />
-        ))}
-      </View>
-    </Screen>
+        </View>
   );
 };
 
@@ -288,24 +378,31 @@ const ReportRow: React.FC<{ item: ReportEntry; last: boolean; onPress: () => voi
     accessibilityRole="button"
     accessibilityLabel={`${item.name}. ${item.hint}`}
   >
-    <View style={styles.rowIcon}>
-      <MaterialCommunityIcons name={item.icon as any} size={19} color={colors.foreground} />
-    </View>
+    <IconTile icon={item.icon} size={44} iconSize={20} />
     <View style={styles.rowText}>
       <Text style={styles.rowName}>{item.name}</Text>
       <Text style={styles.rowHint} numberOfLines={1}>
         {item.hint}
       </Text>
     </View>
-    <MaterialCommunityIcons name="chevron-right" size={20} color={colors.mutedForeground} />
+    <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
   </Pressable>
 );
 
 const styles = themed((c) => ({
+  // The ring, its period tabs and the legend share one BHIM card.
+  summary: {
+    gap: space.md,
+    backgroundColor: c.card,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: radius.lg,
+    padding: space.lg,
+  },
   donutWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: space.lg,
+    paddingVertical: space.sm,
   },
   donutTarget: { width: SIZE, height: SIZE, alignItems: 'center', justifyContent: 'center' },
   donutCentre: {
@@ -316,54 +413,48 @@ const styles = themed((c) => ({
     gap: 4,
   },
   donutLabel: { fontSize: t.small, color: c.mutedForeground, textAlign: 'center' },
-  donutShare: { fontSize: t.micro, color: c.mutedForeground, textAlign: 'center' },
+  donutShare: { fontSize: t.caption, color: c.mutedForeground, textAlign: 'center' },
+  // Big and light, as BHIM sets an amount.
   donutValue: {
-    fontSize: 30,
-    fontWeight: '800',
+    fontSize: 23,
+    fontWeight: '300',
     color: c.foreground,
     fontVariant: ['tabular-nums'],
   },
 
-  legend: { backgroundColor: c.card, borderRadius: radius.lg, padding: space.lg, gap: space.md },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  legendDot: { width: 10, height: 10, borderRadius: radius.pill },
+  legend: { gap: space.md, paddingTop: space.sm },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 28 },
+  legendDot: { width: 8, height: 8, borderRadius: radius.pill },
   legendLabel: { flex: 1, minWidth: 0, fontSize: t.small, color: c.mutedForeground },
-  legendLabelOn: { color: c.foreground, fontWeight: '700' },
+  legendLabelOn: { color: c.foreground, fontWeight: '500' },
   legendValue: {
     fontSize: t.small,
-    fontWeight: '700',
+    fontWeight: '500',
     color: c.foreground,
     fontVariant: ['tabular-nums'],
   },
-
 
   list: {
     borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: c.border,
     backgroundColor: c.card,
+    paddingHorizontal: space.lg,
     overflow: 'hidden',
   },
   row: {
-    minHeight: 64,
+    minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    paddingHorizontal: space.lg,
     paddingVertical: space.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: c.border,
   },
   rowLast: { borderBottomWidth: 0 },
-  rowPressed: { backgroundColor: c.secondary },
-  rowIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.pill,
-    backgroundColor: c.surfaceAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowText: { flex: 1, minWidth: 0, gap: 2 },
-  rowName: { fontSize: t.body, fontWeight: '600', color: c.foreground },
+  rowPressed: { opacity: 0.7 },
+  rowText: { flex: 1, minWidth: 0, gap: 3 },
+  rowName: { fontSize: t.body, fontWeight: '500', color: c.foreground },
   rowHint: { fontSize: t.caption, color: c.mutedForeground },
 }));
 

@@ -1,6 +1,14 @@
 {
   "routes": [
     {
+      "src": "/(.*)",
+      "headers": {
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff"
+      },
+      "continue": true
+    },
+    {
       "src": "/api/(.*)",
       "dest": "https://api.shahparpay.com/api/$1"
     },
@@ -8,7 +16,12 @@
       "handle": "filesystem"
     },
     {
+      "src": "^/(login|kyc-status|contact|commission|about|terms|terms-and-conditions|retailer-terms|aeps-terms|aeps-permission|refund-policy|privacy-policy|dashboard|admin(/[^/]+)?|distributor(/[^/]+)?|aeps(/pipes)?|aeps-settlement|matm|direct-payout|dmt|recharge|bbps|payments/collect|lead-generation|pan|itr|reports/(ledger|aeps|dmt|payout|upi|pan|itr|lead-generation|recharge|bbps|wallet-ledger)|fund-request|add-money|biometric-support|profile|support)?/?$",
+      "dest": "/index.html"
+    },
+    {
       "src": "/(.*)",
+      "status": 404,
       "dest": "/index.html"
     }
   ]

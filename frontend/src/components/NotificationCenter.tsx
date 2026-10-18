@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Bell, Check, Info, TriangleAlert, X } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useVisiblePolling } from '../hooks/use-visible-polling';
 
 const NotificationCenter = () => {
     const { token } = useAuth();
@@ -19,11 +20,7 @@ const NotificationCenter = () => {
         } catch { /* Header notifications must never block the app. */ }
     };
 
-    useEffect(() => {
-        load();
-        const timer = window.setInterval(load, 30000);
-        return () => window.clearInterval(timer);
-    }, [token]);
+    useVisiblePolling(load, 2 * 60000, Boolean(token));
 
     useEffect(() => {
         const close = (event: MouseEvent) => { if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false); };

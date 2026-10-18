@@ -99,27 +99,23 @@ export const loginUser = async (req, res) => {
       role = 'retailer';
     }
 
+    // One answer for "no such user" and "wrong password", so the login form
+    // cannot be used to find out which IDs, emails and phones are registered.
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found.' });
+      return res.status(401).json({ success: false, message: 'Invalid credentials.' });
     }
 
-    if (!user.isActive)
-      return res.status(403).json({ success: false, message: 'Account is inactive.' });
-
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(String(password), user.password);
     if (!isMatch) {
       logActivity({ req, actor: { _id: user._id, role, name: user.name }, action: 'auth.login_failed', summary: 'Failed sign-in: wrong password' });
       return res.status(401).json({ success: false, message: 'Invalid credentials.' });
     }
 
-    // Generate OTP
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    if (!user.isActive)
+      return res.status(403).json({ success: false, message: 'Account is inactive.' });
 
-    await Otp.findOneAndUpdate(
-      { email: user.email },
-      { otp: otpCode, createdAt: Date.now() },
-      { upsert: true, returnDocument: 'after' }
-    );
+    // Generate OTP
+    const otpCode = await Otp.issue(user.email);
 
     const emailSent = await sendEmailOTP(user.email, user.name || 'User', otpCode);
     if (!emailSent) {
@@ -148,6 +144,13 @@ export const loginUser = async (req, res) => {
  * Native clients never use this cookie — they get the refresh token in the
  * response body, which is the only path that survives plain HTTP.
  */
+const signRefreshToken = (user, role) =>
+  jwt.sign({ id: user._id, role, v: user.tokenVersion ?? 0 }, process.env.JWT_REFRESH_SECRET, {
+    expiresIn: '7d',
+  });
+
+const MODEL_BY_ROLE = { admin: Admin, distributor: Distributor, retailer: Retailer };
+
 const refreshCookieOptions = (req) => {
   const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
   return {
@@ -187,12 +190,9 @@ export const verifyLoginOtp = async (req, res) => {
 
     if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
 
-    const otpRecord = await Otp.findOne({ email: user.email });
-    if (!otpRecord || otpRecord.otp !== otp) {
+    if (!(await Otp.consume(user.email, otp))) {
       return res.status(400).json({ success: false, message: 'Invalid or expired OTP.' });
     }
-
-    await Otp.deleteOne({ email: user.email });
 
     const accessToken = jwt.sign(
       {
@@ -205,15 +205,11 @@ export const verifyLoginOtp = async (req, res) => {
             ? user.distributorId.distributorId
             : user.distributorId),
       },
-      process.env.JWT_SECRET || 'default_secret',
+      process.env.JWT_SECRET,
       { expiresIn: '15m' }
     );
 
-    const refreshToken = jwt.sign(
-      { id: user._id, role: role },
-      process.env.JWT_REFRESH_SECRET || 'default_refresh_secret',
-      { expiresIn: '7d' }
-    );
+    const refreshToken = signRefreshToken(user, role);
 
     logActivity({ req, actor: { _id: user._id, role, name: user.name }, action: 'auth.login', summary: 'Signed in' });
 
@@ -266,13 +262,7 @@ export const sendVerificationOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email is already registered.' });
     }
 
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-    await Otp.findOneAndUpdate(
-      { email },
-      { otp: otpCode, createdAt: Date.now() },
-      { upsert: true, returnDocument: 'after' }
-    );
+    const otpCode = await Otp.issue(email);
 
     const emailSent = await sendEmailOTP(email, name || 'User', otpCode);
     if (!emailSent) {
@@ -292,10 +282,9 @@ export const refreshAccessToken = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Refresh token is missing' });
     }
 
-    const decoded = jwt.verify(
-      incomingRefreshToken,
-      process.env.JWT_REFRESH_SECRET || 'default_refresh_secret'
-    );
+    const decoded = jwt.verify(incomingRefreshToken, process.env.JWT_REFRESH_SECRET, {
+      algorithms: ['HS256'],
+    });
 
     let user;
     if (decoded.role === 'admin') user = await Admin.findById(decoded.id);
@@ -309,6 +298,10 @@ export const refreshAccessToken = async (req, res) => {
     if (user.isActive === false) {
       return res.status(403).json({ success: false, message: 'Account is inactive.' });
     }
+    // Logout and password changes bump tokenVersion, retiring every older refresh token.
+    if ((decoded.v ?? 0) !== (user.tokenVersion ?? 0)) {
+      return res.status(401).json({ success: false, message: 'Session expired. Please sign in again.' });
+    }
 
     const newAccessToken = jwt.sign(
       {
@@ -321,17 +314,21 @@ export const refreshAccessToken = async (req, res) => {
             ? user.distributorId.distributorId
             : user.distributorId),
       },
-      process.env.JWT_SECRET || 'default_secret',
+      process.env.JWT_SECRET,
       { expiresIn: '15m' }
     );
 
     const userObj = user.toObject();
     delete userObj.password;
 
+    // Rotate: hand out a fresh refresh token every time.
+    const newRefreshToken = signRefreshToken(user, decoded.role);
+    if (req.cookies?.refreshToken) res.cookie('refreshToken', newRefreshToken, refreshCookieOptions(req));
+
     return res.status(200).json({
       success: true,
       token: newAccessToken,
-      refreshToken: incomingRefreshToken,
+      refreshToken: newRefreshToken,
       role: decoded.role,
       user: userObj,
     });
@@ -344,6 +341,7 @@ export const logoutUser = async (req, res) => {
   try {
     // Must mirror the attributes used when setting it, or the browser keeps it.
     // Flags must match the ones the cookie was set with, or the browser keeps it.
+    await MODEL_BY_ROLE[req.user.role]?.updateOne({ _id: req.user._id }, { $inc: { tokenVersion: 1 } });
     const { maxAge: _ignored, ...clearOptions } = refreshCookieOptions(req);
     res.clearCookie('refreshToken', clearOptions);
     return res.status(200).json({ success: true, message: 'Logged out successfully' });
@@ -368,12 +366,7 @@ export const sendPasswordOtp = async (req, res) => {
         .json({ success: false, message: 'No email on file for this account.' });
     }
 
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    await Otp.findOneAndUpdate(
-      { email },
-      { otp: otpCode, createdAt: Date.now() },
-      { upsert: true, returnDocument: 'after' }
-    );
+    const otpCode = await Otp.issue(email);
 
     const sent = await sendEmailOTP(email, req.user?.name || 'User', otpCode);
     if (!sent) {
@@ -396,8 +389,11 @@ export const verifyEmailOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email and OTP are required' });
     }
 
-    const otpRecord = await Otp.findOne({ email });
-    if (!otpRecord || otpRecord.otp !== otp) {
+    // Signup-only: for a registered address this would be an oracle for the
+    // password-reset code, so refuse those outright.
+    const registered =
+      (await Admin.exists({ email })) || (await Distributor.exists({ email })) || (await Retailer.exists({ email }));
+    if (registered || !(await Otp.check(email, otp))) {
       return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
     }
 
@@ -409,6 +405,23 @@ export const verifyEmailOtp = async (req, res) => {
   }
 };
 
+// KYC calls go to PaySprint under a merchant code taken from the request, so the
+// caller must own that merchant: themselves, a retailer of their own, or admin.
+const canActOnMerchant = async (req, merchantCode) => {
+  const { role, _id } = req.user;
+  if (role === 'admin') return true;
+  const code = String(merchantCode ?? '');
+  if (!code) return false;
+  if (role === 'retailer') return req.user.retailerId === code;
+  if (role === 'distributor') {
+    return req.user.distributorId === code || Boolean(await Retailer.exists({ retailerId: code, distributorId: _id }));
+  }
+  return false;
+};
+
+const notYourMerchant = (res) =>
+  res.status(403).json({ success: false, message: 'You can only run KYC for your own account or your retailers.' });
+
 export const generateAadhaarOtp = async (req, res) => {
   try {
     const { merchantcode, aadhaar, latitude, longitude, formData } = req.body;
@@ -417,6 +430,7 @@ export const generateAadhaarOtp = async (req, res) => {
         .status(400)
         .json({ success: false, message: 'merchantcode and aadhaar are required' });
     }
+    if (!(await canActOnMerchant(req, merchantcode))) return notYourMerchant(res);
 
     const response = await sendAadhaarOtp(
       merchantcode,
@@ -443,6 +457,7 @@ export const verifyAadhaarOtp = async (req, res) => {
         .status(400)
         .json({ success: false, message: 'Missing required fields for Aadhaar verification' });
     }
+    if (!(await canActOnMerchant(req, merchantcode))) return notYourMerchant(res);
 
     const response = await verifyAadhaarOtpApi(
       merchantcode,
@@ -472,6 +487,7 @@ export const verifyPan = async (req, res) => {
         .status(400)
         .json({ success: false, message: 'Missing required fields for PAN verification' });
     }
+    if (!(await canActOnMerchant(req, merchantcode))) return notYourMerchant(res);
 
     const response = await verifyPanDetails(merchantcode, name, pan, dob);
     if (response.success) {
@@ -857,6 +873,7 @@ export const generateOnboardUrl = async (req, res) => {
     if (!merchantCodeFinal) {
       merchantCodeFinal = merchantId;
     }
+    if (!(await canActOnMerchant(req, merchantCodeFinal))) return notYourMerchant(res);
 
     let finalIsNew;
     if (isNew === '0' || isNew === false) {
@@ -1059,7 +1076,8 @@ export const updateKycStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid payload from PaySprint' });
     }
 
-    const merchantCode = decoded.merchantcode;
+    const merchantCode = String(decoded.merchantcode);
+    if (!(await canActOnMerchant(req, merchantCode))) return notYourMerchant(res);
 
     // Load the merchant's real contact number from the DB — the callback payload may
     // omit `mobile`, and PaySprint's getonboardstatus needs it for the verification call.
@@ -1092,6 +1110,7 @@ export const updateKycStatus = async (req, res) => {
     // claims success, re-verify against PaySprint's live getonboardstatus: only mark
     // web KYC complete when PaySprint actually confirms the merchant is onboarded.
     let webKycVerified = false;
+    const verifiedPipes = [];
     if (isSuccess) {
       const pipesToVerify =
         updateData.activeAepsPipes && updateData.activeAepsPipes.length
@@ -1105,13 +1124,18 @@ export const updateKycStatus = async (req, res) => {
         );
         if (live && isWebKycDone(live)) {
           webKycVerified = true;
-          break;
+          verifiedPipes.push(p);
         }
       }
     }
 
     const finalSuccess = isSuccess && webKycVerified;
     updateData.isMerchantKycComplete = finalSuccess;
+    // Pipes come from the (possibly unsigned) payload: keep only the ones PaySprint confirmed.
+    if (updateData.activeAepsPipes) {
+      updateData.activeAepsPipes = updateData.activeAepsPipes.filter((p) => verifiedPipes.includes(p));
+      if (!updateData.activeAepsPipes.length) delete updateData.activeAepsPipes;
+    }
 
     const retailer = await Retailer.findOneAndUpdate({ retailerId: merchantCode }, updateData, {
       new: true,
@@ -1162,7 +1186,19 @@ export const updateProfile = async (req, res) => {
 
     const updateData = {};
     if (name) updateData.name = name;
-    if (contactNumber) updateData.contactNumber = contactNumber;
+    if (contactNumber) {
+      // The number is a login identifier: it must look like a phone number and be nobody else's.
+      if (!/^[6-9]\d{9}$/.test(String(contactNumber))) {
+        return res.status(400).json({ success: false, message: 'Enter a valid 10-digit mobile number.' });
+      }
+      const taken = await Promise.all(
+        [Admin, Distributor, Retailer].map((M) => M.exists({ contactNumber: String(contactNumber), _id: { $ne: userId } }))
+      );
+      if (taken.some(Boolean)) {
+        return res.status(400).json({ success: false, message: 'This mobile number is already registered.' });
+      }
+      updateData.contactNumber = String(contactNumber);
+    }
     if (businessName) updateData.businessName = businessName;
     if (address) {
       try {
@@ -1240,6 +1276,7 @@ export const changePassword = async (req, res) => {
     // modified password, so hashing here too would store a hash of a hash and
     // lock the user out.
     user.password = newPassword;
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
     await user.save();
     logActivity({ req, actor: { _id: user._id, role, name: user.name }, action: 'auth.password_change', summary: 'Changed password' });
 
@@ -1278,12 +1315,7 @@ export const forgotPassword = async (req, res) => {
       return res.status(404).json({ success: false, message: 'No registered account found with these details.' });
     }
 
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    await Otp.findOneAndUpdate(
-      { email: user.email },
-      { otp: otpCode, createdAt: Date.now() },
-      { upsert: true, returnDocument: 'after' }
-    );
+    const otpCode = await Otp.issue(user.email);
 
     await sendEmailOTP(user.email, user.name || user.ownerName || 'Merchant', otpCode);
 
@@ -1305,7 +1337,7 @@ export const forgotPassword = async (req, res) => {
 export const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
-    if (!email || !otp || !newPassword) {
+    if (typeof email !== 'string' || typeof otp !== 'string' || typeof newPassword !== 'string' || !email || !otp || !newPassword) {
       return res.status(400).json({ success: false, message: 'Email, OTP, and new password are required.' });
     }
 
@@ -1326,6 +1358,7 @@ export const resetPassword = async (req, res) => {
     }
 
     user.password = newPassword;
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
     await user.save();
     logActivity({
       req,

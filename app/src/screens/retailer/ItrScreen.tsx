@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { View, Text, Linking } from 'react-native';
-import { themed, space, type as t } from '../../theme/colors';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { colors, themed, space, type as t } from '../../theme/colors';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { IconTile } from '@/components/ui/Gradient';
 import {
   Screen,
+  SectionTitle,
   Banner,
   EmptyState,
   ErrorBanner,
   Row,
-  StatusPill,
   money,
   shortDate,
+  SkeletonRows,
 } from '@/components/ui/Screen';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
@@ -54,15 +56,17 @@ export const ItrScreen: React.FC = () => {
       onRetry={history.reload}
     >
       <Card>
-        <CardContent>
-          <Row label="Main wallet balance" value={money(balances.data?.mainBalance)} mono last />
+        <CardContent style={styles.wallet}>
+          <IconTile icon="wallet-outline" size={48} iconSize={22} />
+          <Text style={styles.walletLabel}>Main wallet balance</Text>
+          <Text style={styles.walletValue} numberOfLines={1} adjustsFontSizeToFit>
+            {money(balances.data?.mainBalance)}
+          </Text>
         </CardContent>
       </Card>
 
+      <SectionTitle>Start a filing</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="rocket-launch-outline">Start a filing</CardTitle>
-        </CardHeader>
         <CardContent style={styles.form}>
           <Text style={styles.help}>
             Filing opens the eSevaTech portal already signed in as your retailer account. Each
@@ -77,7 +81,6 @@ export const ItrScreen: React.FC = () => {
           <Button
             onPress={onLaunch}
             loading={launch.pending}
-            icon="open-in-new"
             size="lg"
             fullWidth
           >
@@ -86,17 +89,19 @@ export const ItrScreen: React.FC = () => {
         </CardContent>
       </Card>
 
+      <SectionTitle>Filing history</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="history">Filing history</CardTitle>
-        </CardHeader>
         <CardContent>
-          {history.loading ? null : history.data?.length ? (
-            history.data.slice(0, 20).map((txn: any) => (
-              <View key={txn._id || txn.transactionId} style={styles.item}>
+          {history.loading ? <SkeletonRows count={3} /> : history.data?.length ? (
+            history.data.slice(0, 20).map((txn: any, index: number, shown: any[]) => (
+              <View
+                key={txn._id || txn.transactionId}
+                style={[styles.item, index === shown.length - 1 && styles.itemLast]}
+              >
                 <View style={styles.itemTop}>
+                  <IconTile icon="file-document-outline" size={44} iconSize={20} />
                   <Text style={styles.itemAmount}>{money(txn.amount)}</Text>
-                  <StatusPill status={txn.status} />
+                  <StatusText status={txn.status} />
                 </View>
                 <Row label="Reference" value={txn.transactionId} />
                 <Row label="Client" value={txn.metadata?.client_name || txn.metadata?.pan} />
@@ -116,20 +121,39 @@ export const ItrScreen: React.FC = () => {
   );
 };
 
+/** BHIM status: small coloured text, never a filled pill. */
+const StatusText: React.FC<{ status?: string | null }> = ({ status }) => {
+  const s = String(status || 'PENDING').toUpperCase();
+  const color = /SUCCESS|COMPLETE|APPROVED|ACTIVE|ACCEPTED|CONVERTED/.test(s)
+    ? colors.success
+    : /FAIL|REJECT/.test(s)
+      ? colors.destructive
+      : colors.warning;
+  return (
+    <Text style={{ fontSize: t.small, fontWeight: '500', color }}>
+      {s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, ' ')}
+    </Text>
+  );
+};
+
 const styles = themed((c) => ({
   form: { gap: space.lg },
-  help: { fontSize: t.caption, color: c.mutedForeground, lineHeight: 18 },
+  help: { fontSize: t.small, color: c.mutedForeground, lineHeight: 19 },
+  wallet: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  walletLabel: { flex: 1, fontSize: t.small, color: c.mutedForeground },
+  walletValue: { fontSize: t.h2, fontWeight: '400', color: c.foreground, fontVariant: ['tabular-nums'] },
   item: { paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
+  itemLast: { borderBottomWidth: 0 },
   itemTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     gap: space.md,
     marginBottom: 2,
   },
   itemAmount: {
-    fontSize: t.body,
-    fontWeight: '700',
+    flex: 1,
+    fontSize: t.bodyLg,
+    fontWeight: '500',
     color: c.foreground,
     fontVariant: ['tabular-nums'],
   },

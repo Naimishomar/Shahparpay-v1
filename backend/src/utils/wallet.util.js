@@ -472,20 +472,19 @@ export const resolveTransaction = async (
       await txn.save();
       return txn;
     } else if (finalStatus === 'FAILED') {
-      // Must refund the deducted amount
-      const refundAmount = Math.abs(txn.amount); // Always positive
-
-      const WalletModel = resolvedWalletType === 'MAIN' ? MainWallet : AepsWallet;
-      await WalletModel.findOneAndUpdate(
-        { userId: txn.userId },
-        { $inc: { balance: refundAmount } }
+      // Claim the PROCESSING -> FAILED flip first: only the request that wins it
+      // refunds, so concurrent status checks and the cron cannot refund twice.
+      const claimed = await Transaction.findOneAndUpdate(
+        { transactionId, status: 'PROCESSING' },
+        { $set: { status: 'FAILED', 'metadata.apiMessage': apiMessage, 'metadata.refundStatus': 'COMPLETED' } },
+        { new: true }
       );
+      if (!claimed) return Transaction.findOne({ transactionId });
 
-      // Update transaction to FAILED (or REFUNDED)
-      txn.status = 'FAILED';
-      txn.metadata = { ...txn.metadata, apiMessage, refundStatus: 'COMPLETED' };
-      await txn.save();
-      return txn;
+      const refundAmount = Math.abs(claimed.amount); // Always positive
+      const WalletModel = resolvedWalletType === 'MAIN' ? MainWallet : AepsWallet;
+      await WalletModel.findOneAndUpdate({ userId: claimed.userId }, { $inc: { balance: refundAmount } });
+      return claimed;
     }
   } catch (error) {
     console.error('Error resolving transaction:', error);

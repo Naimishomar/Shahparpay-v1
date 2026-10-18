@@ -460,7 +460,9 @@ export const setUserStatus = async (req, res) => {
     if (typeof req.body?.isActive !== 'boolean') {
       return res.status(400).json({ success: false, message: 'isActive must be true or false' });
     }
-    const user = await p.Model.findByIdAndUpdate(p.id, { $set: { isActive: req.body.isActive } }, { new: true }).select('name isActive');
+    const update = { isActive: req.body.isActive };
+    if (p.role === 'retailer') update.deactivatedByAdmin = !req.body.isActive;
+    const user = await p.Model.findByIdAndUpdate(p.id, { $set: update }, { new: true }).select('name isActive');
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
     logActivity({

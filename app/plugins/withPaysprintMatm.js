@@ -58,6 +58,10 @@ ${m}
     implementation 'com.karumi:dexter:4.2.0'
     // MatmHostActivity.onCreate calls EdgeToEdge.enable (activity 1.8+); expo only brings 1.7.2.
     implementation 'androidx.activity:activity:1.8.0'
+    // Local AARs carry no POM: MatmHostActivity's layout + view binding need these,
+    // else onCreate dies with NoClassDefFoundError and takes the app down.
+    implementation 'androidx.databinding:viewbinding:8.1.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     // MatmHostActivity calls PaySprint over retrofit + gson + okhttp logging.
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'

@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shahparpay App Mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,0..1,0&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#1B2A72;      /* primary: header, buttons, active tab */
+  --navy-2:#2B3C96;
+  --saffron:#F58220;   /* accent: highlights, offers */
+  --green:#0E9F55;     /* success, money in */
+  --red:#D93A3A;
+  --ink:#141A33;
+  --muted:#6B7290;
+  --line:#E6E8F2;
+  --bg:#F3F5FB;
+  --card:#FFFFFF;
+  --chip-blue:#EAEEFF; --chip-orange:#FFF1E4; --chip-green:#E5F7EE; --chip-purple:#F1EAFE; --chip-pink:#FDEBF1; --chip-teal:#E2F6F7;
+  --head:#1B2A72; --accent-ink:#1B2A72; --seg:#E8EBF6; --seg-on:#FFFFFF;
+  --o-ink:#C25E0C; --g-ink:#0A7A41; --p-ink:#6A3FC8; --k-ink:#B5285A; --t-ink:#0D7C84;
+  --warn-bg:#FFF6E8; --warn-ink:#6B5A2E; --green-ink:#0A7A41; --red-ink:#C62F2F;
+  --page:#DCE1EE;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;background:var(--page);color:var(--ink);padding:32px 16px 64px}
+.ms{font-family:'Material Symbols Rounded';font-weight:500;font-size:22px;line-height:1;font-feature-settings:'liga';-webkit-font-smoothing:antialiased;display:inline-block}
+.fill{font-variation-settings:'FILL' 1}
+
+/* ---------- page chrome ---------- */
+.intro{max-width:1520px;margin:0 auto 28px}
+.intro h1{font-size:28px;font-weight:800;color:var(--accent-ink)}
+.intro p{color:#3d4466;margin-top:6px;max-width:760px;line-height:1.5}
+.swatches{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.sw{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:999px;padding:6px 12px 6px 6px;font-size:12px;font-weight:600}
+.sw i{width:20px;height:20px;border-radius:50%;display:block}
+.grid{max-width:1520px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:36px 24px;justify-items:center}
+.cell{display:flex;flex-direction:column;align-items:center;gap:10px}
+.cap{font-size:13px;font-weight:700;color:#3d4466}
+.cap b{color:var(--accent-ink);margin-right:6px}
+
+/* ---------- phone ---------- */
+.phone{width:340px;height:720px;background:var(--bg);border-radius:36px;border:8px solid #111;overflow:hidden;position:relative;display:flex;flex-direction:column;box-shadow:0 20px 40px -18px rgba(20,26,51,.45)}
+.status{height:28px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 18px;font-size:11px;font-weight:700}
+.status .ms{font-size:14px}
+.on-navy .status{color:#fff}
+.scroll{flex:1;overflow:hidden}
+.pad{padding:0 16px}
+
+/* top bars */
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 16px 14px}
+.topbar h2{font-size:17px;font-weight:700;flex:1}
+.navyhead{background:var(--head);color:#fff}
+.navyhead .ms{color:#fff}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--saffron);color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;flex:none}
+.iconbtn{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.12);position:relative}
+.light .iconbtn{background:var(--card);border:1px solid var(--line)}
+.dot{position:absolute;top:7px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--saffron);border:2px solid var(--head)}
+.brand{font-weight:800;font-size:18px;letter-spacing:-.2px;flex:1}
+.brand small{display:block;font-size:11px;font-weight:500;opacity:.75;letter-spacing:0}
+
+/* cards */
+.card{background:var(--card);border-radius:18px;padding:14px;border:1px solid var(--line)}
+.sec{display:flex;justify-content:space-between;align-items:center;margin:18px 0 10px}
+.sec h3{font-size:14px;font-weight:700}
+.sec a{font-size:12px;font-weight:700;color:var(--accent-ink);text-decoration:none}
+
+/* circular action grid (BHIM signature) */
+.acts{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 6px}
+.act{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;font-size:11px;font-weight:600;line-height:1.25;color:var(--ink)}
+.act .c{width:50px;height:50px;border-radius:50%;display:grid;place-items:center}
+.act .c .ms{font-size:24px}
+.b{background:var(--chip-blue);color:var(--accent-ink)} .o{background:var(--chip-orange);color:var(--o-ink)}
+.g{background:var(--chip-green);color:var(--g-ink)} .p{background:var(--chip-purple);color:var(--p-ink)}
+.k{background:var(--chip-pink);color:var(--k-ink)} .t{background:var(--chip-teal);color:var(--t-ink)}
+
+/* wallet hero */
+.wallet{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);color:#fff;border-radius:20px;padding:16px;position:relative;overflow:hidden}
+.wallet:after{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;background:rgba(245,130,32,.22)}
+.wallet .lbl{font-size:12px;opacity:.8;display:flex;align-items:center;gap:6px}
+.wallet .amt{font-size:28px;font-weight:800;margin:4px 0 12px;letter-spacing:-.5px}
+.wallet .row{display:flex;gap:8px;position:relative;z-index:1}
+.pill{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:rgba(255,255,255,.14);border-radius:12px;padding:9px 0;font-size:12px;font-weight:600}
+.pill .ms{font-size:18px}
+.sub-w{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.18);font-size:12px;position:relative;z-index:1}
+.sub-w b{font-size:15px}
+
+/* scan banner */
+.scanbar{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
+.scanbar .q{width:44px;height:44px;border-radius:12px;background:var(--saffron);color:#fff;display:grid;place-items:center}
+.scanbar div:not(.q){flex:1}
+.scanbar b{font-size:14px;display:block}
+.scanbar div:not(.q) span{font-size:11px;color:var(--muted)}
+
+/* list rows */
+.row-i{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.row-i:last-child{border-bottom:0}
+.row-i .c{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:none}
+.row-i .c .ms{font-size:20px}
+.row-i .m{flex:1;min-width:0}
+.row-i .m b{font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-i .m span{font-size:11px;color:var(--muted)}
+.row-i .r{text-align:right;font-size:13px;font-weight:700}
+.row-i .r span{display:block;font-size:10px;font-weight:600;margin-top:2px}
+.in{color:var(--green-ink)} .out{color:var(--ink)} .fail{color:var(--red-ink)}
+.chev{color:#A3A8C3}
+
+/* bottom nav with raised scan */
+.tabs{flex:none;height:66px;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);align-items:center;position:relative}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:600;color:#8A90AD}
+.tab.on{color:var(--accent-ink)}
+.tab.fab .c{width:54px;height:54px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;margin-top:-30px;border:4px solid var(--bg);box-shadow:0 6px 14px -4px rgba(27,42,114,.6)}
+.tab.fab .c .ms{font-size:26px}
+
+/* forms */
+.field{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:9px 14px;margin-bottom:12px}
+.field label{display:block;font-size:11px;color:var(--muted);font-weight:600}
+.field .v{font-size:15px;font-weight:600;margin-top:2px;display:flex;align-items:center;gap:8px}
+.field .v .ms{font-size:20px;color:var(--muted)}
+.field.focus{border-color:var(--accent-ink)}
+.ph{color:#A3A8C3;font-weight:500}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--navy);color:#fff;border-radius:14px;height:50px;font-size:15px;font-weight:700}
+.btn.ghost{background:var(--card);color:var(--accent-ink);border:1.5px solid var(--accent-ink)}
+.seg{display:flex;background:var(--seg);border-radius:12px;padding:4px;gap:4px;margin-bottom:14px}
+.seg span{flex:1;text-align:center;padding:8px 0;font-size:12px;font-weight:600;border-radius:9px;color:var(--muted)}
+.seg span.on{background:var(--seg-on);color:var(--accent-ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:7px 12px;border-radius:999px;background:var(--card);border:1.5px solid var(--line);font-size:12px;font-weight:600}
+.chip.on{border-color:var(--accent-ink);background:var(--chip-blue);color:var(--accent-ink)}
+.note{display:flex;gap:8px;align-items:flex-start;font-size:11px;color:var(--warn-ink);background:var(--warn-bg);border-radius:12px;padding:10px;line-height:1.4}
+.note .ms{font-size:16px;color:var(--saffron)}
+
+/* amount entry */
+.payee{display:flex;flex-direction:column;align-items:center;padding-top:4px}
+.payee .avatar{width:58px;height:58px;font-size:20px;background:var(--chip-blue);color:var(--accent-ink)}
+.payee b{margin-top:10px;font-size:16px}
+.payee span{font-size:12px;color:var(--muted);margin-top:2px}
+.bigamt{display:flex;align-items:center;justify-content:center;gap:4px;margin:14px 0 8px;font-size:44px;font-weight:800;letter-spacing:-1px}
+.bigamt .cur{font-size:30px;color:var(--muted);font-weight:700}
+.caret{width:2px;height:40px;background:var(--accent-ink);margin-left:2px}
+.addnote{margin:0 auto;display:table;padding:7px 14px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.from{margin:22px 16px 0;display:flex;align-items:center;gap:10px;background:var(--card);border-radius:14px;padding:10px 12px;border:1px solid var(--line);font-size:12px}
+.from .c{width:34px;height:34px;border-radius:10px;display:grid;place-items:center}
+.from div:not(.c){flex:1} .from b{display:block;font-size:13px}
+
+/* keypad */
+.keys{display:grid;grid-template-columns:repeat(3,1fr);background:var(--card);border-top:1px solid var(--line)}
+.keys span{height:52px;display:grid;place-items:center;font-size:22px;font-weight:600}
+.keys .ms{font-size:24px}
+.keys .ok{background:var(--navy);color:#fff;border-radius:50%;width:48px;height:48px;margin:auto}
+
+/* pin */
+.pinbox{display:flex;gap:14px;justify-content:center;margin:20px 0 8px}
+.pinbox i{width:16px;height:16px;border-radius:50%;border:2px solid var(--accent-ink);display:block}
+.pinbox i.f{background:var(--accent-ink)}
+
+/* success */
+.succ{background:linear-gradient(180deg,var(--green) 0%,#0B8A49 100%);color:#fff;padding:22px 16px 60px;text-align:center}
+.tick{width:72px;height:72px;border-radius:50%;background:#fff;color:var(--green);display:grid;place-items:center;margin:8px auto 12px;box-shadow:0 0 0 10px rgba(255,255,255,.18)}
+.tick .ms{font-size:44px;font-weight:700}
+.receipt{margin:-44px 16px 0;background:var(--card);border-radius:18px;padding:16px;border:1px solid var(--line)}
+.kv{display:flex;justify-content:space-between;font-size:12px;padding:6px 0}
+.kv span{color:var(--muted)} .kv b{font-weight:600;text-align:right}
+.dash{border-top:1.5px dashed var(--line);margin:8px 0}
+
+/* qr */
+.qrcard{background:var(--card);border-radius:22px;margin:0 16px;padding:18px;text-align:center;border:1px solid var(--line)}
+.qr{width:190px;height:190px;margin:12px auto;padding:0;border:10px solid #fff;outline:2px solid var(--line);border-radius:16px;background:
+ repeating-conic-gradient(#141A33 0 25%,#fff 0 50%) 0 0/18px 18px}
+.qr-in{width:100%;height:100%;background:#fff;opacity:.0}
+.upi-strip{display:flex;justify-content:center;gap:8px;margin-top:6px}
+.upi-strip i{width:26px;height:26px;border-radius:8px;display:block}
+
+/* login */
+.loginhero{background:var(--head);color:#fff;padding:28px 22px 70px;position:relative;overflow:hidden}
+.loginhero:before{content:"";position:absolute;width:220px;height:220px;border-radius:50%;background:rgba(245,130,32,.25);right:-70px;top:-60px}
+.loginhero:after{content:"";position:absolute;width:140px;height:140px;border-radius:50%;background:rgba(14,159,85,.25);left:-50px;bottom:-60px}
+.logo{width:48px;height:48px;border-radius:14px;background:#fff;color:var(--accent-ink);display:grid;place-items:center;font-weight:900;font-size:20px;position:relative;z-index:1}
+.logo:after{content:"";position:absolute;right:8px;bottom:8px;width:8px;height:8px;border-radius:50%;background:var(--saffron)}
+.loginhero h1{font-size:24px;font-weight:800;margin-top:18px;position:relative;z-index:1}
+.loginhero p{font-size:13px;opacity:.8;margin-top:6px;position:relative;z-index:1}
+.sheet{background:var(--bg);border-radius:26px 26px 0 0;margin-top:-40px;position:relative;padding:22px 16px}
+.otp{display:flex;gap:8px;justify-content:space-between;margin:8px 0 14px}
+.otp span{width:40px;height:48px;border-radius:12px;background:var(--card);border:1.5px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:18px}
+.otp span.on{border-color:var(--accent-ink)}
+
+/* misc */
+.tag{font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px}
+.tag.s{background:var(--chip-green);color:var(--g-ink)}.tag.pd{background:var(--chip-orange);color:var(--o-ink)}.tag.f{background:var(--chip-pink);color:var(--red)}
+.offer{display:flex;align-items:center;gap:12px;background:linear-gradient(90deg,#FFF1E4,#FFE2C6);border-radius:16px;padding:12px 14px}
+.offer b{font-size:13px;display:block}.offer span{font-size:11px;color:var(--warn-ink)}
+.offer .ms{font-size:34px;color:var(--saffron)}
+.fp{width:130px;height:130px;border-radius:50%;margin:18px auto 10px;display:grid;place-items:center;background:var(--chip-blue);position:relative}
+.fp:before{content:"";position:absolute;inset:-12px;border-radius:50%;border:3px solid var(--accent-ink);border-right-color:transparent;border-bottom-color:transparent;transform:rotate(30deg)}
+.fp .ms{font-size:72px;color:var(--accent-ink)}
+.plan{border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.plan b{font-size:18px}.plan span{font-size:11px;color:var(--muted);display:block;margin-top:2px}
+.plan .btn{height:34px;padding:0 14px;font-size:12px;border-radius:10px}
+.search{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;font-size:13px;color:#A3A8C3}
+.search .ms{font-size:20px}
+.stat{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat .card{padding:12px}
+.stat span{font-size:11px;color:var(--muted)}.stat b{display:block;font-size:17px;margin-top:4px}
+.menu .row-i .c{border-radius:12px}
+
+/* ---------- dark theme: same roles, tonal variants (not inverted) ---------- */
+.phone.dark{
+  --bg:#0B1022; --card:#161C33; --line:#262F4D; --ink:#EEF0FA; --muted:#9AA1C0;
+  --head:#141B3D; --navy:#4F5FE0; --navy-2:#6C7BF0; --accent-ink:#AEB8FF;
+  --seg:#1E2643; --seg-on:#2E3962;
+  --chip-blue:#1F2852; --chip-orange:#3A2615; --chip-green:#10301F; --chip-purple:#2A1F4A; --chip-pink:#3A1A28; --chip-teal:#0F2F33;
+  --o-ink:#FFB27A; --g-ink:#5FD99A; --p-ink:#C7ADFF; --k-ink:#FF94B6; --t-ink:#62D6DE;
+  --warn-bg:#2A2214; --warn-ink:#F2D29A; --green-ink:#4ADE8F; --red-ink:#FF7A7A;
+  --green:#0B8A49; border-color:#000; color:var(--ink);
+}
+.phone.dark .wallet:after{background:rgba(245,130,32,.12)}
+.phone.dark .offer{background:linear-gradient(90deg,#2A1D10,#3A2615)}
+.phone.dark .tab.fab .c{box-shadow:0 6px 14px -4px rgba(79,95,224,.7)}
+.phone.dark .btn.ghost{background:transparent}
+
+/* ---------- light / dark pairing ---------- */
+.pair{display:flex;gap:18px;flex-wrap:wrap;justify-content:center}
+.grid{grid-template-columns:repeat(auto-fill,minmax(720px,1fr))}
+.mode{display:flex;gap:4px;background:#fff;border-radius:999px;padding:4px;width:max-content;max-width:100%;margin-top:16px}
+.mode button{border:0;background:none;font:600 13px Inter,sans-serif;padding:8px 16px;min-height:36px;border-radius:999px;color:#3d4466;cursor:pointer}
+.mode button[aria-pressed=true]{background:#1B2A72;color:#fff}
+body[data-show=light] .phone.dark,body[data-show=dark] .phone:not(.dark){display:none}
+body[data-show=light] .grid,body[data-show=dark] .grid{grid-template-columns:repeat(auto-fill,minmax(340px,1fr))}
+@media (max-width:760px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Shahparpay app: BHIM-style mockups, light and dark</h1>
+  <p>Static design mockups for approval. The layout follows the BHIM pattern: navy header, round coloured action icons in a 4-column grid, a raised scan button in the bottom bar, a big amount entry with keypad, and a green success receipt. Branding, logo and PIN screen are Shahparpay's own, not BHIM's or NPCI's.</p>
+  <div class="swatches">
+    <span class="sw"><i style="background:#1B2A72"></i>Navy #1B2A72 primary</span>
+    <span class="sw"><i style="background:#F58220"></i>Saffron #F58220 accent</span>
+    <span class="sw"><i style="background:#0E9F55"></i>Green #0E9F55 success</span>
+    <span class="sw"><i style="background:#F3F5FB;border:1px solid #ccd"></i>#F3F5FB background</span>
+    <span class="sw">Inter font</span>
+  </div>
+  <div class="mode" role="group" aria-label="Theme">
+    <button aria-pressed="true" data-v="both">Light + Dark</button><button aria-pressed="false" data-v="light">Light only</button><button aria-pressed="false" data-v="dark">Dark only</button>
+  </div>
+</div>
+
+<div class="grid">
+
+<!-- 1 LOGIN -->
+<div class="cell"><div class="cap"><b>01</b>Login</div>
+<div class="phone on-navy">
+  <div style="background:var(--head)"><div class="status"><span>9:41</span><span><span class="ms">signal_cellular_alt</span> <span class="ms">battery_full</span></span></div></div>
+  <div class="scroll">
+    <div class="loginhero">
+      <div class="logo">S</div>
+      <h1>Welcome to Shahparpay</h1>
+      <p>Banking point for your shop: AEPS, money transfer, bills and more.</p>
+    </div>
+    <div class="sheet">
+      <div class="seg"><span class="on">Password</span><span>OTP</span></div>
+      <div class="field focus"><label>Mobile number</label><div class="v">+91&nbsp; 98765 43210</div></div>
+      <div class="field"><label>Password</label><div class="v"><span style="flex:1;letter-spacing:3px">••••••••</span><span class="ms">visibility</span></div></div>
+      <div style="text-align:right;font-size:12px;font-weight:700;color:var(--accent-ink);margin:-2px 0 16px">Forgot password?</div>
+      <div class="btn">Login <span class="ms">arrow_forward</span></div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--muted);margin-top:22px"><span class="ms" style="font-size:16px;color:var(--green)">verified_user</span>Secured with 256-bit encryption</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 2 OTP -->
+<div class="cell"><div class="cap"><b>02</b>OTP verify</div>
+<div class="phone light">
+  <div class="status"><span>9:41</span><span><span class="ms">signal_cellular_alt</span> <span class="ms">battery_full</span></span></div>
+  <div class="topbar"><span class="ms">arrow_back</span><h2></h2></div>
+  <div class="scroll pad">
+    <div style="width:64px;height:64px;border-radius:20px;background:var(--chip-blue);display:grid;place-items:center;margin-top:8px"><span class="ms fill" style="font-size:34px;color:var(--accent-ink)">sms</span></div>
+    <h2 style="font-size:22px;margin-top:18px">Enter verification code</h2>
+    <p style="font-size:13px;color:var(--muted);margin-top:6px">We sent a 6-digit code to <b style="color:var(--ink)">r***@gmail.com</b></p>
+    <div class="otp" style="margin-top:26px"><span>4</span><span>8</span><span>2</span><span class="on">|</span><span></span><span></span></div>
+    <div style="font-size:12px;color:var(--muted)">Resend code in <b style="color:var(--accent-ink)">00:42</b></div>
+  </div>
+  <div class="pad" style="padding-bottom:6px"><div class="btn" style="opacity:.45">Verify</div></div>
+  <div class="keys"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span></span><span>0</span><span class="ms">backspace</span></div>
+</div></div>
+
+<!-- 3 HOME -->
+<div class="cell"><div class="cap"><b>03</b>Home</div>
+<div class="phone on-navy">
+  <div class="navyhead">
+    <div class="status"><span>9:41</span><span><span class="ms">signal_cellular_alt</span> <span class="ms">battery_full</span></span></div>
+    <div class="topbar" style="padding-bottom:12px">
+      <div class="avatar">RK</div>
+      <div class="brand">Ramesh Kirana<small>ID SP104522 · Retailer</small></div>
+      <div class="iconbtn"><span class="ms">support_agent</span></div>
+      <div class="iconbtn"><span class="ms">notifications</span><i class="dot"></i></div>
+    </div>
+  </div>
+  <div class="scroll pad" style="background:linear-gradient(var(--head) 0 70px,var(--bg) 70px)">
+    <div class="wallet" style="background:var(--card);color:var(--ink);border:1px solid var(--line)">
+      <div class="lbl" style="opacity:1;color:var(--muted)"><span class="ms" style="font-size:16px">account_balance_wallet</span>Main wallet <span class="ms" style="font-size:16px">visibility</span></div>
+      <div class="amt" style="color:var(--accent-ink)">₹ 24,580.00</div>
+      <div class="row">
+        <div class="pill" style="background:var(--chip-blue);color:var(--accent-ink)"><span class="ms">add</span>Add money</div>
+        <div class="pill" style="background:var(--chip-orange);color:var(--o-ink)"><span class="ms">north_east</span>Withdraw</div>
+      </div>
+      <div class="sub-w" style="border-color:var(--line)"><span style="color:var(--muted)">AEPS wallet</span><b style="color:var(--green)">₹ 8,215.50</b></div>
+    </div>
+    <div class="sec"><h3>Banking</h3><a>View all</a></div>
+    <div class="acts">
+      <div class="act"><div class="c b"><span class="ms">fingerprint</span></div>AEPS</div>
+      <div class="act"><div class="c o"><span class="ms">credit_card</span></div>Micro ATM</div>
+      <div class="act"><div class="c g"><span class="ms">send_money</span></div>Money transfer</div>
+      <div class="act"><div class="c p"><span class="ms">bolt</span></div>Direct payout</div>
+    </div>
+    <div class="sec"><h3>Recharge &amp; bills</h3><a>View all</a></div>
+    <div class="acts">
+      <div class="act"><div class="c t"><span class="ms">smartphone</span></div>Mobile</div>
+      <div class="act"><div class="c k"><span class="ms">satellite_alt</span></div>DTH</div>
+      <div class="act"><div class="c o"><span class="ms">lightbulb</span></div>Electricity</div>
+      <div class="act"><div class="c b"><span class="ms">receipt_long</span></div>All bills</div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab on"><span class="ms fill">home</span>Home</div>
+    <div class="tab"><span class="ms">grid_view</span>Services</div>
+    <div class="tab fab"><div class="c"><span class="ms">fingerprint</span></div>AEPS</div>
+    <div class="tab"><span class="ms">history</span>History</div>
+    <div class="tab"><span class="ms">person</span>Profile</div>
+  </div>
+</div></div>
+
+<!-- 4 HOME scrolled -->
+<div class="cell"><div class="cap"><b>04</b>Home (scrolled down)</div>
+<div class="phone light">
+  <div class="status"><span>9:41</span><span><span class="ms">signal_cellular_alt</span> <span class="ms">battery_full</span></span></div>
+  <div class="scroll pad">
+    <div class="scanbar"><div class="q"><span class="ms">qr_code_2</span></div><div><b>Collect by UPI QR</b><span>Show your QR, money lands in wallet</span></div><span class="ms chev">chevron_right</span></div>
+    <div class="sec"><h3>Today</h3><a>This month</a></div>
+    <div class="stat">
+      <div class="card"><span>AEPS withdrawals</span><b>₹ 42,000</b></div>
+      <div class="card"><span>Commission earned</span><b class="in">₹ 186.40</b></div>
+    </div>
+    <div class="sec"><h3>Government services</h3><a>View all</a></div>
+    <div class="acts">
+      <div class="act"><div class="c b"><span class="ms">badge</span></div>PAN card</div>
+      <div class="act"><div class="c g"><span class="ms">description</span></div>ITR filing</div>
+      <div class="act"><div class="c k"><span class="ms">person_add</span></div>Leads</div>
+      <div class="act"><div class="c o"><span class="ms">payments</span></div>Fund request</div>
+    </div>
+    <div class="sec"><h3>Recent transactions</h3><a>See all</a></div>
+    <div class="card" style="padding:4px 14px">
+      <div class="row-i"><div class="c b"><span class="ms">fingerprint</span></div><div class="m"><b>AEPS withdrawal</b><span>SBI ·· 4821 · 10:42 AM</span></div><div class="r in">+ ₹ 3,000<span class="tag s">Success</span></div></div>
+      <div class="row-i"><div class="c g"><span class="ms">send_money</span></div><div class="m"><b>Sent to Suresh Yadav</b><span>HDFC ·· 9930 · 10:15 AM</span></div><div class="r out">− ₹ 5,000<span class="tag pd">Pending</span></div></div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab on"><span class="ms fill">home</span>Home</div>
+    <div class="tab"><span class="ms">grid_view</span>Services</div>
+    <div class="tab fab"><div class="c"><span class="ms">fingerprint</span></div>AEPS</div>
+    <div class="tab"><span class="ms">history</span>History</div>
+    <div class="tab"><span class="ms">person</span>Profile</div>
+  </div>
+</div></div>
+
+<!-- 5 SERVICES -->
+<div class="cell"><div class="cap"><b>05</b>All services</div>
+<div class="phone light">
+  <div class="status"><span>9:41</span><span><span class="ms">signal_cellular_alt</span> <span class="ms">battery_full</span></span></div>
+  <div class="topbar"><h2 style="font-size:20px">Services</h2><div class="iconbtn"><span class="ms">notifications</span></div></div>
+  <div class="scroll pad">
+    <div class="search"><span class="ms">search</span>Search services</div>
+    <div class="sec"><h3>Banking</h3></div>
+    <div class="card"><div class="acts">
+      <div class="act"><div class="c b"><span class="ms">fingerprint</span></div>AEPS</div>
+      <div class="act"><div class="c o"><span class="ms">credit_card</span></div>Micro ATM</div>
+      <div class="act"><div class="c g"><span class="ms">send_money</span></div>DMT</div>
+      <div class="act"><div class="c p"><span class="ms">bolt</span></div>Payout</div>
+    </div></div>
+    <div class="sec"><h3>Payments</h3></div>
+    <div class="card"><div class="acts">
+      <div class="act"><div class="c t"><span class="ms">smartphone</span></div>Recharge</div>
+      <div class="act"><div class="c o"><span class="ms">receipt_long</span></div>BBPS</div>
+      <div class="act"><div class="c k"><span class="ms">qr_code_2</span></div>Collect</div>
+      <div class="act"><div class="c b"><span class="ms">add_card</span></div>Add money</div>
+      <div class="act"><div class="c g"><span class="ms">payments</span></div>Fund request</div>
+    </div></div>
+    <div class="sec"><h3>Government</h3></div>
+    <div class="card"><div class="acts">
+      <div class="act"><div class="c b"><span class="ms">badge</span></div>PAN card</div>
+      <div class="act"><div class="c g"><span class="ms">description</span></div>ITR filing</div>
+      <div class="act"><div class="c k"><span class="ms">person_add</span></div>Leads</div>
+      <div class="act"><div class="c p"><span class="ms">verified</span></div>KYC status</div>
+    </div></div>
+  </div>
+  <div class="tabs">
+    <div class="tab"><span class="ms">home</span>Home</div>
+    <div class="tab on"><span class="ms fill">grid_view</span>Services</div>
+    <div class="tab fab"><div class="c"><span class="ms">fingerprint</span></div>AEPS</div>
+    <div class="tab"><span class="ms">history</span>History</div>
+    <div class="tab"><span class="ms">person</span>Profile</div>
+  </div>
+</div></div>
+
+<!-- 6 AEPS -->
+<div class="cell"><div class="cap"><b>06</b>AEPS form</div>
+<div class="phone on-navy">
+  <div class="navyhead"><div class="status"><span>9:41</span><span><span class="ms">signal_cellular_alt</span> <span class="ms">battery_full</span></span></div>
+  <div class="topbar"><span class="ms">arrow_back</span><h2>Aadhaar banking</h2><span class="ms">help</span></div></div>
+  <div class="scroll pad" style="padding-top:14px">
+    <div class="acts" style="margin-bottom:16px">
+      <div class="act"><div class="c" style="background:var(--navy);color:#fff"><span class="ms">payments</span></div><b style="color:var(--accent-ink)">Withdraw</b></div>
+      <div class="act"><div class="c b"><span class="ms">account_balance</span></div>Balance</div>
+      <div class="act"><div class="c b"><span class="ms">list_alt</span></div>Mini statement</div>
+      <div class="act"><div class="c b"><span class="ms">storefront</span></div>Aadhaar pay</div>
+    </div>
+    <div class="field"><label>Customer mobile</label><div class="v">98100 22334</div></div>
+    <div class="field focus"><label>Aadhaar number</label><div class="v"><span style="flex:1">XXXX XXXX 4410</span><span class="ms">visibility_off</span></div></div>
+    <div class="field"><label>Bank</label><div class="v"><span class="ms" style="color:var(--accent-ink)">account_balance</span><span style="flex:1">State Bank of India</span><span class="ms">expand_more</span></div></div>
+    <div class="field"><label>Amount</label><div class="v">₹ 3,000</div></div>
+    <div class="chips" style="margin-bottom:14px"><span class="chip">₹ 500</span><span class="chip">₹ 1,000</span><span class="chip">₹ 2,000</span><span class="chip on">₹ 3,000</span></div>
+    <div class="note"><span class="ms">usb</span>Device: Mantra MFS110 · Connected</div>
+  </div>
+  <div class="pad" style="padding:10px 16px 14px;background:var(--card);border-top:1px solid var(--line)"><div class="btn"><span class="ms">fingerprint</span>Scan fingerprint</div></div>
+</div></div>
+
+<!-- 7 FINGERPRINT -->
+<div class="cell"><div class="cap"><b>07</b>Fingerprint capture</div>
+<div class="phone light">
+  <div class="status"><span>9:41</span><span><span class="ms">signal_cellular_alt</span> <span class="ms">battery_full</span></span></div>
+  <div class="topbar"><span class="ms">close</span><h2>Withdraw ₹ 3,000</h2></div>
+  <div class="scroll pad" style="text-align:center">
+    <div class="card" style="text-align:left;display:flex;gap:10px;align-items:center">
+      <div class="avatar" style="background:var(--chip-blue);color:var(--accent-ink)">SB</div>
+      <div style="flex:1;font-size:12px"><b style="font-size:13px;display:block">State Bank of India</b><span style="color:var(--muted)">Aadhaar XXXX XXXX 4410</span></div>
+    </div>
+    <div class="fp"><span class="ms">fingerprint</span></div>
+    <h3 style="font-size:18px;margin-top:22px">Place finger on scanner</h3>
+    <p style="font-size:13px;color:var(--muted);margin-top:6px;line-height:1.5">Ask the customer to press firmly. Keep the finger still until the light turns green.</p>
+    <div style="margin:22px auto 0;width:200px;height:8px;border-radius:99px;background:var(--line);overflow:hidden"><div style="width:62%;height:100%;background:var(--green)"></div></div>
+    <div style="font-size:12px;font-weight:600;color:var(--green);margin-top:8px">Quality 62%</div>
+  </div>
+  <div class="pad" style="padding-bottom:16px"><div class="btn ghost">Cancel</div></div>
+</div></div>
+
+<!-- 8 DMT -->
+<div class="cell"><div class="cap"><b>08</b>Money transfer: beneficiaries</div>
+<div class="phone on-navy">
+  <div class="navyhead"><div class="status"><span>9:41</span><span><span class="ms">signal_cellular_alt</span> <span class="ms">battery_full</span></span></div>
+  <div class="topbar"><span class="ms">arrow_back</span><h2>Money transfer</h2></div>
+  <div class="pad" style="padding-bottom:16px">
+    <div style="background:rgba(255,255,255,.1);border-radius:14px;padding:12px;display:flex;align-items:center;gap:10px">
+      <div class="avatar" style="width:40px;height:40px">AK</div>
+      <div style="flex:1;font-size:12px"><b style="font-size:14px;display:block">Anil Kumar</b>+91 98100 22334 · KYC done</div>
+      <div style="text-align:right;font-size:11px;opacity:.8">Limit left<b style="display:block;font-size:14px;opacity:1">₹ 21,000</b></div>
+    </div>
+  </div></div>
+  <div class="scroll pad">
+    <div class="search" style="margin-top:14px"><span class="ms">search</span>Search name or account</div>
+    <div class="sec"><h3>Beneficiaries</h3><a>+ Add new</a></div>
+    <div class="card" style="padding:4px 14px">
+      <div class="row-i"><div class="c b" style="font-weight:700;font-size:13px">SY</div><div class="m"><b>Suresh Yadav</b><span>HDFC Bank · ·· 9930</span></div><span class="ms chev">chevron_right</span></div>
+      <div class="row-i"><div class="c o" style="font-weight:700;font-size:13px">PD</div><div class="m"><b>Priya Devi</b><span>Punjab National Bank · ·· 1187</span></div><span class="ms chev">chevron_right</span></div>
+      <div class="row-i"><div class="c g" style="font-weight:700;font-size:13px">MK</div><div class="m"><b>Manoj Kumar</b><span>Bank of Baroda · ·· 6402</span></div><span class="ms chev">chevron_right</span></div>
+      <div class="row-i"><div class="c p" style="font-weight:700;font-size:13px">RS</div><div class="m"><b>Rekha Singh</b><span>Canara Bank · ·· 3318</span></div><span class="ms chev">chevron_right</span></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 9 AMOUNT -->
+<div class="cell"><div class="cap"><b>09</b>Enter amount</div>
+<div class="phone light">
+  <div class="status"><span>9:41</span><span><span class="ms">signal_cellular_alt</span> <span class="ms">battery_full</span></span></div>
+  <div class="topbar"><span class="ms">arrow_back</span><h2></h2><span class="ms">more_vert</span></div>
+  <div class="scroll">
+    <div class="payee"><div class="avatar">SY</div><b>Suresh Yadav</b><span>HDFC Bank · A/c ·· 9930 · IFSC HDFC0001234</span></div>
+    <div class="bigamt"><span class="cur">₹</span>5,000<span class="caret"></span></div>
+    <div class="addnote">+ Add a note</div>
+    <div class="seg" style="margin:16px 16px 0"><span class="on">IMPS · instant</span><span>NEFT</span></div>
+    <div class="from"><div class="c b"><span class="ms">account_balance_wallet</span></div><div><b>Main wallet</b>Balance ₹ 24,580.00</div><span style="font-size:11px;color:var(--muted)">Fee ₹ 10</span></div>
+  </div>
+  <div class="pad" style="padding-bottom:6px"><div class="btn">Send ₹ 5,000</div></div>
+  <div class="keys"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>.</span><span>0</span><span class="ms">backspace</span></div>
+</div></div>
+
+<!-- 10 PIN -->
+<div class="cell"><div class="cap"><b>10</b>Wallet PIN (Shahparpay, not UPI PIN)</div>
+<div class="phone light">
+  <div class="status"><span>9:41</span><span><span class="ms">signal_cellular_alt</span> <span class="ms">battery_full</span></span></div>
+  <div class="topbar"><span class="ms">close</span><h2></h2></div>
+  <div class="scroll pad" style="text-align:center">
+    <div class="logo" style="margin:0 auto;background:var(--navy);color:#fff">S</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:14px">Paying Suresh Yadav</div>
+    <div style="font-size:30px;font-weight:800;margin-top:2px">₹ 5,010</div>
+    <div style="font-size:11px;color:var(--muted)">₹ 5,000 + ₹ 10 fee from Main wallet</div>
+    <h3 style="font-size:15px;margin-top:30px">Enter Shahparpay wallet PIN</h3>
+    <div class="pinbox"><i class="f"></i><i class="f"></i><i></i><i></i></div>
+    <div style="font-size:12px;font-weight:700;color:var(--accent-ink);margin-top:10px">Forgot PIN?</div>
+  </div>
+  <div class="keys"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span class="ms">backspace</span><span>0</span><span><span class="ok ms" style="display:grid;place-items:center">check</span></span></div>
+</div></div>
+
+<!-- 11 SUCCESS -->
+<div class="cell"><div class="cap"><b>11</b>Success receipt</div>
+<div class="phone">
+  <div style="background:var(--green);color:#fff"><div class="status"><span>9:41</span><span><span class="ms">signal_cellular_alt</span> <span class="ms">battery_full</span></span></div></div>
+  <div class="scroll">
+    <div class="succ">
+      <div class="tick"><span class="ms">check</span></div>
+      <div style="font-size:15px;font-weight:600">Money sent successfully</div>
+      <div style="font-size:36px;font-weight:800;margin-top:4px">₹ 5,000</div>
+      <div style="font-size:12px;opacity:.85;margin-top:4px">13 Oct 2026, 10:15 AM</div>
+    </div>
+    <div class="receipt">
+      <div class="kv"><span>To</span><b>Suresh Yadav</b></div>
+      <div class="kv"><span>Account</span><b>HDFC Bank ·· 9930</b></div>
+      <div class="kv"><span>Mode</span><b>IMPS</b></div>
+      <div class="dash"></div>
+      <div class="kv"><span>Bank ref (UTR)</span><b>628610459912</b></div>
+      <div class="kv"><span>Transaction ID</span><b>SPDMT26101345</b></div>
+      <div class="kv"><span>Fee</span><b>₹ 10.00</b></div>
+      <div class="kv"><span>Wallet balance</span><b>₹ 19,570.00</b></div>
+    </div>
+    <div style="display:flex;gap:10px;margin:16px">
+      <div class="btn ghost" style="flex:1"><span class="ms">share</span>Share</div>
+      <div class="btn ghost" style="flex:1"><span class="ms">print</span>Print</div>
+    </div>
+  </div>
+  <div class="pad" style="padding-bottom:16px"><div class="btn">Done</div></div>
+</div></div>
+
+<!-- 12 RECHARGE -->
+<div class="cell"><div class="cap"><b>12</b>Mobile recharge</div>
+<div class="phone light">
+  <div class="status"><span>9:41</span><span><span class="ms">signal_cellular_alt</span> <span class="ms">battery_full</span></span></div>
+  <div class="topbar"><span class="ms">arrow_back</span><h2>Mobile recharge</h2></div>
+  <div class="scroll pad">
+    <div class="seg"><span class="on">Prepaid</span><span>Postpaid</span><span>DTH</span></div>
+    <div class="field focus"><label>Mobile number</label><div class="v"><span style="flex:1">98765 12345</span><span class="ms">contacts</span></div></div>
+    <div class="card" style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:14px">
+      <div class="avatar" style="background:#E8F0FE;color:#1A56DB;width:34px;height:34px;font-size:12px">JI</div>
+      <div style="flex:1;font-size:12px"><b style="display:block;font-size:13px">Jio Prepaid</b><span style="color:var(--muted)">Uttar Pradesh East</span></div>
+      <span style="font-size:12px;font-weight:700;color:var(--accent-ink)">Change</span>
+    </div>
+    <div class="chips" style="margin-bottom:12px"><span class="chip on">Popular</span><span class="chip">Data</span><span class="chip">Unlimited</span><span class="chip">Top-up</span></div>
+    <div class="plan"><div><b>₹ 299</b><span>2 GB/day · 28 days · Unlimited calls</span></div><div class="btn">Recharge</div></div>
+    <div class="plan"><div><b>₹ 349</b><span>2.5 GB/day · 28 days · 5G</span></div><div class="btn ghost">Select</div></div>
+    <div class="plan"><div><b>₹ 719</b><span>2 GB/day · 70 days · Unlimited calls</span></div><div class="btn ghost">Select</div></div>
+  </div>
+</div></div>
+
+<!-- 13 BBPS -->
+<div class="cell"><div class="cap"><b>13</b>Bill payments (BBPS)</div>
+<div class="phone light">
+  <div class="status"><span>9:41</span><span><span class="ms">signal_cellular_alt</span> <span class="ms">battery_full</span></span></div>
+  <div class="topbar"><span class="ms">arrow_back</span><h2>Pay bills</h2></div>
+  <div class="scroll pad">
+    <div class="offer"><span class="ms">receipt_long</span><div><b>Earn on every bill</b><span>Commission credited instantly to your wallet</span></div></div>
+    <div class="sec"><h3>Utilities</h3></div>
+    <div class="card"><div class="acts">
+      <div class="act"><div class="c o"><span class="ms">lightbulb</span></div>Electricity</div>
+      <div class="act"><div class="c t"><span class="ms">water_drop</span></div>Water</div>
+      <div class="act"><div class="c k"><span class="ms">propane_tank</span></div>LPG gas</div>
+      <div class="act"><div class="c b"><span class="ms">gas_meter</span></div>Piped gas</div>
+      <div class="act"><div class="c g"><span class="ms">wifi</span></div>Broadband</div>
+      <div class="act"><div class="c p"><span class="ms">phone_in_talk</span></div>Landline</div>
+      <div class="act"><div class="c o"><span class="ms">satellite_alt</span></div>DTH</div>
+      <div class="act"><div class="c b"><span class="ms">tv</span></div>Cable TV</div>
+    </div></div>
+    <div class="sec"><h3>Finance</h3></div>
+    <div class="card"><div class="acts">
+      <div class="act"><div class="c g"><span class="ms">real_estate_agent</span></div>Loan EMI</div>
+      <div class="act"><div class="c b"><span class="ms">health_and_safety</span></div>Insurance</div>
+      <div class="act"><div class="c k"><span class="ms">credit_card</span></div>Credit card</div>
+      <div class="act"><div class="c t"><span class="ms">directions_car</span></div>FASTag</div>
+    </div></div>
+  </div>
+</div></div>
+
+<!-- 14 COLLECT QR -->
+<div class="cell"><div class="cap"><b>14</b>Collect / add money by UPI QR</div>
+<div class="phone on-navy">
+  <div class="navyhead"><div class="status"><span>9:41</span><span><span class="ms">signal_cellular_alt</span> <span class="ms">battery_full</span></span></div>
+  <div class="topbar"><span class="ms">arrow_back</span><h2>Collect payment</h2><span class="ms">share</span></div></div>
+  <div class="scroll" style="background:linear-gradient(var(--head) 0 90px,var(--bg) 90px);padding-top:6px">
+    <div class="qrcard">
+      <div style="font-size:12px;color:var(--muted)">Scan with any UPI app</div>
+      <div style="font-size:26px;font-weight:800;margin-top:4px">₹ 1,500</div>
+      <div class="qr"><div class="qr-in"></div></div>
+      <div style="font-size:13px;font-weight:700">Ramesh Kirana Store</div>
+      <div style="font-size:11px;color:var(--muted)">Expires in 09:42</div>
+      <div class="upi-strip"><i style="background:#5F259F"></i><i style="background:#1A73E8"></i><i style="background:#00BAF2"></i><i style="background:#F58220"></i></div>
+    </div>
+    <div style="margin:14px 16px 0;display:flex;align-items:center;gap:10px;background:var(--warn-bg);border-radius:14px;padding:12px;font-size:12px">
+      <span class="ms" style="color:var(--saffron)">hourglass_top</span><div style="flex:1"><b style="display:block">Waiting for payment</b><span style="color:var(--muted)">Updates on its own</span></div>
+    </div>
+    <div class="pad" style="margin-top:14px;display:flex;gap:10px"><div class="btn ghost" style="flex:1">New amount</div><div class="btn" style="flex:1"><span class="ms">link</span>Send link</div></div>
+  </div>
+</div></div>
+
+<!-- 15 HISTORY -->
+<div class="cell"><div class="cap"><b>15</b>History / reports</div>
+<div class="phone light">
+  <div class="status"><span>9:41</span><span><span class="ms">signal_cellular_alt</span> <span class="ms">battery_full</span></span></div>
+  <div class="topbar"><h2 style="font-size:20px">History</h2><div class="iconbtn"><span class="ms">download</span></div></div>
+  <div class="scroll pad">
+    <div class="search"><span class="ms">search</span>Search name, ID or UTR</div>
+    <div class="chips" style="margin:12px 0 4px"><span class="chip on">All</span><span class="chip">AEPS</span><span class="chip">DMT</span><span class="chip">Bills</span><span class="chip"><span class="ms" style="font-size:14px;vertical-align:-2px">tune</span></span></div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);margin:14px 0 2px">TODAY</div>
+    <div class="card" style="padding:4px 14px">
+      <div class="row-i"><div class="c b"><span class="ms">fingerprint</span></div><div class="m"><b>AEPS withdrawal</b><span>SBI ·· 4821 · 10:42 AM</span></div><div class="r in">+ ₹ 3,000<span class="tag s">Success</span></div></div>
+      <div class="row-i"><div class="c g"><span class="ms">send_money</span></div><div class="m"><b>Suresh Yadav</b><span>DMT · IMPS · 10:15 AM</span></div><div class="r out">− ₹ 5,010<span class="tag pd">Pending</span></div></div>
+      <div class="row-i"><div class="c t"><span class="ms">smartphone</span></div><div class="m"><b>Jio · 98765 12345</b><span>Recharge · 9:58 AM</span></div><div class="r fail">₹ 299<span class="tag f">Failed</span></div></div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);margin:14px 0 2px">YESTERDAY</div>
+    <div class="card" style="padding:4px 14px">
+      <div class="row-i"><div class="c k"><span class="ms">qr_code_2</span></div><div class="m"><b>UPI collected</b><span>Wallet top-up · 6:20 PM</span></div><div class="r in">+ ₹ 1,500<span class="tag s">Success</span></div></div>
+      <div class="row-i"><div class="c o"><span class="ms">lightbulb</span></div><div class="m"><b>UPPCL electricity</b><span>BBPS · 4:05 PM</span></div><div class="r out">− ₹ 1,240<span class="tag s">Success</span></div></div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab"><span class="ms">home</span>Home</div>
+    <div class="tab"><span class="ms">grid_view</span>Services</div>
+    <div class="tab fab"><div class="c"><span class="ms">fingerprint</span></div>AEPS</div>
+    <div class="tab on"><span class="ms fill">history</span>History</div>
+    <div class="tab"><span class="ms">person</span>Profile</div>
+  </div>
+</div></div>
+
+<!-- 16 PROFILE -->
+<div class="cell"><div class="cap"><b>16</b>Profile</div>
+<div class="phone on-navy">
+  <div class="navyhead"><div class="status"><span>9:41</span><span><span class="ms">signal_cellular_alt</span> <span class="ms">battery_full</span></span></div>
+  <div style="text-align:center;padding:8px 16px 22px">
+    <div class="avatar" style="width:68px;height:68px;font-size:24px;margin:0 auto;border:3px solid rgba(255,255,255,.4)">RK</div>
+    <div style="font-size:17px;font-weight:700;margin-top:10px">Ramesh Kumar</div>
+    <div style="font-size:12px;opacity:.8">Ramesh Kirana Store · SP104522</div>
+  </div></div>
+  <div class="scroll pad">
+    <div class="card" style="margin-top:14px;display:flex;align-items:center;gap:10px">
+      <span class="ms fill" style="color:var(--green);font-size:28px">verified</span>
+      <div style="flex:1;font-size:12px"><b style="display:block;font-size:13px">KYC verified</b><span style="color:var(--muted)">AEPS, DMT and payout active</span></div>
+      <span class="ms chev">chevron_right</span>
+    </div>
+    <div class="card menu" style="padding:4px 14px;margin-top:12px">
+      <div class="row-i"><div class="c b"><span class="ms">person</span></div><div class="m"><b>Personal details</b></div><span class="ms chev">chevron_right</span></div>
+      <div class="row-i"><div class="c o"><span class="ms">account_balance</span></div><div class="m"><b>Settlement bank</b><span>SBI ·· 7781</span></div><span class="ms chev">chevron_right</span></div>
+      <div class="row-i"><div class="c g"><span class="ms">password</span></div><div class="m"><b>Wallet PIN</b></div><span class="ms chev">chevron_right</span></div>
+      <div class="row-i"><div class="c p"><span class="ms">lock</span></div><div class="m"><b>Change password</b></div><span class="ms chev">chevron_right</span></div>
+      <div class="row-i"><div class="c t"><span class="ms">translate</span></div><div class="m"><b>Language</b><span>English</span></div><span class="ms chev">chevron_right</span></div>
+      <div class="row-i"><div class="c k"><span class="ms">support_agent</span></div><div class="m"><b>Help &amp; support</b></div><span class="ms chev">chevron_right</span></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px;color:var(--red);font-weight:700;font-size:14px;margin-top:16px"><span class="ms">logout</span>Log out</div>
+  </div>
+  <div class="tabs">
+    <div class="tab"><span class="ms">home</span>Home</div>
+    <div class="tab"><span class="ms">grid_view</span>Services</div>
+    <div class="tab fab"><div class="c"><span class="ms">fingerprint</span></div>AEPS</div>
+    <div class="tab"><span class="ms">history</span>History</div>
+    <div class="tab on"><span class="ms fill">person</span>Profile</div>
+  </div>
+</div></div>
+
+</div>
+<script>
+document.querySelectorAll('.cell').forEach(c=>{
+  const light=c.querySelector('.phone'), dark=light.cloneNode(true);
+  dark.classList.add('dark');
+  const pair=document.createElement('div'); pair.className='pair';
+  light.replaceWith(pair); pair.append(light,dark);
+});
+document.querySelectorAll('.mode button').forEach(b=>b.onclick=()=>{
+  document.body.dataset.show=b.dataset.v;
+  document.querySelectorAll('.mode button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+});
+</script>
+</body>
+</html>

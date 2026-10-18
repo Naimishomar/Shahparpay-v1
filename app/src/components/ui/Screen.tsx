@@ -5,14 +5,14 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  StyleSheet,
   StyleProp,
   Text,
   View,
   ViewStyle,
 } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { colors, getActivePalette, themed, lift, motion, radius, space, type as t, TOUCH } from '../../theme/colors';
-import { GradientFill } from './Gradient';
+import { colors, themed, motion, radius, space, type as t, TOUCH } from '../../theme/colors';
 import { useResponsive } from '@/hooks/useResponsive';
 
 interface ScreenProps {
@@ -39,6 +39,8 @@ interface ScreenProps {
    * would be positioned against the scrolled page and slide away with it.
    */
   overlay?: React.ReactNode;
+  /** Shown instead of the content while `loading` — shaped like the screen. */
+  skeleton?: React.ReactNode;
 }
 
 /**
@@ -56,6 +58,7 @@ export const Screen: React.FC<ScreenProps> = ({
   header,
   headerOverlap = 0,
   overlay,
+  skeleton,
 }) => {
   const { padding, gap } = useResponsive();
 
@@ -68,7 +71,8 @@ export const Screen: React.FC<ScreenProps> = ({
       keyboardDismissMode="on-drag"
       contentContainerStyle={[
         styles.content,
-        header ? null : { padding, paddingBottom: padding * 2, gap },
+        // The app bar already leaves the gap the design wants above the content.
+        header ? null : { padding, paddingTop: space.xs, paddingBottom: padding * 2, gap },
         contentStyle,
       ]}
       refreshControl={
@@ -101,7 +105,7 @@ export const Screen: React.FC<ScreenProps> = ({
         ]}
       >
         {!!error && <Banner tone="error" message={error} action={onRetry && { label: 'Retry', onPress: onRetry }} />}
-        {loading ? <LoadingBlock /> : children}
+        {loading ? (skeleton ?? <LoadingBlock />) : children}
       </View>
     </ScrollView>
   );
@@ -153,24 +157,84 @@ export const Skeleton: React.FC<{
   );
 };
 
-/** Card-shaped skeleton used while a screen's first payload is in flight. */
-export const LoadingBlock: React.FC<{ label?: string; rows?: number }> = ({ label, rows = 3 }) => (
-  <View
-    style={styles.loading}
-    accessibilityRole="progressbar"
-    accessibilityLabel={label || 'Loading'}
-  >
-    {Array.from({ length: rows }).map((_, index) => (
-      <View key={index} style={styles.skeletonCard}>
-        <View style={styles.skeletonRow}>
-          <Skeleton width={38} height={38} radius={radius.md} />
-          <View style={styles.skeletonLines}>
-            <Skeleton width="62%" height={13} />
-            <Skeleton width="40%" height={11} />
-          </View>
+/**
+ * Skeleton kit. Each piece has the exact footprint of the real thing it stands
+ * in for — a list row, a grid of service circles, a form field — so content
+ * lands where the placeholder was instead of jumping.
+ */
+
+/** Rows of a transaction/list card: icon circle, two lines, amount + status. */
+export const SkeletonRows: React.FC<{ count?: number; avatar?: number; amount?: boolean }> = ({
+  count = 4,
+  avatar = 44,
+  amount = true,
+}) => (
+  <View accessibilityRole="progressbar" accessibilityLabel="Loading">
+    {Array.from({ length: count }).map((_, index) => (
+      <View key={index} style={[styles.skRow, index === count - 1 && styles.skRowLast]}>
+        <Skeleton width={avatar} height={avatar} radius={avatar / 2} />
+        <View style={styles.skLines}>
+          <Skeleton width="58%" height={14} />
+          <Skeleton width="38%" height={11} />
         </View>
+        {amount && (
+          <View style={styles.skRight}>
+            <Skeleton width={72} height={14} />
+            <Skeleton width={48} height={11} />
+          </View>
+        )}
       </View>
     ))}
+  </View>
+);
+
+/** Round service buttons with a label under each, four to a row. */
+export const SkeletonGrid: React.FC<{ count?: number; size?: number }> = ({ count = 8, size = 56 }) => (
+  <View style={styles.skGrid} accessibilityElementsHidden importantForAccessibility="no">
+    {Array.from({ length: count }).map((_, index) => (
+      <View key={index} style={styles.skGridItem}>
+        <Skeleton width={size} height={size} radius={size / 2} />
+        <Skeleton width={56} height={11} />
+      </View>
+    ))}
+  </View>
+);
+
+/** A labelled form field. */
+export const SkeletonField: React.FC = () => (
+  <View style={styles.skField} accessibilityElementsHidden importantForAccessibility="no">
+    <Skeleton width={110} height={12} />
+    <Skeleton height={52} radius={radius.md} />
+  </View>
+);
+
+/** A card, optionally with a title line, around other skeleton pieces. */
+export const SkeletonCard: React.FC<{ title?: boolean; children?: React.ReactNode; style?: StyleProp<ViewStyle> }> = ({
+  title,
+  children,
+  style,
+}) => (
+  <View style={[styles.skCard, style]}>
+    {title && <Skeleton width="44%" height={16} style={styles.skCardTitle} />}
+    {children}
+  </View>
+);
+
+/** A section heading ("Title ✦ ——"). */
+export const SkeletonTitle: React.FC = () => (
+  <View style={styles.skTitle} accessibilityElementsHidden importantForAccessibility="no">
+    <Skeleton width={140} height={16} />
+    <View style={styles.sectionRule} />
+  </View>
+);
+
+/** Fallback for a screen without its own skeleton: a card of list rows. */
+export const LoadingBlock: React.FC<{ label?: string; rows?: number }> = ({ label, rows = 4 }) => (
+  <View style={styles.loading} accessibilityRole="progressbar" accessibilityLabel={label || 'Loading'}>
+    <SkeletonTitle />
+    <SkeletonCard>
+      <SkeletonRows count={rows} />
+    </SkeletonCard>
   </View>
 );
 
@@ -197,7 +261,7 @@ export const Banner: React.FC<{
     <View
       style={[
         styles.banner,
-        { backgroundColor: colors[spec.bg] as string, borderLeftColor: colors[spec.fg] as string },
+        { backgroundColor: colors[spec.bg] as string },
       ]}
       accessibilityLiveRegion="polite"
       accessibilityRole="alert"
@@ -324,15 +388,12 @@ export const StatusPill: React.FC<{ status?: string | null }> = ({ status }) => 
   const label = (status || 'UNKNOWN').toUpperCase();
   const spec = STATUS[label];
   const fg = spec ? (colors[TONES[spec.tone].fg] as string) : colors.mutedForeground;
-  const bg = spec ? (colors[TONES[spec.tone].bg] as string) : colors.secondary;
+  // BHIM writes a status as coloured words, not a filled pill; the word itself
+  // carries the meaning, so nothing rests on colour alone.
   return (
-    // Tinted fill plus a ring of the same hue, like the site's status pills.
-    <View style={[styles.pill, { backgroundColor: bg, borderColor: `${fg}33` }]}>
-      <MaterialCommunityIcons name={(spec?.icon ?? 'help-circle-outline') as any} size={11} color={fg} />
-      <Text style={[styles.pillText, { color: fg }]} numberOfLines={1}>
-        {label}
-      </Text>
-    </View>
+    <Text style={[styles.pillText, { color: fg }]} numberOfLines={1}>
+      {label.charAt(0) + label.slice(1).toLowerCase()}
+    </Text>
   );
 };
 
@@ -397,6 +458,11 @@ export const Row: React.FC<{
   </View>
 );
 
+/**
+ * BHIM's section heading: the title, a small four-point star, and a hairline
+ * running to the edge ("Plan Details ✦ ————"). With an action, the action
+ * takes the line's place.
+ */
 export const SectionTitle: React.FC<{ children: React.ReactNode; action?: React.ReactNode }> = ({
   children,
   action,
@@ -405,7 +471,23 @@ export const SectionTitle: React.FC<{ children: React.ReactNode; action?: React.
     <Text style={styles.sectionTitleText} accessibilityRole="header">
       {children}
     </Text>
-    {action}
+    {action ? (
+      <>
+        <View style={styles.sectionSpacer} />
+        {action}
+      </>
+    ) : (
+      <>
+        <MaterialCommunityIcons
+          name="star-four-points"
+          size={11}
+          color={colors.mutedForeground}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+        />
+        <View style={styles.sectionRule} />
+      </>
+    )}
   </View>
 );
 
@@ -439,9 +521,6 @@ export const Segmented = <T extends string>({
         accessibilityState={{ selected: active }}
         accessibilityLabel={option.label}
       >
-        {active && getActivePalette() === 'dark' && (
-          <GradientFill stops={colors.activeGradient} radius={radius.pill} />
-        )}
         <Text
           style={[styles.chipText, active && (scroll ? styles.chipTextActive : styles.chipTextFlushActive)]}
           numberOfLines={1}
@@ -480,7 +559,7 @@ export const Segmented = <T extends string>({
  */
 export const money = (value: any) => {
   const n = Number(value ?? 0);
-  if (!Number.isFinite(n)) return '₹0.00';
+  if (!Number.isFinite(n)) return '₹\u00A00.00';
   // toPrecision(15) collapses binary noise (1.005 is really 1.00499…) before
   // rounding, so ties round half-up the way Intl does. toFixed alone rounds
   // those down and the amount is a paisa short of the web portal's. 15 rather
@@ -493,7 +572,9 @@ export const money = (value: any) => {
   const rest = whole.slice(0, -3);
   // \B avoids a leading comma; pairs are matched from the right.
   const grouped = rest ? `${rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',')},${last3}` : last3;
-  return `₹${n < 0 ? '-' : ''}${grouped}.${frac}`;
+  // A no-break space after the symbol, as the design writes it ("₹ 24,580.00"),
+  // so the symbol never wraps away from its number.
+  return `₹\u00A0${n < 0 ? '-' : ''}${grouped}.${frac}`;
 };
 
 /**
@@ -524,32 +605,46 @@ export const dateTime = (value?: string | Date | null) =>
     : '—';
 
 const styles = themed((c, isDark) => ({
-  scrollView: { flex: 1, backgroundColor: c.background },
+  // Transparent so the layout's TopGlow shows behind the first screenful.
+  scrollView: { flex: 1 },
   content: { flexGrow: 1 },
   body: { flexGrow: 1 },
   loading: { gap: space.md },
-  loadingLabel: { fontSize: t.small, color: c.mutedForeground },
-  skeletonCard: {
-    padding: space.lg,
-    borderRadius: radius.lg,
+  skRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    paddingVertical: space.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border,
+  },
+  skRowLast: { borderBottomWidth: 0 },
+  skLines: { flex: 1, gap: 7 },
+  skRight: { alignItems: 'flex-end', gap: 7 },
+  skGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space.lg },
+  skGridItem: { width: '25%', alignItems: 'center', gap: space.sm },
+  skField: { gap: space.sm },
+  skCard: {
     backgroundColor: c.card,
     borderWidth: 1,
     borderColor: c.border,
+    borderRadius: radius.lg,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.sm,
   },
-  skeletonRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  skeletonLines: { flex: 1, gap: space.sm },
+  skCardTitle: { marginTop: space.sm, marginBottom: space.lg },
+  skTitle: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  loadingLabel: { fontSize: t.small, color: c.mutedForeground },
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
     padding: space.md,
-    // A 3px leading rule in the tone colour gives the banner an edge to scan
-    // to, so it reads as a distinct object rather than a tinted paragraph.
-    borderLeftWidth: 3,
+    // BHIM's notes: a quiet tinted card with the tone's icon, no edge bar.
     borderRadius: radius.md,
   },
   bannerText: { flex: 1, fontSize: t.small, lineHeight: 19 },
-  bannerAction: { fontSize: t.small, fontWeight: '700', minWidth: 44, textAlign: 'right' },
+  bannerAction: { fontSize: t.small, fontWeight: '600', minWidth: 44, textAlign: 'right' },
   // Floats clear of the form and above the tab bar, so it never covers the
   // field the retailer is about to correct.
   toast: {
@@ -581,7 +676,7 @@ const styles = themed((c, isDark) => ({
     justifyContent: 'center',
     marginBottom: space.xs,
   },
-  emptyText: { fontSize: t.bodyLg, fontWeight: '700', color: c.foreground, textAlign: 'center' },
+  emptyText: { fontSize: t.bodyLg, fontWeight: '500', color: c.foreground, textAlign: 'center' },
   emptySubtext: {
     fontSize: t.caption,
     color: c.mutedForeground,
@@ -594,7 +689,7 @@ const styles = themed((c, isDark) => ({
     justifyContent: 'center',
     paddingHorizontal: space.lg,
   },
-  emptyActionText: { fontSize: t.small, fontWeight: '700', color: c.accent },
+  emptyActionText: { fontSize: t.small, fontWeight: '600', color: c.accent },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -605,7 +700,7 @@ const styles = themed((c, isDark) => ({
     borderWidth: 1,
     alignSelf: 'flex-start',
   },
-  pillText: { fontSize: t.micro, fontWeight: '700', letterSpacing: 0.4 },
+  pillText: { fontSize: t.caption, fontWeight: '500' },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   row: {
     flexDirection: 'row',
@@ -620,7 +715,7 @@ const styles = themed((c, isDark) => ({
   rowLabel: { fontSize: t.small, color: c.mutedForeground, flexShrink: 1 },
   rowValue: {
     fontSize: t.small,
-    fontWeight: '600',
+    fontWeight: '500',
     color: c.foreground,
     flexShrink: 1,
     textAlign: 'right',
@@ -629,39 +724,48 @@ const styles = themed((c, isDark) => ({
   sectionTitle: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: space.md,
+    gap: space.sm,
     marginTop: space.xs,
   },
-  sectionTitleText: { fontSize: t.title, fontWeight: '700', color: c.foreground, letterSpacing: -0.3 },
+  sectionTitleText: { flexShrink: 1, fontSize: t.bodyLg, fontWeight: '500', color: c.foreground },
+  sectionSpacer: { flex: 1 },
+  sectionRule: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: c.borderStrong },
   chipScroll: { flexGrow: 0, flexShrink: 0 },
   chipRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingRight: space.xs },
+  // Filter chips: outlined pills; the selected one fills in.
   chip: {
     minHeight: 38,
     justifyContent: 'center',
     paddingHorizontal: space.lg,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: c.border,
-    backgroundColor: c.card,
+    borderColor: c.borderStrong,
+    backgroundColor: 'transparent',
   },
-  chipActive: { backgroundColor: c.primary, borderColor: isDark ? c.activeGradient[c.activeGradient.length - 1] : c.primary, ...lift('sm', isDark) },
+  chipActive: { backgroundColor: c.surfaceAlt, borderColor: c.foreground },
+  // A switch between views: BHIM's text tabs over a hairline, the current one
+  // underlined in orange ("Pending | Completed").
   chipGroup: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.xs,
-    padding: space.xs,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: c.border,
-    backgroundColor: c.card,
+    alignItems: 'stretch',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.borderStrong,
   },
-  chipFlush: { flex: 1, minWidth: 0, alignItems: 'center', borderWidth: 0, backgroundColor: 'transparent' },
-  // Both forms use the site's ACTIVE_BUTTON: zinc-900, silver in dark.
-  chipFlushActive: { backgroundColor: c.primary, ...lift('sm', isDark) },
-  chipTextFlushActive: { color: c.primaryForeground, fontWeight: '700' },
-  chipText: { fontSize: t.caption, fontWeight: '600', color: c.foreground },
-  chipTextActive: { color: c.primaryForeground },
+  chipFlush: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'center',
+    borderWidth: 0,
+    borderRadius: 0,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+    backgroundColor: 'transparent',
+    minHeight: 46,
+  },
+  chipFlushActive: { borderBottomColor: c.highlight },
+  chipTextFlushActive: { color: c.foreground, fontWeight: '500' },
+  chipText: { fontSize: t.body, fontWeight: '400', color: c.mutedForeground },
+  chipTextActive: { color: c.foreground, fontWeight: '500' },
 }));
 
 export default Screen;

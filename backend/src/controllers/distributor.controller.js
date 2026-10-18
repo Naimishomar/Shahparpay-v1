@@ -140,13 +140,22 @@ export const updateRetailer = async (req, res) => {
     if (dob) updateData.dob = dob;
     if (email) updateData.email = email;
     if (contactNumber) updateData.contactNumber = contactNumber;
-    if (password) updateData.password = password;
+    // A distributor setting a retailer's password could log in as them and drain
+    // the wallet. Retailers reset their own password with an emailed OTP.
+    if (password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Retailer passwords cannot be changed here. Ask the retailer to use "Forgot password".',
+      });
+    }
     if (businessName) updateData.businessName = businessName;
     if (businessAddress) updateData.businessAddress = businessAddress;
     if (address)
       updateData.address = typeof address === 'string' ? JSON.parse(address) : address;
-    if (aadhaarNumber) updateData.aadhaarNumber = aadhaarNumber;
-    if (panNumber) updateData.panNumber = panNumber;
+    // Identity documents are frozen once KYC is verified against them.
+    const kycLocked = retailer.isMerchantKycComplete === true;
+    if (aadhaarNumber && !kycLocked) updateData.aadhaarNumber = aadhaarNumber;
+    if (panNumber && !kycLocked) updateData.panNumber = panNumber;
     if (hasGst !== undefined) updateData.hasGst = hasGst === 'true' || hasGst === true;
     if (gstNumber) updateData.gstNumber = gstNumber;
 
@@ -178,7 +187,14 @@ export const updateRetailer = async (req, res) => {
     if (supportMobile) updateData.supportMobile = supportMobile;
     if (isExistingMerchant !== undefined)
       updateData.isExistingMerchant = isExistingMerchant === 'true' || isExistingMerchant === true;
-    if (isActive !== undefined) updateData.isActive = isActive === 'true' || isActive === true;
+    if (isActive !== undefined) {
+      const wantActive = isActive === 'true' || isActive === true;
+      // An admin's block (fraud, KYC) is not the distributor's to lift.
+      if (wantActive && retailer.deactivatedByAdmin) {
+        return res.status(403).json({ success: false, message: 'This retailer was deactivated by the admin. Contact support to reactivate.' });
+      }
+      updateData.isActive = wantActive;
+    }
 
     // Image uploads
     const profilePictureLocalPath = req.files?.profilePicture?.[0]?.path;
@@ -189,11 +205,11 @@ export const updateRetailer = async (req, res) => {
       const profilePic = await uploadOnR2(profilePictureLocalPath);
       if (profilePic?.url) updateData.profilePicture = profilePic.url;
     }
-    if (aadhaarPictureLocalPath) {
+    if (aadhaarPictureLocalPath && !kycLocked) {
       const aadhaarPic = await uploadOnR2(aadhaarPictureLocalPath);
       if (aadhaarPic?.url) updateData.aadhaarPicture = aadhaarPic.url;
     }
-    if (panPictureLocalPath) {
+    if (panPictureLocalPath && !kycLocked) {
       const panPic = await uploadOnR2(panPictureLocalPath);
       if (panPic?.url) updateData.panPicture = panPic.url;
     }

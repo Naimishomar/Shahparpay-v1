@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { FileText, Search, Download, FileDown, Loader2, ChevronLeft, ChevronRight, XCircle } from "lucide-react"
+import { FileText, Search, Download, FileDown, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -12,6 +12,7 @@ import axios from "axios"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { useAuth } from "../context/AuthContext"
+import TransactionDetailModal, { reasonOf } from "../components/TransactionDetailModal"
 
 const getCrDr = (tx: any) => {
     // AEPS withdrawal money is credited only after bank success. A declined or
@@ -32,9 +33,6 @@ const displayStatus = (tx: any) => {
     return tx.status || 'UNKNOWN';
 };
 
-/** Why the gateway ended the transaction the way it did. */
-const reasonOf = (tx: any) =>
-    tx?.metadata?.gatewayMessage || tx?.metadata?.apiMessage || tx?.metadata?.message || tx?.metadata?.note || "";
 
 const isFailed = (tx: any) => /FAIL|REJECT/i.test(tx?.status || "");
 
@@ -376,124 +374,7 @@ const LedgerReport = () => {
                 </div>
             </div>
 
-            {/* Transaction Detail Modal */}
-            {selectedTransaction && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setSelectedTransaction(null)}>
-                    <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-                        {/* Header */}
-                        <div className="flex justify-between items-start p-4 bg-muted/30 border-b border-border">
-                            <div className="flex flex-col gap-1">
-                                <h3 className="text-lg font-black text-foreground">Transaction Details</h3>
-                                <p className="text-xs text-muted-foreground font-medium">Ref: {selectedTransaction.transactionId || selectedTransaction._id}</p>
-                            </div>
-                            <button onClick={() => setSelectedTransaction(null)} className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors">
-                                <XCircle className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* Body */}
-                        <div className="p-6 space-y-5">
-                            {/* Amount & Status */}
-                            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border/50">
-                                <div>
-                                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Amount</p>
-                                    <p className="text-2xl font-black text-foreground">₹ {selectedTransaction.amount || 0}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Status</p>
-                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                                        selectedTransaction.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20 border border-emerald-500/20' : 
-                                        selectedTransaction.status === 'FAILED' ? 'bg-rose-500/10 text-rose-700 dark:text-rose-400 ring-rose-500/20 border border-rose-500/20' : 
-                                        'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-amber-500/20 border border-yellow-500/20'
-                                    }`}>
-                                        {selectedTransaction.status || "UNKNOWN"}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Details Grid */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase">Date & Time</p>
-                                    <p className="text-sm font-medium text-foreground">{new Date(selectedTransaction.createdAt).toLocaleString()}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase">Type</p>
-                                    <p className="text-sm font-medium text-foreground">{selectedTransaction.type?.replace(/_/g, ' ')}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase">Customer Name</p>
-                                    <p className="text-sm font-medium text-foreground">{selectedTransaction.metadata?.name || selectedTransaction.metadata?.customerName || "N/A"}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase">Mobile Number</p>
-                                    <p className="text-sm font-medium text-foreground">{selectedTransaction.metadata?.mobile || "N/A"}</p>
-                                </div>
-                                {selectedTransaction.metadata?.bankName && (
-                                    <div className="space-y-1 col-span-2">
-                                        <p className="text-[10px] text-muted-foreground font-semibold uppercase">Bank Name</p>
-                                        <p className="text-sm font-medium text-foreground">{selectedTransaction.metadata.bankName}</p>
-                                    </div>
-                                )}
-                                {selectedTransaction.metadata?.rrn && (
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] text-muted-foreground font-semibold uppercase">Bank RRN</p>
-                                        <p className="text-sm font-medium text-foreground">{selectedTransaction.metadata.rrn}</p>
-                                    </div>
-                                )}
-                                {(selectedTransaction.metadata?.aadhaar || selectedTransaction.metadata?.aadhar) && (
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] text-muted-foreground font-semibold uppercase">Aadhaar (Last 4)</p>
-                                        <p className="text-sm font-medium text-foreground">**** {String(selectedTransaction.metadata.aadhaar || selectedTransaction.metadata.aadhar).slice(-4)}</p>
-                                    </div>
-                                )}
-                                {selectedTransaction.metadata?.bankBalance != null && (
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] text-muted-foreground font-semibold uppercase">Bank Balance After</p>
-                                        <p className="text-sm font-medium text-foreground">₹ {selectedTransaction.metadata.bankBalance}</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* PaySprint / Gateway Message */}
-                            {reasonOf(selectedTransaction) && (
-                                <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
-                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase mb-1">Message</p>
-                                    <p className="text-sm font-medium text-foreground">
-                                        {reasonOf(selectedTransaction)}
-                                    </p>
-                                </div>
-                            )}
-                            
-                            {/* Metadata Dump (for debugging/extra details) */}
-                            {selectedTransaction.metadata && Object.keys(selectedTransaction.metadata).length > 0 && (
-                                <div className="mt-4 pt-4 border-t border-border">
-                                    <p className="text-[10px] text-muted-foreground font-semibold uppercase mb-2">Additional Metadata</p>
-                                    <div className="bg-muted/50 p-3 rounded-lg overflow-x-auto">
-                                        <pre className="text-[10px] text-foreground/80 font-mono whitespace-pre-wrap">
-                                            {JSON.stringify(
-                                                Object.fromEntries(
-                                                    Object.entries(selectedTransaction.metadata).filter(
-                                                        ([k]) => !['name', 'customerName', 'mobile', 'bankName', 'rrn', 'aadhar', 'latitude', 'longitude'].includes(k)
-                                                    )
-                                                ), 
-                                                null, 2
-                                            )}
-                                        </pre>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Footer */}
-                        <div className="p-4 bg-muted/30 border-t border-border flex justify-end">
-                            <button onClick={() => setSelectedTransaction(null)} className="px-5 py-2 bg-zinc-900 text-white shadow-md shadow-black/20 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:shadow-white/10 rounded-xl text-sm font-semibold transition-colors">
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <TransactionDetailModal tx={selectedTransaction} onClose={() => setSelectedTransaction(null)} />
         </div>
     )
 }

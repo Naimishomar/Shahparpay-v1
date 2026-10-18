@@ -20,6 +20,9 @@ const AepsWalletSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    // Wrong-PIN lockout: a 4-digit PIN is only 10,000 guesses without it.
+    pinFailedAttempts: { type: Number, default: 0 },
+    pinLockedUntil: { type: Date, default: null },
   },
   { timestamps: true }
 );

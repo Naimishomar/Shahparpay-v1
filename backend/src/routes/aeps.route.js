@@ -24,6 +24,7 @@ import {
   getOnboardSdkParams,
 } from '../controllers/onboardCallback.controller.js';
 import { getBaseLocation, updateBaseLocation } from '../controllers/aepsLocation.controller.js';
+import { cacheFor } from '../middlewares/cache.middleware.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 import { requireService } from '../middlewares/service.middleware.js';
 
@@ -42,7 +43,7 @@ router.get('/onboard/sdk-params', authMiddlewares, getOnboardSdkParams);
 router.post('/get-pid-options', authMiddlewares, getPidOptions);
 
 // Core AEPS Services
-router.get('/banks', getBankList);
+router.get('/banks', cacheFor(6 * 3600), getBankList);
 router.post('/balance-enquiry', authMiddlewares, requireService('aeps'), balanceEnquiry);
 router.post('/initiate-otp', authMiddlewares, requireService('aeps'), initiateAepsTxnOtp);
 router.post('/cash-withdrawal', authMiddlewares, requireService('aeps'), cashWithdrawal);

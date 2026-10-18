@@ -5,6 +5,7 @@ import MainWallet from '../models/mainWallet.model.js';
 import { generatePaySprintToken } from '../utils/paysprint.util.js';
 import { settleMatmWithdrawal } from './matm.controller.js';
 import { leadCallback } from './lead.controller.js';
+import { hasCallbackKey } from '../utils/callbackKey.js';
 
 // PaySprint calls these endpoints server-to-server, so they cannot sit behind
 // the retailer JWT middleware. The shared secret below is the only thing
@@ -12,18 +13,7 @@ import { leadCallback } from './lead.controller.js';
 // with PAYSPRINT_CALLBACK_KEY unset every callback is refused rather than
 // silently trusted. Register the URL with PaySprint as
 //   https://<host>/api/aeps/onboard/callback/transaction?key=<PAYSPRINT_CALLBACK_KEY>
-export const isAuthorisedCallback = (req) => {
-  const expected = process.env.PAYSPRINT_CALLBACK_KEY;
-  if (!expected) {
-    console.error(
-      '[Onboard Callback] PAYSPRINT_CALLBACK_KEY is not set — refusing the callback. ' +
-        'Set it and register the callback URL with that key in the query string.'
-    );
-    return false;
-  }
-  const supplied = req.query?.key || req.headers['x-callback-key'];
-  return typeof supplied === 'string' && supplied === expected;
-};
+export const isAuthorisedCallback = (req) => hasCallbackKey(req, 'PAYSPRINT_CALLBACK_KEY');
 
 // PaySprint mirrors `param` into `param_enc` as a JWT signed with our API key.
 // When it is present and parses, it is the authoritative copy: the plaintext
@@ -217,7 +207,9 @@ export const getOnboardSdkParams = async (req, res) => {
 export const matmCallback = async (req, res) => {
   try {
     const body = req.body || {};
-    const param = authoritativeParam(body) || body.param || {};
+    // null means param_enc was present but failed verification: refuse, don't fall back to plaintext.
+    const param = authoritativeParam(body);
+    if (!param) return ack(res, 400, 'Invalid MATM callback signature');
     const event = String(body.event || '').toUpperCase();
     const ref = param.ackno || param.txnrefrenceNo;
     const txnStatus = Number(param.txnstatus); // 1 = success, 3 = failed

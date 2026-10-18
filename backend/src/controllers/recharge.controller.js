@@ -1,5 +1,4 @@
 import axios from 'axios';
-import bcrypt from 'bcrypt';
 import { generatePaySprintToken } from '../utils/paysprint.util.js';
 import {
   icchhamatiGet,
@@ -9,6 +8,7 @@ import {
   providerMessage,
   fetchRechargeStatus,
   makeReferenceId,
+  providerCrashed,
   rechargeTypeCode,
   isBillType,
   OPERATOR_CATEGORY,
@@ -20,6 +20,7 @@ import {
 } from '../utils/wallet.util.js';
 import Transaction from '../models/transaction.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
+import { checkWalletPin } from '../utils/walletPin.js';
 
 /**
  * Recharge and bill payment, both on Icchhamati.
@@ -59,36 +60,61 @@ export const operatorSource = (type) => {
  *
  * The category screen needs a biller count for every category at once — one
  * call each — to know which tiles are worth offering at all. The registry
- * changes rarely, so answers are reused instead of re-fetched on every load.
+ * changes rarely, so answers are kept for hours instead of re-fetched on every
+ * load — the category screen alone is one call per category.
  * Refusals are not cached: a provider that is briefly down must not leave the
  * screen empty for the rest of the window.
  */
-const BILLER_TTL_MS = 10 * 60 * 1000;
+const BILLER_TTL_MS = 12 * 60 * 60 * 1000;
 const billerCache = new Map();
 
-const fetchBillers = async (category) => {
-  const key = String(category);
-  const cached = billerCache.get(key);
-  if (cached && Date.now() - cached.at < BILLER_TTL_MS) return cached.result;
+/** Tests swap the provider between cases; production never needs this. */
+export const clearBillerCache = () => billerCache.clear();
 
-  const data = await icchhamatiPost('/api/v2/billers-by-category', { category: key });
-  if (!isOk(data)) {
-    return {
-      ok: false,
-      rows: [],
-      message: providerMessage(data, 'The biller list is unavailable right now.'),
-    };
-  }
-
-  // A biller with no code cannot be named on a fetch or a payment, so it is not
-  // one a retailer can pick.
-  const rows = (data.billers || data.operators || data.data || []).filter(
-    (row) => row.is_active !== false && String(row.code ?? '').trim()
+/**
+ * Cached call with in-flight sharing: two screens opening at once wait on the
+ * same provider request instead of each firing their own. A result that
+ * `keep` rejects (a refusal) is dropped so the next caller asks again.
+ */
+const remember = (key, ttlMs, load, keep = () => true) => {
+  const hit = billerCache.get(key);
+  if (hit && Date.now() - hit.at < ttlMs) return hit.promise;
+  const promise = load().then(
+    (result) => {
+      if (!keep(result)) billerCache.delete(key);
+      return result;
+    },
+    (error) => {
+      billerCache.delete(key);
+      throw error;
+    }
   );
-  const result = { ok: true, rows, message: null };
-  billerCache.set(key, { at: Date.now(), result });
-  return result;
+  billerCache.set(key, { at: Date.now(), promise });
+  return promise;
 };
+
+const fetchBillers = (category) =>
+  remember(
+    `biller:${category}`,
+    BILLER_TTL_MS,
+    async () => {
+      const data = await icchhamatiPost('/api/v2/billers-by-category', { category: String(category) });
+      if (!isOk(data)) {
+        return {
+          ok: false,
+          rows: [],
+          message: providerMessage(data, 'The biller list is unavailable right now.'),
+        };
+      }
+      // A biller with no code cannot be named on a fetch or a payment, so it is
+      // not one a retailer can pick.
+      const rows = (data.billers || data.operators || data.data || []).filter(
+        (row) => row.is_active !== false && String(row.code ?? '').trim()
+      );
+      return { ok: true, rows, message: null };
+    },
+    (result) => result.ok
+  );
 
 /** One row per operator/biller code: the registries repeat a few. */
 const dedupeRows = (rows) => {
@@ -133,14 +159,16 @@ const fetchOperatorRows = async (type) => {
     return billers.ok ? billers.rows : [];
   }
 
-  const key = `operator:${category}`;
-  const cached = billerCache.get(key);
-  if (cached && Date.now() - cached.at < BILLER_TTL_MS) return cached.result;
-  const data = await icchhamatiPost('/api/v2/getOperator', { category });
-  if (!isOk(data)) return [];
-  const rows = (data.operators || data.data || []).filter((row) => row.is_active !== false);
-  billerCache.set(key, { at: Date.now(), result: rows });
-  return rows;
+  return remember(
+    `operator:${category}`,
+    BILLER_TTL_MS,
+    async () => {
+      const data = await icchhamatiPost('/api/v2/getOperator', { category });
+      if (!isOk(data)) return null;
+      return (data.operators || data.data || []).filter((row) => row.is_active !== false);
+    },
+    (rows) => rows !== null
+  ).then((rows) => rows ?? []);
 };
 
 /**
@@ -161,10 +189,10 @@ const resolveProviderOperator = async (type, candidate) => {
     const match =
       rows.find((row) => String(row.code ?? '') === value) ||
       rows.find((row) => String(row.id ?? '') === value);
-    return { code: String(match?.code ?? value), name: match?.name || null };
+    return { code: String(match?.code ?? value), name: match?.name || null, matched: Boolean(match) };
   } catch (error) {
     console.error('Resolve provider operator Error:', error?.response?.data || error?.message);
-    return { code: value, name: null };
+    return { code: value, name: null, matched: false };
   }
 };
 
@@ -248,68 +276,76 @@ export const getCircles = async (req, res) => {
  */
 export const getBillCategories = async (req, res) => {
   try {
-    const data = await icchhamatiGet('/api/v2/bill-categories');
-    if (!isOk(data)) {
-      return res.status(502).json({
-        success: false,
-        message: providerMessage(data, 'Bill categories are unavailable right now.'),
-      });
-    }
-
-    // The provider names a category under any of three keys, and its own portal
-    // reads all three. Insisting on `category` alone dropped every row that
-    // carries the name under one of the others.
-    const categoryName = (row) =>
-      String(row.category || row.category_name || row.name || '').trim();
-    const rows = (data.categories || data.data || []).filter((row) => categoryName(row));
-    const categories = await Promise.all(
-      rows.map(async (row) => {
-        const category = categoryName(row);
-        const billers = await fetchBillers(category).catch(() => ({ ok: false, rows: [] }));
-        return {
-          id: category,
-          name: row.name || category,
-          category,
-          providerCategory: category,
-          label: row.label || null,
-          image: row.biller_icon || row.icon || null,
-          billerCount: billers.rows.length,
-          available: !billers.ok || billers.rows.length > 0,
-        };
-      })
-    );
-
-    // Postpaid mobile is billed like any other utility, but its operators live
-    // in the operator registry rather than the biller registry, so the
-    // provider's own "Mobile Postpaid" category row has nothing behind it and
-    // reads as unavailable. Point that row at the operator registry instead of
-    // adding a second postpaid tile beside a greyed-out one.
-    const postpaid = categories.find((category) => /^(mobile )?postpaid$/i.test(category.id));
-    if (postpaid && !postpaid.available) {
-      Object.assign(postpaid, {
-        id: OPERATOR_CATEGORY.postpaid,
-        category: OPERATOR_CATEGORY.postpaid,
-        providerCategory: OPERATOR_CATEGORY.postpaid,
-        available: true,
-      });
-    } else if (!postpaid) {
-      categories.push({
-        id: OPERATOR_CATEGORY.postpaid,
-        name: 'Postpaid',
-        category: OPERATOR_CATEGORY.postpaid,
-        providerCategory: OPERATOR_CATEGORY.postpaid,
-        label: 'Mobile Number',
-        image: null,
-        billerCount: 0,
-        available: true,
-      });
-    }
-
-    return res.status(200).json({ success: true, data: categories });
+    // The whole list, biller counts included, is one answer for every
+    // retailer; building it costs a provider call per category.
+    // A list built while some lookups were refused is served but not kept.
+    const result = await remember('categories', BILLER_TTL_MS, buildBillCategories, (r) => r.ok && !r.degraded);
+    if (!result.ok) return res.status(502).json({ success: false, message: result.message });
+    return res.status(200).json({ success: true, data: result.categories });
   } catch (error) {
     console.error('Fetch Bill Categories Error:', error?.response?.data || error?.message);
     return res.status(500).json({ success: false, message: 'Failed to fetch bill categories' });
   }
+};
+
+const buildBillCategories = async () => {
+  const data = await icchhamatiGet('/api/v2/bill-categories');
+  if (!isOk(data)) {
+    return { ok: false, message: providerMessage(data, 'Bill categories are unavailable right now.') };
+  }
+
+  // The provider names a category under any of three keys, and its own portal
+  // reads all three. Insisting on `category` alone dropped every row that
+  // carries the name under one of the others.
+  const categoryName = (row) =>
+    String(row.category || row.category_name || row.name || '').trim();
+  const rows = (data.categories || data.data || []).filter((row) => categoryName(row));
+  let refused = false;
+  const categories = await Promise.all(
+    rows.map(async (row) => {
+      const category = categoryName(row);
+      const billers = await fetchBillers(category).catch(() => ({ ok: false, rows: [] }));
+      if (!billers.ok) refused = true;
+      return {
+        id: category,
+        name: row.name || category,
+        category,
+        providerCategory: category,
+        label: row.label || null,
+        image: row.biller_icon || row.icon || null,
+        billerCount: billers.rows.length,
+        available: !billers.ok || billers.rows.length > 0,
+      };
+    })
+  );
+
+  // Postpaid mobile is billed like any other utility, but its operators live
+  // in the operator registry rather than the biller registry, so the
+  // provider's own "Mobile Postpaid" category row has nothing behind it and
+  // reads as unavailable. Point that row at the operator registry instead of
+  // adding a second postpaid tile beside a greyed-out one.
+  const postpaid = categories.find((category) => /^(mobile )?postpaid$/i.test(category.id));
+  if (postpaid && !postpaid.available) {
+    Object.assign(postpaid, {
+      id: OPERATOR_CATEGORY.postpaid,
+      category: OPERATOR_CATEGORY.postpaid,
+      providerCategory: OPERATOR_CATEGORY.postpaid,
+      available: true,
+    });
+  } else if (!postpaid) {
+    categories.push({
+      id: OPERATOR_CATEGORY.postpaid,
+      name: 'Postpaid',
+      category: OPERATOR_CATEGORY.postpaid,
+      providerCategory: OPERATOR_CATEGORY.postpaid,
+      label: 'Mobile Number',
+      image: null,
+      billerCount: 0,
+      available: true,
+    });
+  }
+
+  return { ok: true, categories, degraded: refused };
 };
 
 /**
@@ -546,6 +582,25 @@ export const fetchBill = async (req, res) => {
     });
 
     if (!isOk(data)) {
+      // Some billers (LIC) need the policy holder's date of birth, and the
+      // gateway says so with the bare field name "dateofbirth". It reads the
+      // date only when joined to the account as "policy|DD/MM/YYYY", which the
+      // screen does once it knows to ask.
+      if (String(data?.message || '').trim().toLowerCase() === 'dateofbirth') {
+        return res.status(400).json({
+          success: false,
+          requiredField: 'dateofbirth',
+          message: "Enter the policy holder's date of birth to fetch this bill.",
+        });
+      }
+      // 228 "Invalid Service Provider": the gateway lists the biller but has no
+      // live route for it (most letter-coded billers at the time of writing).
+      if (String(data?.data?.errorcode) === '228') {
+        return res.status(400).json({
+          success: false,
+          message: 'This biller is not live on BBPS right now. Please try another biller or try later.',
+        });
+      }
       return res.status(400).json({
         success: false,
         message: providerMessage(data, 'Failed to fetch bill. Please verify the consumer number.'),
@@ -599,13 +654,23 @@ export const doRecharge = async (req, res) => {
     if (totalAmount < 10) {
       return res.status(400).json({ success: false, message: 'Minimum recharge amount is ₹10.' });
     }
+    // The provider is sent a whole-rupee amount, so the wallet must be debited the same.
+    if (!Number.isInteger(totalAmount)) {
+      return res.status(400).json({ success: false, message: 'Amount must be in whole rupees.' });
+    }
 
     const typeCode = rechargeTypeCode(type);
     const bill = isBillType(type);
-    const { code: providerOperator, name: providerOperatorName } = await resolveProviderOperator(
-      type,
-      operator
-    );
+    const {
+      code: providerOperator,
+      name: providerOperatorName,
+      matched: operatorMatched,
+    } = await resolveProviderOperator(type, operator);
+    // `type` sets the commission and the credit-card charge, so the operator must
+    // genuinely belong to that service: no paying a card bill as "misc".
+    if (!operatorSource(type).category || !operatorMatched) {
+      return res.status(400).json({ success: false, message: 'Operator not found for this service. Please reselect it.' });
+    }
     const providerAccountId = String(process.env.ICCHHAMATI_ACCOUNT_ID || '').trim();
     const providerMpin = String(process.env.ICCHHAMATI_MPIN || '').trim();
 
@@ -637,13 +702,8 @@ export const doRecharge = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Transaction PIN is required.' });
     }
     const aepsWallet = await AepsWallet.findOne({ userId });
-    if (!aepsWallet || !aepsWallet.pin) {
-      return res.status(400).json({ success: false, message: 'Please set your wallet PIN first.' });
-    }
-    const isPinValid = await bcrypt.compare(pin.toString(), aepsWallet.pin);
-    if (!isPinValid) {
-      return res.status(401).json({ success: false, message: 'Incorrect PIN' });
-    }
+    const pinError = await checkWalletPin(aepsWallet, pin);
+    if (pinError) return res.status(pinError.status).json({ success: false, message: pinError.message });
 
     const referenceId = makeReferenceId('REC');
 
@@ -693,7 +753,9 @@ export const doRecharge = async (req, res) => {
       amount: Math.round(totalAmount),
       type: typeCode,
       transaction_id: referenceId,
-      details: `${bill ? 'Bill payment' : 'Recharge'} for ${caNumber}`,
+      // The provider's own portal pays a bill with the fetched bill object as
+      // `details`; the fetch reference rides in it.
+      details: bill && billDetails ? billDetails : `Recharge for ${caNumber}`,
       ...(typeCode === 1 ? { circle: String(circle), circal: String(circle) } : { circal: '' }),
     };
 
@@ -717,11 +779,19 @@ export const doRecharge = async (req, res) => {
 
     // The envelope status means the request was accepted. The nested status is
     // the actual recharge/bill outcome and may still be Pending.
-    const status = normaliseStatus(providerResponse?.data?.status ?? providerResponse?.status);
-    const message = providerMessage(
-      providerResponse,
-      status === 'FAILED' ? 'The provider could not complete this transaction.' : ''
-    );
+    // A crash is not a refusal: refunding on one hands back money for a
+    // recharge the operator may already have delivered. It stays PROCESSING
+    // for reconciliation or an admin to settle.
+    const crashed = providerCrashed(providerResponse);
+    const status = crashed
+      ? 'PENDING'
+      : normaliseStatus(providerResponse?.data?.status ?? providerResponse?.status);
+    const message = crashed
+      ? 'Transaction submitted; provider status is being confirmed.'
+      : providerMessage(
+          providerResponse,
+          status === 'FAILED' ? 'The provider could not complete this transaction.' : ''
+        );
 
     await Transaction.findOneAndUpdate(
       { transactionId: referenceId },
@@ -804,8 +874,9 @@ export const checkStatus = async (req, res) => {
     // Scoped to the caller: a retailer must not be able to read someone else's
     // transaction by guessing a reference id.
     const txn = await Transaction.findOne({
-      transactionId: req.params.transid,
+      transactionId: String(req.params.transid),
       userId: req.user.id,
+      type: { $in: ['RECHARGE', 'BILL_PAYMENT'] },
     });
     if (!txn) {
       return res.status(404).json({ success: false, message: 'Transaction not found' });

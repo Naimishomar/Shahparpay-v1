@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import mongoose from 'mongoose';
 
 const otpSchema = new mongoose.Schema({
@@ -45,6 +46,29 @@ otpSchema.statics.consume = async function (email, otp) {
 
   await this.deleteOne({ _id: record._id });
   return true;
+};
+
+// Same attempt accounting as consume, but leaves a correct code in place for a
+// later step (signup verifies the email first and creates the account after).
+otpSchema.statics.check = async function (email, otp) {
+  const record = await this.findOne({ email });
+  if (!record) return false;
+  if (record.otp === String(otp)) return true;
+  record.attempts += 1;
+  if (record.attempts >= MAX_ATTEMPTS) await this.deleteOne({ _id: record._id });
+  else await record.save();
+  return false;
+};
+
+// Issues a fresh code: CSPRNG, and a new code always starts with a full set of attempts.
+otpSchema.statics.issue = async function (email) {
+  const otp = String(crypto.randomInt(100000, 1000000));
+  await this.findOneAndUpdate(
+    { email },
+    { otp, attempts: 0, createdAt: Date.now() },
+    { upsert: true, returnDocument: 'after' }
+  );
+  return otp;
 };
 
 // Avoid recompiling the model if it already exists

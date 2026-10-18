@@ -181,7 +181,7 @@ export const SelectField: React.FC<{
 
 const styles = themed((c) => ({
   container: { gap: 7 },
-  label: { fontSize: t.caption, fontWeight: '600', color: c.mutedForeground, letterSpacing: 0.1 },
+  label: { fontSize: t.small, fontWeight: '500', color: c.foreground },
   required: { color: c.destructive },
   wrapper: {
     flexDirection: 'row',
@@ -189,18 +189,15 @@ const styles = themed((c) => ({
     borderWidth: 1,
     borderColor: c.input,
     borderRadius: radius.md,
-    // The site's INPUT: page-ground fill inside the card, rounded-xl.
-    backgroundColor: c.background,
-    minHeight: TOUCH,
+    // BHIM's field: a filled surface one step up from the card, hairline edge.
+    backgroundColor: c.surface,
+    minHeight: 52,
   },
   // 2px ring plus a tinted halo: focus stays visible without relying on colour
   // alone, and survives at the largest Dynamic Type sizes.
   // The site's focus:ring-4 ring-zinc-400/15, as a soft halo around the border.
-  wrapperFocused: {
-    borderColor: c.focus,
-    borderWidth: 2,
-    ...({ shadowColor: c.focus, shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } } as const),
-  },
+  // Typing: the edge turns light, as in BHIM — no glow.
+  wrapperFocused: { borderColor: c.focus },
   wrapperError: { borderColor: c.destructive },
   select: { paddingHorizontal: space.md, justifyContent: 'space-between' },
   selectValue: { flex: 1, fontSize: t.body, color: c.foreground },

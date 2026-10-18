@@ -24,8 +24,9 @@ assert.strictEqual(withFont({ fontWeight: '400' }).fontFamily, FONTS.regular);
 assert.strictEqual(withFont({ fontWeight: '500' }).fontFamily, FONTS.medium);
 assert.strictEqual(withFont({ fontWeight: '600' }).fontFamily, FONTS.semibold);
 assert.strictEqual(withFont({ fontWeight: '700' }).fontFamily, FONTS.bold);
-// 800 is used by the receipt amount; the family ships nothing above 700.
+// 800 folds into Bold; 300 is the light face the big amounts use.
 assert.strictEqual(withFont({ fontWeight: '800' }).fontFamily, FONTS.bold);
+assert.strictEqual(withFont({ fontWeight: '300' }).fontFamily, FONTS.light);
 assert.strictEqual(withFont({ fontWeight: 'bold' }).fontFamily, FONTS.bold);
 
 // Unweighted and unstyled text still gets the app face, never the system one.

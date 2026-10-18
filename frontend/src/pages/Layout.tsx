@@ -2,6 +2,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import Header from "@/components/Header"
 import News from "@/components/News"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { Suspense } from "react"
 import { Outlet, Navigate, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import SupportWidget from "../components/SupportWidget"
@@ -53,7 +54,9 @@ const Layout = () => {
                 <div data-accent={PAGE_ACCENT[location.pathname.split('/').filter(Boolean).pop() ?? '']} className="w-full p-8 flex-1 min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain no-scrollbar relative">
                     <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-white/5 to-transparent pointer-events-none -z-10 rounded-full blur-3xl opacity-50 translate-x-[-10%] translate-y-[-20%]"></div>
                     <div className="absolute bottom-0 right-0 w-full h-[500px] bg-gradient-to-t from-white/5 to-transparent pointer-events-none -z-10 rounded-full blur-3xl opacity-30 translate-x-[10%] translate-y-[20%]"></div>
-                    <Outlet />
+                    <Suspense fallback={null}>
+                        <Outlet />
+                    </Suspense>
                 </div>
                 <SupportWidget />
             </main>

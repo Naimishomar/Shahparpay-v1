@@ -68,9 +68,12 @@ for (const file of walk('src')) {
     }
   }
 }
-// src/constants menus + quick actions are all rendered with MaterialCommunityIcons.
-for (const m of constants.matchAll(/icon:\s*'([^']+)'/g)) {
-  if (!glyphs.MaterialCommunityIcons.has(m[1])) bad.push(`src/constants/index.ts: MaterialCommunityIcons icon '${m[1]}'`);
+// src/constants menus render with MaterialCommunityIcons; the bottom bar
+// (BottomTabBar's TabIcon) prefers Ionicons and falls back to MCI, so a tab
+// name only has to exist in one of the two.
+for (const m of constants.matchAll(/icon(?:Active)?:\s*'([^']+)'/g)) {
+  if (!glyphs.MaterialCommunityIcons.has(m[1]) && !glyphs.Ionicons.has(m[1]))
+    bad.push(`src/constants/index.ts: icon '${m[1]}' is in neither MaterialCommunityIcons nor Ionicons`);
 }
 
 assert.deepStrictEqual(bad, [], `unknown icon names:\n  ${bad.join('\n  ')}`);

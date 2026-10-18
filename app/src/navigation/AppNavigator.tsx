@@ -1,5 +1,5 @@
 import React from 'react';
-import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
+import { createStackNavigator, TransitionPresets, CardStyleInterpolators } from '@react-navigation/stack';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -19,7 +19,6 @@ import { RechargeScreen } from '@/screens/retailer/RechargeScreen';
 import { BbpsScreen } from '@/screens/retailer/BbpsScreen';
 import { BbpsServiceScreen } from '@/screens/retailer/BbpsServiceScreen';
 import { CollectScreen } from '@/screens/retailer/CollectScreen';
-import { DirectPayoutScreen } from '@/screens/retailer/DirectPayoutScreen';
 import { FundRequestScreen } from '@/screens/retailer/FundRequestScreen';
 import { AddMoneyScreen } from '@/screens/retailer/AddMoneyScreen';
 import { BiometricSupportScreen } from '@/screens/retailer/BiometricSupportScreen';
@@ -110,7 +109,6 @@ const RETAILER_SCREENS: [string, React.ComponentType<any>][] = ([
   ['BBPS', BbpsScreen],
   ['BbpsService', BbpsServiceScreen],
   ['Collect', CollectScreen],
-  ['DirectPayout', DirectPayoutScreen],
   ['FundRequest', FundRequestScreen],
   ['AddMoney', AddMoneyScreen],
   ['BiometricSupport', BiometricSupportScreen],
@@ -135,8 +133,19 @@ const DISTRIBUTOR_SCREENS: [string, React.ComponentType<any>][] = [
   ...REPORT_SCREENS,
 ];
 
-const buildNavigator = (screens: [string, React.ComponentType<any>][], background: string) => (
+const PROFILE_DRAWER = {
+  gestureDirection: 'horizontal-inverted' as const,
+  cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+};
+
+const buildNavigator = (
+  screens: [string, React.ComponentType<any>][],
+  background: string,
+  initialRoute?: string
+) => (
   <Stack.Navigator
+    // A splash shortcut opens its service first; back from it lands on Home.
+    initialRouteName={initialRoute && screens.some(([name]) => name === initialRoute) ? initialRoute : undefined}
     screenOptions={{
       headerShown: false,
       gestureEnabled: true,
@@ -152,19 +161,34 @@ const buildNavigator = (screens: [string, React.ComponentType<any>][], backgroun
     }}
   >
     {screens.map(([name, Screen]) => (
-      <Stack.Screen key={name} name={name} component={withLayout(Screen)} />
+      <Stack.Screen
+        key={name}
+        name={name}
+        component={withLayout(Screen)}
+        // Profile slides in from the left over the whole screen — BHIM's side
+        // drawer — and swipes back out the same way.
+        options={name === 'Profile' ? PROFILE_DRAWER : undefined}
+      />
     ))}
   </Stack.Navigator>
 );
 
 export const AppNavigator: React.FC = () => {
   const [showSplash, setShowSplash] = React.useState(true);
+  const [startRoute, setStartRoute] = React.useState<string | undefined>();
   const { user, token, isInitializing } = useAuth();
   const { resolvedTheme } = useTheme();
   const palette = palettes[resolvedTheme];
 
   if (showSplash) {
-    return <AppSplashScreen onFinish={() => setShowSplash(false)} />;
+    return (
+      <AppSplashScreen
+        onFinish={(route) => {
+          setStartRoute(route);
+          setShowSplash(false);
+        }}
+      />
+    );
   }
 
   const navTheme = {
@@ -190,7 +214,7 @@ export const AppNavigator: React.FC = () => {
   return (
     <NavigationContainer theme={navTheme}>
       {screens ? (
-        buildNavigator(screens, palette.background)
+        buildNavigator(screens, palette.background, startRoute)
       ) : (
         <Stack.Navigator
           screenOptions={{

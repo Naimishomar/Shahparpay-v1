@@ -13,6 +13,8 @@ import {
   StatusPill,
   SuccessBanner,
   money,
+  SkeletonRows,
+  SkeletonCard,
 } from '@/components/ui/Screen';
 import { OnboardMemberSheet } from '@/components/network/OnboardMemberSheet';
 import { EditRetailerSheet } from '@/components/network/EditRetailerSheet';
@@ -75,6 +77,7 @@ export const RetailersScreen: React.FC = () => {
   return (
     <Screen
       loading={retailers.loading}
+      skeleton={<SkeletonCard><SkeletonRows count={6} amount={false} /></SkeletonCard>}
       refreshing={retailers.refreshing}
       onRefresh={retailers.refresh}
       error={retailers.error}
@@ -114,7 +117,7 @@ export const RetailersScreen: React.FC = () => {
               autoCapitalize="none"
             />
           )}
-          {retailers.loading ? null : list.length ? (
+          {retailers.loading ? <SkeletonRows count={3} /> : list.length ? (
             list.map((ret: any, i: number) => (
               <View
                 key={ret._id}

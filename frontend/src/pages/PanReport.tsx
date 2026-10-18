@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
+import TransactionDetailModal from "../components/TransactionDetailModal"
 import { Search, Download, FileDown, Loader2, ChevronLeft, ChevronRight, CreditCard } from "lucide-react"
 import {
   Table,
@@ -38,6 +39,7 @@ const getPanTypeColor = (type: string) => {
 
 const PanReport = () => {
     const [transactions, setTransactions] = useState<any[]>([]);
+    const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -153,6 +155,7 @@ const PanReport = () => {
 
     return (
         <div className="flex-1 w-full flex flex-col p-4 md:p-6 animate-in fade-in duration-500 max-w-[1600px] mx-auto h-[calc(100vh-64px)] overflow-hidden">
+            <TransactionDetailModal tx={selectedTransaction} onClose={() => setSelectedTransaction(null)} />
             <div className="flex flex-col gap-6 h-full">
                 {/* Header */}
                 <div className="relative isolate overflow-hidden flex flex-col gap-4 w-full shrink-0 rounded-3xl border bg-card p-4 md:p-5 shadow-sm"><div aria-hidden className="pointer-events-none absolute -top-32 -right-24 -z-10 h-72 w-72 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" /><div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 -z-10 h-72 w-72 rounded-full bg-slate-200/70 dark:bg-slate-400/10 blur-3xl" />
@@ -238,7 +241,7 @@ const PanReport = () => {
                                         const isCr = getCrDr(tx.type) === 'CR';
                                         const serialNumber = ((currentPage - 1) * itemsPerPage) + idx + 1;
                                         return (
-                                            <TableRow key={idx} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors">
+                                            <TableRow key={idx} onClick={() => setSelectedTransaction(tx)} className="cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors">
                                                 <TableCell className="px-4 py-2 text-center text-sm font-medium text-muted-foreground">
                                                     {serialNumber}
                                                 </TableCell>

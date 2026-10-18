@@ -97,7 +97,6 @@ export interface NavigationParams {
     Recharge: undefined;
     BBPS: undefined;
     Collect: undefined;
-    DirectPayout: undefined;
     FundRequest: undefined;
     AddMoney: undefined;
     BiometricSupport: undefined;

@@ -30,26 +30,26 @@ const LandingFooter: React.FC = () => {
                 {/* Column 2: Products */}
                 <div className="space-y-3">
                     <h4 className="text-sm font-bold text-white uppercase tracking-wider">Banking Services</h4>
-                    <ul className="space-y-2 text-xs font-medium text-slate-400">
-                        <li><a href="#products" className="hover:text-white transition-colors">AEPS Cash Withdrawal</a></li>
-                        <li><a href="#products" className="hover:text-white transition-colors">Balance &amp; Mini Statement</a></li>
-                        <li><a href="#products" className="hover:text-white transition-colors">Micro ATM</a></li>
-                        <li><a href="#products" className="hover:text-white transition-colors">Money Transfer (DMT)</a></li>
-                        <li><a href="#products" className="hover:text-white transition-colors">UPI QR Collection</a></li>
-                        <li><a href="#products" className="hover:text-white transition-colors">Aadhaar Pay</a></li>
+                    <ul className="space-y-0 sm:space-y-2 text-xs font-medium text-slate-400">
+                        <li><a href="#products" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">AEPS Cash Withdrawal</a></li>
+                        <li><a href="#products" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">Balance &amp; Mini Statement</a></li>
+                        <li><a href="#products" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">Micro ATM</a></li>
+                        <li><a href="#products" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">Money Transfer (DMT)</a></li>
+                        <li><a href="#products" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">UPI QR Collection</a></li>
+                        <li><a href="#products" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">Aadhaar Pay</a></li>
                     </ul>
                 </div>
 
                 {/* Column 3: Payouts & Verification */}
                 <div className="space-y-3">
                     <h4 className="text-sm font-bold text-white uppercase tracking-wider">Bills &amp; Documents</h4>
-                    <ul className="space-y-2 text-xs font-medium text-slate-400">
-                        <li><a href="#payouts" className="hover:text-white transition-colors">Mobile &amp; DTH Recharge</a></li>
-                        <li><a href="#payouts" className="hover:text-white transition-colors">BBPS Bill Payments</a></li>
-                        <li><a href="#payouts" className="hover:text-white transition-colors">FASTag Recharge</a></li>
-                        <li><a href="#identity" className="hover:text-white transition-colors">PAN Card Services</a></li>
-                        <li><a href="#identity" className="hover:text-white transition-colors">ITR Filing</a></li>
-                        <li><a href="#identity" className="hover:text-white transition-colors">Lead Generation</a></li>
+                    <ul className="space-y-0 sm:space-y-2 text-xs font-medium text-slate-400">
+                        <li><a href="#payouts" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">Mobile &amp; DTH Recharge</a></li>
+                        <li><a href="#payouts" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">BBPS Bill Payments</a></li>
+                        <li><a href="#payouts" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">FASTag Recharge</a></li>
+                        <li><a href="#identity" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">PAN Card Services</a></li>
+                        <li><a href="#identity" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">ITR Filing</a></li>
+                        <li><a href="#identity" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">Lead Generation</a></li>
                     </ul>
                 </div>
 
@@ -73,7 +73,7 @@ const LandingFooter: React.FC = () => {
                 </div>
             </div>
 
-            {/* GIANT FULL-WIDTH BRAND LOGO BANNER (MATCHING CASHFREE FOOTER SCREENSHOT) */}
+            {/* GIANT FULL-WIDTH BRAND LOGO BANNER */}
             <div className="w-full pt-12 sm:pt-16 pb-8 border-t border-slate-800/80 my-8 sm:my-12 flex items-center justify-center overflow-hidden">
                 <div className="w-full flex items-center justify-center gap-2 sm:gap-4 md:gap-2 select-none group cursor-pointer">
                     {/* <img
@@ -91,33 +91,33 @@ const LandingFooter: React.FC = () => {
             <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-6 text-xs text-slate-400 font-medium">
                 {/* Social Links Row */}
                 <div className="flex items-center gap-3">
-                    <a href="#contact" aria-label="WhatsApp Support" className="w-9 h-9 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
+                    <a href="https://wa.me/918240039776?text=Hi%20Shahparpay%2C%20I%20need%20help%20with%20my%20retailer%20account." target="_blank" rel="noopener noreferrer" aria-label="WhatsApp Support" className="w-11 h-11 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
                         <MessageCircle className="w-4 h-4" />
                     </a>
-                    <a href="#contact" aria-label="Email Support" className="w-9 h-9 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
+                    <a href="mailto:shahparpay@gmail.com" aria-label="Email Support" className="w-11 h-11 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
                         <Mail className="w-4 h-4" />
                     </a>
-                    <a href="#contact" aria-label="Official Phone" className="w-9 h-9 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
+                    <a href="tel:+918240039776" aria-label="Official Phone" className="w-11 h-11 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
                         <Phone className="w-4 h-4" />
                     </a>
-                    <a href="#contact" aria-label="Location" className="w-9 h-9 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
+                    <a href="#contact" aria-label="Location" className="w-11 h-11 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
                         <Globe className="w-4 h-4" />
                     </a>
                 </div>
 
                 {/* Copyright & Legal Links */}
                 <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-4 text-slate-400 text-xs font-semibold">
-                    <Link to="/about" className="hover:text-white transition-colors">About Us</Link>
+                    <Link to="/about" className="inline-block py-3 sm:py-0 hover:text-white transition-colors">About Us</Link>
                     <span>•</span>
-                    <Link to="/terms" className="hover:text-white transition-colors">General Terms</Link>
+                    <Link to="/terms" className="inline-block py-3 sm:py-0 hover:text-white transition-colors">General Terms</Link>
                     <span>•</span>
-                    <Link to="/retailer-terms" className="hover:text-white transition-colors">Retailer Terms</Link>
+                    <Link to="/retailer-terms" className="inline-block py-3 sm:py-0 hover:text-white transition-colors">Retailer Terms</Link>
                     <span>•</span>
-                    <Link to="/aeps-terms" className="hover:text-white transition-colors">AEPS Terms</Link>
+                    <Link to="/aeps-terms" className="inline-block py-3 sm:py-0 hover:text-white transition-colors">AEPS Terms</Link>
                     <span>•</span>
-                    <Link to="/aeps-permission" className="hover:text-white transition-colors">AEPS Declaration</Link>
+                    <Link to="/aeps-permission" className="inline-block py-3 sm:py-0 hover:text-white transition-colors">AEPS Declaration</Link>
                     <span>•</span>
-                    <Link to="/refund-policy" className="hover:text-white transition-colors">Refund Policy</Link>
+                    <Link to="/refund-policy" className="inline-block py-3 sm:py-0 hover:text-white transition-colors">Refund Policy</Link>
                     <span>•</span>
                     <span>© {new Date().getFullYear()} Shahparpay Solutions Private Limited</span>
                 </div>

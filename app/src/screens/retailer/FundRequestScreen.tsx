@@ -1,22 +1,25 @@
 import React, { useState } from 'react';
-import { View, Text, Alert } from 'react-native';
-import { themed, space, type as t } from '../../theme/colors';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { View, Text, Alert, Pressable } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { colors, themed, space, type as t } from '../../theme/colors';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import {
   Screen,
+  SectionTitle,
   EmptyState,
   ErrorBanner,
   SuccessBanner,
   Row,
   Segmented,
-  StatusPill,
   money,
   shortDate,
   isoDate,
+  SkeletonRows,
 } from '@/components/ui/Screen';
 import { ImageField } from '@/components/ui/ImageField';
+import { IconTile } from '@/components/ui/Gradient';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import type { PickedFile } from '@/services/imagePicker';
 import api from '@/services/api';
@@ -111,10 +114,8 @@ export const FundRequestScreen: React.FC = () => {
       error={requests.error}
       onRetry={requests.reload}
     >
+      <SectionTitle>New fund request</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="hand-coin-outline">New fund request</CardTitle>
-        </CardHeader>
         <CardContent style={styles.form}>
           <View style={styles.field}>
             <Text style={styles.label}>How did you pay?</Text>
@@ -176,7 +177,6 @@ export const FundRequestScreen: React.FC = () => {
             onPress={onSubmit}
             disabled={!valid}
             loading={submit.pending}
-            icon="send-outline"
             size="lg"
             fullWidth
           >
@@ -185,18 +185,19 @@ export const FundRequestScreen: React.FC = () => {
         </CardContent>
       </Card>
 
+      <SectionTitle>Request history</SectionTitle>
       <Card>
-        <CardHeader>
-          <CardTitle icon="history">Request history</CardTitle>
-        </CardHeader>
         <CardContent>
           {!!remove.error && <ErrorBanner message={remove.error} />}
-          {requests.loading ? null : requests.data?.length ? (
-            requests.data.map((req: any) => (
-              <View key={req._id} style={styles.item}>
+          {requests.loading ? <SkeletonRows count={3} /> : requests.data?.length ? (
+            requests.data.map((req: any, index: number, shown: any[]) => (
+              <View key={req._id} style={[styles.item, index === shown.length - 1 && styles.itemLast]}>
                 <View style={styles.itemTop}>
-                  <Text style={styles.itemAmount}>{money(req.amount)}</Text>
-                  <StatusPill status={req.status} />
+                  <IconTile icon="hand-coin-outline" size={44} iconSize={20} />
+                  <Text style={styles.itemAmount} numberOfLines={1}>
+                    {money(req.amount)}
+                  </Text>
+                  <StatusText status={req.status} />
                 </View>
                 <Row label="Mode" value={String(req.transactionMode || '').replace(/_/g, ' ')} />
                 <Row label="UTR" value={req.bankUtr} />
@@ -204,15 +205,16 @@ export const FundRequestScreen: React.FC = () => {
                 <Row label="Requested" value={shortDate(req.createdAt)} last={!req.adminRemarks} />
                 {!!req.adminRemarks && <Row label="Remarks" value={req.adminRemarks} last />}
                 {String(req.status).toUpperCase() === 'PENDING' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon="trash-can-outline"
+                  <Pressable
                     onPress={() => confirmDelete(req)}
-                    style={styles.deleteButton}
+                    style={({ pressed }) => [styles.deleteButton, pressed && { opacity: 0.6 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete request"
+                    hitSlop={8}
                   >
-                    Delete request
-                  </Button>
+                    <Ionicons name="trash-outline" size={18} color={colors.destructive} />
+                    <Text style={styles.deleteText}>Delete request</Text>
+                  </Pressable>
                 )}
               </View>
             ))
@@ -229,25 +231,49 @@ export const FundRequestScreen: React.FC = () => {
   );
 };
 
+/** BHIM status: small coloured text, never a filled pill. */
+const StatusText: React.FC<{ status?: string | null }> = ({ status }) => {
+  const s = String(status || 'PENDING').toUpperCase();
+  const color = /SUCCESS|COMPLETE|APPROVED|ACTIVE|ACCEPTED|CONVERTED/.test(s)
+    ? colors.success
+    : /FAIL|REJECT/.test(s)
+      ? colors.destructive
+      : colors.warning;
+  return (
+    <Text style={{ fontSize: t.small, fontWeight: '500', color }}>
+      {s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, ' ')}
+    </Text>
+  );
+};
+
 const styles = themed((c) => ({
   form: { gap: space.lg },
   field: { gap: space.sm },
-  label: { fontSize: t.caption, fontWeight: '600', color: c.mutedForeground },
+  label: { fontSize: t.small, fontWeight: '500', color: c.mutedForeground },
   item: { paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
   itemTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     gap: space.md,
-    marginBottom: 2,
+    marginBottom: space.xs,
   },
   itemAmount: {
+    flex: 1,
     fontSize: t.bodyLg,
-    fontWeight: '700',
+    fontWeight: '500',
     color: c.foreground,
     fontVariant: ['tabular-nums'],
   },
-  deleteButton: { alignSelf: 'flex-start', marginTop: space.xs },
+  itemLast: { borderBottomWidth: 0 },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    alignSelf: 'flex-start',
+    minHeight: 44,
+    marginTop: space.xs,
+  },
+  deleteText: { fontSize: t.body, fontWeight: '500', color: c.destructive },
 }));
 
 export default FundRequestScreen;

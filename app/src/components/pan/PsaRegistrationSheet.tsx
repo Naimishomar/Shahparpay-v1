@@ -148,16 +148,14 @@ export const PsaRegistrationSheet: React.FC<{
       onClose={onClose}
       title={isStandard ? 'Standard PSA registration' : 'Biometric PSA registration'}
       subtitle={isUpdate ? 'Resubmit your rejected application' : 'One-time agent registration'}
-      icon="card-account-details-outline"
       dismissible={!submit.pending}
       footer={
         done ? (
-          <Button icon="check" onPress={onClose} fullWidth>
+          <Button onPress={onClose} fullWidth>
             Done
           </Button>
         ) : (
           <Button
-            icon="send-outline"
             size="lg"
             onPress={submit.run}
             loading={submit.pending}
@@ -349,11 +347,13 @@ const styles = themed((c) => ({
     marginTop: 6,
     maxHeight: 220,
     borderRadius: radius.md,
-    backgroundColor: c.secondary,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
     padding: space.xs,
   },
   pickerItem: {
-    minHeight: 44,
+    minHeight: 48,
     justifyContent: 'center',
     paddingHorizontal: space.md,
     borderRadius: radius.sm,

@@ -1,153 +1,162 @@
 import { StyleSheet } from 'react-native';
 
 /**
- * Design system: "Trust & Authority" — Minimalism/Swiss for a fintech retailer
- * app, in a monochrome key. Near-black is the brand: it carries every primary
- * action and selected state, and inverts to near-white in dark mode so the
- * accent always reads against its own ground.
+ * Design system: BHIM 4 (NPCI's own system — Figtree, BHIM Orange, BHIM Green,
+ * near-black greys). Dark is the reference; light mirrors it on white.
  *
- * Status colours (success/warning/danger/info) stay chromatic on purpose —
- * they encode meaning, not brand — and each is paired with its own icon at the
- * call site so nothing rests on hue alone.
+ * - Ground is near-black, with a soft orange and green glow behind the top of
+ *   each screen (TopGlow) — the only colour on most screens.
+ * - Icons are monochrome line glyphs in grey circles. Colour is reserved for
+ *   meaning: orange for the one primary action and the active tab, green for
+ *   money in and success, red for failure.
+ * - Cards are a step lighter than the ground with a hairline border.
  *
- * Both themes are authored together so contrast is checked per mode rather
- * than inferred by inverting one palette.
+ * Status colours are always paired with an icon or label at the call site so
+ * nothing rests on hue alone.
  */
-const brand = {
-  /** Light-mode brand: the website's zinc-900 primary. */
-  ink: '#18181B',
-  inkSoft: '#27272A',
-  /** Dark-mode brand — the same role, inverted. */
-  chalk: '#FAFAFA',
-  chalkSoft: '#D4D4D8',
+const bhim = {
+  orange: '#F47920', // O-500
+  orangeDeep: '#E55C11', // O-600
+  orangeSoft: '#F79440', // O-400
+  green: '#028C45', // G-600
 };
 
-/**
- * Neutrals mirror the website's shadcn tokens (frontend/src/index.css) so the
- * two surfaces read as one product; change them together. The silver ramps are
- * the site's ACTIVE_BUTTON and SILVER_TILE classes.
- */
+/** Icon chips: one neutral circle everywhere (BHIM's monochrome icon system).
+ *  Kept as named tones so call sites can still say what a chip is for. */
+const lightChip = { bg: '#F1F1F1', fg: '#171717' };
+const darkChip = { bg: '#262626', fg: '#FFFFFF' };
+const tonesOf = (chip: { bg: string; fg: string }) => ({
+  blue: chip,
+  orange: chip,
+  green: chip,
+  purple: chip,
+  pink: chip,
+  teal: chip,
+  red: chip,
+});
+export type Tone = keyof ReturnType<typeof tonesOf>;
+
 export const palettes = {
   light: {
     background: '#FAFAFA',
     foreground: '#171717',
     card: '#FFFFFF',
     cardForeground: '#171717',
-    // Elevated surface for sheets/menus that must separate from `card`.
-    surface: '#FFFFFF',
-    surfaceAlt: '#EDEDED',
+    surface: '#F4F4F4',
+    surfaceAlt: '#EFEFEF',
     popover: '#FFFFFF',
     popoverForeground: '#171717',
 
-    primary: brand.ink,
+    primary: bhim.orangeDeep,
     primaryForeground: '#FFFFFF',
-    accent: brand.ink,
+    // Orange text on white needs the deeper shade (O-700) to stay readable.
+    accent: '#BE4510',
     accentForeground: '#FFFFFF',
+    highlight: bhim.orange,
+    highlightForeground: '#FFFFFF',
 
-    // The app header band. Separate from `accent` because accent inverts to
-    // near-white in dark mode — correct for a button, glare as a full-width
-    // band. In dark the band is an elevated surface instead of an inversion.
-    band: brand.ink,
-    bandForeground: '#FFFFFF',
+    band: '#FAFAFA',
+    bandForeground: '#171717',
 
-    secondary: '#F5F5F5',
+    secondary: '#F4F4F4',
     secondaryForeground: '#171717',
-    muted: '#F5F5F5',
-    // 4.6:1 on #FAFAFA — the site's muted-foreground, still AA for body text.
-    mutedForeground: '#737373',
-    accentSubtle: 'rgba(24, 24, 27, 0.06)',
+    muted: '#F4F4F4',
+    mutedForeground: '#626262',
+    accentSubtle: 'rgba(229, 92, 17, 0.08)',
 
-    success: '#047857',
-    successSubtle: 'rgba(4, 120, 87, 0.10)',
-    warning: '#B45309',
-    warningSubtle: 'rgba(180, 83, 9, 0.10)',
-    destructive: '#DC2626',
-    destructiveSubtle: 'rgba(220, 38, 38, 0.10)',
-    info: '#1D4ED8',
-    infoSubtle: 'rgba(29, 78, 216, 0.10)',
+    success: '#047239',
+    successSubtle: 'rgba(4, 114, 57, 0.10)',
+    warning: '#9B5C0D',
+    warningSubtle: 'rgba(222, 165, 17, 0.14)',
+    destructive: '#C11414',
+    destructiveSubtle: 'rgba(193, 20, 20, 0.08)',
+    info: '#353535',
+    infoSubtle: 'rgba(0, 0, 0, 0.04)',
 
-    border: '#E5E5E5',
-    borderStrong: '#D4D4D4',
-    input: '#E5E5E5',
-    ring: brand.ink,
-    // Input focus: zinc-500 rather than the site's zinc-400, which is under
-    // 3:1 against white and would leave focus nearly invisible on a phone.
-    focus: '#71717A',
-    overlay: 'rgba(10, 10, 11, 0.55)',
-    skeleton: '#EDEDED',
+    border: '#E9E9E9',
+    borderStrong: '#D2D2D2',
+    input: '#E9E9E9',
+    ring: '#171717',
+    focus: '#171717',
+    overlay: 'rgba(0, 0, 0, 0.45)',
+    // Visibly darker than the filled fields (#F4F4F4) it often stands in for.
+    skeleton: '#E4E4E4',
 
-    // Primary button / selected chip. Solid zinc-900 in light, as on the site.
-    activeGradient: [brand.ink, brand.ink],
-    // Icon tiles: from-zinc-100 to-zinc-300, zinc-700 glyph, zinc-400/40 ring.
-    tileGradient: ['#F4F4F5', '#D4D4D8'],
-    tileForeground: '#3F3F46',
-    tileRing: 'rgba(161, 161, 170, 0.4)',
+    activeGradient: [bhim.orange, bhim.orangeDeep],
+    tileGradient: [lightChip.bg, lightChip.bg],
+    tileForeground: lightChip.fg,
+    tileRing: 'transparent',
+    tones: tonesOf(lightChip),
 
-    chart: ['#6C4DF6', '#F0605E', '#F5C33B', '#2FB86B', '#3B82F6', '#E879F9'],
+    /** The two soft lights behind the top of every screen (TopGlow). */
+    glowWarm: bhim.orange,
+    glowGreen: '#12A65A',
+    glowStrength: 0.14,
+
+    chart: [bhim.orange, '#12A65A', '#626262', '#171717', '#E51D1D', '#DEA511'],
 
     tabBar: '#FFFFFF',
-    tabBarActive: brand.ink,
-    tabBarInactive: '#8A8A8A',
+    tabBarActive: bhim.orangeDeep,
+    tabBarInactive: '#626262',
   },
   dark: {
-    background: '#050505',
-    foreground: '#FAFAFA',
-    card: '#0A0A0A',
-    cardForeground: '#FAFAFA',
-    surface: '#141414',
-    surfaceAlt: '#1F1F1F',
-    popover: '#0A0A0A',
-    popoverForeground: '#FAFAFA',
+    background: '#0B0B0B',
+    foreground: '#FFFFFF',
+    card: '#171717',
+    cardForeground: '#FFFFFF',
+    surface: '#1D1D1F',
+    surfaceAlt: '#262626',
+    popover: '#171717',
+    popoverForeground: '#FFFFFF',
 
-    // The brand inverts: near-white now carries primary actions, because
-    // near-black on near-black would be invisible.
-    primary: brand.chalk,
-    primaryForeground: '#171717',
-    accent: brand.chalk,
-    accentForeground: '#171717',
+    primary: '#EB6A16',
+    primaryForeground: '#FFFFFF',
+    accent: bhim.orangeSoft,
+    accentForeground: '#0B0B0B',
+    highlight: bhim.orange,
+    highlightForeground: '#FFFFFF',
 
-    // Flush with the page: the home screen opens straight into black, so the
-    // chrome must not draw a lighter slab across the top.
-    band: '#050505',
-    bandForeground: brand.chalk,
+    band: '#0B0B0B',
+    bandForeground: '#FFFFFF',
 
-    secondary: '#1F1F1F',
-    secondaryForeground: '#FAFAFA',
-    muted: '#1F1F1F',
-    mutedForeground: '#A6A6A6',
-    accentSubtle: 'rgba(255, 255, 255, 0.08)',
+    secondary: '#1D1D1F',
+    secondaryForeground: '#FFFFFF',
+    muted: '#1D1D1F',
+    mutedForeground: '#9C9C9C',
+    accentSubtle: 'rgba(244, 121, 32, 0.12)',
 
-    success: '#34D399',
-    successSubtle: 'rgba(52, 211, 153, 0.14)',
-    warning: '#FBBF24',
-    warningSubtle: 'rgba(251, 191, 36, 0.14)',
-    destructive: '#F87171',
-    destructiveSubtle: 'rgba(248, 113, 113, 0.14)',
-    info: '#60A5FA',
-    infoSubtle: 'rgba(96, 165, 250, 0.14)',
+    success: '#28BF72',
+    successSubtle: 'rgba(40, 191, 114, 0.14)',
+    warning: '#F1BF1E',
+    warningSubtle: 'rgba(241, 191, 30, 0.13)',
+    destructive: '#FF6565',
+    destructiveSubtle: 'rgba(255, 101, 101, 0.13)',
+    info: '#E9E9E9',
+    infoSubtle: 'rgba(255, 255, 255, 0.06)',
 
-    border: '#262626',
-    borderStrong: '#404040',
-    input: '#262626',
-    ring: '#CCCCCC',
-    focus: '#A1A1AA',
-    overlay: 'rgba(0, 0, 0, 0.72)',
-    skeleton: '#1A1A1A',
+    border: '#2A2A2A',
+    borderStrong: '#353535',
+    input: '#2A2A2A',
+    ring: '#E9E9E9',
+    focus: '#E9E9E9',
+    overlay: 'rgba(0, 0, 0, 0.7)',
+    skeleton: '#262626',
 
-    // The site's dark ACTIVE_BUTTON: brushed silver, zinc-100 -> 300 -> 400.
-    activeGradient: ['#F4F4F5', '#D4D4D8', '#A1A1AA'],
-    tileGradient: ['#52525B', '#27272A'],
-    tileForeground: '#F4F4F5',
-    tileRing: 'rgba(161, 161, 170, 0.3)',
+    activeGradient: [bhim.orange, bhim.orangeDeep],
+    tileGradient: [darkChip.bg, darkChip.bg],
+    tileForeground: darkChip.fg,
+    tileRing: 'transparent',
+    tones: tonesOf(darkChip),
 
-    // Category hues for donuts, bars and row avatars. Same set in both themes:
-    // they encode a service, not a mode, so a colour must not shift meaning
-    // when the theme flips.
-    chart: ['#6C4DF6', '#F0605E', '#F5C33B', '#2FB86B', '#3B82F6', '#E879F9'],
+    glowWarm: bhim.orange,
+    glowGreen: bhim.green,
+    glowStrength: 0.32,
 
-    tabBar: '#050505',
-    tabBarActive: brand.chalk,
-    tabBarInactive: '#737373',
+    chart: [bhim.orange, '#28BF72', '#9C9C9C', '#FFFFFF', '#FF6565', '#F1BF1E'],
+
+    tabBar: '#141414',
+    tabBarActive: bhim.orange,
+    tabBarInactive: '#B5B5B5',
   },
 };
 
@@ -232,7 +241,7 @@ export const radius = {
   sm: 10,
   md: 14,
   lg: 20,
-  xl: 28,
+  xl: 24,
   pill: 999,
 };
 

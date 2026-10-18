@@ -5,6 +5,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import { useVisiblePolling } from '../hooks/use-visible-polling';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'bg-zinc-900 text-white shadow-md shadow-black/20 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:shadow-white/10';
@@ -47,13 +48,12 @@ const Collect = () => {
 
     useEffect(() => {
         if (token) fetchHistory();
-        if (!token) return;
-
-        // Keep pending collection rows synchronized while this page is open.
-        // The backend rechecks Icchhamati and credits the wallet idempotently.
-        const refreshTimer = window.setInterval(fetchHistory, 15000);
-        return () => window.clearInterval(refreshTimer);
     }, [token]);
+
+    // Keep pending collection rows synchronized while this page is open — but
+    // only while something is actually pending; settled history never changes.
+    const hasPending = history.some((row: any) => row.status === 'PENDING');
+    useVisiblePolling(fetchHistory, 20000, Boolean(token) && hasPending, false);
 
     const verify = async (reference: string, quiet = false) => {
         setVerifying(true);

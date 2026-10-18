@@ -1,4 +1,3 @@
-import bcrypt from 'bcrypt';
 import {
   icchhamatiGet,
   icchhamatiPost,
@@ -13,6 +12,7 @@ import DmtTransaction from '../models/dmtTransaction.model.js';
 import Transaction from '../models/transaction.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
 import { verifyBankAccountWithProvider } from '../utils/bankAccountVerification.util.js';
+import { checkWalletPin } from '../utils/walletPin.js';
 
 /**
  * Money transfer and beneficiaries, on Icchhamati.
@@ -347,6 +347,10 @@ export const initiateTransfer = async (req, res) => {
     const totalAmount = Number(amount);
     const senderMobile = requireMobile(req.body?.mobile);
 
+    // Whole rupees only: the provider is sent Math.round(amount), the wallet the exact figure.
+    if (totalAmount && !Number.isInteger(totalAmount)) {
+      return res.status(400).json({ success: false, message: 'Amount must be in whole rupees.' });
+    }
     if (!beneficiaryId || !senderMobile || !totalAmount || totalAmount <= 0 || !pin) {
       return res.status(400).json({
         success: false,
@@ -389,13 +393,8 @@ export const initiateTransfer = async (req, res) => {
     }
 
     const aepsWallet = await AepsWallet.findOne({ userId: retailerId });
-    if (!aepsWallet || !aepsWallet.pin) {
-      return res.status(400).json({ success: false, message: 'Please set your wallet PIN first.' });
-    }
-    const isPinValid = await bcrypt.compare(pin.toString(), aepsWallet.pin);
-    if (!isPinValid) {
-      return res.status(401).json({ success: false, message: 'Incorrect PIN' });
-    }
+    const pinError = await checkWalletPin(aepsWallet, pin);
+    if (pinError) return res.status(pinError.status).json({ success: false, message: pinError.message });
 
     const transactionId = makeReferenceId('DMT');
 

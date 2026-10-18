@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text } from 'react-native';
-import { themed, space, type as t } from '../../theme/colors';
+import { themed, radius, space, type as t } from '../../theme/colors';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Sheet } from '@/components/ui/Sheet';
@@ -153,7 +153,7 @@ export const DailyAuthSheet: React.FC<{
 const styles = themed((c) => ({
   summary: {
     paddingHorizontal: space.lg,
-    borderRadius: 12,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: c.border,
     backgroundColor: c.card,

@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /distributor
+Disallow: /reports/
+Disallow: /profile
+Disallow: /kyc-status
+
+Sitemap: https://www.shahparpay.in/sitemap.xml

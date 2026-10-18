@@ -14,7 +14,12 @@ export const listNotifications = async (req, res) => {
     const key = userKey(req);
     return res.json({
       success: true,
-      data: rows.map((row) => ({ ...row, isRead: row.readBy?.includes(key) || false })),
+      // readBy lists every reader's internal id; only admins may see it.
+      data: rows.map(({ readBy, ...row }) => ({
+        ...row,
+        ...(isAdmin(req) ? { readBy } : {}),
+        isRead: readBy?.includes(key) || false,
+      })),
       unreadCount: rows.filter((row) => !row.readBy?.includes(key)).length,
     });
   } catch (error) {
@@ -36,7 +41,10 @@ export const listTickerUpdates = async (req, res) => {
 
 export const markNotificationRead = async (req, res) => {
   try {
-    await Notification.updateOne({ _id: req.params.id }, { $addToSet: { readBy: userKey(req) } });
+    await Notification.updateOne(
+      { _id: String(req.params.id), ...activeQuery(req.user.role) },
+      { $addToSet: { readBy: userKey(req) } }
+    );
     return res.json({ success: true });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Failed to mark notification as read' });

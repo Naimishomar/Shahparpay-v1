@@ -1,25 +1,33 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { View, Text, Pressable, ScrollView, TextInput } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Input, SelectField } from '@/components/ui/Input';
+import { IconTile } from '@/components/ui/Gradient';
+import { Input } from '@/components/ui/Input';
 import {
   Screen,
   Banner,
   EmptyState,
-  Grid,
-  Row,
+  SectionTitle,
   Segmented,
-  StatusPill,
   money,
   dateTime,
+  SkeletonRows,
+  SkeletonGrid,
+  SkeletonField,
 } from '@/components/ui/Screen';
-import { BiometricCapture, useBiometricDevice } from '@/components/aeps/BiometricCapture';
+import {
+  ActionButton,
+  bankInitials,
+  CaptureStep,
+  DevicePicker,
+  useBiometricDevice,
+} from '@/components/aeps/BiometricCapture';
+import { DEVICE_LABELS, isCaptureSupported } from '@/services/rdService';
 import { MerchantKycSheet } from '@/components/aeps/MerchantKycSheet';
 import { DailyAuthSheet } from '@/components/aeps/DailyAuthSheet';
-import { TransactionReceipt, type ReceiptData } from '@/components/aeps/TransactionReceipt';
+import { TransactionReceipt, StatusText, type ReceiptData } from '@/components/aeps/TransactionReceipt';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import { useAuth } from '@/context/AuthContext';
 import { AEPS_OTP_THRESHOLD, AEPS_MAX_WITHDRAWAL } from '@/constants';
@@ -33,6 +41,8 @@ type ServiceKey = 'balance' | 'statement' | 'withdrawal' | 'deposit' | 'aadhaarp
 interface ServiceSpec {
   key: ServiceKey;
   label: string;
+  /** Chip label and capture-step verb, as the mockup words them. */
+  short: string;
   icon: string;
   /** Amount field shown and required. */
   amount: boolean;
@@ -45,9 +55,20 @@ interface ServiceSpec {
 
 const SERVICES: ServiceSpec[] = [
   {
+    key: 'withdrawal',
+    label: 'Cash withdrawal',
+    short: 'Withdraw',
+    icon: 'cash-multiple',
+    amount: true,
+    mobile: true,
+    guarded: true,
+    call: (payload) => api.aepsCashWithdrawal(payload),
+  },
+  {
     key: 'balance',
     label: 'Balance enquiry',
-    icon: 'scale-balance',
+    short: 'Balance',
+    icon: 'bank-outline',
     amount: false,
     mobile: false,
     guarded: false,
@@ -56,42 +77,65 @@ const SERVICES: ServiceSpec[] = [
   {
     key: 'statement',
     label: 'Mini statement',
-    icon: 'format-list-bulleted',
+    short: 'Mini statement',
+    icon: 'text-box-outline',
     amount: false,
     mobile: true,
     guarded: false,
     call: (payload) => api.aepsMiniStatement(payload),
   },
   {
-    key: 'withdrawal',
-    label: 'Cash withdrawal',
-    icon: 'cash-minus',
-    amount: true,
-    mobile: true,
-    guarded: true,
-    call: (payload) => api.aepsCashWithdrawal(payload),
-  },
-  {
-    key: 'deposit',
-    label: 'Cash deposit',
-    icon: 'cash-plus',
-    amount: true,
-    mobile: true,
-    guarded: false,
-    call: (payload) => api.aepsCashDeposit(payload),
-  },
-  {
     key: 'aadhaarpay',
     label: 'Aadhaar Pay',
-    icon: 'qrcode-scan',
+    short: 'Aadhaar pay',
+    icon: 'store-outline',
     amount: true,
     mobile: true,
     guarded: true,
     call: (payload) => api.aepsAadhaarPay(payload),
   },
+  {
+    key: 'deposit',
+    label: 'Cash deposit',
+    short: 'Deposit',
+    icon: 'wallet-plus-outline',
+    amount: true,
+    mobile: true,
+    guarded: false,
+    call: (payload) => api.aepsCashDeposit(payload),
+  },
 ];
 
-const QUICK_AMOUNTS = [100, 500, 1000, 2000, 5000, 10000];
+const QUICK_AMOUNTS = [500, 1000, 2000, 3000];
+
+/** "₹ 3,000" — whole rupees with Indian grouping, as on the chips and titles. */
+const rupees = (value: number) => `₹\u00A0${value.toLocaleString('en-IN')}`;
+
+/** Groups characters with a space every `size`: "98100 22334", "XXXX XXXX 4410". */
+const group = (value: string, size: number) =>
+  value.replace(new RegExp(`(.{${size}})(?=.)`, 'g'), '$1 ');
+
+/** Hidden Aadhaar shows only the last four, the way the bank prints it. */
+const aadhaarDisplay = (digits: string, show: boolean) =>
+  group(show ? digits : digits.replace(/\d(?=\d{4})/g, 'X'), 4);
+
+/** Maps an edit of the masked text back to digits: each X keeps the digit it hid. */
+const aadhaarFromDisplay = (text: string, digits: string) =>
+  text
+    .replace(/\s/g, '')
+    .split('')
+    .map((ch, i) => (/x/i.test(ch) ? digits[i] ?? '' : ch))
+    .join('')
+    .replace(/\D/g, '')
+    .slice(0, 12);
+
+/** "3000.5" → "3,000.5" for display; the state keeps the raw number. */
+const amountDisplay = (raw: string) => {
+  if (!raw) return '';
+  const [whole, decimals] = raw.split('.');
+  const grouped = whole ? Number(whole).toLocaleString('en-IN') : '0';
+  return `₹\u00A0${grouped}${decimals !== undefined ? `.${decimals}` : ''}`;
+};
 
 interface Bank {
   iin?: string | number;
@@ -175,16 +219,19 @@ export const AepsScreen: React.FC = () => {
   const { user } = useAuth();
   const { device, setDevice } = useBiometricDevice();
 
-  const [service, setService] = useState<ServiceKey>('balance');
+  const [service, setService] = useState<ServiceKey>('withdrawal');
   const [pipe, setPipe] = useState<string | null>(null);
 
-  const [customerName, setCustomerName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [aadhaarNumber, setAadhaarNumber] = useState('');
   const [showAadhaar, setShowAadhaar] = useState(false);
   const [bank, setBank] = useState<Bank | null>(null);
   const [showBanks, setShowBanks] = useState(false);
   const [bankQuery, setBankQuery] = useState('');
+  const [showDevices, setShowDevices] = useState(false);
+  // Set when Scan is pressed on an incomplete form: the blocker shows by the button.
+  const [attempted, setAttempted] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [amount, setAmount] = useState('');
   const [consent, setConsent] = useState(false);
   const [pidData, setPidData] = useState<string | null>(null);
@@ -207,7 +254,6 @@ export const AepsScreen: React.FC = () => {
     [merchantcode]
   );
   const banks = useAsync<Bank[]>(async () => (await api.getAepsBanks()).data ?? [], []);
-  const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
   const recent = useAsync<any[]>(
     async () => (await api.getRecentTransactions({ type: 'AEPS', limit: 6 })).data ?? [],
     []
@@ -246,7 +292,6 @@ export const AepsScreen: React.FC = () => {
   };
 
   const resetForm = () => {
-    setCustomerName('');
     setMobileNumber('');
     setAadhaarNumber('');
     setBank(null);
@@ -321,7 +366,10 @@ export const AepsScreen: React.FC = () => {
   const { problem: locationProblem } = useLocationReady();
 
   const captureBlocker =
-    guardBlocker || missingField || (locationProblem ? 'Turn on location to continue' : null);
+    guardBlocker ||
+    missingField ||
+    (locationProblem ? 'Turn on location to continue' : null) ||
+    (isCaptureSupported ? null : 'Fingerprint capture needs the Android app or the web portal with a scanner.');
 
   // AEPS withdrawals can settle after the response comes back, so a PENDING
   // row is re-queried against PaySprint rather than left stale.
@@ -359,7 +407,9 @@ export const AepsScreen: React.FC = () => {
       aadhaarNumber,
       bankIIN: bankIin(bank!),
       bankName: bankName(bank!),
-      customerName,
+      // The form no longer asks for a name (mockup 06); the field stays in
+      // the payload so the request shape is unchanged.
+      customerName: '',
       pidData,
       pipe,
       ...(await coordsPayload()),
@@ -373,13 +423,22 @@ export const AepsScreen: React.FC = () => {
 
     const base = {
       service: spec.label,
-      customerName,
       customerMobile: spec.mobile ? mobileNumber : undefined,
       aadhaarNumber,
       bankName: bankName(bank!),
       agentName: user?.name,
       agentMobile: user?.contactNumber,
-      dateTime: new Date().toLocaleString('en-IN'),
+      // "13 Oct 2026, 10:15 AM", as on the receipt mockup.
+      dateTime: new Date()
+        .toLocaleString('en-IN', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        })
+        .replace(/\b(am|pm)\b/i, (m) => m.toUpperCase()),
       amount: spec.amount ? amountValue : undefined,
     };
 
@@ -399,7 +458,6 @@ export const AepsScreen: React.FC = () => {
       // a duplicate inline banner would report the same failure twice.
       return null;
     } finally {
-      balances.refresh();
       recent.refresh();
       // A used PID block is never valid twice, whatever the outcome.
       setPidData(null);
@@ -432,94 +490,82 @@ export const AepsScreen: React.FC = () => {
     return response;
   });
 
+  // The receipt replaces the capture step whatever the outcome.
+  useEffect(() => {
+    if (receipt) setCapturing(false);
+  }, [receipt]);
+
+  const startScan = () => {
+    if (captureBlocker) {
+      setAttempted(true);
+      return;
+    }
+    setAttempted(false);
+    submit.setError(null);
+    setCapturing(true);
+  };
+
+  const gateNote = !kycDone
+    ? { text: 'Merchant eKYC is pending. Withdrawals and Aadhaar pay unlock once it is done.', action: 'Complete eKYC', onPress: () => { setKycPipe(undefined); setShowKyc(true); } }
+    : !activePipes.length
+      ? { text: 'No AEPS pipe is active for your merchant code yet.' }
+      : !dailyAuthDone
+        ? { text: 'Daily 2FA is pending. Authenticate once to unlock transactions for today.', action: 'Authenticate', onPress: () => setShowDailyAuth(true) }
+        : null;
+
   return (
     <Screen
       loading={status.loading}
+      skeleton={<View style={{ gap: 16 }}><SkeletonGrid count={4} /><SkeletonField /><SkeletonField /><SkeletonField /><SkeletonField /></View>}
       refreshing={status.refreshing || banks.refreshing}
       onRefresh={() => {
         status.refresh();
         banks.refresh();
-        balances.refresh();
         recent.refresh();
       }}
       error={status.error}
       onRetry={status.reload}
+      contentStyle={styles.content}
+      // The scan action is pinned below the scroll, as in the mockup: it
+      // stays in reach while the retailer works down the form.
+      overlay={
+        <View style={styles.footer}>
+          {attempted && !!captureBlocker && <Banner tone="warning" message={captureBlocker} />}
+          <ActionButton icon="fingerprint" label="Scan fingerprint" onPress={startScan} />
+        </View>
+      }
     >
       {/* Ahead of the form: a geo-fence refusal arrives as an opaque provider
           error, so the cause is surfaced while it can still be fixed. */}
       <LocationGate />
 
-      <Card>
-        <CardContent>
-          <Row label="AEPS wallet" value={money(balances.data?.aepsBalance)} mono />
-          <Row label="Merchant code" value={merchantcode} mono />
-          <Row label="Merchant eKYC" value={<StatusPill status={kycDone ? 'COMPLETED' : 'PENDING'} />} />
-          <Row
-            label="Daily 2FA"
-            value={<StatusPill status={dailyAuthDone ? 'SUCCESS' : 'PENDING'} />}
-            last
-          />
-        </CardContent>
-      </Card>
-
-      {(!kycDone || !dailyAuthDone) && (
-        <View style={styles.gateRow}>
-          {!kycDone && (
-            <Button
-              icon="shield-account-outline"
-              variant="outline"
-              onPress={() => {
-                setKycPipe(undefined);
-                setShowKyc(true);
-              }}
-              style={styles.flex}
-            >
-              Complete eKYC
-            </Button>
-          )}
-          {kycDone && !dailyAuthDone && (
-            <Button icon="shield-key-outline" onPress={() => setShowDailyAuth(true)} style={styles.flex}>
-              Daily 2FA login
-            </Button>
-          )}
+      <View>
+        {/* BHIM's grey line-icon circles; the selected one gains an orange ring. */}
+        <View style={styles.acts} accessibilityRole="radiogroup">
+          {SERVICES.map((s) => {
+            const active = s.key === service;
+            return (
+              <Pressable
+                key={s.key}
+                onPress={() => changeService(s.key)}
+                style={({ pressed }) => [styles.act, pressed && { opacity: 0.7 }]}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={s.label}
+              >
+                <View style={[styles.actRing, active && styles.actRingOn]}>
+                  <IconTile icon={s.icon} size={50} iconSize={22} />
+                </View>
+                <Text style={[styles.actLabel, active && styles.actLabelOn]} numberOfLines={2}>
+                  {s.short}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
-      )}
 
-      <Grid columns={2}>
-        {SERVICES.map((s) => {
-          const active = s.key === service;
-          return (
-            <Pressable
-              key={s.key}
-              onPress={() => changeService(s.key)}
-              style={({ pressed }) => [
-                styles.serviceCard,
-                active && styles.serviceCardActive,
-                pressed && { opacity: 0.8 },
-              ]}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: active }}
-              accessibilityLabel={s.label}
-            >
-              <MaterialCommunityIcons
-                name={s.icon as any}
-                size={20}
-                color={active ? colors.accent : colors.mutedForeground}
-              />
-              <Text style={[styles.serviceLabel, active && styles.serviceLabelActive]} numberOfLines={2}>
-                {s.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </Grid>
-
-      {activePipes.length > 1 && (
-        <Card>
-          <CardHeader>
-            <CardTitle icon="pipe">Bank pipe</CardTitle>
-          </CardHeader>
-          <CardContent>
+        {activePipes.length > 1 && (
+          <View style={styles.gap}>
             <Segmented
               options={activePipes.map((p) => ({ key: p, label: p.replace(/^bank/i, 'Bank ') }))}
               value={pipe ?? activePipes[0]}
@@ -529,183 +575,176 @@ export const AepsScreen: React.FC = () => {
                 invalidateOtp();
               }}
             />
-          </CardContent>
-        </Card>
-      )}
+          </View>
+        )}
 
-      {!!guardBlocker && <Banner tone="warning" message={guardBlocker} />}
+        {!!gateNote && (
+          <Note icon="shield-alert-outline" warn action={gateNote.action} onPress={gateNote.onPress} style={styles.gap}>
+            {gateNote.text}
+          </Note>
+        )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle icon="account-outline">Customer details</CardTitle>
-          {/* With one active pipe the selector above is hidden, so nothing said
-              which bank rail the transaction ran on — the first thing you need
-              when one fails. */}
-          {activePipes.length === 1 && (
-            <View style={styles.pipeChip}>
-              <Text style={styles.pipeChipText}>{activePipes[0].toUpperCase()}</Text>
-            </View>
-          )}
-        </CardHeader>
-        <CardContent style={styles.form}>
+        {spec.mobile && (
           <Input
-            label="Customer name"
-            value={customerName}
-            onChangeText={setCustomerName}
-            leftIcon="account-outline"
-            placeholder="Printed on the receipt"
-            autoCapitalize="words"
-          />
-
-          <Input
-            label="Aadhaar number"
-            required
-            value={aadhaarNumber}
-            onChangeText={(v) => {
-              setAadhaarNumber(v.replace(/\D/g, '').slice(0, 12));
-              setPidData(null);
-            }}
+            label="Customer mobile"
+            value={group(mobileNumber, 5)}
+            onChangeText={(v) => setMobileNumber(v.replace(/\D/g, '').slice(0, 10))}
             keyboardType="number-pad"
-            secureTextEntry={!showAadhaar}
-            leftIcon="card-account-details-outline"
-            rightIcon={showAadhaar ? 'eye-off-outline' : 'eye-outline'}
-            onRightIconPress={() => setShowAadhaar(!showAadhaar)}
-            rightIconLabel={showAadhaar ? 'Hide Aadhaar number' : 'Show Aadhaar number'}
-            placeholder="12 digits"
-            helperText="Never stored on this device"
+            autoComplete="tel"
+            placeholder="10-digit mobile number"
+            containerStyle={styles.field}
           />
+        )}
 
-          <SelectField
-            label="Customer bank"
-            required
-            value={bank ? `${bankName(bank)} · IIN ${bankIin(bank)}` : ''}
-            placeholder={banks.loading ? 'Loading banks…' : 'Search and select bank'}
-            open={showBanks}
-            onPress={() => setShowBanks(!showBanks)}
-          />
-          {showBanks && (
-            <View style={styles.picker}>
-              <Input
+        <Input
+          label="Aadhaar number"
+          value={aadhaarDisplay(aadhaarNumber, showAadhaar)}
+          onChangeText={(v) => {
+            setAadhaarNumber(aadhaarFromDisplay(v, aadhaarNumber));
+            setPidData(null);
+          }}
+          keyboardType="number-pad"
+          placeholder="12-digit Aadhaar number"
+          rightIcon={showAadhaar ? 'eye-outline' : 'eye-off-outline'}
+          onRightIconPress={() => setShowAadhaar(!showAadhaar)}
+          rightIconLabel={showAadhaar ? 'Hide Aadhaar number' : 'Show Aadhaar number'}
+          containerStyle={styles.field}
+        />
+
+        <Text style={styles.fieldLabel}>Bank</Text>
+        <Pressable
+          onPress={() => setShowBanks(!showBanks)}
+          style={({ pressed }) => [styles.select, showBanks && styles.selectOpen, pressed && { opacity: 0.8 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Bank"
+          accessibilityValue={{ text: bank ? bankName(bank) : 'Not selected' }}
+          accessibilityState={{ expanded: showBanks }}
+        >
+          {bank ? (
+            <View style={styles.logo}>
+              <Text style={styles.logoText}>{bankInitials(bankName(bank))}</Text>
+            </View>
+          ) : (
+            <Ionicons name="business-outline" size={20} color={colors.mutedForeground} />
+          )}
+          <Text style={[styles.selectValue, !bank && styles.selectPlaceholder]} numberOfLines={1}>
+            {bank ? bankName(bank) : banks.loading ? 'Loading banks…' : 'Select bank'}
+          </Text>
+          <Ionicons name={showBanks ? 'chevron-up' : 'chevron-down'} size={20} color={colors.mutedForeground} />
+        </Pressable>
+        {showBanks && (
+          <View style={styles.picker}>
+            <View style={styles.search}>
+              <Ionicons name="search-outline" size={18} color={colors.mutedForeground} />
+              <TextInput
                 placeholder="Search bank name"
+                placeholderTextColor={colors.mutedForeground}
                 value={bankQuery}
                 onChangeText={setBankQuery}
-                leftIcon="magnify"
                 autoCapitalize="none"
+                style={styles.searchInput}
+                accessibilityLabel="Search bank name"
               />
-              <ScrollView style={styles.pickerList} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-                {filteredBanks.slice(0, 80).map((b) => (
-                  <Pressable
-                    key={bankIin(b) || bankName(b).toLowerCase()}
-                    onPress={() => {
-                      setBank(b);
-                      setShowBanks(false);
-                      setBankQuery('');
-                      setPidData(null);
-                    }}
-                    style={({ pressed }) => [styles.pickerItem, pressed && styles.pickerItemPressed]}
-                    accessibilityRole="button"
-                  >
+            </View>
+            <ScrollView style={styles.pickerList} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+              {filteredBanks.slice(0, 80).map((b) => {
+                const picked = !!bank && bankIin(bank) === bankIin(b) && bankName(bank) === bankName(b);
+                return (
+                <Pressable
+                  key={bankIin(b) || bankName(b).toLowerCase()}
+                  onPress={() => {
+                    setBank(b);
+                    setShowBanks(false);
+                    setBankQuery('');
+                    setPidData(null);
+                  }}
+                  style={({ pressed }) => [styles.pickerItem, pressed && styles.pickerItemPressed]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: picked }}
+                >
+                  <View style={styles.logo}>
+                    <Text style={styles.logoText}>{bankInitials(bankName(b))}</Text>
+                  </View>
+                  <View style={styles.pickerInfo}>
                     <Text style={styles.pickerText} numberOfLines={1}>
                       {bankName(b)}
                     </Text>
-                    <Text style={styles.pickerIin}>{bankIin(b)}</Text>
-                  </Pressable>
-                ))}
-                {!filteredBanks.length && <Text style={styles.pickerEmpty}>No matching bank</Text>}
-              </ScrollView>
-            </View>
-          )}
+                    <Text style={styles.pickerIin}>IIN {bankIin(b)}</Text>
+                  </View>
+                  <Ionicons
+                    name={picked ? 'radio-button-on' : 'radio-button-off'}
+                    size={20}
+                    color={picked ? colors.highlight : colors.mutedForeground}
+                  />
+                </Pressable>
+                );
+              })}
+              {!filteredBanks.length && <Text style={styles.pickerEmpty}>No matching bank</Text>}
+            </ScrollView>
+          </View>
+        )}
 
-          {spec.mobile && (
+        {spec.amount && (
+          <>
             <Input
-              label="Customer mobile"
-              required
-              value={mobileNumber}
-              onChangeText={(v) => setMobileNumber(v.replace(/\D/g, '').slice(0, 10))}
-              keyboardType="number-pad"
-              leftIcon="phone-outline"
-              autoComplete="tel"
-              placeholder="10-digit mobile number"
+              label="Amount"
+              value={amountDisplay(amount)}
+              onChangeText={(v) => changeAmount(v.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
+              keyboardType="decimal-pad"
+              placeholder="₹ 0"
+              // BHIM prints the amount in words under the figure.
+              helperText={amountInWords(amount) || undefined}
+              containerStyle={styles.field}
+              error={
+                service === 'withdrawal' && amountValue > AEPS_MAX_WITHDRAWAL
+                  ? `Maximum ${money(AEPS_MAX_WITHDRAWAL)} per withdrawal`
+                  : undefined
+              }
             />
-          )}
-
-          {spec.amount && (
-            <>
-              <Input
-                label="Amount"
-                required
-                value={amount}
-                onChangeText={(v) => changeAmount(v.replace(/[^0-9.]/g, ''))}
-                keyboardType="decimal-pad"
-                placeholder="0.00"
-                leftIcon="currency-inr"
-                error={
-                  service === 'withdrawal' && amountValue > AEPS_MAX_WITHDRAWAL
-                    ? `Maximum ${money(AEPS_MAX_WITHDRAWAL)} per withdrawal`
-                    : undefined
-                }
-                helperText={
-                  service === 'withdrawal'
-                    ? `Above ${money(AEPS_OTP_THRESHOLD)} the customer also receives an OTP`
-                    : undefined
-                }
-              />
-              {!!amountInWords(amount) && (
-                <Text style={styles.words}>{amountInWords(amount)}</Text>
-              )}
-              <View style={styles.quickRow}>
-                {QUICK_AMOUNTS.map((value) => (
+            <View style={styles.chips}>
+              {QUICK_AMOUNTS.map((value) => {
+                const picked = amountValue === value;
+                return (
                   <Pressable
                     key={value}
                     onPress={() => changeAmount(String(value))}
-                    style={({ pressed }) => [styles.quickChip, pressed && { opacity: 0.7 }]}
+                    style={({ pressed }) => [styles.chip, picked && styles.chipOn, pressed && { opacity: 0.7 }]}
+                    // 32 tall + slop clears the 44 target without chunky pills.
+                    hitSlop={8}
                     accessibilityRole="button"
+                    accessibilityState={{ selected: picked }}
                     accessibilityLabel={`Set amount to ${value} rupees`}
                   >
-                    <Text style={styles.quickText}>₹{value.toLocaleString('en-IN')}</Text>
+                    <Text style={[styles.chipText, picked && styles.chipTextOn]}>{rupees(value)}</Text>
                   </Pressable>
-                ))}
-                {!!amount && (
-                  <Pressable
-                    onPress={() => changeAmount('')}
-                    style={({ pressed }) => [styles.quickChip, styles.quickClear, pressed && { opacity: 0.7 }]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Clear amount"
-                  >
-                    <Text style={[styles.quickText, styles.quickClearText]}>Clear</Text>
-                  </Pressable>
-                )}
-              </View>
-            </>
-          )}
-        </CardContent>
-      </Card>
+                );
+              })}
+            </View>
+          </>
+        )}
 
-      {needsOtp && (
-        <Card>
-          <CardHeader>
-            <CardTitle icon="message-lock-outline">Customer OTP</CardTitle>
-          </CardHeader>
-          <CardContent style={styles.form}>
-            <Banner
-              tone="info"
-              message={`The bank sends a 6-digit code to the customer's registered mobile for withdrawals above ${money(AEPS_OTP_THRESHOLD)}. It is signed into the fingerprint capture, so send it before scanning.`}
-            />
-            {!!sendOtp.error && <Banner tone="error" message={sendOtp.error} />}
-            <Button
-              variant="outline"
+        {needsOtp && (
+          <View style={styles.gap}>
+            <Note icon="message-lock-outline" style={styles.gap}>
+              {`Withdrawals above ${money(AEPS_OTP_THRESHOLD)} need the customer's OTP. It is signed into the fingerprint capture, so send it before scanning.`}
+            </Note>
+            {!!sendOtp.error && (
+              <View style={styles.gap}>
+                <Banner tone="error" message={sendOtp.error} />
+              </View>
+            )}
+            <ActionButton
+              ghost
               icon="send-outline"
+              label={otpSent ? 'Resend OTP' : 'Send OTP'}
               onPress={sendOtp.run}
               loading={sendOtp.pending}
               disabled={aadhaarNumber.length !== 12 || !bank || mobileNumber.length !== 10 || amountValue <= 0}
-              fullWidth
-            >
-              {otpSent ? 'Resend OTP' : 'Send OTP'}
-            </Button>
+              style={otpSent ? styles.gap : undefined}
+            />
             {otpSent && (
               <Input
                 label="Transaction OTP"
-                required
                 value={otp}
                 onChangeText={(v) => {
                   setOtp(v.replace(/\D/g, '').slice(0, 6));
@@ -713,108 +752,84 @@ export const AepsScreen: React.FC = () => {
                 }}
                 keyboardType="number-pad"
                 maxLength={6}
-                leftIcon="lock-outline"
                 autoComplete="one-time-code"
-                placeholder="6 digits"
-                helperText="Ask the customer to read out the code they received"
+                placeholder="6 digits the customer received"
+                containerStyle={styles.field}
               />
             )}
-          </CardContent>
-        </Card>
-      )}
+          </View>
+        )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle icon="fingerprint">Customer consent & fingerprint</CardTitle>
-        </CardHeader>
-        <CardContent style={styles.form}>
-          <Pressable
-            onPress={() => {
-              setConsent(!consent);
-              setPidData(null);
-            }}
-            style={({ pressed }) => [styles.consent, pressed && { opacity: 0.8 }]}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: consent }}
-            accessibilityLabel="Customer consent for Aadhaar authentication"
-          >
-            <MaterialCommunityIcons
-              name={consent ? 'checkbox-marked' : 'checkbox-blank-outline'}
-              size={22}
-              color={consent ? colors.accent : colors.mutedForeground}
-            />
-            <Text style={styles.consentText}>
-              The customer has agreed to use their Aadhaar and fingerprint for this transaction.
-            </Text>
-          </Pressable>
-
-          <BiometricCapture
-            device={device}
-            onDeviceChange={setDevice}
-            pidData={pidData}
-            onCaptured={setPidData}
-            options={{ otp: needsOtp && otp.length === 6 ? otp : undefined }}
-            blockedReason={captureBlocker}
-            confirmMessage="Ask the CUSTOMER to place their finger on the scanner. This starts a live bank transaction."
-            label="Capture customer fingerprint"
+        <Pressable
+          onPress={() => {
+            setConsent(!consent);
+            setPidData(null);
+          }}
+          style={({ pressed }) => [styles.consent, pressed && { opacity: 0.8 }]}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: consent }}
+          accessibilityLabel="Customer consent for Aadhaar authentication"
+        >
+          <Ionicons
+            name={consent ? 'checkbox' : 'square-outline'}
+            size={22}
+            color={consent ? colors.highlight : colors.mutedForeground}
           />
+          <Text style={styles.consentText}>
+            Customer agrees to use their Aadhaar and fingerprint for this transaction.
+          </Text>
+        </Pressable>
 
-          {/* The receipt sheet reports whatever the provider answered, but a
-              failure BEFORE the call never reaches it — those land here. This
-              was rendered nowhere, so a blocked submit looked like a dead
-              button: the fingerprint captured, nothing happened, no reason. */}
-          {!!submit.error && <Banner tone="error" message={submit.error} />}
+        <Note
+          icon="usb"
+          action={showDevices ? 'Done' : 'Change'}
+          onPress={() => setShowDevices(!showDevices)}
+        >
+          {`Device: ${DEVICE_LABELS[device]}`}
+        </Note>
+        {showDevices && (
+          <View style={styles.devices}>
+            <DevicePicker
+              value={device}
+              onChange={(next) => {
+                setDevice(next);
+                setPidData(null);
+                setShowDevices(false);
+              }}
+            />
+          </View>
+        )}
+      </View>
 
-          <Button
-            icon="check-decagram"
-            haptic="medium"
-            size="lg"
-            fullWidth
-            loading={submit.pending}
-            disabled={!pidData || !!captureBlocker}
-            onPress={submit.run}
-          >
-            {/* A dead grey button with the action's own name on it tells the
-                retailer nothing. When the form is blocked, the label is the
-                reason — the blocker text itself when there is one, otherwise
-                the missing fingerprint. */}
-            {captureBlocker
-              ? captureBlocker
-              : !pidData
-                ? 'Capture fingerprint to continue'
-                : spec.amount
-                  ? `${spec.label} · ${money(amountValue)}`
-                  : spec.label}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle icon="history">Recent AEPS activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!!checkTxnStatus.error && <Banner tone="error" message={checkTxnStatus.error} />}
-          {recent.loading ? null : recent.data?.length ? (
-            recent.data.map((txn: any) => (
-              <View key={txn._id || txn.transactionId} style={styles.item}>
+      <View>
+        <SectionTitle>Recent AEPS activity</SectionTitle>
+        {!!checkTxnStatus.error && (
+          <View style={styles.gap}>
+            <Banner tone="error" message={checkTxnStatus.error} />
+          </View>
+        )}
+        <View style={styles.card}>
+          {recent.loading ? <SkeletonRows count={3} /> : recent.data?.length ? (
+            recent.data.map((txn: any, index: number) => (
+              <View
+                key={txn._id || txn.transactionId}
+                style={[styles.item, index === recent.data!.length - 1 && styles.itemLast]}
+              >
+                <IconTile icon="fingerprint" size={44} iconSize={20} />
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemTitle} numberOfLines={1}>
-                    {String(txn.type || 'AEPS').replace(/_/g, ' ')}
+                    {String(txn.type || 'AEPS').replace(/_/g, ' ').toLowerCase()}
                   </Text>
                   <Text style={styles.itemDate}>{dateTime(txn.createdAt)}</Text>
                 </View>
                 <View style={styles.itemRight}>
                   <Text style={styles.itemAmount}>{money(txn.amount)}</Text>
-                  <StatusPill status={txn.status} />
+                  <StatusText status={txn.status} />
                   {String(txn.status).toUpperCase() === 'PENDING' && (
                     <Pressable
                       onPress={async () => {
                         const res = await checkTxnStatus.run(txn.transactionId);
-                        if (res) {
-                          recent.refresh();
-                          balances.refresh();
-                        }
+                        if (res) recent.refresh();
                       }}
                       hitSlop={10}
                       accessibilityRole="button"
@@ -829,9 +844,27 @@ export const AepsScreen: React.FC = () => {
           ) : (
             <EmptyState icon="fingerprint" title="No AEPS transactions yet" />
           )}
-        </CardContent>
-      </Card>
+        </View>
+      </View>
 
+      <CaptureStep
+        visible={capturing}
+        title={spec.amount ? `${spec.short} ${rupees(amountValue)}` : spec.label}
+        bankName={bank ? bankName(bank) : ''}
+        aadhaarNumber={aadhaarNumber}
+        device={device}
+        options={{ otp: needsOtp && otp.length === 6 ? otp : undefined }}
+        pidData={pidData}
+        onCaptured={setPidData}
+        onClose={() => {
+          setCapturing(false);
+          setPidData(null);
+        }}
+        submitLabel={spec.amount ? `${spec.short} ${rupees(amountValue)}` : 'Submit'}
+        submitting={submit.pending}
+        submitError={submit.error}
+        onSubmit={submit.run}
+      />
       <MerchantKycSheet
         visible={showKyc}
         initialPipe={kycPipe}
@@ -852,84 +885,157 @@ export const AepsScreen: React.FC = () => {
   );
 };
 
+/** A quiet info card, optionally with one action on the right. */
+const Note: React.FC<{
+  icon: string;
+  children: string;
+  action?: string;
+  onPress?: () => void;
+  /** Tints the icon: something is blocking the retailer. */
+  warn?: boolean;
+  style?: any;
+}> = ({ icon, children, action, onPress, warn, style }) => (
+  <View style={[styles.note, style]}>
+    <MaterialCommunityIcons name={icon as any} size={18} color={warn ? colors.warning : colors.mutedForeground} />
+    <Text style={styles.noteText}>{children}</Text>
+    {!!action && (
+      <Pressable onPress={onPress} hitSlop={14} accessibilityRole="button" accessibilityLabel={action}>
+        <Text style={styles.noteAction}>{action}</Text>
+      </Pressable>
+    )}
+  </View>
+);
+
 const styles = themed((c) => ({
-  pipeChip: {
-    paddingHorizontal: space.sm,
-    paddingVertical: 3,
-    borderRadius: radius.pill,
-    backgroundColor: c.secondary,
-  },
-  pipeChipText: {
-    fontSize: t.micro,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    color: c.mutedForeground,
-  },
-  gateRow: { flexDirection: 'row', gap: space.sm },
-  flex: { flex: 1 },
-  serviceCard: {
-    minHeight: 76,
-    justifyContent: 'center',
-    gap: 6,
-    padding: space.md,
-    borderRadius: radius.md,
-    backgroundColor: c.card,
-    borderWidth: 1,
-    borderColor: c.border,
-  },
-  serviceCardActive: { borderColor: c.accent, backgroundColor: c.accentSubtle },
-  serviceLabel: { fontSize: t.small, fontWeight: '600', color: c.foreground },
-  serviceLabelActive: { fontWeight: '700' },
-  form: { gap: space.lg },
-  picker: { gap: space.sm, padding: space.sm, borderRadius: radius.md, backgroundColor: c.secondary },
-  pickerList: { maxHeight: 260 },
-  pickerItem: {
+  content: { paddingTop: space.md },
+  gap: { marginBottom: space.md },
+  field: { marginBottom: space.lg },
+  acts: { flexDirection: 'row', gap: 4, marginBottom: space.xl },
+  act: { flex: 1, alignItems: 'center', gap: space.sm },
+  // Same footprint on and off, so selecting never nudges the row.
+  actRing: { padding: 3, borderRadius: 30, borderWidth: 1.5, borderColor: 'transparent' },
+  actRingOn: { borderColor: c.highlight },
+  actLabel: { fontSize: t.caption, lineHeight: 16, color: c.mutedForeground, textAlign: 'center' },
+  actLabelOn: { fontWeight: '500', color: c.foreground },
+  fieldLabel: { fontSize: t.small, fontWeight: '500', color: c.foreground, marginBottom: 7 },
+  select: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.sm,
-    minHeight: 44,
-    paddingHorizontal: space.md,
-    borderRadius: radius.sm,
+    gap: space.md,
+    minHeight: 52,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: c.input,
+    backgroundColor: c.surface,
+    marginBottom: space.lg,
   },
-  pickerItemPressed: { backgroundColor: c.surfaceAlt },
-  pickerText: { flex: 1, fontSize: t.small, color: c.foreground },
-  pickerIin: { fontSize: t.micro, color: c.mutedForeground, fontVariant: ['tabular-nums'] },
-  pickerEmpty: { fontSize: t.caption, color: c.mutedForeground, padding: space.md },
-  words: { fontSize: t.caption, fontWeight: '600', color: c.success, marginTop: -space.sm },
-  quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  quickChip: {
-    minHeight: 38,
+  selectOpen: { borderColor: c.focus, marginBottom: space.sm },
+  selectValue: { flex: 1, fontSize: t.body, color: c.foreground },
+  selectPlaceholder: { color: c.mutedForeground },
+  logo: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: space.md,
+    backgroundColor: c.tileGradient[0],
+  },
+  logoText: { fontSize: t.caption, fontWeight: '500', color: c.tileForeground },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: -space.xs, marginBottom: space.lg },
+  chip: {
+    minHeight: 36,
+    justifyContent: 'center',
+    paddingHorizontal: space.lg,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: c.border,
-    backgroundColor: c.card,
+    borderColor: c.borderStrong,
   },
-  quickClear: { borderColor: c.destructive },
-  quickText: { fontSize: t.caption, fontWeight: '600', color: c.foreground },
-  quickClearText: { color: c.destructive },
-  consent: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm, minHeight: 44 },
-  consentText: { flex: 1, fontSize: t.small, color: c.foreground, lineHeight: 19 },
-  item: {
+  chipOn: { borderColor: c.highlight },
+  chipText: { fontSize: t.small, color: c.foreground, fontVariant: ['tabular-nums'] },
+  chipTextOn: { color: c.accent, fontWeight: '500' },
+  note: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
     paddingVertical: space.md,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.card,
+  },
+  noteText: { flex: 1, fontSize: t.small, lineHeight: 19, color: c.mutedForeground },
+  noteAction: { fontSize: t.small, fontWeight: '500', color: c.accent },
+  consent: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 48, marginBottom: space.sm },
+  consentText: { flex: 1, fontSize: t.small, lineHeight: 19, color: c.mutedForeground },
+  devices: { marginTop: space.md },
+  // Pinned scan action on the ground colour, BHIM's near-black footer.
+  footer: {
+    gap: space.sm,
+    paddingTop: space.md,
+    paddingHorizontal: space.lg,
+    paddingBottom: space.lg,
+    backgroundColor: c.background,
+    borderTopWidth: 1,
+    borderTopColor: c.border,
+  },
+  picker: {
+    gap: space.sm,
+    padding: space.sm,
+    marginBottom: space.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.card,
+  },
+  search: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    paddingHorizontal: space.lg,
+    minHeight: 44,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  searchInput: { flex: 1, fontSize: t.small, color: c.foreground, padding: 0, outlineStyle: 'none' } as any,
+  pickerList: { maxHeight: 300 },
+  pickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    minHeight: 56,
+    paddingHorizontal: space.sm,
+    borderRadius: radius.md,
+  },
+  pickerItemPressed: { backgroundColor: c.surfaceAlt },
+  pickerInfo: { flex: 1, minWidth: 0, gap: 2 },
+  pickerText: { fontSize: t.body, color: c.foreground },
+  pickerIin: { fontSize: t.caption, color: c.mutedForeground, fontVariant: ['tabular-nums'] },
+  pickerEmpty: { fontSize: t.small, color: c.mutedForeground, padding: space.md },
+  card: {
+    paddingHorizontal: space.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.card,
+  },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: c.border,
   },
-  itemInfo: { flex: 1, minWidth: 0, gap: 2 },
-  itemTitle: { fontSize: t.small, fontWeight: '600', color: c.foreground },
-  itemDate: { fontSize: t.micro, color: c.mutedForeground },
-  itemRight: { alignItems: 'flex-end', gap: 4 },
-  itemAmount: {
-    fontSize: t.small,
-    fontWeight: '700',
-    color: c.foreground,
-    fontVariant: ['tabular-nums'],
-  },
-  recheck: { fontSize: t.micro, fontWeight: '700', color: c.accent, minHeight: 22 },
+  itemLast: { borderBottomWidth: 0 },
+  itemInfo: { flex: 1, minWidth: 0, gap: 3 },
+  itemTitle: { fontSize: t.body, fontWeight: '500', color: c.foreground, textTransform: 'capitalize' },
+  itemDate: { fontSize: t.caption, color: c.mutedForeground },
+  itemRight: { alignItems: 'flex-end', gap: 3 },
+  itemAmount: { fontSize: t.body, fontWeight: '500', color: c.foreground, fontVariant: ['tabular-nums'] },
+  recheck: { fontSize: t.caption, fontWeight: '500', color: c.accent, minHeight: 22 },
 }));
 
 export default AepsScreen;

@@ -33,15 +33,29 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/** Milliseconds until the stored access token expires; 0 when absent or unreadable. */
+const accessTokenMsLeft = () => {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) return 0;
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        return typeof payload.exp === 'number' ? payload.exp * 1000 - Date.now() : 0;
+    } catch {
+        return 0;
+    }
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(() => {
         const storedUser = localStorage.getItem('user');
         return storedUser ? JSON.parse(storedUser) : null;
     });
     const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
-    const [isInitializing, setIsInitializing] = useState(() => !localStorage.getItem('token'));
+    const [isInitializing, setIsInitializing] = useState(false);
 
     const refreshAuthToken = async () => {
+        // No stored session means nothing to refresh; skip the guaranteed 401 for visitors.
+        if (!localStorage.getItem('token')) return;
         try {
             const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/refresh-token`, {
                 method: 'POST',
@@ -70,14 +84,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     useEffect(() => {
-        refreshAuthToken();
-
-        // Silently refresh token every 10 minutes (600000 ms)
-        const intervalId = setInterval(() => {
+        // Refresh only when the access token is about to expire (it carries its
+        // own `exp`), not on every page load. The 1-minute check is local; a
+        // hidden tab makes no calls and catches up when it becomes visible.
+        const maybeRefresh = () => {
+            if (document.visibilityState !== 'visible') return;
+            if (accessTokenMsLeft() > 5 * 60000) return;
             refreshAuthToken();
-        }, 600000);
+        };
+        maybeRefresh();
+        const intervalId = setInterval(maybeRefresh, 60000);
+        document.addEventListener('visibilitychange', maybeRefresh);
 
-        return () => clearInterval(intervalId);
+        return () => {
+            clearInterval(intervalId);
+            document.removeEventListener('visibilitychange', maybeRefresh);
+        };
     }, []);
 
     const login = (newToken: string, newUser: User) => {

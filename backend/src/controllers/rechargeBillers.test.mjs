@@ -9,7 +9,7 @@
 import assert from 'node:assert';
 import http from 'node:http';
 import { OPERATOR_CATEGORY } from '../utils/icchhamati.util.js';
-import { operatorSource, getBillCategories } from './recharge.controller.js';
+import { operatorSource, getBillCategories, clearBillerCache } from './recharge.controller.js';
 
 // --- the operator registry answers to these three names and no others ------
 
@@ -127,6 +127,7 @@ const OUTAGE_CATEGORIES = [
   { name: 'Fastag', category: 'Fastag' },
 ];
 
+clearBillerCache();
 await withProvider(
   provider(OUTAGE_CATEGORIES, () => ({ status: 0, message: 'Service temporarily unavailable' })),
   async () => {

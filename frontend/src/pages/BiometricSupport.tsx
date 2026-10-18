@@ -162,13 +162,13 @@ const BiometricSupport = () => {
                             </div>
                             
                             <div className="flex flex-col gap-3 mt-2 pt-4 border-t border-border">
-                                <a href="tel:+919876543210" className="flex items-center gap-3 text-sm font-medium text-foreground hover:text-primary transition-colors">
+                                <a href="tel:+918240039776" className="flex items-center gap-3 text-sm font-medium text-foreground hover:text-primary transition-colors">
                                     <div className="p-2 bg-muted/50 rounded-lg"><Phone className="w-4 h-4 text-primary" /></div>
-                                    +91 98765 43210
+                                    +91 8240039776
                                 </a>
-                                <a href="mailto:support@shahparpay.com" className="flex items-center gap-3 text-sm font-medium text-foreground hover:text-primary transition-colors">
+                                <a href="mailto:shahparpay@gmail.com" className="flex items-center gap-3 text-sm font-medium text-foreground hover:text-primary transition-colors">
                                     <div className="p-2 bg-muted/50 rounded-lg"><Mail className="w-4 h-4 text-primary" /></div>
-                                    support@shahparpay.com
+                                    shahparpay@gmail.com
                                 </a>
                             </div>
                         </div>

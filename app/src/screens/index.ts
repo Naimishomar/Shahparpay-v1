@@ -16,7 +16,6 @@ export { RechargeScreen } from './retailer/RechargeScreen';
 export { BbpsScreen } from './retailer/BbpsScreen';
 export { BbpsServiceScreen } from './retailer/BbpsServiceScreen';
 export { CollectScreen } from './retailer/CollectScreen';
-export { DirectPayoutScreen } from './retailer/DirectPayoutScreen';
 export { FundRequestScreen } from './retailer/FundRequestScreen';
 export { AddMoneyScreen } from './retailer/AddMoneyScreen';
 export { BiometricSupportScreen } from './retailer/BiometricSupportScreen';

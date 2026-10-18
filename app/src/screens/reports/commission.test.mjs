@@ -38,7 +38,7 @@ for (const [name, src] of [['retailerNetCommission', walletUtil], ['getCommissio
 
 // --- the app reconciles them instead of showing gross alone ---------------
 const summary = reports.slice(
-  reports.indexOf('const ledgerSummary'),
+  reports.indexOf('const ledgerTiles'),
   reports.indexOf('const LEDGER_STATUSES')
 );
 assert.ok(/money\(gross - tds\)/.test(summary), 'the earned tile must be net of TDS');
