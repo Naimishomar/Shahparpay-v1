@@ -53,8 +53,7 @@ const AdminNotifications = () => {
 
     return (
         <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
+            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
                 <div className="relative flex items-center gap-4">
                     <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><Bell className="h-7 w-7" /></div>
                     <div>

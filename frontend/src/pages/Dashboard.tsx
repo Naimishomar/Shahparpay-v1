@@ -17,14 +17,11 @@ const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR',
 const ymd = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-// Full class strings: Tailwind only ships classes it can find literally.
+// BHIM's icon system: every service gets the same neutral circle; colour is
+// kept for meaning (status, money in), never for telling services apart.
+const NEUTRAL = { tile: 'icon-chip', bar: 'bg-primary', glow: '' };
 const ACCENTS = {
-    silver: { tile: 'bg-gradient-to-br from-zinc-100 to-zinc-300 text-zinc-700 ring-zinc-400/40 dark:from-zinc-600 dark:to-zinc-800 dark:text-zinc-100 dark:ring-zinc-400/30', bar: 'bg-gradient-to-r from-zinc-300 via-zinc-500 to-zinc-300 dark:from-zinc-500 dark:via-zinc-200 dark:to-zinc-500', glow: 'bg-zinc-400/25' },
-    sky: { tile: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 ring-sky-500/20', bar: 'bg-sky-500', glow: 'bg-sky-500/20' },
-    emerald: { tile: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-emerald-500/20', bar: 'bg-emerald-500', glow: 'bg-emerald-500/20' },
-    amber: { tile: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-amber-500/20', bar: 'bg-amber-500', glow: 'bg-amber-500/20' },
-    rose: { tile: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 ring-rose-500/20', bar: 'bg-rose-500', glow: 'bg-rose-500/20' },
-    cyan: { tile: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 ring-cyan-500/20', bar: 'bg-cyan-500', glow: 'bg-cyan-500/20' },
+    silver: NEUTRAL, sky: NEUTRAL, emerald: NEUTRAL, amber: NEUTRAL, rose: NEUTRAL, cyan: NEUTRAL,
 } as const;
 
 const QUICK_ACTIONS = [
@@ -104,13 +101,12 @@ const VolumeChart = ({ points, start, end }: { points: number[]; start: Date; en
                     <defs>
                         {/* Silver: bright centre, darker edges, like brushed metal. */}
                         <linearGradient id="dash-silver-stroke" x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="0%" className="[stop-color:#a1a1aa] dark:[stop-color:#71717a]" />
-                            <stop offset="50%" className="[stop-color:#52525b] dark:[stop-color:#f4f4f5]" />
-                            <stop offset="100%" className="[stop-color:#a1a1aa] dark:[stop-color:#71717a]" />
+                            <stop offset="0%" stopColor="#F47920" />
+                            <stop offset="100%" stopColor="#E55C11" />
                         </linearGradient>
                         <linearGradient id="dash-silver-fill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" className="[stop-color:#a1a1aa] dark:[stop-color:#d4d4d8]" stopOpacity="0.45" />
-                            <stop offset="100%" className="[stop-color:#e4e4e7] dark:[stop-color:#27272a]" stopOpacity="0" />
+                            <stop offset="0%" stopColor="#F47920" stopOpacity="0.22" />
+                            <stop offset="100%" stopColor="#F47920" stopOpacity="0" />
                         </linearGradient>
                     </defs>
                     <path d={`${line} L${W},${H} L0,${H} Z`} fill="url(#dash-silver-fill)" style={morph} />
@@ -120,7 +116,7 @@ const VolumeChart = ({ points, start, end }: { points: number[]; start: Date; en
                     <>
                         <div className="pointer-events-none absolute inset-y-0 w-px bg-zinc-400/50" style={{ left: pct(hover) }} />
                         <div
-                            className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white dark:border-zinc-900 bg-gradient-to-br from-zinc-300 to-zinc-600 shadow"
+                            className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card bg-primary shadow"
                             style={{ left: pct(hover), top: `${(py(points[hover]) / H) * 100}%` }}
                         />
                         <div
@@ -302,10 +298,7 @@ const Dashboard = () => {
             )}
 
             {/* Hero */}
-            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-sky-300/40 dark:bg-sky-500/20 blur-3xl" />
-                <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 h-80 w-80 rounded-full bg-emerald-200/50 dark:bg-emerald-500/15 blur-3xl" />
-                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-20 [background-image:radial-gradient(currentColor_1px,transparent_1px)] [background-size:22px_22px] text-black/10 dark:text-white/10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+            <section className="relative overflow-hidden rounded-3xl border bg-card top-glow p-6 md:p-8 shadow-sm">
 
                 <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                     <div>
@@ -318,7 +311,7 @@ const Dashboard = () => {
                         {loading ? (
                             <Skeleton className="mt-2 h-11 w-56" />
                         ) : (
-                            <h1 className="mt-1 text-4xl md:text-5xl font-bold tracking-tight tabular-nums bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
+                            <h1 className="mt-1 text-4xl md:text-5xl font-bold tracking-tight tabular-nums text-foreground">
                                 {inr.format(volume)}
                             </h1>
                         )}
@@ -344,7 +337,7 @@ const Dashboard = () => {
                                     <button
                                         key={type}
                                         onClick={() => setTempDateType(type)}
-                                        className={`px-3 py-2 text-sm text-left rounded-lg transition-colors ${tempDateType === type ? 'bg-gradient-to-b from-zinc-200 to-zinc-400 text-zinc-900 font-medium shadow-sm dark:from-zinc-300 dark:to-zinc-500' : 'text-foreground hover:bg-black/5 dark:hover:bg-white/10'}`}
+                                        className={`px-3 py-2 text-sm text-left rounded-lg transition-colors ${tempDateType === type ? 'bg-primary/10 text-brand font-semibold' : 'text-foreground hover:bg-black/5 dark:hover:bg-white/10'}`}
                                     >
                                         {type}
                                     </button>
@@ -364,7 +357,7 @@ const Dashboard = () => {
                                 )}
 
                                 <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border">
-                                    <button onClick={applyDateFilter} className="flex-1 px-4 py-1.5 text-sm bg-gradient-to-b from-zinc-700 to-zinc-900 hover:from-zinc-600 hover:to-zinc-800 text-white rounded-lg font-medium shadow-sm dark:from-zinc-200 dark:to-zinc-400 dark:text-zinc-900 dark:hover:from-zinc-100 dark:hover:to-zinc-300">Apply</button>
+                                    <button onClick={applyDateFilter} className="flex-1 px-4 py-1.5 text-sm btn-primary rounded-lg font-medium">Apply</button>
                                     <button onClick={() => setPopoverOpen(false)} className="flex-1 px-4 py-1.5 text-sm font-medium text-foreground hover:bg-black/5 dark:hover:bg-white/10 rounded-lg">Cancel</button>
                                 </div>
                             </div>
@@ -415,7 +408,7 @@ const Dashboard = () => {
                                     <div aria-hidden className={`pointer-events-none absolute inset-0 opacity-60 transition-opacity duration-500 group-hover:opacity-100 ${a.glow}`} />
                                     <div className="relative flex items-center justify-between gap-3">
                                         <span className="text-sm font-medium text-muted-foreground">{card.title}</span>
-                                        <div className={`rounded-xl p-2.5 ring-1 ${a.tile}`}>
+                                        <div className={`rounded-full p-2.5 ${a.tile}`}>
                                             <Icon className="h-5 w-5" />
                                         </div>
                                     </div>
@@ -451,7 +444,7 @@ const Dashboard = () => {
                                 className={`group relative flex flex-col items-start gap-3 rounded-xl border p-4 text-left hover:border-foreground/20 active:scale-[0.98] ${ACCENTS[accent].glow}`}
                             >
                                 <ArrowUpRight className="absolute right-3 top-3 h-4 w-4 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                                <div className={`rounded-xl p-2.5 ring-1 ${ACCENTS[accent].tile}`}>
+                                <div className={`rounded-full p-2.5 ${ACCENTS[accent].tile}`}>
                                     <Icon className="h-5 w-5" />
                                 </div>
                                 <div>
@@ -477,7 +470,7 @@ const Dashboard = () => {
                                 const tile = ACCENTS[SALE_ACCENT[sale.service] || 'rose'].tile;
                                 return (
                                     <li key={i} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 ${tile}`}>
+                                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${tile}`}>
                                             <Icon className="h-5 w-5" />
                                         </div>
                                         <div className="min-w-0 flex-1">

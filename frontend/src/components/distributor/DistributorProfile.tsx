@@ -103,13 +103,10 @@ const DistributorProfile = ({
     return (
         <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Hero */}
-            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
-                <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 h-80 w-80 rounded-full bg-slate-200/70 dark:bg-slate-400/10 blur-3xl" />
-                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-20 [background-image:radial-gradient(currentColor_1px,transparent_1px)] [background-size:22px_22px] text-black/10 dark:text-white/10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
                 <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-5 min-w-0">
-                        <label className={`group relative h-24 w-24 shrink-0 rounded-full bg-gradient-to-br from-zinc-200 via-zinc-400 to-zinc-600 p-[3px] shadow-md ${isEditing ? 'cursor-pointer' : ''}`}>
+                        <label className={`group relative h-24 w-24 shrink-0 rounded-full bg-gradient-to-br from-[#F47920] to-[#12A65A] p-[3px] shadow-md ${isEditing ? 'cursor-pointer' : ''}`}>
                             <div className="relative h-full w-full overflow-hidden rounded-full bg-background">
                                 {avatarSrc ? (
                                     <img src={avatarSrc} alt="Profile" className="h-full w-full object-cover" />

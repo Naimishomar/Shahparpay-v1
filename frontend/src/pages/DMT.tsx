@@ -5,8 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
 // Same black (light) / silver (dark) language as the dashboard.
-const ACTIVE_BUTTON = 'bg-zinc-900 text-white shadow-md shadow-black/20 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:shadow-white/10';
-const SILVER_TILE = 'bg-gradient-to-br from-zinc-100 to-zinc-300 text-zinc-700 ring-1 ring-zinc-400/40 dark:from-zinc-600 dark:to-zinc-800 dark:text-zinc-100 dark:ring-zinc-400/30';
+const ACTIVE_BUTTON = 'btn-primary';
+const SILVER_TILE = 'icon-chip';
 const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500';
 
 /**
@@ -183,10 +183,7 @@ const DMT = () => {
     return (
         <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Hero with sender search */}
-            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
-                <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 h-80 w-80 rounded-full bg-slate-200/70 dark:bg-slate-400/10 blur-3xl" />
-                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-20 [background-image:radial-gradient(currentColor_1px,transparent_1px)] [background-size:22px_22px] text-black/10 dark:text-white/10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
 
                 <div className="relative flex flex-col lg:flex-row lg:items-end justify-between gap-6">
                     <div className="flex items-center gap-4">
@@ -486,8 +483,8 @@ const DMT = () => {
                         </button>
                         <h2 className="text-lg font-semibold mb-4">Send Money</h2>
 
-                        <div className="mb-5 flex items-center gap-3 rounded-2xl bg-gradient-to-br from-zinc-800 via-zinc-900 to-black p-4 text-white dark:from-zinc-200 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-sm font-bold ring-1 ring-white/20 dark:bg-black/10 dark:ring-black/10">
+                        <div className="mb-5 flex items-center gap-3 rounded-2xl hero-panel p-4">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-sm font-bold ring-1 ring-white/20">
                                 {initials(transferBene.name)}
                             </div>
                             <div className="min-w-0">

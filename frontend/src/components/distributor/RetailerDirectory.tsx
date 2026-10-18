@@ -75,8 +75,7 @@ const RetailerDirectory = ({
 
     return (
         <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
+            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
                 <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><Users className="h-7 w-7" /></div>
@@ -106,7 +105,7 @@ const RetailerDirectory = ({
                                 <button
                                     key={f.key}
                                     onClick={() => setFilter(f.key)}
-                                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${filter === f.key ? 'border-transparent bg-zinc-900 text-white dark:bg-zinc-200 dark:text-zinc-900' : 'bg-background text-muted-foreground hover:text-foreground'}`}
+                                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${filter === f.key ? 'border-transparent btn-primary' : 'bg-background text-muted-foreground hover:text-foreground'}`}
                                 >
                                     {f.label}
                                     <span className="tabular-nums opacity-70">{loading && !data ? '–' : count}</span>

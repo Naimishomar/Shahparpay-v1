@@ -117,7 +117,7 @@ const TransactionDetailModal = ({ tx, onClose }: { tx: any; onClose: () => void 
 
                 {/* Footer */}
                 <div className="p-4 bg-muted/30 border-t border-border flex justify-end">
-                    <button onClick={() => onClose()} className="px-5 py-2 bg-zinc-900 text-white shadow-md shadow-black/20 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:shadow-white/10 rounded-xl text-sm font-semibold transition-colors">
+                    <button onClick={() => onClose()} className="px-5 py-2 btn-primary rounded-xl text-sm font-semibold transition-colors">
                         Close
                     </button>
                 </div>

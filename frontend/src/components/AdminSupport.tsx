@@ -81,8 +81,7 @@ const AdminSupport = () => {
 
     return (
         <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
+            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
                 <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><Headset className="h-7 w-7" /></div>
@@ -112,7 +111,7 @@ const AdminSupport = () => {
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                             {([['active', 'Active'], ['all', 'All'], ...Object.entries(STATUS).map(([k, v]) => [k, v.label])] as [string, string][]).map(([k, label]) => (
-                                <button key={k} onClick={() => setFilter(k as typeof filter)} className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition ${filter === k ? 'border-transparent bg-zinc-900 text-white dark:bg-zinc-200 dark:text-zinc-900' : 'bg-background text-muted-foreground hover:text-foreground'}`}>
+                                <button key={k} onClick={() => setFilter(k as typeof filter)} className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition ${filter === k ? 'border-transparent btn-primary' : 'bg-background text-muted-foreground hover:text-foreground'}`}>
                                     {label}
                                 </button>
                             ))}
@@ -209,7 +208,7 @@ const AdminSupport = () => {
                                     <button
                                         onClick={sendReply}
                                         disabled={saving || (!reply.trim() && !attachment)}
-                                        className="flex items-center rounded-xl bg-zinc-900 px-4 text-white shadow-md disabled:opacity-50 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900"
+                                        className="flex items-center rounded-xl btn-primary px-4 disabled:opacity-50"
                                         aria-label="Send reply"
                                     >
                                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

@@ -81,11 +81,10 @@ export function AppSidebar() {
                    retailerProjects.filter((item: any) => isServiceEnabled(user, item.service));
 
   return (
-    <Sidebar className="border-r border-black/10 dark:border-white/10 !bg-background/95">
+    <Sidebar className="border-r border-border">
       <SidebarContent className="bg-transparent text-foreground">
         <div className="p-6 pb-2 flex flex-col items-center justify-center relative">
-            <div className="absolute top-0 left-0 w-full h-[100px] bg-primary/10 blur-[50px] -z-10 rounded-full"></div>
-            <img src={logo} alt="logo" className="w-[80%] object-contain dark:brightness-0 dark:invert dark:opacity-90 dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
+                        <img src={logo} alt="logo" className="w-[80%] object-contain dark:brightness-0 dark:invert dark:opacity-90" />
         </div>
         <SidebarMenu className="px-4 py-6 gap-3 mt-2">
           {projects.map((project: any) => {
@@ -97,7 +96,7 @@ export function AppSidebar() {
                   <SidebarMenuItem key={project.name}>
                       <Collapsible defaultOpen={isSubActive} className="group/collapsible w-full">
                           <CollapsibleTrigger asChild>
-                              <SidebarMenuButton className={`p-0 h-auto hover:bg-transparent ${isSubActive ? 'bg-zinc-900 text-white shadow-md shadow-black/20 border border-zinc-900 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:border-zinc-200 dark:shadow-white/10 rounded-xl' : 'text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground border border-transparent rounded-xl'}`}>
+                              <SidebarMenuButton className={`p-0 h-auto hover:bg-transparent ${isSubActive ? 'text-foreground border border-transparent rounded-xl' : 'text-muted-foreground hover:bg-accent hover:text-foreground border border-transparent rounded-xl'}`}>
                                   <div className="flex items-center justify-between w-full py-3 px-4 transition-all duration-300">
                                       <div className="flex items-center gap-3">
                                           <Icon className={`w-5 h-5 transition-transform ${isSubActive ? 'scale-110' : 'group-hover:scale-110'}`} />
@@ -108,7 +107,7 @@ export function AppSidebar() {
                               </SidebarMenuButton>
                           </CollapsibleTrigger>
                           <CollapsibleContent>
-                              <SidebarMenuSub className="mt-2 pr-0 mr-0 border-l border-black/10 dark:border-white/20 ml-6 pl-4 space-y-1">
+                              <SidebarMenuSub className="mt-2 pr-0 mr-0 border-l border-border ml-6 pl-4 space-y-1">
                                   {project.subItems.map((subItem: any) => {
                                       const isItemActive = location.pathname === subItem.url;
                                       return (
@@ -116,7 +115,7 @@ export function AppSidebar() {
                                               <SidebarMenuSubButton asChild className="p-0 h-auto hover:bg-transparent">
                                                   <Link
                                                       to={subItem.url}
-                                                      className={`block py-2 px-3 w-full rounded-lg transition-all duration-300 text-sm ${isItemActive ? 'bg-zinc-900 text-white font-medium dark:bg-gradient-to-b dark:from-zinc-100 dark:to-zinc-300 dark:text-zinc-900' : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
+                                                      className={`block py-2 px-3 w-full rounded-lg transition-all duration-300 text-sm ${isItemActive ? 'bg-primary/10 text-brand font-semibold' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}
                                                   >
                                                       {subItem.name}
                                                   </Link>
@@ -140,8 +139,8 @@ export function AppSidebar() {
                     to={project.url!} 
                     className={`flex items-center gap-3 py-3 px-4 w-full rounded-xl transition-all duration-300 ${
                         isActive 
-                        ? 'bg-zinc-900 text-white shadow-md shadow-black/20 border border-zinc-900 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:border-zinc-200 dark:shadow-white/10'
-                        : 'text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground border border-transparent'
+                        ? 'bg-primary/10 text-brand font-semibold border border-transparent'
+                        : 'text-muted-foreground hover:bg-accent hover:text-foreground border border-transparent'
                     }`}
                   >
                     <Icon className={`w-5 h-5 transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />

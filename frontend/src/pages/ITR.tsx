@@ -5,8 +5,8 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
 // Same black (light) / silver (dark) language as the dashboard.
-const ACTIVE_BUTTON = 'bg-zinc-900 text-white shadow-md shadow-black/20 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:shadow-white/10';
-const SILVER_TILE = 'bg-gradient-to-br from-zinc-100 to-zinc-300 text-zinc-700 ring-1 ring-zinc-400/40 dark:from-zinc-600 dark:to-zinc-800 dark:text-zinc-100 dark:ring-zinc-400/30';
+const ACTIVE_BUTTON = 'btn-primary';
+const SILVER_TILE = 'icon-chip';
 
 const ITR: React.FC = () => {
     const { token } = useAuth();
@@ -45,10 +45,7 @@ const ITR: React.FC = () => {
     return (
         <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Hero */}
-            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
-                <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 h-80 w-80 rounded-full bg-slate-200/70 dark:bg-slate-400/10 blur-3xl" />
-                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-20 [background-image:radial-gradient(currentColor_1px,transparent_1px)] [background-size:22px_22px] text-black/10 dark:text-white/10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
 
                 <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div className="flex items-start gap-4">
@@ -129,10 +126,10 @@ const ITR: React.FC = () => {
                 </section>
 
                 {/* Security */}
-                <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-800 via-zinc-900 to-black p-6 text-white shadow-lg dark:from-zinc-200 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900">
-                    <div aria-hidden className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-white/10 blur-2xl dark:bg-white/40" />
+                <section className="relative overflow-hidden rounded-2xl hero-panel p-6">
+                    <div aria-hidden className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[#F47920]/25 blur-2xl" />
                     <div className="relative flex h-full flex-col gap-4">
-                        <div className="inline-flex w-max rounded-xl bg-white/10 p-2.5 ring-1 ring-white/20 dark:bg-black/10 dark:ring-black/10">
+                        <div className="inline-flex w-max rounded-xl bg-white/10 p-2.5 ring-1 ring-white/20">
                             <ShieldCheck className="h-6 w-6" />
                         </div>
                         <div>
@@ -141,7 +138,7 @@ const ITR: React.FC = () => {
                                 ITR filing through eSevaTech uses secure single-use tokens. Your Main Wallet is only charged upon successful submission.
                             </p>
                         </div>
-                        <p className="mt-auto flex items-center gap-2 border-t border-white/15 pt-4 text-xs opacity-70 dark:border-black/10">
+                        <p className="mt-auto flex items-center gap-2 border-t border-white/15 pt-4 text-xs opacity-70">
                             <ScrollText className="h-4 w-4 shrink-0" />
                             Every transaction is logged in your Wallet Ledger.
                         </p>

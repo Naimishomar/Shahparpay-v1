@@ -93,9 +93,7 @@ const RetailerDetail = ({
                 <ChevronLeft size={16} /> Back to retailers
             </button>
 
-            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
-                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-20 [background-image:radial-gradient(currentColor_1px,transparent_1px)] [background-size:22px_22px] text-black/10 dark:text-white/10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
                 <div className="relative flex flex-col gap-6">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                         <div className="flex items-center gap-4 min-w-0">
@@ -242,7 +240,7 @@ const RetailerDetail = ({
                                     aria-label={`${svc.label} ${on ? 'on' : 'off'}`}
                                     disabled={savingKey !== null}
                                     onClick={() => toggleService(svc.key)}
-                                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60 ${on ? 'bg-zinc-900 dark:bg-zinc-200' : 'bg-black/15 dark:bg-white/15'}`}
+                                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60 ${on ? 'bg-primary' : 'bg-black/15 dark:bg-white/15'}`}
                                 >
                                     <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform dark:bg-zinc-900 ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
                                 </button>

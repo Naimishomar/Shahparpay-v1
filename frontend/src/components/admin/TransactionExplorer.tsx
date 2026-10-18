@@ -78,8 +78,7 @@ const TransactionExplorer = ({
 
     return (
         <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
+            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
                 <div className="relative flex flex-col gap-5">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
@@ -128,7 +127,7 @@ const TransactionExplorer = ({
                 </select>
                 <input type="date" value={draft.from || ''} onChange={(e) => setDraft({ ...draft, from: e.target.value })} className={`${INPUT} dark:[color-scheme:dark]`} aria-label="From" />
                 <input type="date" value={draft.to || ''} onChange={(e) => setDraft({ ...draft, to: e.target.value })} className={`${INPUT} dark:[color-scheme:dark]`} aria-label="To" />
-                <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-md dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900">
+                <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-xl btn-primary px-4 py-2.5 text-sm font-semibold">
                     <Filter size={16} /> Apply
                 </button>
                 {activeFilters.length > 0 && (

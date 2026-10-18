@@ -99,8 +99,7 @@ const ActivityLog = ({ token, onOpenUser }: { token: string | null; onOpenUser: 
 
     return (
         <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
+            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
                 <div className="relative flex items-center gap-4">
                     <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><History className="h-7 w-7" /></div>
                     <div>
@@ -117,7 +116,7 @@ const ActivityLog = ({ token, onOpenUser }: { token: string | null; onOpenUser: 
                             <button
                                 key={key || 'all'}
                                 onClick={() => { setAction(key); setPageNo(1); }}
-                                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${action === key ? 'border-transparent bg-zinc-900 text-white dark:bg-zinc-200 dark:text-zinc-900' : 'bg-background text-muted-foreground hover:text-foreground'}`}
+                                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${action === key ? 'border-transparent btn-primary' : 'bg-background text-muted-foreground hover:text-foreground'}`}
                             >
                                 {label}
                             </button>

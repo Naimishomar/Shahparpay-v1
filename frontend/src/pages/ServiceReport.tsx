@@ -127,9 +127,9 @@ const ServiceReport = ({ kind, title, description }: ServiceReportProps) => {
         <div className="flex-1 w-full flex flex-col p-4 md:p-6 max-w-[1600px] mx-auto h-[calc(100vh-64px)] overflow-hidden">
             <TransactionDetailModal tx={selectedTransaction} onClose={() => setSelectedTransaction(null)} />
             <div className="flex flex-col gap-5 h-full">
-                <div className="relative isolate overflow-hidden flex flex-col xl:flex-row xl:items-center justify-between gap-4 shrink-0 rounded-3xl border bg-card p-5 md:p-6 shadow-sm"><div aria-hidden className="pointer-events-none absolute -top-32 -right-24 -z-10 h-72 w-72 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" /><div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 -z-10 h-72 w-72 rounded-full bg-slate-200/70 dark:bg-slate-400/10 blur-3xl" />
+                <div className="relative isolate overflow-hidden top-glow flex flex-col xl:flex-row xl:items-center justify-between gap-4 shrink-0 rounded-3xl border bg-card p-5 md:p-6 shadow-sm">
                     <div className="flex items-center gap-3">
-                        <div className="p-2.5 rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-300 text-zinc-700 ring-1 ring-zinc-400/40 dark:from-zinc-600 dark:to-zinc-800 dark:text-zinc-100 dark:ring-zinc-400/30"><FileText className="w-6 h-6" /></div>
+                        <div className="p-2.5 rounded-xl icon-chip"><FileText className="w-6 h-6" /></div>
                         <div>
                             <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">{title}</h1>
                             <p className="text-xs md:text-sm text-muted-foreground">{description}</p>
@@ -148,7 +148,7 @@ const ServiceReport = ({ kind, title, description }: ServiceReportProps) => {
                             <option value="REFUNDED">Refunded</option>
                         </select>
                         <button onClick={downloadCsv} className="flex items-center gap-2 px-3 py-2 rounded-xl border bg-background hover:bg-black/5 dark:hover:bg-white/5 text-sm font-medium"><Download className="w-4 h-4" /> CSV</button>
-                        <button onClick={downloadPdf} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium bg-zinc-900 text-white shadow-md shadow-black/20 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:shadow-white/10"><FileDown className="w-4 h-4" /> PDF</button>
+                        <button onClick={downloadPdf} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium btn-primary"><FileDown className="w-4 h-4" /> PDF</button>
                     </div>
                 </div>
 
@@ -159,7 +159,7 @@ const ServiceReport = ({ kind, title, description }: ServiceReportProps) => {
                     <div className="ml-auto flex gap-3 text-sm">
                         <span className="px-3 py-2 rounded-xl bg-card border">Transactions: <b>{filtered.length}</b></span>
                         <span className="px-3 py-2 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">Success: <b>{totals.success}</b></span>
-                        <span className="px-3 py-2 rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-300 text-zinc-800 border border-zinc-400/40 dark:from-zinc-600 dark:to-zinc-800 dark:text-zinc-100">Commission: <b>{money(totals.commission)}</b></span>
+                        <span className="px-3 py-2 rounded-xl icon-chip">Commission: <b>{money(totals.commission)}</b></span>
                     </div>
                 </div>
 

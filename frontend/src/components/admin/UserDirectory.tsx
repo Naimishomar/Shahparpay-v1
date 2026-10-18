@@ -34,8 +34,7 @@ const UserDirectory = ({
 
     return (
         <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
+            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
                 <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><Users className="h-7 w-7" /></div>
@@ -49,7 +48,7 @@ const UserDirectory = ({
                             <button
                                 key={r}
                                 onClick={() => { setRole(r); setPageNo(1); }}
-                                className={`rounded-lg px-4 py-1.5 text-sm font-semibold capitalize transition ${role === r ? 'bg-zinc-900 text-white shadow-md dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900' : 'text-muted-foreground hover:text-foreground'}`}
+                                className={`rounded-lg px-4 py-1.5 text-sm font-semibold capitalize transition ${role === r ? 'btn-primary' : 'text-muted-foreground hover:text-foreground'}`}
                             >
                                 {r}s
                             </button>

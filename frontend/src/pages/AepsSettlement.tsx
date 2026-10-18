@@ -18,8 +18,8 @@ const SETTLEMENT_MIN = 100;
 const SETTLEMENT_MAX = 25000;
 
 // Same black (light) / silver (dark) language as the dashboard and AEPS page.
-const ACTIVE_BUTTON = 'bg-zinc-900 text-white shadow-md shadow-black/20 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:shadow-white/10';
-const SILVER_TILE = 'bg-gradient-to-br from-zinc-100 to-zinc-300 text-zinc-700 ring-zinc-400/40 dark:from-zinc-600 dark:to-zinc-800 dark:text-zinc-100 dark:ring-zinc-400/30';
+const ACTIVE_BUTTON = 'btn-primary';
+const SILVER_TILE = 'icon-chip';
 const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500';
 const FILE_INPUT = 'w-full rounded-xl border bg-background px-3 py-2 text-sm text-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-900 file:px-3 file:py-1.5 file:text-white dark:file:bg-zinc-200 dark:file:text-zinc-900';
 
@@ -271,10 +271,7 @@ const AepsSettlement = () => {
     return (
         <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Hero */}
-            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
-                <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 h-80 w-80 rounded-full bg-slate-200/70 dark:bg-slate-400/10 blur-3xl" />
-                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-20 [background-image:radial-gradient(currentColor_1px,transparent_1px)] [background-size:22px_22px] text-black/10 dark:text-white/10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
 
                 <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-5">
                     <div className="flex items-center gap-4">
@@ -323,8 +320,8 @@ const AepsSettlement = () => {
                     <h2 className="mb-5 text-lg font-semibold">Transfer to Bank</h2>
 
                     {/* Selected bank, shown as a card */}
-                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-800 via-zinc-900 to-black p-5 text-white shadow-lg dark:from-zinc-200 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900">
-                        <div aria-hidden className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-white/10 blur-2xl dark:bg-white/40" />
+                    <div className="relative overflow-hidden rounded-2xl hero-panel p-5">
+                        <div aria-hidden className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-[#F47920]/25 blur-2xl" />
                         {selectedBank ? (
                             <div className="relative flex flex-col gap-5">
                                 <div className="flex items-start justify-between gap-3">
@@ -332,7 +329,7 @@ const AepsSettlement = () => {
                                         <Landmark className="h-5 w-5 opacity-80" />
                                         <span className="font-semibold">{selectedBank.bankName}</span>
                                     </div>
-                                    <span className="flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold ring-1 ring-white/20 dark:bg-black/10 dark:ring-black/10">
+                                    <span className="flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold ring-1 ring-white/20">
                                         <span className={`h-1.5 w-1.5 rounded-full ${selectedBank.status === 'VERIFIED' ? 'bg-emerald-400' : selectedBank.status === 'PENDING' ? 'bg-amber-400' : 'bg-rose-400'}`} />
                                         {selectedBank.status === 'VERIFIED' ? 'Active' : selectedBank.status === 'PENDING' ? 'Pending Activation' : 'Rejected'}
                                     </span>

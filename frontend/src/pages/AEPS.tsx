@@ -27,8 +27,8 @@ const banks = [
 const AEPS_OTP_THRESHOLD = 5000;
 
 // Same black (light) / silver (dark) treatment as the active sidebar item and dashboard.
-const ACTIVE_BUTTON = 'bg-zinc-900 text-white shadow-md shadow-black/20 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:shadow-white/10';
-const SILVER_TILE = 'bg-gradient-to-br from-zinc-100 to-zinc-300 text-zinc-700 ring-zinc-400/40 dark:from-zinc-600 dark:to-zinc-800 dark:text-zinc-100 dark:ring-zinc-400/30';
+const ACTIVE_BUTTON = 'btn-primary';
+const SILVER_TILE = 'icon-chip';
 const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500';
 const AEPS_TABS = [
     { key: 'balance_enquiry', label: 'Balance Enquiry', icon: Wallet, hint: "Check the balance in the customer's Aadhaar-linked bank account." },
@@ -549,10 +549,7 @@ const AEPS = () => {
     return (
         <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Hero: title, daily auth status, service tabs */}
-            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
-                <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 h-80 w-80 rounded-full bg-slate-200/70 dark:bg-slate-400/10 blur-3xl" />
-                <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-20 [background-image:radial-gradient(currentColor_1px,transparent_1px)] [background-size:22px_22px] text-black/10 dark:text-white/10 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
 
                 <div className="relative flex flex-col gap-6">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -742,7 +739,7 @@ const AEPS = () => {
                                                 if (otpSent) invalidateOtp();
                                                 setAmount(prev => (Number(prev) || 0) + val + "");
                                             }}
-                                            className="rounded-full border bg-background px-3 py-1.5 text-xs font-semibold tabular-nums text-foreground hover:bg-zinc-900 hover:text-white hover:border-zinc-900 dark:hover:bg-zinc-200 dark:hover:text-zinc-900 dark:hover:border-zinc-200"
+                                            className="rounded-full border bg-background px-3 py-1.5 text-xs font-semibold tabular-nums text-foreground hover:bg-primary hover:text-white hover:border-primary"
                                         >
                                             +₹{val}
                                         </button>
@@ -821,7 +818,7 @@ const AEPS = () => {
                                         <span className="text-xs font-semibold tabular-nums text-muted-foreground">{doneCount}/{steps.length}</span>
                                     </div>
                                     <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-black/5 dark:bg-white/10">
-                                        <div className="h-full rounded-full bg-gradient-to-r from-zinc-400 via-zinc-600 to-zinc-400 dark:from-zinc-500 dark:via-zinc-200 dark:to-zinc-500 transition-[width] duration-500" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
+                                        <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                         {steps.map((st, i) => (
@@ -949,7 +946,7 @@ const AEPS = () => {
                             const value = device.toLowerCase();
                             const active = selectedDevice === value;
                             return (
-                                <label key={device} className={`flex items-center gap-3 rounded-xl border p-2 pr-5 cursor-pointer transition-all ${active ? 'border-zinc-900 bg-zinc-900/[0.03] dark:border-zinc-300 dark:bg-white/5 shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}>
+                                <label key={device} className={`flex items-center gap-3 rounded-xl border p-2 pr-5 cursor-pointer transition-all ${active ? 'border-primary bg-primary/5 dark:bg-white/5 shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}>
                                     <input
                                         type="radio"
                                         name="device"

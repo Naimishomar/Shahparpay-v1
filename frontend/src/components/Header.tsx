@@ -18,7 +18,7 @@ const formatBalance = (value: unknown) => {
 
 // Full class strings: Tailwind only ships classes it can find literally.
 const WALLET_TILES = {
-    silver: 'bg-gradient-to-br from-zinc-100 to-zinc-300 text-zinc-700 ring-zinc-400/40 dark:from-zinc-600 dark:to-zinc-800 dark:text-zinc-100 dark:ring-zinc-400/30',
+    silver: 'icon-chip',
     emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-emerald-500/20',
 };
 
@@ -62,7 +62,7 @@ const Header = () => {
         ];
 
     const avatar = (size: string) => (
-        <div className={`${size} shrink-0 rounded-full bg-gradient-to-br from-zinc-200 via-zinc-400 to-zinc-600 p-[2px] shadow-sm`}>
+        <div className={`${size} shrink-0 rounded-full bg-gradient-to-br from-[#F47920] to-[#12A65A] p-[2px] shadow-sm`}>
             <div className="w-full h-full bg-background rounded-full flex items-center justify-center overflow-hidden">
                 {user?.profilePicture ? (
                     <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover" />
@@ -122,7 +122,7 @@ const Header = () => {
                     </button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-72 p-2 rounded-2xl bg-popover border-border shadow-xl">
-                    <div className="flex items-center gap-3 rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 p-3">
+                    <div className="flex items-center gap-3 rounded-xl icon-chip p-3">
                         {avatar('w-11 h-11')}
                         <div className="min-w-0">
                             <p className="truncate text-sm font-semibold text-foreground">{user?.name || "Admin User"}</p>

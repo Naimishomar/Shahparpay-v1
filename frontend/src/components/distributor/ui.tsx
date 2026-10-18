@@ -22,7 +22,7 @@ export const Skeleton = ({ className = '' }: { className?: string }) => (
 );
 
 export const Avatar = ({ name, src, size = 'w-9 h-9' }: { name?: string; src?: string; size?: string }) => (
-    <div className={`${size} shrink-0 rounded-full bg-gradient-to-br from-zinc-200 via-zinc-400 to-zinc-600 p-[2px]`}>
+    <div className={`${size} shrink-0 rounded-full bg-gradient-to-br from-[#F47920] to-[#12A65A] p-[2px]`}>
         <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-background text-xs font-bold text-foreground">
             {src ? <img src={src} alt="" className="h-full w-full object-cover" /> : (name?.charAt(0) || 'R').toUpperCase()}
         </div>
@@ -118,7 +118,7 @@ export const TrendChart = ({ points, metric, id }: { points: TrendPoint[]; metri
 export const ShareBar = ({ value, max }: { value: number; max: number }) => (
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/5 dark:bg-white/10">
         <div
-            className="h-full rounded-full bg-gradient-to-r from-zinc-400 to-zinc-700 dark:from-zinc-500 dark:to-zinc-200 transition-[width] duration-700"
+            className="h-full rounded-full bg-primary transition-[width] duration-700"
             style={{ width: `${max > 0 ? Math.max(2, (value / max) * 100) : 0}%` }}
         />
     </div>

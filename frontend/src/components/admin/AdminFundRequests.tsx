@@ -42,8 +42,7 @@ const AdminFundRequests = ({
 
     return (
         <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" />
+            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
                 <div className="relative flex flex-col gap-5">
                     <div className="flex items-center gap-4">
                         <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><Banknote className="h-7 w-7" /></div>
@@ -96,7 +95,7 @@ const AdminFundRequests = ({
                 <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
                     <div className="flex flex-wrap gap-2">
                         {(['PENDING', 'APPROVED', 'REJECTED', 'ALL'] as const).map((f) => (
-                            <button key={f} onClick={() => setFilter(f)} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold capitalize transition ${filter === f ? 'border-transparent bg-zinc-900 text-white dark:bg-zinc-200 dark:text-zinc-900' : 'bg-background text-muted-foreground hover:text-foreground'}`}>
+                            <button key={f} onClick={() => setFilter(f)} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold capitalize transition ${filter === f ? 'border-transparent btn-primary' : 'bg-background text-muted-foreground hover:text-foreground'}`}>
                                 {f.toLowerCase()}
                                 <span className="tabular-nums opacity-70">{f === 'ALL' ? requests.length : requests.filter((r) => r.status === f).length}</span>
                             </button>

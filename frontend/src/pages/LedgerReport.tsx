@@ -159,10 +159,10 @@ const LedgerReport = () => {
         <div className="flex-1 w-full flex flex-col p-4 md:p-6 animate-in fade-in duration-500 max-w-[1600px] mx-auto h-[calc(100vh-64px)] overflow-hidden">
             <div className="flex flex-col gap-6 h-full">
                 {/* Header */}
-                <div className="relative isolate overflow-hidden flex flex-col gap-4 w-full shrink-0 rounded-3xl border bg-card p-4 md:p-5 shadow-sm"><div aria-hidden className="pointer-events-none absolute -top-32 -right-24 -z-10 h-72 w-72 rounded-full bg-zinc-300/60 dark:bg-zinc-500/20 blur-3xl" /><div aria-hidden className="pointer-events-none absolute -bottom-40 -left-20 -z-10 h-72 w-72 rounded-full bg-slate-200/70 dark:bg-slate-400/10 blur-3xl" />
+                <div className="relative isolate overflow-hidden top-glow flex flex-col gap-4 w-full shrink-0 rounded-3xl border bg-card p-4 md:p-5 shadow-sm">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-3 shrink-0">
-                        <div className="p-2.5 rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-300 text-zinc-700 ring-1 ring-zinc-400/40 dark:from-zinc-600 dark:to-zinc-800 dark:text-zinc-100 dark:ring-zinc-400/30">
+                        <div className="p-2.5 rounded-xl icon-chip">
                             <FileText className="w-6 h-6" />
                         </div>
                         <div>
@@ -176,7 +176,7 @@ const LedgerReport = () => {
                                     <span className="hidden sm:inline">Export CSV</span>
                                     <span className="sm:hidden">CSV</span>
                                 </button>
-                                <button onClick={handleDownloadPDF} className="flex items-center justify-center gap-2 bg-zinc-900 text-white shadow-md shadow-black/20 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:shadow-white/10 px-3 md:px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap">
+                                <button onClick={handleDownloadPDF} className="flex items-center justify-center gap-2 btn-primary px-3 md:px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap">
                                     <FileDown className="w-4 h-4" />
                                     <span className="hidden sm:inline">Export PDF</span>
                                     <span className="sm:hidden">PDF</span>
@@ -351,7 +351,7 @@ const LedgerReport = () => {
                                                 onClick={() => setCurrentPage(pageNum)}
                                                 className={`w-7 h-7 rounded text-xs font-medium flex items-center justify-center transition-colors ${
                                                     currentPage === pageNum 
-                                                    ? "bg-zinc-900 text-white shadow-md shadow-black/20 dark:bg-gradient-to-b dark:from-zinc-100 dark:via-zinc-300 dark:to-zinc-400 dark:text-zinc-900 dark:shadow-white/10" 
+                                                    ? "btn-primary" 
                                                     : "text-muted-foreground hover:bg-muted"
                                                 }`}
                                             >
