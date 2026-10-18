@@ -177,7 +177,7 @@ const Login: React.FC = () => {
             const data = await response.json();
 
             if (data.success) {
-                login(data.token, { ...data.user, role: data.role });
+                login(data.token, { ...data.user, role: data.role }, data.refreshToken);
                 setTimeout(() => {
                     if (data.role === 'admin') navigate('/admin');
                     else if (data.role === 'distributor') navigate('/distributor');

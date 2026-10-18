@@ -26,7 +26,7 @@ interface AuthContextType {
     user: User | null;
     token: string | null;
     isInitializing: boolean;
-    login: (token: string, user: User) => void;
+    login: (token: string, user: User, refreshToken?: string) => void;
     logout: () => void;
     checkSession: () => Promise<void>;
 }
@@ -57,22 +57,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // No stored session means nothing to refresh; skip the guaranteed 401 for visitors.
         if (!localStorage.getItem('token')) return;
         try {
+            // The site (shahparpay.in) and the API (api.shahparpay.com) are different
+            // sites, so the refresh cookie is third-party and Safari, Brave and
+            // incognito Chrome never send it. The body copy is what survives that.
             const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/refresh-token`, {
                 method: 'POST',
-                credentials: 'include' // Important: sends the HttpOnly cookie
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refreshToken: localStorage.getItem('refreshToken') || undefined }),
             });
+            // Only a refused session ends it; a 5xx or a deploy restart is not a logout.
+            if (res.status !== 401 && res.status !== 403 && !res.ok) return;
             const data = await res.json();
             if (data.success) {
                 const refreshedUser = { ...data.user, role: data.role };
                 setToken(data.token);
                 setUser(refreshedUser);
                 localStorage.setItem('token', data.token);
+                if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
                 localStorage.setItem('user', JSON.stringify(refreshedUser));
             } else {
                 // If refresh fails, log out completely
                 setToken(null);
                 setUser(null);
                 localStorage.removeItem('token');
+                localStorage.removeItem('refreshToken');
                 localStorage.removeItem('user');
             }
         } catch (error) {
@@ -102,10 +111,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
     }, []);
 
-    const login = (newToken: string, newUser: User) => {
+    const login = (newToken: string, newUser: User, refreshToken?: string) => {
         setToken(newToken);
         setUser(newUser);
         localStorage.setItem('token', newToken);
+        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
         localStorage.setItem('user', JSON.stringify(newUser));
     };
 
@@ -122,6 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setToken(null);
         setUser(null);
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
     };
 
