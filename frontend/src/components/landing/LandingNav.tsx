@@ -227,7 +227,7 @@ const LandingNav: React.FC = () => {
                 >
                     <button className="text-slate-600 hover:text-black inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors">
                         Products
-                        <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${activeDropdown === 'products' ? 'rotate-180 text-[#008c46]' : ''}`} />
+                        <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${activeDropdown === 'products' ? 'rotate-180 text-[#BE4510]' : ''}`} />
                     </button>
 
                     {activeDropdown === 'products' && (
@@ -251,7 +251,7 @@ const LandingNav: React.FC = () => {
                                                             <item.icon className="mega-icon h-3.5 w-3.5" />
                                                         </div>
                                                         <div>
-                                                            <div className="text-xs font-bold text-slate-900 group-hover:text-[#008c46] transition-colors">
+                                                            <div className="text-xs font-bold text-slate-900 group-hover:text-[#E55C11] transition-colors">
                                                                 {item.title}
                                                             </div>
                                                             <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
@@ -275,17 +275,17 @@ const LandingNav: React.FC = () => {
                                             key={card.title}
                                             to={appHref}
                                             onClick={() => setActiveDropdown(null)}
-                                            className={`block p-3 rounded-xl border border-slate-200 bg-slate-50 hover:border-[#008c46] transition-all group`}
+                                            className={`block p-3 rounded-xl border border-slate-200 bg-slate-50 hover:border-[#E55C11] transition-all group`}
                                         >
                                             <div className="flex items-center justify-between mb-1">
-                                                <span className="text-[0.6rem] font-bold tracking-wider uppercase text-[#008c46]">
+                                                <span className="text-[0.6rem] font-bold tracking-wider uppercase text-[#BE4510]">
                                                     {card.tag}
                                                 </span>
-                                                <span className="text-[0.6rem] font-bold px-1.5 py-0.5 rounded bg-[#008c46] text-white">
+                                                <span className="text-[0.6rem] font-bold px-1.5 py-0.5 rounded bg-[#E55C11] text-white">
                                                     {card.badge}
                                                 </span>
                                             </div>
-                                            <div className="text-xs font-extrabold text-slate-900 group-hover:text-[#008c46] transition-colors">
+                                            <div className="text-xs font-extrabold text-slate-900 group-hover:text-[#E55C11] transition-colors">
                                                 {card.title}
                                             </div>
                                             <p className="text-xs text-slate-500 mt-0.5">
@@ -316,10 +316,10 @@ const LandingNav: React.FC = () => {
             <div className="flex items-center gap-2 sm:gap-3">
                 <Link
                     to="/login"
-                    className="inline-flex min-h-11 items-center justify-center gap-2 sm:gap-2.5 bg-[#18181b] hover:bg-black text-white rounded-full pl-4 sm:pl-5 pr-1.5 sm:pr-2 py-1.5 sm:py-2 text-xs sm:text-sm font-bold shadow-md transition-all hover:scale-[1.01] group"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 sm:gap-2.5 bg-[#E55C11] hover:bg-[#D2520E] text-white rounded-full pl-4 sm:pl-5 pr-1.5 sm:pr-2 py-1.5 sm:py-2 text-xs sm:text-sm font-bold shadow-md transition-all hover:scale-[1.01] group"
                 >
                     <span>Sign In</span>
-                    <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#a3e635] text-black flex items-center justify-center font-black text-[0.6rem] sm:text-xs group-hover:rotate-45 transition-transform">
+                    <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white text-[#E55C11] flex items-center justify-center font-black text-[0.6rem] sm:text-xs group-hover:rotate-45 transition-transform">
                         ↗
                     </span>
                 </Link>
@@ -359,10 +359,10 @@ const LandingNav: React.FC = () => {
                     <Link
                         to="/login"
                         onClick={() => setMenuOpen(false)}
-                        className="inline-flex items-center justify-center gap-2.5 bg-[#18181b] hover:bg-black text-white py-2.5 rounded-full text-sm font-bold shadow-md transition-all group"
+                        className="inline-flex items-center justify-center gap-2.5 bg-[#E55C11] hover:bg-[#D2520E] text-white py-2.5 rounded-full text-sm font-bold shadow-md transition-all group"
                     >
                         <span>Sign In</span>
-                        <span className="w-6 h-6 rounded-full bg-[#a3e635] text-black flex items-center justify-center font-black text-xs group-hover:rotate-45 transition-transform">
+                        <span className="w-6 h-6 rounded-full bg-white text-[#E55C11] flex items-center justify-center font-black text-xs group-hover:rotate-45 transition-transform">
                             ↗
                         </span>
                     </Link>

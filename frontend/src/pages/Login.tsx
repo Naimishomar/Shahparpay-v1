@@ -194,12 +194,12 @@ const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex w-full bg-white text-slate-900 selection:bg-[#ccf788] selection:text-slate-900 font-sans relative overflow-hidden">
+        <div className="min-h-screen flex w-full bg-white text-slate-900 selection:bg-[#FDE3CF] selection:text-slate-900 font-sans relative overflow-hidden">
             {/* ------------------------------------------------ LEFT BRANDING & HERO COMPONENTS PANEL */}
             <div className="hidden lg:flex flex-col justify-between w-7/12 p-10 xl:p-14 relative overflow-hidden bg-white border-r border-slate-200/80">
                 {/* Background illustration: neighbourhood shops with a CSP banking point (same as landing hero).
                     Only on tall screens; on short ones a cropped strip of it looks broken behind the footer. */}
-                <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-b from-[#f7fee7] via-white to-[#ecfdf3]" />
+                <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-b from-[#FFF8F2] via-white to-[#ecfdf3]" />
                 <img
                     src={heroCspBg}
                     alt=""
@@ -207,7 +207,7 @@ const Login: React.FC = () => {
                 />
 
                 {/* Top Ambient Radial Glows */}
-                <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#a3e635]/25 rounded-full blur-3xl pointer-events-none z-0" />
+                <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#F79440]/25 rounded-full blur-3xl pointer-events-none z-0" />
                 <div className="absolute bottom-10 -right-20 w-96 h-96 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none z-0" />
 
                 {/* TOP HEADER LOGO & NAV */}
@@ -222,9 +222,9 @@ const Login: React.FC = () => {
                     </Link>
                     <Link
                         to="/"
-                        className="inline-flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-[#008c46] transition-colors bg-white/90 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200 shadow-xs"
+                        className="inline-flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-[#E55C11] transition-colors bg-white/90 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200 shadow-xs"
                     >
-                        <ArrowLeft className="w-3.5 h-3.5 text-[#008c46]" />
+                        <ArrowLeft className="w-3.5 h-3.5 text-[#BE4510]" />
                         <span>Return to Website</span>
                     </Link>
                 </div>
@@ -232,13 +232,13 @@ const Login: React.FC = () => {
                 {/* CENTER CONTENT CONTAINER */}
                 <div className="relative z-10 my-auto py-8 space-y-6 max-w-xl">
                     {/* Eyebrow Pill Badge (from Landing Hero) */}
-                    <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-4 py-1.5 rounded-full text-xs font-bold shadow-2xs">
-                        <Sparkles className="w-3.5 h-3.5 text-[#008c46]" />
+                    <div className="inline-flex items-center gap-2 bg-[#FEF3EA] text-[#BE4510] border border-[#FAD3B5] px-4 py-1.5 rounded-full text-xs font-bold shadow-2xs">
+                        <Sparkles className="w-3.5 h-3.5 text-[#BE4510]" />
                         <span>Digital banking services for your shop</span>
                     </div>
 
                     <h1 className="text-4xl xl:text-5xl font-extrabold text-slate-900 tracking-tight leading-[1.12]">
-                        Welcome back to your <span className="text-[#008c46]">Banking Point</span>
+                        Welcome back to your <span className="text-[#BE4510]">Banking Point</span>
                     </h1>
 
                     <p className="text-slate-600 font-medium text-sm xl:text-base leading-relaxed">
@@ -247,29 +247,29 @@ const Login: React.FC = () => {
 
                     {/* HERO LIME/YELLOW OFFER CARD (Directly referenced from Landing Page Hero) */}
                     <div
-                        className="rounded-2xl p-5 border border-lime-300/90 shadow-md relative overflow-hidden backdrop-blur-md space-y-3"
+                        className="rounded-2xl p-5 border border-orange-300/90 shadow-md relative overflow-hidden backdrop-blur-md space-y-3"
                         style={{
-                            background: 'linear-gradient(180deg, rgba(228, 250, 173, 0.95) 0%, rgba(254, 248, 184, 0.95) 100%)'
+                            background: 'linear-gradient(180deg, rgba(254, 232, 214, 0.95) 0%, rgba(255, 246, 236, 0.95) 100%)'
                         }}
                     >
                         <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-black text-[#00502b] tracking-tight">₹0</span>
-                            <span className="text-sm font-extrabold text-[#00502b]">to join. You earn a commission on every transaction.</span>
+                            <span className="text-4xl font-black text-[#7A2E06] tracking-tight">₹0</span>
+                            <span className="text-sm font-extrabold text-[#7A2E06]">to join. You earn a commission on every transaction.</span>
                         </div>
 
                         <div className="w-full h-px bg-slate-900/10" />
 
                         <div className="grid grid-cols-3 gap-2 text-[0.7rem] font-bold text-slate-800">
                             <div className="flex items-center gap-1.5">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-[#00502b] shrink-0" />
+                                <CheckCircle2 className="w-3.5 h-3.5 text-[#7A2E06] shrink-0" />
                                 <span>Settle to bank daily</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-[#00502b] shrink-0" />
+                                <CheckCircle2 className="w-3.5 h-3.5 text-[#7A2E06] shrink-0" />
                                 <span>Commission on every service</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-[#00502b] shrink-0" />
+                                <CheckCircle2 className="w-3.5 h-3.5 text-[#7A2E06] shrink-0" />
                                 <span>Call &amp; WhatsApp support</span>
                             </div>
                         </div>
@@ -279,16 +279,16 @@ const Login: React.FC = () => {
                     <div className="pt-2 flex flex-wrap items-center gap-2">
                         <span className="text-[0.68rem] font-extrabold text-slate-400 uppercase tracking-wider mr-2">Supports:</span>
                         <div className="inline-flex items-center gap-1.5 bg-slate-100/90 px-3 py-1 rounded-lg text-xs font-bold text-slate-700">
-                            <Fingerprint className="w-3.5 h-3.5 text-[#008c46]" /> AePS
+                            <Fingerprint className="w-3.5 h-3.5 text-[#BE4510]" /> AePS
                         </div>
                         <div className="inline-flex items-center gap-1.5 bg-slate-100/90 px-3 py-1 rounded-lg text-xs font-bold text-slate-700">
-                            <CreditCard className="w-3.5 h-3.5 text-[#008c46]" /> Micro ATM
+                            <CreditCard className="w-3.5 h-3.5 text-[#BE4510]" /> Micro ATM
                         </div>
                         <div className="inline-flex items-center gap-1.5 bg-slate-100/90 px-3 py-1 rounded-lg text-xs font-bold text-slate-700">
-                            <QrCode className="w-3.5 h-3.5 text-[#008c46]" /> UPI Collect
+                            <QrCode className="w-3.5 h-3.5 text-[#BE4510]" /> UPI Collect
                         </div>
                         <div className="inline-flex items-center gap-1.5 bg-slate-100/90 px-3 py-1 rounded-lg text-xs font-bold text-slate-700">
-                            <Receipt className="w-3.5 h-3.5 text-[#008c46]" /> BBPS
+                            <Receipt className="w-3.5 h-3.5 text-[#BE4510]" /> BBPS
                         </div>
                     </div>
                 </div>
@@ -314,7 +314,7 @@ const Login: React.FC = () => {
                     </Link>
                     <Link
                         to="/"
-                        className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-[#008c46] transition-colors"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-[#E55C11] transition-colors"
                     >
                         <ArrowLeft className="w-3.5 h-3.5" />
                         <span>Home</span>
@@ -323,8 +323,8 @@ const Login: React.FC = () => {
 
                 {/* Desktop Top Security Header */}
                 <div className="hidden lg:flex items-center justify-between text-xs font-extrabold text-slate-500">
-                    <div className="inline-flex items-center gap-1.5 text-[0.68rem] text-[#008c46] bg-[#f0fdf4] px-3 py-1 rounded-full border border-emerald-200">
-                        <Building2 className="w-3.5 h-3.5 text-[#008c46]" />
+                    <div className="inline-flex items-center gap-1.5 text-[0.68rem] text-[#BE4510] bg-[#FEF3EA] px-3 py-1 rounded-full border border-[#FAD3B5]">
+                        <Building2 className="w-3.5 h-3.5 text-[#BE4510]" />
                         <span>Retailer Portal</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-400 text-xs font-bold">
@@ -381,7 +381,7 @@ const Login: React.FC = () => {
                                         User ID / Email / Phone Number
                                     </label>
                                     <div className="relative group">
-                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#008c46] transition-colors">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#E55C11] transition-colors">
                                             <User className="h-5 w-5" />
                                         </div>
                                         <input
@@ -389,7 +389,7 @@ const Login: React.FC = () => {
                                             value={forgotIdentifier}
                                             onChange={(e) => setForgotIdentifier(e.target.value)}
                                             placeholder="Enter registered User ID, Email, or Phone"
-                                            className="w-full pl-12 pr-4 py-3.5 sm:py-4 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-sm sm:text-base font-semibold focus:border-[#008c46] focus:bg-white focus:ring-4 focus:ring-[#008c46]/10 outline-none transition-all placeholder:text-slate-400"
+                                            className="w-full pl-12 pr-4 py-3.5 sm:py-4 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-sm sm:text-base font-semibold focus:border-[#E55C11] focus:bg-white focus:ring-4 focus:ring-[#E55C11]/10 outline-none transition-all placeholder:text-slate-400"
                                             required
                                             disabled={isLoading}
                                         />
@@ -399,7 +399,7 @@ const Login: React.FC = () => {
                                 <button
                                     type="submit"
                                     disabled={isLoading || !forgotIdentifier.trim()}
-                                    className="w-full py-4 px-6 bg-[#008c46] hover:bg-[#007038] text-white font-extrabold text-base rounded-full shadow-lg shadow-emerald-900/10 hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-3 cursor-pointer"
+                                    className="w-full py-4 px-6 bg-[#E55C11] hover:bg-[#D2520E] text-white font-extrabold text-base rounded-full shadow-lg shadow-orange-900/10 hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-3 cursor-pointer"
                                 >
                                     {isLoading ? (
                                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -428,7 +428,7 @@ const Login: React.FC = () => {
                                         Verification Code (OTP)
                                     </label>
                                     <div className="relative group">
-                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#008c46] transition-colors">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#E55C11] transition-colors">
                                             <KeyRound className="h-5 w-5" />
                                         </div>
                                         <input
@@ -436,7 +436,7 @@ const Login: React.FC = () => {
                                             value={forgotOtp}
                                             onChange={(e) => setForgotOtp(e.target.value)}
                                             placeholder="••••••"
-                                            className="w-full pl-12 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-center tracking-[0.3em] font-mono text-xl font-bold focus:border-[#008c46] focus:bg-white focus:ring-4 focus:ring-[#008c46]/10 outline-none transition-all placeholder:text-slate-300"
+                                            className="w-full pl-12 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-center tracking-[0.3em] font-mono text-xl font-bold focus:border-[#E55C11] focus:bg-white focus:ring-4 focus:ring-[#E55C11]/10 outline-none transition-all placeholder:text-slate-300"
                                             required
                                             maxLength={6}
                                             disabled={isLoading}
@@ -449,7 +449,7 @@ const Login: React.FC = () => {
                                         New Password
                                     </label>
                                     <div className="relative group">
-                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#008c46] transition-colors">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#E55C11] transition-colors">
                                             <Lock className="h-5 w-5" />
                                         </div>
                                         <input
@@ -457,7 +457,7 @@ const Login: React.FC = () => {
                                             value={newPassword}
                                             onChange={(e) => setNewPassword(e.target.value)}
                                             placeholder="At least 6 characters"
-                                            className="w-full pl-12 pr-12 py-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-sm font-semibold focus:border-[#008c46] focus:bg-white focus:ring-4 focus:ring-[#008c46]/10 outline-none transition-all placeholder:text-slate-400"
+                                            className="w-full pl-12 pr-12 py-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-sm font-semibold focus:border-[#E55C11] focus:bg-white focus:ring-4 focus:ring-[#E55C11]/10 outline-none transition-all placeholder:text-slate-400"
                                             required
                                             minLength={6}
                                             disabled={isLoading}
@@ -478,7 +478,7 @@ const Login: React.FC = () => {
                                         Confirm New Password
                                     </label>
                                     <div className="relative group">
-                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#008c46] transition-colors">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#E55C11] transition-colors">
                                             <Lock className="h-5 w-5" />
                                         </div>
                                         <input
@@ -486,7 +486,7 @@ const Login: React.FC = () => {
                                             value={confirmPassword}
                                             onChange={(e) => setConfirmPassword(e.target.value)}
                                             placeholder="Re-enter new password"
-                                            className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-sm font-semibold focus:border-[#008c46] focus:bg-white focus:ring-4 focus:ring-[#008c46]/10 outline-none transition-all placeholder:text-slate-400"
+                                            className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-sm font-semibold focus:border-[#E55C11] focus:bg-white focus:ring-4 focus:ring-[#E55C11]/10 outline-none transition-all placeholder:text-slate-400"
                                             required
                                             disabled={isLoading}
                                         />
@@ -496,7 +496,7 @@ const Login: React.FC = () => {
                                 <button
                                     type="submit"
                                     disabled={isLoading || forgotOtp.length < 6 || !newPassword || !confirmPassword}
-                                    className="w-full py-4 px-6 bg-[#008c46] hover:bg-[#007038] text-white font-extrabold text-base rounded-full shadow-lg shadow-emerald-900/10 hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-2 cursor-pointer mt-2"
+                                    className="w-full py-4 px-6 bg-[#E55C11] hover:bg-[#D2520E] text-white font-extrabold text-base rounded-full shadow-lg shadow-orange-900/10 hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-2 cursor-pointer mt-2"
                                 >
                                     {isLoading ? (
                                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -522,7 +522,7 @@ const Login: React.FC = () => {
                                         type="button"
                                         onClick={() => handleSendResetOtp()}
                                         disabled={countdown > 0 || isLoading}
-                                        className="text-[#008c46] font-extrabold hover:underline disabled:text-slate-400 disabled:no-underline"
+                                        className="text-[#BE4510] font-extrabold hover:underline disabled:text-slate-400 disabled:no-underline"
                                     >
                                         {countdown > 0 ? `Resend OTP in ${countdown}s` : 'Resend OTP'}
                                     </button>
@@ -537,7 +537,7 @@ const Login: React.FC = () => {
                                     User ID / Email / Phone
                                 </label>
                                 <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#008c46] transition-colors">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#E55C11] transition-colors">
                                         <User className="h-5 w-5" />
                                     </div>
                                     <input
@@ -545,7 +545,7 @@ const Login: React.FC = () => {
                                         value={identifier}
                                         onChange={(e) => setIdentifier(e.target.value)}
                                         placeholder="Enter your User ID, Email, or Phone"
-                                        className="w-full pl-12 pr-4 py-3.5 sm:py-4 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-sm sm:text-base font-semibold focus:border-[#008c46] focus:bg-white focus:ring-4 focus:ring-[#008c46]/10 outline-none transition-all placeholder:text-slate-400 placeholder:font-normal"
+                                        className="w-full pl-12 pr-4 py-3.5 sm:py-4 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-sm sm:text-base font-semibold focus:border-[#E55C11] focus:bg-white focus:ring-4 focus:ring-[#E55C11]/10 outline-none transition-all placeholder:text-slate-400 placeholder:font-normal"
                                         required
                                         disabled={isLoading}
                                     />
@@ -567,13 +567,13 @@ const Login: React.FC = () => {
                                             setError('');
                                             setMessage('');
                                         }}
-                                        className="text-xs font-bold text-[#008c46] hover:underline cursor-pointer"
+                                        className="text-xs font-bold text-[#BE4510] hover:underline cursor-pointer"
                                     >
                                         Forgot password?
                                     </button>
                                 </div>
                                 <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#008c46] transition-colors">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#E55C11] transition-colors">
                                         <Lock className="h-5 w-5" />
                                     </div>
                                     <input
@@ -581,7 +581,7 @@ const Login: React.FC = () => {
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="••••••••••••"
-                                        className="w-full pl-12 pr-12 py-3.5 sm:py-4 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-sm sm:text-base font-semibold focus:border-[#008c46] focus:bg-white focus:ring-4 focus:ring-[#008c46]/10 outline-none transition-all placeholder:text-slate-400 placeholder:font-normal"
+                                        className="w-full pl-12 pr-12 py-3.5 sm:py-4 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-sm sm:text-base font-semibold focus:border-[#E55C11] focus:bg-white focus:ring-4 focus:ring-[#E55C11]/10 outline-none transition-all placeholder:text-slate-400 placeholder:font-normal"
                                         required
                                         disabled={isLoading}
                                     />
@@ -603,7 +603,7 @@ const Login: React.FC = () => {
                                         onClick={() => setRememberMe(!rememberMe)}
                                         className={`w-4 h-4 rounded-md border transition-all flex items-center justify-center ${
                                             rememberMe
-                                                ? 'bg-[#008c46] border-[#008c46] text-white'
+                                                ? 'bg-[#E55C11] border-[#E55C11] text-white'
                                                 : 'bg-slate-50 border-slate-300'
                                         }`}
                                     >
@@ -612,12 +612,12 @@ const Login: React.FC = () => {
                                     <span className="text-xs font-bold text-slate-600">Remember this device</span>
                                 </label>
 
-                                <label className="flex items-start gap-2.5 cursor-pointer select-none p-3 rounded-2xl bg-slate-50 border border-slate-200/90 hover:border-[#008c46]/40 transition-colors">
+                                <label className="flex items-start gap-2.5 cursor-pointer select-none p-3 rounded-2xl bg-slate-50 border border-slate-200/90 hover:border-[#E55C11]/40 transition-colors">
                                     <div
                                         onClick={() => setAcceptTerms(!acceptTerms)}
                                         className={`w-4.5 h-4.5 mt-0.5 rounded-md border transition-all flex items-center justify-center shrink-0 ${
                                             acceptTerms
-                                                ? 'bg-[#008c46] border-[#008c46] text-white'
+                                                ? 'bg-[#E55C11] border-[#E55C11] text-white'
                                                 : 'bg-white border-slate-300'
                                         }`}
                                     >
@@ -625,11 +625,11 @@ const Login: React.FC = () => {
                                     </div>
                                     <span className="text-xs font-semibold text-slate-700 leading-relaxed">
                                         I accept &amp; agree to Shahparpay's{' '}
-                                        <Link to="/terms" target="_blank" className="text-[#008c46] font-bold hover:underline">
+                                        <Link to="/terms" target="_blank" className="text-[#BE4510] font-bold hover:underline">
                                             Terms &amp; Conditions
                                         </Link>{' '}
                                         and{' '}
-                                        <Link to="/privacy-policy" target="_blank" className="text-[#008c46] font-bold hover:underline">
+                                        <Link to="/privacy-policy" target="_blank" className="text-[#BE4510] font-bold hover:underline">
                                             Privacy Policy
                                         </Link>.
                                     </span>
@@ -640,14 +640,14 @@ const Login: React.FC = () => {
                             <button
                                 type="submit"
                                 disabled={isLoading || !identifier.trim() || !password || !acceptTerms}
-                                className="w-full min-h-13 inline-flex items-center justify-center gap-2.5 bg-[#18181b] hover:bg-black text-white rounded-full pl-6 pr-2 py-2 text-base font-bold shadow-md transition-all hover:scale-[1.01] disabled:opacity-70 disabled:hover:scale-100 disabled:hover:bg-[#18181b] disabled:cursor-not-allowed cursor-pointer group mt-4"
+                                className="w-full min-h-13 inline-flex items-center justify-center gap-2.5 bg-[#E55C11] hover:bg-[#D2520E] text-white rounded-full pl-6 pr-2 py-2 text-base font-bold shadow-md transition-all hover:scale-[1.01] disabled:opacity-70 disabled:hover:scale-100 disabled:hover:bg-[#E55C11] disabled:cursor-not-allowed cursor-pointer group mt-4"
                             >
                                 {isLoading ? (
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                 ) : (
                                     <>
                                         <span>Sign In to Dashboard</span>
-                                        <span className="w-6 h-6 rounded-full bg-[#a3e635] text-black flex items-center justify-center font-black text-xs [font-family:'Inter_Variable',Inter,ui-sans-serif,system-ui,-apple-system,sans-serif] group-hover:rotate-45 group-disabled:rotate-0 transition-transform">
+                                        <span className="w-6 h-6 rounded-full bg-white text-[#E55C11] flex items-center justify-center font-black text-xs [font-family:'Inter_Variable',Inter,ui-sans-serif,system-ui,-apple-system,sans-serif] group-hover:rotate-45 group-disabled:rotate-0 transition-transform">
                                             ↗
                                         </span>
                                     </>
@@ -662,7 +662,7 @@ const Login: React.FC = () => {
                                     Security Verification Code
                                 </label>
                                 <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#008c46] transition-colors">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#E55C11] transition-colors">
                                         <KeyRound className="h-5 w-5" />
                                     </div>
                                     <input
@@ -670,7 +670,7 @@ const Login: React.FC = () => {
                                         value={otp}
                                         onChange={(e) => setOtp(e.target.value)}
                                         placeholder="••••••"
-                                        className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-center tracking-[0.3em] font-mono text-xl font-bold focus:border-[#008c46] focus:bg-white focus:ring-4 focus:ring-[#008c46]/10 outline-none transition-all placeholder:text-slate-300"
+                                        className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-900 text-center tracking-[0.3em] font-mono text-xl font-bold focus:border-[#E55C11] focus:bg-white focus:ring-4 focus:ring-[#E55C11]/10 outline-none transition-all placeholder:text-slate-300"
                                         required
                                         maxLength={6}
                                         disabled={isLoading}
@@ -689,7 +689,7 @@ const Login: React.FC = () => {
                                         type="button"
                                         onClick={() => handleSubmit()}
                                         disabled={countdown > 0 || isLoading}
-                                        className="text-[#008c46] font-extrabold hover:underline disabled:text-slate-400 disabled:no-underline"
+                                        className="text-[#BE4510] font-extrabold hover:underline disabled:text-slate-400 disabled:no-underline"
                                     >
                                         {countdown > 0 ? `Resend code in ${countdown}s` : 'Resend Code'}
                                     </button>
@@ -699,14 +699,14 @@ const Login: React.FC = () => {
                             <button
                                 type="submit"
                                 disabled={isLoading || otp.length < 6}
-                                className="w-full min-h-13 inline-flex items-center justify-center gap-2.5 bg-[#18181b] hover:bg-black text-white rounded-full pl-6 pr-2 py-2 text-base font-bold shadow-md transition-all hover:scale-[1.01] disabled:opacity-70 disabled:hover:scale-100 disabled:hover:bg-[#18181b] disabled:cursor-not-allowed cursor-pointer group"
+                                className="w-full min-h-13 inline-flex items-center justify-center gap-2.5 bg-[#E55C11] hover:bg-[#D2520E] text-white rounded-full pl-6 pr-2 py-2 text-base font-bold shadow-md transition-all hover:scale-[1.01] disabled:opacity-70 disabled:hover:scale-100 disabled:hover:bg-[#E55C11] disabled:cursor-not-allowed cursor-pointer group"
                             >
                                 {isLoading ? (
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                 ) : (
                                     <>
                                         <span>Verify &amp; Enter Dashboard</span>
-                                        <span className="w-6 h-6 rounded-full bg-[#a3e635] text-black flex items-center justify-center font-black text-xs [font-family:'Inter_Variable',Inter,ui-sans-serif,system-ui,-apple-system,sans-serif] group-hover:rotate-45 group-disabled:rotate-0 transition-transform">
+                                        <span className="w-6 h-6 rounded-full bg-white text-[#E55C11] flex items-center justify-center font-black text-xs [font-family:'Inter_Variable',Inter,ui-sans-serif,system-ui,-apple-system,sans-serif] group-hover:rotate-45 group-disabled:rotate-0 transition-transform">
                                             ↗
                                         </span>
                                     </>
@@ -731,9 +731,9 @@ const Login: React.FC = () => {
                 {/* Footer Notes */}
                 <div className="w-full text-center text-xs font-semibold text-slate-400">
                     <span>By signing in, you agree to Shahparpay's </span>
-                    <Link to="/terms" target="_blank" className="hover:underline text-[#008c46] font-bold">Terms of Service</Link>
+                    <Link to="/terms" target="_blank" className="hover:underline text-[#BE4510] font-bold">Terms of Service</Link>
                     <span> &amp; </span>
-                    <Link to="/privacy-policy" target="_blank" className="hover:underline text-[#008c46] font-bold">Privacy Policy</Link>
+                    <Link to="/privacy-policy" target="_blank" className="hover:underline text-[#BE4510] font-bold">Privacy Policy</Link>
                 </div>
             </div>
         </div>

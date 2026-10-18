@@ -143,8 +143,8 @@ function BillReceiptMockup() {
                 <div className="flex justify-between"><span className="text-slate-500">Due date</span><span className="font-bold text-slate-900">18 Oct</span></div>
             </div>
             <div className="mt-4 flex items-center justify-between rounded-2xl bg-[#00381e] text-white px-4 py-3">
-                <span className="flex items-center gap-1.5 text-xs font-bold"><CheckCircle2 className="w-4 h-4 text-lime-300" /> Paid · receipt sent</span>
-                <span className="text-xs font-extrabold text-lime-300">+₹4.50</span>
+                <span className="flex items-center gap-1.5 text-xs font-bold"><CheckCircle2 className="w-4 h-4 text-orange-300" /> Paid · receipt sent</span>
+                <span className="text-xs font-extrabold text-orange-300">+₹4.50</span>
             </div>
         </div>
     );
@@ -173,7 +173,7 @@ function RechargePlansMockup() {
                             <p className="text-sm font-extrabold text-slate-900">{plan.price}</p>
                             <p className="text-[11px] text-slate-500">{plan.detail}</p>
                         </div>
-                        {i === 1 && <span className="text-[10px] font-bold text-white bg-[#008c46] px-2 py-0.5 rounded-full">Selected</span>}
+                        {i === 1 && <span className="text-[10px] font-bold text-white bg-[#E55C11] px-2 py-0.5 rounded-full">Selected</span>}
                     </div>
                 ))}
             </div>
@@ -325,8 +325,8 @@ const Landing: React.FC = () => {
                 {/* Centered Hero Header Text & Offer Card sitting over the background illustration */}
                 <div className="relative z-10 mx-auto max-w-5xl 2xl:max-w-6xl text-center flex flex-col items-center justify-center w-full">
                     {/* Eyebrow Pill Badge */}
-                    <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-bold mb-3 sm:mb-4 shadow-2xs">
-                        <Sparkles className="w-3.5 h-3.5 text-[#008c46]" />
+                    <div className="inline-flex items-center gap-2 bg-[#FEF3EA] text-[#BE4510] border border-[#FAD3B5] px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-bold mb-3 sm:mb-4 shadow-2xs">
+                        <Sparkles className="w-3.5 h-3.5 text-[#BE4510]" />
                         <span>Digital banking services for your shop</span>
                     </div>
 
@@ -334,18 +334,18 @@ const Landing: React.FC = () => {
                         Turn Your Shop Into A Banking Point For Your Neighbourhood
                     </h1>
 
-                    {/* Soft Lime/Yellow Offer Card matching screenshot */}
+                    {/* Soft orange offer card (BHIM O-50) */}
                     <div
-                        className="my-4 sm:my-8 lg:my-[min(2rem,3vh)] 2xl:my-[min(2.5rem,3.5vh)] rounded-2xl sm:rounded-3xl p-4 sm:p-8 lg:p-[min(2rem,3vh)] 2xl:p-[min(2.5rem,3.5vh)] max-w-2xl 2xl:max-w-3xl w-full border border-lime-300/80 shadow-md text-center relative overflow-hidden mx-auto flex flex-col items-center justify-center backdrop-blur-xs"
+                        className="my-4 sm:my-8 lg:my-[min(2rem,3vh)] 2xl:my-[min(2.5rem,3.5vh)] rounded-2xl sm:rounded-3xl p-4 sm:p-8 lg:p-[min(2rem,3vh)] 2xl:p-[min(2.5rem,3.5vh)] max-w-2xl 2xl:max-w-3xl w-full border border-orange-300/80 shadow-md text-center relative overflow-hidden mx-auto flex flex-col items-center justify-center backdrop-blur-xs"
                         style={{
-                            background: 'linear-gradient(180deg, rgba(228, 250, 173, 0.94) 0%, rgba(254, 248, 184, 0.94) 100%)'
+                            background: 'linear-gradient(180deg, rgba(254, 232, 214, 0.94) 0%, rgba(255, 246, 236, 0.94) 100%)'
                         }}
                     >
                         <div className="flex flex-wrap sm:flex-col items-center justify-center gap-1.5 sm:gap-1 text-slate-900">
-                            <span className="text-4xl sm:text-6xl lg:text-[min(3.75rem,7vh)] leading-none font-black tracking-tight text-[#00502b]">
+                            <span className="text-4xl sm:text-6xl lg:text-[min(3.75rem,7vh)] leading-none font-black tracking-tight text-[#7A2E06]">
                                 ₹0
                             </span>
-                            <span className="text-xs sm:text-xl font-extrabold text-[#00502b] ml-0.5 sm:ml-0">
+                            <span className="text-xs sm:text-xl font-extrabold text-[#7A2E06] ml-0.5 sm:ml-0">
                                 to join. You earn a commission on every transaction.
                             </span>
                         </div>
@@ -367,10 +367,10 @@ const Landing: React.FC = () => {
                     <div className="flex flex-row items-center justify-center gap-2.5 sm:gap-4 relative z-20 mx-auto w-full sm:w-auto">
                         <Link
                             to="/login"
-                            className="bg-[#18181b] hover:bg-black text-white font-bold px-4 sm:px-7 py-3 rounded-full text-xs sm:text-base inline-flex items-center justify-center gap-2 sm:gap-3 shadow-md transition-transform hover:scale-[1.01] flex-1 sm:flex-initial"
+                            className="bg-[#E55C11] hover:bg-[#D2520E] text-white font-bold px-4 sm:px-7 py-3 rounded-full text-xs sm:text-base inline-flex items-center justify-center gap-2 sm:gap-3 shadow-md transition-transform hover:scale-[1.01] flex-1 sm:flex-initial"
                         >
                             <span>Sign In</span>
-                            <span className="bg-[#a3e635] text-black w-5 h-5 sm:w-6 sm:h-6 rounded-md flex items-center justify-center font-black text-xs sm:text-sm">
+                            <span className="bg-white text-[#E55C11] w-5 h-5 sm:w-6 sm:h-6 rounded-md flex items-center justify-center font-black text-xs sm:text-sm">
                                 ↗
                             </span>
                         </Link>
@@ -397,7 +397,7 @@ const Landing: React.FC = () => {
             <section className="relative py-20 sm:py-28 px-4 sm:px-6 bg-white">
                 <div className="mx-auto max-w-6xl">
                     <div className="text-center max-w-2xl mx-auto">
-                        <span className="inline-block bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 py-1 rounded-full text-xs font-bold">
+                        <span className="inline-block bg-[#FEF3EA] text-[#BE4510] border border-[#FAD3B5] px-3.5 py-1 rounded-full text-xs font-bold">
                             Get started
                         </span>
                         <h2 className="mt-4 text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-[1.1]">
@@ -413,11 +413,11 @@ const Landing: React.FC = () => {
                         <div className="hidden md:block absolute top-7 left-[16.6%] right-[16.6%] h-0.5 bg-gradient-to-r from-[#bbf7d0] via-[#008c46] to-[#bbf7d0]" />
                         {START_STEPS.map(({ title, text, icon: Icon }, i) => (
                             <Reveal key={title} delay={i * 0.12} className="relative flex flex-col items-center text-center">
-                                <div className="relative z-10 w-14 h-14 rounded-full bg-[#008c46] text-white flex items-center justify-center text-lg font-black shadow-lg ring-8 ring-white">
+                                <div className="relative z-10 w-14 h-14 rounded-full bg-[#E55C11] text-white flex items-center justify-center text-lg font-black shadow-lg ring-8 ring-white">
                                     {i + 1}
                                 </div>
                                 <div className="mt-6 w-full rounded-3xl border border-slate-200 bg-[#f8fafc] p-6 sm:p-7 text-left shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="w-11 h-11 rounded-2xl bg-[#ecfccb] text-[#00502b] flex items-center justify-center">
+                                    <div className="w-11 h-11 rounded-2xl bg-[#FEF0E4] text-[#7A2E06] flex items-center justify-center">
                                         <Icon className="w-5 h-5" />
                                     </div>
                                     <h3 className="mt-4 text-xl font-extrabold text-slate-900 tracking-tight">{title}</h3>
@@ -430,7 +430,7 @@ const Landing: React.FC = () => {
                     <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-3">
                         <a
                             href="tel:+918240039776"
-                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#18181b] hover:bg-black text-white px-7 text-sm sm:text-base font-bold shadow-md"
+                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#E55C11] hover:bg-[#D2520E] text-white px-7 text-sm sm:text-base font-bold shadow-md"
                         >
                             <Phone className="w-4 h-4" /> Call +91 8240039776
                         </a>
@@ -443,7 +443,7 @@ const Landing: React.FC = () => {
             <a
                 href="#contact"
                 aria-label="Open support chat"
-                className="fixed bottom-6 right-6 w-14 h-14 bg-[#008c46] hover:bg-[#007339] text-white rounded-full flex items-center justify-center shadow-2xl z-50 transition-transform hover:scale-105"
+                className="fixed bottom-6 right-6 w-14 h-14 bg-[#E55C11] hover:bg-[#D2520E] text-white rounded-full flex items-center justify-center shadow-2xl z-50 transition-transform hover:scale-105"
             >
                 <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
                     <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
@@ -455,14 +455,14 @@ const Landing: React.FC = () => {
             {/* --------------------------------------------------- THE WHOLE PAYMENTS STACK, ON ONE PLATFORM ---------------- */}
             <section className="relative py-28 px-6 bg-white overflow-hidden select-none">
                 {/* Soft brand glows */}
-                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_10%_50%,#dcfce7_0%,transparent_45%),radial-gradient(ellipse_at_90%_50%,#ecfccb_0%,transparent_45%)]" />
+                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_10%_50%,#dcfce7_0%,transparent_45%),radial-gradient(ellipse_at_90%_50%,#FEF0E4_0%,transparent_45%)]" />
 
                 <div className="mx-auto max-w-7xl relative z-10">
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center min-h-[600px]">
                         {/* Left Column Floating Tiles */}
                         <div className="lg:col-span-4 flex flex-col items-center lg:items-end justify-between gap-14">
                             {/* Top Left: Live Analytics Chart Card */}
-                            <div className="bg-[#ccf788] border border-lime-300 rounded-3xl p-4 shadow-lg w-full max-w-xs transform -rotate-2 hover:rotate-0 transition-transform">
+                            <div className="bg-[#FDE3CF] border border-orange-300 rounded-3xl p-4 shadow-lg w-full max-w-xs transform -rotate-2 hover:rotate-0 transition-transform">
                                 <div className="bg-white rounded-2xl p-4 shadow-sm">
                                     <div className="flex items-center justify-between text-[0.65rem] font-bold text-slate-500 mb-1">
                                         <span className="flex items-center gap-1">
@@ -486,17 +486,17 @@ const Landing: React.FC = () => {
                                         <path d="M0,35 Q40,10 80,28 T160,12 T200,30 L200,45 L0,45 Z" fill="url(#walletChartGrad)" />
                                         <path d="M0,35 Q40,10 80,28 T160,12 T200,30" fill="none" stroke="#059669" strokeWidth="3.5" strokeLinecap="round" />
                                         <circle cx="160" cy="12" r="4.5" fill="#047857" className="animate-ping" />
-                                        <circle cx="160" cy="12" r="3.5" fill="#a3e635" />
+                                        <circle cx="160" cy="12" r="3.5" fill="#F79440" />
                                     </svg>
                                 </div>
                             </div>
 
                             {/* Bottom Left: Assisted Onboarding Support Card */}
                             <div className="relative rounded-3xl overflow-hidden border border-emerald-200 shadow-xl w-full max-w-xs h-64 transform rotate-1 hover:rotate-0 transition-transform bg-gradient-to-br from-[#008c46] to-[#00502b]">
-                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_25%,rgba(163,230,53,0.35),transparent_55%)]" />
+                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_25%,rgba(255,255,255,0.18),transparent_55%)]" />
                                 <div className="absolute top-6 left-6 right-6 text-white">
                                     <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center">
-                                        <Headset className="w-7 h-7 text-lime-300" />
+                                        <Headset className="w-7 h-7 text-orange-300" />
                                     </div>
                                     <p className="mt-4 text-lg font-extrabold leading-tight">Our team sets up your counter with you</p>
                                     <p className="mt-1 text-xs font-semibold text-emerald-100">Call +91 8240039776 · Mon–Sat</p>
@@ -554,7 +554,7 @@ const Landing: React.FC = () => {
                                     <div className="bg-white/85 backdrop-blur-md p-2 rounded-2xl border border-white/90 w-full grid grid-cols-4 gap-1.5 text-center shadow-lg">
                                         <span className="text-[0.6rem] font-bold py-1 bg-[#008c46] text-white rounded">AEPS</span>
                                         <span className="text-[0.6rem] font-bold py-1 bg-emerald-100 text-emerald-800 rounded">mATM</span>
-                                        <span className="text-[0.6rem] font-bold py-1 bg-lime-100 text-lime-900 rounded">DMT</span>
+                                        <span className="text-[0.6rem] font-bold py-1 bg-orange-100 text-orange-900 rounded">DMT</span>
                                         <span className="text-[0.6rem] font-bold py-1 bg-amber-100 text-amber-900 rounded">BBPS</span>
                                         <span className="text-[0.6rem] font-bold py-1 bg-sky-100 text-sky-800 rounded">UPI</span>
                                         <span className="text-[0.6rem] font-bold py-1 bg-slate-100 text-slate-800 rounded">Recharge</span>
@@ -568,7 +568,7 @@ const Landing: React.FC = () => {
                             <div className="bg-[#0284c7] text-white rounded-3xl p-6 shadow-xl w-full max-w-xs text-center border border-sky-300 relative transform -rotate-1 hover:rotate-0 transition-transform">
                                 <h4 className="text-2xl font-black tracking-tight mb-2">No Hidden</h4>
                                 <div className="my-2 mx-auto w-32 h-20 rounded-2xl bg-white/20 backdrop-blur-md border border-white/40 p-1.5 flex items-center justify-center">
-                                    <div className="w-full h-full rounded-xl bg-gradient-to-br from-lime-300 via-emerald-300 to-emerald-400 flex items-center justify-center text-slate-900 font-extrabold text-xs shadow-inner">
+                                    <div className="w-full h-full rounded-xl bg-gradient-to-br from-orange-300 via-emerald-300 to-emerald-400 flex items-center justify-center text-slate-900 font-extrabold text-xs shadow-inner">
                                         ₹0 to join
                                     </div>
                                 </div>
@@ -707,7 +707,7 @@ const Landing: React.FC = () => {
                                                 <p className="text-[10px] font-bold text-slate-900">Mobile recharge</p>
                                                 <p className="text-[9px] text-slate-500">₹239 / 28 days</p>
                                             </div>
-                                            <button className="bg-[#008c46] text-white text-[9px] font-bold px-2.5 py-1 rounded">
+                                            <button className="bg-[#E55C11] text-white text-[9px] font-bold px-2.5 py-1 rounded">
                                                 PAY
                                             </button>
                                         </div>
@@ -758,7 +758,7 @@ const Landing: React.FC = () => {
                             <div className="mt-10 sm:mt-12 grid grid-cols-2 sm:grid-cols-3 gap-3.5 relative z-10">
                                 {TRANSFER_AND_BILL_SERVICES.map(({ label, icon: Icon }) => (
                                     <div key={label} className="bg-white/85 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-white/90 flex items-center gap-2.5 font-bold text-slate-800 text-sm group-hover:scale-105 transition-all">
-                                        <div className="w-7 h-7 rounded-lg bg-[#008c46] text-white flex items-center justify-center shadow-sm shrink-0">
+                                        <div className="w-7 h-7 rounded-lg bg-[#F1F1F1] text-[#171717] flex items-center justify-center shadow-sm shrink-0">
                                             <Icon className="w-4 h-4" />
                                         </div>
                                         <span>{label}</span>
@@ -796,12 +796,12 @@ const Landing: React.FC = () => {
                                 {/* Form Mockup Card */}
                                 <div className="bg-white rounded-2xl shadow-xl border border-slate-200/80 p-4 sm:p-5 text-slate-900 max-w-md w-full transform -rotate-1 group-hover:rotate-0 transition-transform duration-500 z-10">
                                     {/* Form Header Banner */}
-                                    <div className="bg-gradient-to-r from-lime-200 via-emerald-200 to-teal-200 rounded-xl p-3.5 text-center relative overflow-hidden mb-3 border border-emerald-200/60">
+                                    <div className="bg-gradient-to-r from-orange-200 via-emerald-200 to-teal-200 rounded-xl p-3.5 text-center relative overflow-hidden mb-3 border border-emerald-200/60">
                                         <span className="absolute top-2 right-2 text-[8px] font-bold text-slate-600 bg-white/70 px-1.5 py-0.5 rounded">
                                             Powered by Shahparpay
                                         </span>
                                         <div className="flex items-center justify-center gap-1.5 pt-1">
-                                            <div className="w-6 h-6 rounded-full bg-[#008c46] text-white flex items-center justify-center">
+                                            <div className="w-6 h-6 rounded-full bg-[#F1F1F1] text-[#171717] flex items-center justify-center">
                                                 <IdCard className="w-3.5 h-3.5" />
                                             </div>
                                             <span className="text-base font-extrabold text-slate-900 tracking-tight">PAN Card Application</span>
@@ -851,7 +851,7 @@ const Landing: React.FC = () => {
                                                 </div>
                                             </div>
 
-                                            <button className="bg-[#008c46] hover:bg-[#007339] text-white font-extrabold py-2 px-3 rounded-xl text-[10px] shadow-sm flex items-center justify-center gap-1.5 w-full transition-colors mt-2">
+                                            <button className="bg-[#E55C11] hover:bg-[#007339] text-white font-extrabold py-2 px-3 rounded-xl text-[10px] shadow-sm flex items-center justify-center gap-1.5 w-full transition-colors mt-2">
                                                 <span>Submit application</span>
                                                 <ArrowRight className="w-3 h-3" />
                                             </button>
@@ -880,7 +880,7 @@ const Landing: React.FC = () => {
                                     Daily Settlement
                                 </h3>
                                 <p className="mt-3 text-sm sm:text-base text-slate-700 leading-relaxed font-medium">
-                                    Move the day's earnings from your wallet to your own bank account, on your schedule. <a href="#products" className="underline font-bold text-slate-900 hover:text-[#008c46]">Learn more</a>
+                                    Move the day's earnings from your wallet to your own bank account, on your schedule. <a href="#products" className="underline font-bold text-slate-900 hover:text-[#E55C11]">Learn more</a>
                                 </p>
                             </div>
 
@@ -968,7 +968,7 @@ const Landing: React.FC = () => {
                                 onClick={() => setBentoTab('collect')}
                                 className={`px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
                                     bentoTab === 'collect'
-                                        ? 'bg-[#00a859] text-white shadow-md'
+                                        ? 'bg-[#E55C11] text-white shadow-md'
                                         : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                                 }`}
                             >
@@ -978,7 +978,7 @@ const Landing: React.FC = () => {
                                 onClick={() => setBentoTab('global')}
                                 className={`px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
                                     bentoTab === 'global'
-                                        ? 'bg-[#00a859] text-white shadow-md'
+                                        ? 'bg-[#E55C11] text-white shadow-md'
                                         : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                                 }`}
                             >
@@ -988,7 +988,7 @@ const Landing: React.FC = () => {
                                 onClick={() => setBentoTab('identity')}
                                 className={`px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
                                     bentoTab === 'identity'
-                                        ? 'bg-[#00a859] text-white shadow-md'
+                                        ? 'bg-[#E55C11] text-white shadow-md'
                                         : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                                 }`}
                             >
@@ -998,7 +998,7 @@ const Landing: React.FC = () => {
                                 onClick={() => setBentoTab('ai')}
                                 className={`px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
                                     bentoTab === 'ai'
-                                        ? 'bg-[#00a859] text-white shadow-md'
+                                        ? 'bg-[#E55C11] text-white shadow-md'
                                         : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                                 }`}
                             >
@@ -1008,7 +1008,7 @@ const Landing: React.FC = () => {
                                 onClick={() => setBentoTab('disburse')}
                                 className={`px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
                                     bentoTab === 'disburse'
-                                        ? 'bg-[#00a859] text-white shadow-md'
+                                        ? 'bg-[#E55C11] text-white shadow-md'
                                         : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                                 }`}
                             >
@@ -1055,7 +1055,7 @@ const Landing: React.FC = () => {
                                 </p>
                                 <a
                                     href="#products"
-                                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#008c46] hover:text-[#006e37] transition-colors group-hover:translate-x-1 duration-200 pt-1"
+                                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#BE4510] hover:text-[#D2520E] transition-colors group-hover:translate-x-1 duration-200 pt-1"
                                 >
                                     <span>Know More</span>
                                     <ArrowRight className="w-4 h-4" />
@@ -1080,7 +1080,7 @@ const Landing: React.FC = () => {
                                 </p>
                                 <a
                                     href="#products"
-                                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#008c46] hover:text-[#006e37] transition-colors group-hover:translate-x-1 duration-200 pt-1"
+                                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#BE4510] hover:text-[#D2520E] transition-colors group-hover:translate-x-1 duration-200 pt-1"
                                 >
                                     <span>Know More</span>
                                     <ArrowRight className="w-4 h-4" />
@@ -1092,7 +1092,7 @@ const Landing: React.FC = () => {
             </section>
 
             {/* -------------------------------------------------- PAYMENTS, BUILT FOR AI SECTION */}
-            <section className="relative w-full py-24 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gradient-to-b from-[#f7fee7]/80 via-[#ecfccb]/30 to-white border-b border-slate-100">
+            <section className="relative w-full py-24 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gradient-to-b from-[#FFF8F2]/80 via-[#FEF0E4]/30 to-white border-b border-slate-100">
                 <div className="mx-auto max-w-7xl relative z-10">
                     {/* Section Header */}
                     <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
@@ -1116,7 +1116,7 @@ const Landing: React.FC = () => {
                             </h3>
                             <a
                                 href="#products"
-                                className="inline-flex items-center gap-1.5 text-sm sm:text-base font-bold text-[#008c46] hover:text-[#006e37] transition-colors group pt-2"
+                                className="inline-flex items-center gap-1.5 text-sm sm:text-base font-bold text-[#BE4510] hover:text-[#D2520E] transition-colors group pt-2"
                             >
                                 <span>See what you can track</span>
                                 <ArrowRight className="w-4.5 h-4.5 group-hover:translate-x-1 transition-transform" />
@@ -1164,10 +1164,10 @@ const Landing: React.FC = () => {
                                 <div className="flex items-center gap-4 flex-wrap pt-2">
                                     <Link
                                         to="/login"
-                                        className="bg-[#18181b] hover:bg-black text-white pl-6 pr-2 py-2.5 rounded-full font-extrabold text-sm shadow-2xl flex items-center gap-3 transition-all hover:scale-105 group"
+                                        className="bg-[#E55C11] hover:bg-[#D2520E] text-white pl-6 pr-2 py-2.5 rounded-full font-extrabold text-sm shadow-2xl flex items-center gap-3 transition-all hover:scale-105 group"
                                     >
                                         <span>Sign In</span>
-                                        <div className="w-8 h-8 rounded-full bg-[#ccf788] text-slate-900 flex items-center justify-center font-black group-hover:rotate-45 transition-transform">
+                                        <div className="w-8 h-8 rounded-full bg-white text-[#E55C11] flex items-center justify-center font-black group-hover:rotate-45 transition-transform">
                                             ↗
                                         </div>
                                     </Link>
@@ -1223,13 +1223,13 @@ const Landing: React.FC = () => {
                 className="relative py-20 sm:py-28 px-4 sm:px-6 overflow-hidden bg-white select-none"
             >
                 {/* Soft brand glows */}
-                <div className="absolute inset-0 pointer-events-none z-0 bg-[radial-gradient(ellipse_at_0%_60%,#bbf7d0_0%,transparent_40%),radial-gradient(ellipse_at_100%_40%,#d9f99d_0%,transparent_40%)]" />
+                <div className="absolute inset-0 pointer-events-none z-0 bg-[radial-gradient(ellipse_at_0%_60%,#bbf7d0_0%,transparent_40%),radial-gradient(ellipse_at_100%_40%,#FBD5B5_0%,transparent_40%)]" />
 
                 <div className="relative z-10 max-w-5xl mx-auto space-y-8 sm:space-y-10">
                     {/* Centered Heading */}
                     <div className="text-center space-y-3">
                         <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight">
-                            Frequently <span className="text-[#008c46]">asked questions</span>
+                            Frequently <span className="text-[#BE4510]">asked questions</span>
                         </h2>
                         <p className="text-sm sm:text-base text-slate-600 font-medium max-w-xl mx-auto">
                             Earnings, onboarding, devices and security — the things retailers ask before they sign up.
@@ -1243,7 +1243,7 @@ const Landing: React.FC = () => {
                             onClick={() => { setFaqCategory('getting_started'); setOpenFaqIndex(0); }}
                             className={`px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                                 faqCategory === 'getting_started'
-                                    ? 'bg-[#ccf788] text-slate-900 border border-[#a3e635] shadow-xs scale-[1.02]'
+                                    ? 'bg-[#FDEBDD] text-slate-900 border border-[#F79440] shadow-xs scale-[1.02]'
                                     : 'bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80'
                             }`}
                         >
@@ -1254,7 +1254,7 @@ const Landing: React.FC = () => {
                             onClick={() => { setFaqCategory('integration'); setOpenFaqIndex(0); }}
                             className={`px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                                 faqCategory === 'integration'
-                                    ? 'bg-[#ccf788] text-slate-900 border border-[#a3e635] shadow-xs scale-[1.02]'
+                                    ? 'bg-[#FDEBDD] text-slate-900 border border-[#F79440] shadow-xs scale-[1.02]'
                                     : 'bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80'
                             }`}
                         >
@@ -1265,7 +1265,7 @@ const Landing: React.FC = () => {
                             onClick={() => { setFaqCategory('security'); setOpenFaqIndex(0); }}
                             className={`px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                                 faqCategory === 'security'
-                                    ? 'bg-[#ccf788] text-slate-900 border border-[#a3e635] shadow-xs scale-[1.02]'
+                                    ? 'bg-[#FDEBDD] text-slate-900 border border-[#F79440] shadow-xs scale-[1.02]'
                                     : 'bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80'
                             }`}
                         >
@@ -1276,7 +1276,7 @@ const Landing: React.FC = () => {
                             onClick={() => { setFaqCategory('support'); setOpenFaqIndex(0); }}
                             className={`px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                                 faqCategory === 'support'
-                                    ? 'bg-[#ccf788] text-slate-900 border border-[#a3e635] shadow-xs scale-[1.02]'
+                                    ? 'bg-[#FDEBDD] text-slate-900 border border-[#F79440] shadow-xs scale-[1.02]'
                                     : 'bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80'
                             }`}
                         >
@@ -1302,7 +1302,7 @@ const Landing: React.FC = () => {
                                         </h3>
                                         <div
                                             className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-base shrink-0 transition-transform ${
-                                                isOpen ? 'bg-[#008c46] text-white rotate-45' : 'bg-slate-100 text-slate-700'
+                                                isOpen ? 'bg-[#E55C11] text-white rotate-45' : 'bg-slate-100 text-slate-700'
                                             }`}
                                         >
                                             +

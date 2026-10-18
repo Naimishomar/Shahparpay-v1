@@ -22,7 +22,7 @@ const LandingFooter: React.FC = () => {
                     <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
                         Shahparpay Solutions Private Limited equips shop owners across India to offer banking, bill payment and document services to their customers, and to earn on every transaction.
                     </p>
-                    <div className="pt-2 text-xs font-semibold text-[#a3e635] flex items-center gap-2">
+                    <div className="pt-2 text-xs font-semibold text-[#F79440] flex items-center gap-2">
                         <CheckCircle2 className="h-4 w-4" /> Services delivered over NPCI rails through licensed banking partners
                     </div>
                 </div>
@@ -58,15 +58,15 @@ const LandingFooter: React.FC = () => {
                     <h4 className="text-sm font-bold text-white uppercase tracking-wider">Official Contact</h4>
                     <ul className="space-y-3 text-xs text-slate-400 font-medium">
                         <li className="flex items-center gap-2.5">
-                            <Phone className="h-4 w-4 text-[#a3e635] shrink-0" />
+                            <Phone className="h-4 w-4 text-[#F79440] shrink-0" />
                             <a href="tel:+918240039776" className="hover:text-white transition-colors font-bold">+91 8240039776</a>
                         </li>
                         <li className="flex items-center gap-2.5">
-                            <Mail className="h-4 w-4 text-[#a3e635] shrink-0" />
+                            <Mail className="h-4 w-4 text-[#F79440] shrink-0" />
                             <a href="mailto:shahparpay@gmail.com" className="hover:text-white transition-colors">shahparpay@gmail.com</a>
                         </li>
                         <li className="flex items-start gap-2.5">
-                            <MapPin className="h-4 w-4 text-[#a3e635] shrink-0 mt-0.5" />
+                            <MapPin className="h-4 w-4 text-[#F79440] shrink-0 mt-0.5" />
                             <span>4/1 Victoria Lane, Telinipara, Bhadreswar, Hooghly, West Bengal - 712125</span>
                         </li>
                     </ul>
@@ -81,7 +81,7 @@ const LandingFooter: React.FC = () => {
                         alt="Shahparpay"
                         className="h-[8.5vw] max-h-40 min-h-10 w-auto object-contain transition-transform group-hover:scale-105 duration-300 shrink-0"
                     /> */}
-                    <h2 className="text-[11.5vw] sm:text-[13vw] xl:text-[13.5vw] font-black text-white tracking-tighter leading-none text-center transition-colors group-hover:text-[#ccf788] whitespace-nowrap">
+                    <h2 className="text-[11.5vw] sm:text-[13vw] xl:text-[13.5vw] font-black text-white tracking-tighter leading-none text-center transition-colors group-hover:text-[#FDE3CF] whitespace-nowrap">
                         Shahparpay
                     </h2>
                 </div>
@@ -91,16 +91,16 @@ const LandingFooter: React.FC = () => {
             <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-6 text-xs text-slate-400 font-medium">
                 {/* Social Links Row */}
                 <div className="flex items-center gap-3">
-                    <a href="https://wa.me/918240039776?text=Hi%20Shahparpay%2C%20I%20need%20help%20with%20my%20retailer%20account." target="_blank" rel="noopener noreferrer" aria-label="WhatsApp Support" className="w-11 h-11 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
+                    <a href="https://wa.me/918240039776?text=Hi%20Shahparpay%2C%20I%20need%20help%20with%20my%20retailer%20account." target="_blank" rel="noopener noreferrer" aria-label="WhatsApp Support" className="w-11 h-11 rounded-full bg-slate-800/90 hover:bg-[#E55C11] hover:text-white text-slate-300 transition-all flex items-center justify-center">
                         <MessageCircle className="w-4 h-4" />
                     </a>
-                    <a href="mailto:shahparpay@gmail.com" aria-label="Email Support" className="w-11 h-11 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
+                    <a href="mailto:shahparpay@gmail.com" aria-label="Email Support" className="w-11 h-11 rounded-full bg-slate-800/90 hover:bg-[#E55C11] hover:text-white text-slate-300 transition-all flex items-center justify-center">
                         <Mail className="w-4 h-4" />
                     </a>
-                    <a href="tel:+918240039776" aria-label="Official Phone" className="w-11 h-11 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
+                    <a href="tel:+918240039776" aria-label="Official Phone" className="w-11 h-11 rounded-full bg-slate-800/90 hover:bg-[#E55C11] hover:text-white text-slate-300 transition-all flex items-center justify-center">
                         <Phone className="w-4 h-4" />
                     </a>
-                    <a href="#contact" aria-label="Location" className="w-11 h-11 rounded-full bg-slate-800/90 hover:bg-[#008c46] hover:text-white text-slate-300 transition-all flex items-center justify-center">
+                    <a href="#contact" aria-label="Location" className="w-11 h-11 rounded-full bg-slate-800/90 hover:bg-[#E55C11] hover:text-white text-slate-300 transition-all flex items-center justify-center">
                         <Globe className="w-4 h-4" />
                     </a>
                 </div>
