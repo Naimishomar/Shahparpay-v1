@@ -133,6 +133,24 @@ await withServer(reply(laravelFault), async () => {
   assert.equal((await fetchRechargeStatus('REC4', 'prepaid')).finalStatus, 'PROCESSING');
 });
 
+// The gateway crashes after loading the row and answers status 0 with the row
+// attached. The row's own status is the outcome; a row for another txnid, or
+// one still pending, settles nothing.
+const crashedWith = (row) =>
+  reply({ status: 0, message: 'Exception: Attempt to read property "mid" on null', data: row });
+await withServer(crashedWith({ txnid: '5209522352', oid: '5209522352', status: 'success' }), async () => {
+  assert.equal((await fetchRechargeStatus('5209522352')).finalStatus, 'SUCCESS');
+});
+await withServer(crashedWith({ txnid: 'R6', status: 'failure' }), async () => {
+  assert.equal((await fetchRechargeStatus('R6')).finalStatus, 'FAILED');
+});
+await withServer(crashedWith({ txnid: 'R7', status: 'pending' }), async () => {
+  assert.equal((await fetchRechargeStatus('R7')).finalStatus, 'PROCESSING');
+});
+await withServer(crashedWith({ txnid: 'OTHER', status: 'success' }), async () => {
+  assert.equal((await fetchRechargeStatus('R8')).finalStatus, 'PROCESSING');
+});
+
 // A dead gateway is not a failed recharge either.
 process.env.ICCHHAMATI_BASE_URL = 'http://127.0.0.1:1';
 assert.equal((await fetchRechargeStatus('REC5', 'prepaid')).finalStatus, 'PROCESSING');

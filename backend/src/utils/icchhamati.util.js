@@ -250,6 +250,16 @@ export const fetchRechargeStatus = async (txnid) => {
     // and the commission was never credited.
     const data = await icchhamatiPost('/api/v2/bill-status', { txnid });
     if (!isOk(data) && normaliseStatus(data?.status) !== 'PENDING') {
+      // The gateway loads the recharge row and then crashes on its own
+      // 'Attempt to read property "mid" on null', answering status 0 with the
+      // row still attached. That row is the real outcome, so a row for this
+      // txnid with a definite status settles it; anything else stays pending.
+      const row = data?.data;
+      const rowStatus = String(row?.status ?? '').trim().toUpperCase();
+      if (row && [row.txnid, row.oid].map(String).includes(String(txnid))) {
+        if (rowStatus === 'SUCCESS') return { finalStatus: 'SUCCESS', data };
+        if (['FAILED', 'FAILURE', 'FAIL'].includes(rowStatus)) return { finalStatus: 'FAILED', data };
+      }
       return { finalStatus: 'PROCESSING', data };
     }
 
