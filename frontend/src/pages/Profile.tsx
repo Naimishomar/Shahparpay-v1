@@ -2,6 +2,7 @@ import { useAuth } from '../context/AuthContext';
 import { User, Mail, Phone, MapPin, Building2, ShieldCheck, KeyRound, Lock, ChevronRight, Camera, Edit2, Save, X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { aepsKycDone } from '../lib/services';
 
 const ACTIVE_BUTTON = 'btn-primary';
 const SILVER_TILE = 'icon-chip';
@@ -213,7 +214,7 @@ const Profile = () => {
         setPasswordFormData({ email: '', otp: '', newPassword: '', newPin: '' });
     };
 
-    const kycComplete = user?.role !== 'retailer' || user?.isMerchantKycComplete;
+    const kycComplete = user?.role !== 'retailer' || aepsKycDone(user as Parameters<typeof aepsKycDone>[0]);
     const distributorCode = (user as any)?.distributorId?.distributorId || (user as any)?.distributorId;
     const addressLine = [(user as any)?.address?.city, (user as any)?.address?.district, (user as any)?.address?.state].filter(Boolean).join(', ');
 

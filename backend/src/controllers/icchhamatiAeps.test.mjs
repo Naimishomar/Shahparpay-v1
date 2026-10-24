@@ -1,7 +1,7 @@
 // Run: node src/controllers/icchhamatiAeps.test.mjs
 // The two calls that decide what a retailer sees and whether money moves.
 import assert from 'node:assert';
-import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks } from './icchhamatiAeps.controller.js';
+import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks, recordStep } from './icchhamatiAeps.controller.js';
 import { parseServicesUpdate, usesAepsProvider } from '../utils/services.js';
 
 // --- onboarding step ------------------------------------------------------
@@ -95,5 +95,23 @@ assert.deepEqual(
   [{ iinno: '990320', bankName: 'Airtel Payment Bank' }],
   'a bank with no IIN cannot be transacted on'
 );
+
+// --- recorded step and "KYC verified" ---------------------------------------
+
+const fakeRetailer = (step, done) => {
+  const r = { icchhamatiAeps: { step }, isMerchantKycComplete: done, saves: 0 };
+  r.save = async () => { r.saves += 1; };
+  return r;
+};
+let r = fakeRetailer(null, true); // verified on PaySprint, never seen on Icchhamati
+await recordStep(r, 'video_review');
+assert.equal(r.isMerchantKycComplete, false, 'an old PaySprint verification does not count on Icchhamati');
+assert.equal(r.icchhamatiAeps.step, 'video_review');
+r = fakeRetailer('ekyc', false);
+await recordStep(r, 'twofa');
+assert.equal(r.isMerchantKycComplete, true, 'eKYC done: only the daily login is left');
+r = fakeRetailer('ready', true);
+await recordStep(r, 'ready');
+assert.equal(r.saves, 0, 'nothing changed, nothing written');
 
 console.log('icchhamatiAeps tests passed');

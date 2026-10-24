@@ -9,8 +9,9 @@ import FundRequest from '../models/fundRequest.model.js';
 import SupportTicket from '../models/supportTicket.model.js';
 import ActivityLog from '../models/activityLog.model.js';
 import { SERVICE_TYPES, ALLOWED_DAYS, windowFor } from './distributorAnalytics.controller.js';
-import { parseServicesUpdate } from '../utils/services.js';
+import { parseServicesUpdate, aepsKycDoneFilter, aepsKycPendingFilter } from '../utils/services.js';
 import { logActivity } from '../utils/activity.js';
+import { refreshAepsStep } from './icchhamatiAeps.controller.js';
 
 const TZ = 'Asia/Kolkata';
 const MODELS = { retailer: Retailer, distributor: Distributor };
@@ -133,7 +134,7 @@ export const getOverview = async (req, res) => {
       Distributor.countDocuments(),
       Retailer.countDocuments({ createdAt: { $gte: since } }),
       Distributor.countDocuments({ createdAt: { $gte: since } }),
-      Retailer.countDocuments({ isMerchantKycComplete: { $ne: true } }),
+      Retailer.countDocuments(aepsKycPendingFilter()),
       Retailer.countDocuments({ isActive: false }),
       Distributor.countDocuments({ isActive: false }),
       FundRequest.countDocuments({ status: 'PENDING', requestType: 'RETAILER' }),
@@ -291,14 +292,14 @@ export const getUsers = async (req, res) => {
     if (req.query.status === 'active') filter.isActive = { $ne: false };
     if (req.query.status === 'inactive') filter.isActive = false;
     if (role === 'retailer') {
-      if (req.query.kyc === 'pending') filter.isMerchantKycComplete = { $ne: true };
-      if (req.query.kyc === 'done') filter.isMerchantKycComplete = true;
+      if (req.query.kyc === 'pending') Object.assign(filter, aepsKycPendingFilter());
+      if (req.query.kyc === 'done') Object.assign(filter, aepsKycDoneFilter());
       if (req.query.distributor && mongoose.isValidObjectId(req.query.distributor)) filter.distributorId = req.query.distributor;
     }
     const sort = { newest: { createdAt: -1 }, oldest: { createdAt: 1 }, name: { name: 1 } }[req.query.sort] || { createdAt: -1 };
 
     const query = Model.find(filter)
-      .select('name email contactNumber businessName retailerId distributorId profilePicture isActive isMerchantKycComplete disabledServices createdAt address')
+      .select('name email contactNumber businessName retailerId distributorId profilePicture isActive isMerchantKycComplete icchhamatiAeps.step icchhamatiAeps.stepAt disabledServices createdAt address')
       .sort(sort)
       .skip(skip)
       .limit(limit);
@@ -373,7 +374,7 @@ export const getUserDetail = async (req, res) => {
     // A distributor's business is its retailers' transactions.
     const network = p.role === 'distributor'
       ? await Retailer.find({ distributorId: p.id })
-          .select('name retailerId businessName isActive isMerchantKycComplete createdAt profilePicture')
+          .select('name retailerId businessName isActive isMerchantKycComplete icchhamatiAeps.step icchhamatiAeps.stepAt createdAt profilePicture')
           .sort({ createdAt: -1 })
           .lean()
       : [];
@@ -534,5 +535,19 @@ export const getActivity = async (req, res) => {
   } catch (error) {
     console.error('Admin activity error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+/** GET /api/admin/console/retailers/:id/aeps-status — the retailer's AEPS onboarding step, asked of the provider now. */
+export const getRetailerAepsStatus = async (req, res) => {
+  try {
+    if (forbid(req, res)) return;
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid retailer id' });
+    const retailer = await Retailer.findById(req.params.id);
+    if (!retailer) return res.status(404).json({ success: false, message: 'Retailer not found' });
+    return res.status(200).json({ success: true, data: await refreshAepsStep(retailer) });
+  } catch (error) {
+    console.error('Admin AEPS status error:', error.message);
+    return res.status(502).json({ success: false, message: error.message || 'Could not load AEPS status' });
   }
 };

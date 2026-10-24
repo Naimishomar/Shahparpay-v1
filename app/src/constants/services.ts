@@ -74,3 +74,32 @@ export const usesAepsProvider = (
   const chosen = aepsProviderOf(user);
   return chosen === 'both' || chosen === provider;
 };
+
+/** Icchhamati onboarding steps, as the backend records them, in plain words. */
+export const AEPS_STEP_LABELS: Record<string, string> = {
+  register: 'AEPS not started',
+  pan: 'PAN verification pending',
+  mobile: 'Mobile verification pending',
+  email: 'Email verification pending',
+  aadhaar: 'Aadhaar verification pending',
+  bank: 'Bank verification pending',
+  video: 'Video KYC pending',
+  video_review: 'Video KYC under review',
+  onboard: 'Activation pending',
+  ekyc: 'Biometric eKYC pending',
+  twofa: 'KYC verified',
+  ready: 'KYC verified',
+};
+
+type WithAepsStep = { isMerchantKycComplete?: boolean; icchhamatiAeps?: { step?: string | null } | null };
+
+/**
+ * Whether the retailer's AEPS KYC is done. With PaySprint off that is the
+ * Icchhamati step (eKYC complete), not the old PaySprint flag.
+ */
+export const aepsKycDone = (r: WithAepsStep | null | undefined) =>
+  PAYSPRINT_ENABLED ? !!r?.isMerchantKycComplete : ['twofa', 'ready'].includes(String(r?.icchhamatiAeps?.step));
+
+/** Where the retailer stands, for following up. A retailer never seen on Icchhamati has not started. */
+export const aepsStepLabel = (r: WithAepsStep | null | undefined) =>
+  AEPS_STEP_LABELS[String(r?.icchhamatiAeps?.step)] || AEPS_STEP_LABELS.register;

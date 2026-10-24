@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Clock, Search, ShieldCheck, Users } from 'lucide-react';
 import { CARD, INPUT, LABEL, PENDING_PILL, SECONDARY_BUTTON, SILVER_TILE, ago, inrShort, useApiGet } from '../distributor/shared';
 import { Avatar, Skeleton } from '../distributor/ui';
+import { aepsKycDone, aepsStepLabel } from '../../lib/services';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -130,9 +131,9 @@ const UserDirectory = ({
                                             ) : (
                                                 <span className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20">Active</span>
                                             )}
-                                            {role === 'retailer' && (u.isMerchantKycComplete
+                                            {role === 'retailer' && (aepsKycDone(u)
                                                 ? <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold"><ShieldCheck size={11} /> KYC</span>
-                                                : <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}><Clock size={11} /> KYC</span>)}
+                                                : <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`} title={aepsStepLabel(u)}><Clock size={11} /> {aepsStepLabel(u)}</span>)}
                                             {!!u.disabledServices?.length && <span className="rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground">{u.disabledServices.length} off</span>}
                                         </div>
                                     </td>

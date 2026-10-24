@@ -4,6 +4,7 @@ import {
   getRetailers,
   updateRetailer,
   updateRetailerServices,
+  getRetailerAepsStatus,
   getProfile,
   updateProfile,
 } from '../controllers/distributor.controller.js';
@@ -23,6 +24,7 @@ router.get('/analytics', authMiddlewares, getNetworkAnalytics);
 // Retailers
 router.get('/retailers', authMiddlewares, getRetailers);
 router.get('/retailers/:id/performance', authMiddlewares, getRetailerPerformance);
+router.get('/retailers/:id/aeps-status', authMiddlewares, getRetailerAepsStatus);
 router.put('/retailers/:id/services', authMiddlewares, updateRetailerServices);
 router.put(
   '/retailers/:id',

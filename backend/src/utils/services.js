@@ -71,3 +71,16 @@ export const parseServicesUpdate = (body = {}) => {
   if (!summary.length) return { error: 'Nothing to update' };
   return { set, summary: summary.join('; ') };
 };
+
+/**
+ * Icchhamati onboarding steps after which the merchant's KYC is done: what is
+ * left is only the daily login. With PaySprint off this, not the old PaySprint
+ * isMerchantKycComplete flag, is what "KYC verified" means.
+ */
+export const AEPS_KYC_DONE_STEPS = ['twofa', 'ready'];
+
+export const aepsKycDone = (retailer) => AEPS_KYC_DONE_STEPS.includes(retailer?.icchhamatiAeps?.step);
+
+/** Mongo filters for the same rule; a retailer never seen on Icchhamati is pending. */
+export const aepsKycDoneFilter = () => ({ 'icchhamatiAeps.step': { $in: AEPS_KYC_DONE_STEPS } });
+export const aepsKycPendingFilter = () => ({ 'icchhamatiAeps.step': { $nin: AEPS_KYC_DONE_STEPS } });

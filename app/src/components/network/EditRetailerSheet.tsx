@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { Input, SelectField } from '@/components/ui/Input';
 import { Sheet } from '@/components/ui/Sheet';
 import { Banner, Row, StatusPill, SuccessBanner, money, shortDate } from '@/components/ui/Screen';
-import { useAction } from '@/hooks/useAsync';
+import { useAction, useAsync } from '@/hooks/useAsync';
+import { aepsStepLabel } from '@/constants/services';
 import { INDIAN_STATES } from '@/constants';
 import api from '@/services/api';
 
@@ -42,6 +43,14 @@ export const EditRetailerSheet: React.FC<{
 }> = ({ retailer, onClose, onSaved }) => {
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
+  // AEPS onboarding, asked of the provider when the sheet opens; the stored
+  // step is only as fresh as the retailer's last visit to AEPS.
+  const aepsStatus = useAsync<any>(
+    async () => (await api.getRetailerAepsStatus(retailer._id)).data,
+    [retailer?._id],
+    !!retailer?._id
+  );
+  const aepsStep = { icchhamatiAeps: { step: aepsStatus.data?.step ?? retailer?.icchhamatiAeps?.step } };
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -263,8 +272,8 @@ export const EditRetailerSheet: React.FC<{
               mono={!!retailer.hasGst}
             />
             <Row
-              label="Merchant eKYC"
-              value={<StatusPill status={retailer.isMerchantKycComplete ? 'COMPLETED' : 'PENDING'} />}
+              label="AEPS onboarding"
+              value={aepsStatus.loading && !aepsStatus.data ? 'Checking…' : aepsStepLabel(aepsStep)}
             />
             <Row label="Joined" value={shortDate(retailer.createdAt)} last />
           </View>

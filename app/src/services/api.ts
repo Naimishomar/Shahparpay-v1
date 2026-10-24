@@ -988,6 +988,11 @@ class ApiService {
     return this.put(`${API_ENDPOINTS.distributor.retailers}/${id}`, data);
   }
 
+  /** The retailer's AEPS onboarding step, asked of the provider now. */
+  async getRetailerAepsStatus(id: string) {
+    return this.get(`${API_ENDPOINTS.distributor.retailers}/${id}/aeps-status`);
+  }
+
   async createRetailer(
     data: Record<string, any>,
     files?: Record<string, { uri: string; name: string; type: string } | undefined>

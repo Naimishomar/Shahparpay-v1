@@ -15,6 +15,7 @@ import {
   makeReferenceId,
 } from '../utils/icchhamati.util.js';
 import { applyAepsWithdrawalSuccess } from '../utils/wallet.util.js';
+import { aepsKycDone } from '../utils/services.js';
 import { AEPS_OTP_THRESHOLD } from './aepsPayment.controller.js';
 
 /**
@@ -121,6 +122,35 @@ export const transactionOutcome = (data) => {
   return 'FAILED';
 };
 
+/**
+ * Saves where the merchant is, so distributors and admins see it, and keeps
+ * isMerchantKycComplete (which locks the identity documents) in step with it.
+ */
+export const recordStep = async (retailer, step) => {
+  const done = aepsKycDone({ icchhamatiAeps: { step } });
+  if (retailer.icchhamatiAeps.step === step && retailer.isMerchantKycComplete === done) return;
+  retailer.icchhamatiAeps.step = step;
+  retailer.icchhamatiAeps.stepAt = new Date();
+  retailer.isMerchantKycComplete = done;
+  await retailer.save();
+};
+
+/**
+ * Asks the provider where this retailer's onboarding stands and records it.
+ * Returns the step, or throws with the provider's message.
+ */
+export const refreshAepsStep = async (retailer) => {
+  const outletId = outletOf(retailer);
+  let step = 'register';
+  if (outletId) {
+    const data = await icchhamatiPost('/api/v2/aeps/draft-data', { outletId });
+    if (!isOk(data)) throw new Error(providerMessage(data, 'Could not load AEPS registration status.'));
+    step = onboardingStep(data.data || {});
+  }
+  await recordStep(retailer, step);
+  return { step, checkedAt: retailer.icchhamatiAeps.stepAt || new Date() };
+};
+
 // --- Onboarding ------------------------------------------------------------
 
 /** GET /status — the retailer's onboarding step plus the provider draft. */
@@ -142,6 +172,7 @@ export const getStatus = async (req, res) => {
     };
     const outletId = outletOf(retailer);
     if (!outletId) {
+      await recordStep(retailer, 'register');
       return res
         .status(200)
         .json({ success: true, data: { step: 'register', outletId: null, profile } });
@@ -155,10 +186,12 @@ export const getStatus = async (req, res) => {
       });
     }
     const draft = data.data || {};
+    const step = onboardingStep(draft);
+    await recordStep(retailer, step);
     return res.status(200).json({
       success: true,
       data: {
-        step: onboardingStep(draft),
+        step,
         outletId,
         aadhaarPayReady: Number(draft.ap_status) !== 0,
         primaryKeyId: draft.primaryKeyId ?? null,

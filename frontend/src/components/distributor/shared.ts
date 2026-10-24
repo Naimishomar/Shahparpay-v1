@@ -68,6 +68,7 @@ export type NetworkRetailer = Totals & {
     businessName?: string;
     profilePicture?: string;
     isMerchantKycComplete?: boolean;
+    icchhamatiAeps?: { step?: string | null; stepAt?: string | null } | null;
     createdAt: string;
     lastAt: string | null;
     lifetimeEarned: number;

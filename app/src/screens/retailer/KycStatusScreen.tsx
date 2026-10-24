@@ -45,7 +45,7 @@ export const KycStatusScreen: React.FC = () => {
       merchantId,
       !kycDone,
       targetPipe,
-      'https://shahparpay-v1.vercel.app/kyc-callback'
+      'https://shahparpay.in/kyc-callback'
     );
     if (!res.success) throw new Error(res.message);
     // The backend answers with `alreadyOnboarded` and no URL once KYC is done.

@@ -28,6 +28,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
 import type { PickedFile } from '@/services/imagePicker';
 import api from '@/services/api';
+import { aepsKycDone } from '@/constants/services';
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
@@ -104,7 +105,7 @@ export const DistributorPortalScreen: React.FC = () => {
   const pending = (fundRequests.data ?? []).filter(
     (r: any) => String(r.status).toUpperCase() === 'PENDING'
   );
-  const kycPending = (retailers.data ?? []).filter((r: any) => !r.isMerchantKycComplete);
+  const kycPending = (retailers.data ?? []).filter((r: any) => !aepsKycDone(r));
 
   const onDecide = async (requestId: string, status: 'APPROVED' | 'REJECTED') => {
     setNotice('');

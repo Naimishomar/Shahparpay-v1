@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Activity, AlertTriangle, ArrowRight, Clock, IndianRupee, Network, Receipt, ShieldAlert, Trophy, UserPlus, Wallet } from 'lucide-react';
 import { CARD, LABEL, type NetworkAnalytics, PENDING_PILL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, STATUS_PILL, ago, daysSince, delta, inr, inrShort, serviceLabel, useDistributorData } from './shared';
 import { Avatar, DeltaBadge, RangeSwitch, ShareBar, Skeleton, TrendChart } from './ui';
+import { aepsKycDone } from '../../lib/services';
 
 export type DirectoryPreset = { filter?: 'all' | 'kyc' | 'inactive' | 'dormant'; sort?: 'earned' | 'volume' | 'lastActive' | 'newest' };
 
@@ -38,7 +39,7 @@ const NetworkDashboard = ({
     const retailers = data?.retailers || [];
     const top = [...retailers].filter((r) => r.earned > 0 || r.volume > 0).sort((a, b) => b.earned - a.earned || b.volume - a.volume).slice(0, 5);
     const topMax = Math.max(...top.map((r) => r.earned), 0);
-    const kycPending = retailers.filter((r) => !r.isMerchantKycComplete);
+    const kycPending = retailers.filter((r) => !aepsKycDone(r));
     const inactive = retailers.filter((r) => r.lastActiveAt && daysSince(r.lastActiveAt) >= INACTIVE_DAYS);
     const dormant = retailers.filter((r) => !r.lastActiveAt);
     const services = [...(data?.byService || [])].sort((a, b) => b[mixBy] - a[mixBy]);

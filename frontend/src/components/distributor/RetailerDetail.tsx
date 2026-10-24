@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { AEPS_PROVIDERS, PAYSPRINT_ENABLED, SERVICES, aepsProviderOf, type AepsProvider, type ServiceKey } from '../../lib/services';
+import { AEPS_PROVIDERS, PAYSPRINT_ENABLED, SERVICES, aepsKycDone, aepsProviderOf, aepsStepLabel, type AepsProvider, type ServiceKey } from '../../lib/services';
 import { AepsProviderSwitches } from '../AepsProviderPicker';
-import { Briefcase, Package, ChevronLeft, Edit2, Link2, Mail, MapPin, Phone, ShieldCheck, Clock, UserCircle, Activity } from 'lucide-react';
+import { Briefcase, Package, ChevronLeft, Edit2, Link2, Mail, MapPin, Phone, ShieldCheck, Clock, UserCircle, Activity, RefreshCcw } from 'lucide-react';
 import { CARD, LABEL, PENDING_PILL, PRIMARY_BUTTON, type RetailerPerformance, SECONDARY_BUTTON, SILVER_TILE, STATUS_PILL, ago, delta, inr, inrShort, serviceLabel, useDistributorData } from './shared';
 import { Avatar, DeltaBadge, RangeSwitch, ShareBar, Skeleton, TrendChart } from './ui';
 
@@ -43,7 +43,7 @@ const RetailerDetail = ({
     onBack: () => void;
     onEdit: () => void;
     onKycLink: () => void;
-    onServicesChanged: (patch: { disabledServices?: string[]; aepsProvider?: AepsProvider }) => void;
+    onServicesChanged: (patch: { disabledServices?: string[]; aepsProvider?: AepsProvider; icchhamatiAeps?: { step: string; stepAt: string } }) => void;
 }) => {
     const { data, loading } = useDistributorData<RetailerPerformance>(token, `/api/distributor/retailers/${retailer._id}/performance`, days);
     const [metric, setMetric] = useState<'earned' | 'volume' | 'count'>('volume');
@@ -98,6 +98,28 @@ const RetailerDetail = ({
         }
     };
 
+    // Where the retailer stands in AEPS onboarding, asked of the provider each
+    // time the page opens: the stored step is only as fresh as their last visit.
+    const [checkingAeps, setCheckingAeps] = useState(false);
+    const fetchAepsStatus = () =>
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/distributor/retailers/${retailer._id}/aeps-status`, {
+            headers: { Authorization: `Bearer ${token}` },
+        }).then((res) => res.json());
+    const applyAepsStatus = (json: { success: boolean; message?: string; data?: { step: string; checkedAt: string } }) => {
+        if (!json.success || !json.data) throw new Error(json.message);
+        onServicesChanged({ icchhamatiAeps: { step: json.data.step, stepAt: json.data.checkedAt } });
+    };
+    const refreshAepsStatus = () => {
+        setCheckingAeps(true);
+        fetchAepsStatus()
+            .then(applyAepsStatus)
+            .catch((error) => toast.error(error instanceof Error && error.message ? error.message : 'Could not check AEPS status'))
+            .finally(() => setCheckingAeps(false));
+    };
+    // A failed background check stays quiet; the stored step is still shown.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => { fetchAepsStatus().then(applyAepsStatus).catch(() => {}); }, [retailer._id]);
+
     const address = [retailer.address?.city, retailer.address?.district, retailer.address?.state].filter(Boolean).join(', ');
 
     const kpis = data ? [
@@ -122,11 +144,15 @@ const RetailerDetail = ({
                                 <h1 className="truncate text-2xl md:text-3xl font-bold tracking-tight">{retailer.name}</h1>
                                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                                     <span className="rounded-full border bg-background/70 px-2.5 py-0.5 font-mono text-xs">{retailer.retailerId}</span>
-                                    {retailer.isMerchantKycComplete ? (
+                                    {aepsKycDone(retailer) ? (
                                         <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20"><ShieldCheck size={12} /> KYC verified</span>
                                     ) : (
-                                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}><Clock size={12} /> KYC pending</span>
+                                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}><Clock size={12} /> {aepsStepLabel(retailer)}</span>
                                     )}
+                                    <button onClick={refreshAepsStatus} disabled={checkingAeps} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-60" title="Check AEPS onboarding with the provider now">
+                                        <RefreshCcw size={12} className={checkingAeps ? 'animate-spin' : ''} />
+                                        {checkingAeps ? 'Checking…' : retailer.icchhamatiAeps?.stepAt ? `Checked ${ago(retailer.icchhamatiAeps.stepAt)}` : 'Check status'}
+                                    </button>
                                     <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Activity size={12} /> Active {ago(data?.lastActiveAt ?? retailer.lastActiveAt)}</span>
                                 </div>
                             </div>

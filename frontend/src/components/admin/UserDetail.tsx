@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { ArrowRight, Banknote, ChevronLeft, Clock, History, Loader2, Mail, MapPin, Package, Phone, Power, Receipt, ShieldCheck, Store, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowRight, Banknote, ChevronLeft, Clock, History, Loader2, Mail, MapPin, Package, Phone, Power, Receipt, RefreshCcw, ShieldCheck, Store, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { CARD, LABEL, PENDING_PILL, SECONDARY_BUTTON, SILVER_TILE, STATUS_PILL, ago, inr, inrShort, serviceLabel, useApiGet } from '../distributor/shared';
 import { Avatar, Skeleton } from '../distributor/ui';
-import { AEPS_PROVIDERS, PAYSPRINT_ENABLED, SERVICES, aepsProviderOf, type AepsProvider, type ServiceKey } from '../../lib/services';
+import { AEPS_PROVIDERS, PAYSPRINT_ENABLED, SERVICES, aepsKycDone, aepsProviderOf, aepsStepLabel, type AepsProvider, type ServiceKey } from '../../lib/services';
 import { AepsProviderSwitches } from '../AepsProviderPicker';
 import { ActivityList, type Activity } from './ActivityLog';
 
@@ -80,6 +80,23 @@ const UserDetail = ({
     const setProvider = (aepsProvider: AepsProvider) =>
         call('aepsProvider', `/api/admin/console/retailers/${id}/services`, 'PUT', { aepsProvider }, `AEPS: ${AEPS_PROVIDERS.find((p) => p.key === aepsProvider)?.label}`);
 
+    // Where a retailer stands in AEPS onboarding, asked of the provider when the
+    // page opens; the stored step is only as fresh as the retailer's last visit.
+    const [checkingAeps, setCheckingAeps] = useState(false);
+    const fetchAepsStatus = () =>
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/console/retailers/${id}/aeps-status`, {
+            headers: { Authorization: `Bearer ${token}` },
+        }).then((res) => res.json());
+    const refreshAepsStatus = () => {
+        setCheckingAeps(true);
+        fetchAepsStatus()
+            .then((json) => { if (!json.success) throw new Error(json.message); reload(); })
+            .catch((error) => toast.error(error instanceof Error && error.message ? error.message : 'Could not check AEPS status'))
+            .finally(() => setCheckingAeps(false));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => { if (role === 'retailer') fetchAepsStatus().then((json) => json.success && reload()).catch(() => {}); }, [id, role]);
+
     if (loading && !data) {
         return <div className="flex flex-col gap-6"><Skeleton className="h-56 rounded-3xl" /><Skeleton className="h-64 rounded-2xl" /></div>;
     }
@@ -114,9 +131,15 @@ const UserDetail = ({
                                     {active
                                         ? <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20">Active</span>
                                         : <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 bg-red-500/10 text-red-700 dark:text-red-400 ring-red-500/20">Inactive</span>}
-                                    {role === 'retailer' && (user.isMerchantKycComplete
+                                    {role === 'retailer' && (aepsKycDone(user)
                                         ? <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20"><ShieldCheck size={12} /> KYC verified</span>
-                                        : <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}><Clock size={12} /> KYC pending</span>)}
+                                        : <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}><Clock size={12} /> {aepsStepLabel(user)}</span>)}
+                                    {role === 'retailer' && (
+                                        <button onClick={refreshAepsStatus} disabled={checkingAeps} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-60" title="Check AEPS onboarding with the provider now">
+                                            <RefreshCcw size={12} className={checkingAeps ? 'animate-spin' : ''} />
+                                            {checkingAeps ? 'Checking…' : user.icchhamatiAeps?.stepAt ? `Checked ${ago(user.icchhamatiAeps.stepAt)}` : 'Check status'}
+                                        </button>
+                                    )}
                                     {role === 'retailer' && user.distributorId && (
                                         <button onClick={() => onOpenUser('distributor', user.distributorId._id)} className="inline-flex items-center gap-1 rounded-full border bg-background/70 px-2.5 py-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/10">
                                             <Store size={12} /> {user.distributorId.name}
@@ -248,7 +271,7 @@ const UserDetail = ({
                                             <td className="px-4 py-2.5 text-right tabular-nums">{r.count}</td>
                                             <td className="px-4 py-2.5 text-muted-foreground">{ago(r.lastTxnAt)}</td>
                                             <td className="px-4 py-2.5">
-                                                {r.isActive === false ? <span className="text-xs font-semibold text-red-600 dark:text-red-400">Inactive</span> : r.isMerchantKycComplete ? <span className="text-xs text-muted-foreground">Active</span> : <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">KYC pending</span>}
+                                                {r.isActive === false ? <span className="text-xs font-semibold text-red-600 dark:text-red-400">Inactive</span> : aepsKycDone(r) ? <span className="text-xs text-muted-foreground">Active</span> : <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">{aepsStepLabel(r)}</span>}
                                             </td>
                                         </tr>
                                     ))}

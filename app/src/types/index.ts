@@ -13,6 +13,8 @@ export interface User {
   contactNumber?: string;
   profilePicture?: string;
   isMerchantKycComplete?: boolean;
+  /** Icchhamati AEPS onboarding: the step last seen, see aepsStepLabel. */
+  icchhamatiAeps?: { outletId?: string | null; step?: string | null; stepAt?: string | null } | null;
   activeAepsPipes?: string[];
   aadhaarNumber?: string;
   aadhaarPicture?: string;

@@ -165,6 +165,10 @@ const retailerSchema = new mongoose.Schema(
       draftId: { type: Number, default: null },
       deviceIMEI: { type: String, default: null },
       deviceName: { type: String, default: null },
+      // The onboarding step last seen (see onboardingStep), so a distributor
+      // can see who is stuck where without asking the provider for everyone.
+      step: { type: String, default: null },
+      stepAt: { type: Date, default: null },
     },
     // PaySprint's registered base location for AEPS geo-fencing, and the audit
     // trail behind it. PaySprint caps base-location changes at three per

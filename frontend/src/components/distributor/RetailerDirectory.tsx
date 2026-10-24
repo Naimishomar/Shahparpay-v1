@@ -3,14 +3,14 @@ import { ArrowDownUp, Download, Search, ShieldCheck, Clock, UserPlus, Users } fr
 import { CARD, INPUT, LABEL, type NetworkAnalytics, type NetworkRetailer, PENDING_PILL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, ago, daysSince, inr, inrShort, useDistributorData } from './shared';
 import { Avatar, RangeSwitch, ShareBar, Skeleton } from './ui';
 import type { DirectoryPreset } from './NetworkDashboard';
-import { PAYSPRINT_ENABLED } from '../../lib/services';
+import { PAYSPRINT_ENABLED, aepsKycDone, aepsStepLabel } from '../../lib/services';
 
 type Filter = NonNullable<DirectoryPreset['filter']>;
 type Sort = NonNullable<DirectoryPreset['sort']>;
 
 const FILTERS: { key: Filter; label: string; test: (r: NetworkRetailer) => boolean }[] = [
     { key: 'all', label: 'All', test: () => true },
-    { key: 'kyc', label: 'KYC pending', test: (r) => !r.isMerchantKycComplete },
+    { key: 'kyc', label: 'KYC pending', test: (r) => !aepsKycDone(r) },
     { key: 'inactive', label: 'Quiet 7+ days', test: (r) => !!r.lastActiveAt && daysSince(r.lastActiveAt) >= 7 },
     { key: 'dormant', label: 'Never transacted', test: (r) => !r.lastActiveAt },
 ];
@@ -30,7 +30,7 @@ const csvCell = (v: unknown) => {
 const exportCsv = (rows: NetworkRetailer[], days: number) => {
     const header = ['Retailer ID', 'Name', 'Business', 'KYC', `Commission (${days}d)`, `Volume (${days}d)`, `Transactions (${days}d)`, 'Lifetime commission', 'Last active', 'Joined'];
     const lines = rows.map((r) => [
-        r.retailerId, r.name, r.businessName, r.isMerchantKycComplete ? 'Verified' : 'Pending',
+        r.retailerId, r.name, r.businessName, aepsStepLabel(r),
         r.earned.toFixed(2), r.volume.toFixed(2), r.count, r.lifetimeEarned.toFixed(2),
         r.lastActiveAt ? new Date(r.lastActiveAt).toISOString() : '', new Date(r.createdAt).toISOString().slice(0, 10),
     ].map(csvCell).join(','));
@@ -182,14 +182,14 @@ const RetailerDirectory = ({
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            {r.isMerchantKycComplete ? (
+                                            {aepsKycDone(r) ? (
                                                 <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20">
                                                     <ShieldCheck size={12} /> Verified
                                                 </span>
                                             ) : (
                                                 <div className="flex items-center gap-2">
                                                     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}>
-                                                        <Clock size={12} /> Pending
+                                                        <Clock size={12} /> {aepsStepLabel(r)}
                                                     </span>
                                                     {/* The KYC link is PaySprint's onboarding URL. */}
                                                     {PAYSPRINT_ENABLED && <button

@@ -20,9 +20,9 @@ import { OnboardMemberSheet } from '@/components/network/OnboardMemberSheet';
 import { EditRetailerSheet } from '@/components/network/EditRetailerSheet';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
-import { PAYSPRINT_ENABLED } from '@/constants/services';
+import { PAYSPRINT_ENABLED, aepsKycDone, aepsStepLabel } from '@/constants/services';
 
-const KYC_CALLBACK = 'https://shahparpay-v1.vercel.app/kyc-callback';
+const KYC_CALLBACK = 'https://shahparpay.in/kyc-callback';
 
 /**
  * The distributor's network, one level down from the portal: every retailer,
@@ -73,7 +73,7 @@ export const RetailersScreen: React.FC = () => {
           .some((field: string) => String(field).toLowerCase().includes(needle))
       )
     : all;
-  const kycPending = all.filter((r: any) => !r.isMerchantKycComplete).length;
+  const kycPending = all.filter((r: any) => !aepsKycDone(r)).length;
 
   return (
     <Screen
@@ -145,9 +145,15 @@ export const RetailersScreen: React.FC = () => {
                     <Text style={styles.listMeta} numberOfLines={1}>
                       {`AEPS ${money(ret.aepsWalletBalance)} · Main ${money(ret.mainWalletBalance)}`}
                     </Text>
+                    {/* Where they are stuck, so the distributor knows what to follow up on. */}
+                    {!aepsKycDone(ret) && (
+                      <Text style={[styles.listMeta, { color: colors.warning }]} numberOfLines={1}>
+                        {aepsStepLabel(ret)}
+                      </Text>
+                    )}
                   </View>
                   <View style={styles.listRight}>
-                    <StatusPill status={ret.isMerchantKycComplete ? 'COMPLETED' : 'PENDING'} />
+                    <StatusPill status={aepsKycDone(ret) ? 'COMPLETED' : 'PENDING'} />
                     <StatusPill status={ret.isActive === false ? 'INACTIVE' : 'ACTIVE'} />
                   </View>
                   <MaterialCommunityIcons

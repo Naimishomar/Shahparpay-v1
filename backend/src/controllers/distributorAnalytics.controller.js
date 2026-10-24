@@ -147,7 +147,7 @@ export const getNetworkAnalytics = async (req, res) => {
     const days = parseDays(req.query.days);
 
     const retailers = await Retailer.find({ distributorId: req.user.id })
-      .select('name retailerId businessName profilePicture isMerchantKycComplete createdAt')
+      .select('name retailerId businessName profilePicture isMerchantKycComplete icchhamatiAeps.step icchhamatiAeps.stepAt createdAt')
       .lean();
     const ids = retailers.map((r) => r._id);
 

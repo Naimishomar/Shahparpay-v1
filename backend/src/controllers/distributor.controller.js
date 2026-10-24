@@ -7,6 +7,7 @@ import { uploadOnR2 } from '../utils/r2.js';
 import { lifetimeFor } from './distributorAnalytics.controller.js';
 import { parseDisabledServices, parseServicesUpdate } from '../utils/services.js';
 import { logActivity } from '../utils/activity.js';
+import { refreshAepsStep } from './icchhamatiAeps.controller.js';
 
 // Get dashboard statistics for distributor
 export const getDashboardStats = async (req, res) => {
@@ -367,5 +368,25 @@ export const updateProfile = async (req, res) => {
   } catch (error) {
     console.error('Error updating profile:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+/**
+ * GET /api/distributor/retailers/:id/aeps-status
+ * Where one of this distributor's retailers stands in AEPS onboarding, asked
+ * of the provider now, so the distributor knows what to follow up on.
+ */
+export const getRetailerAepsStatus = async (req, res) => {
+  try {
+    if (req.user.role !== 'distributor')
+      return res.status(403).json({ success: false, message: 'Unauthorized access' });
+    if (!mongoose.isValidObjectId(req.params.id))
+      return res.status(400).json({ success: false, message: 'Invalid retailer id' });
+    const retailer = await Retailer.findOne({ _id: req.params.id, distributorId: req.user.id });
+    if (!retailer) return res.status(404).json({ success: false, message: 'Retailer not found' });
+    return res.status(200).json({ success: true, data: await refreshAepsStep(retailer) });
+  } catch (error) {
+    console.error('Distributor AEPS status error:', error.message);
+    return res.status(502).json({ success: false, message: error.message || 'Could not load AEPS status' });
   }
 };
