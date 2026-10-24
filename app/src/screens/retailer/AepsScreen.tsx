@@ -35,6 +35,12 @@ import { coordsPayload } from '@/services/location';
 import { LocationGate } from '@/components/aeps/LocationGate';
 import { useLocationReady } from '@/hooks/useLocationReady';
 import api from '@/services/api';
+import { aepsProviderOf } from '@/constants/services';
+import {
+  IcchhamatiOnboardingSheet,
+  providerDeviceName,
+  type IcchStatus,
+} from '@/components/aeps/IcchhamatiOnboardingSheet';
 
 type ServiceKey = 'balance' | 'statement' | 'withdrawal' | 'deposit' | 'aadhaarpay';
 
@@ -206,6 +212,20 @@ const paysprintError = (payload: any) => {
   );
 };
 
+/**
+ * Fingpay's mini statement rows, in the receipt's shape. Field names are not
+ * documented, so the usual spellings are tried.
+ */
+const icchStatement = (rows: any) =>
+  Array.isArray(rows)
+    ? rows.map((r: any) => ({
+        date: r.date ?? r.txnDate,
+        narration: r.narration ?? r.remarks,
+        amount: r.amount,
+        txnType: r.txnType ?? r.debitCredit,
+      }))
+    : undefined;
+
 /** Balance sits under a different key per pipe and per service. */
 const readBalance = (data: any) =>
   data?.balanceamount ??
@@ -248,20 +268,31 @@ export const AepsScreen: React.FC = () => {
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
 
   const merchantcode = user?.retailerId || user?.code;
+  // Same screen, two providers: the retailer is on exactly one of them.
+  const icch = aepsProviderOf(user) === 'icchhamati';
+  const [onboarding, setOnboarding] = useState<null | 'AEPS' | 'AP'>(null);
 
-  const status = useAsync<any>(
-    async () => (await api.getAepsMerchantStatus({ merchantcode })).data,
-    [merchantcode]
+  const status = useAsync<any>(async () => {
+    if (!icch) return (await api.getAepsMerchantStatus({ merchantcode })).data;
+    const response = await api.icchAepsStatus();
+    if (!response?.success) throw new Error(response?.message || 'Could not load AEPS status.');
+    return response.data;
+  }, [merchantcode, icch]);
+  const banks = useAsync<Bank[]>(
+    async () => (await (icch ? api.icchAepsBanks() : api.getAepsBanks())).data ?? [],
+    [icch]
   );
-  const banks = useAsync<Bank[]>(async () => (await api.getAepsBanks()).data ?? [], []);
   const recent = useAsync<any[]>(
     async () => (await api.getRecentTransactions({ type: 'AEPS', limit: 6 })).data ?? [],
     []
   );
 
-  const activePipes: string[] = status.data?.activePipes ?? [];
+  const icchStatus: IcchStatus | null = icch ? status.data ?? null : null;
+  const activePipes: string[] = icch ? [] : status.data?.activePipes ?? [];
   const kycDone = !!status.data?.isMerchantKycComplete;
   const dailyAuthDone = !!status.data?.isDailyAuthDoneToday;
+  // Icchhamati has no cash deposit.
+  const services = icch ? SERVICES.filter((s) => s.key !== 'deposit') : SERVICES;
 
   useEffect(() => {
     if (!pipe && activePipes.length) setPipe(activePipes[0]);
@@ -269,7 +300,9 @@ export const AepsScreen: React.FC = () => {
 
   const spec = SERVICES.find((s) => s.key === service)!;
   const amountValue = Number(amount) || 0;
-  const needsOtp = service === 'withdrawal' && amountValue > AEPS_OTP_THRESHOLD;
+  // Icchhamati asks the customer's OTP for Aadhaar Pay above the threshold too.
+  const needsOtp =
+    (service === 'withdrawal' || (icch && service === 'aadhaarpay')) && amountValue > AEPS_OTP_THRESHOLD;
 
   /** Any change to what the OTP was issued against invalidates it. */
   const invalidateOtp = () => {
@@ -332,7 +365,19 @@ export const AepsScreen: React.FC = () => {
   }, [sortedBanks, bankQuery]);
 
   // Ordered so the retailer is shown the first thing actually blocking them.
-  const guardBlocker = !spec.guarded
+  // Icchhamati refuses every service, enquiries included, until onboarded and logged in today.
+  const icchBlocker = !icchStatus
+    ? null
+    : icchStatus.step === 'twofa'
+      ? 'Daily login is pending. Authenticate once to unlock transactions for today.'
+      : icchStatus.step !== 'ready'
+        ? 'Complete AEPS onboarding before serving customers.'
+        : service === 'aadhaarpay' && icchStatus.aadhaarPayReady === false
+          ? 'Aadhaar Pay needs its own daily login.'
+          : null;
+  const guardBlocker = icch
+    ? icchBlocker
+    : !spec.guarded
     ? null
     : !kycDone
       ? 'Complete merchant eKYC before using this service.'
@@ -351,7 +396,7 @@ export const AepsScreen: React.FC = () => {
           ? 'Enter the customer\'s 10-digit mobile number.'
           : spec.amount && amountValue <= 0
             ? 'Enter the transaction amount.'
-            : service === 'withdrawal' && amountValue > AEPS_MAX_WITHDRAWAL
+            : (service === 'withdrawal' || (icch && service === 'aadhaarpay')) && amountValue > AEPS_MAX_WITHDRAWAL
               ? `A single AEPS withdrawal cannot exceed ${money(AEPS_MAX_WITHDRAWAL)}.`
               : needsOtp && (!otpSent || otp.length !== 6)
                 ? `Withdrawals above ${money(AEPS_OTP_THRESHOLD)} need the customer's OTP.`
@@ -380,6 +425,15 @@ export const AepsScreen: React.FC = () => {
   });
 
   const sendOtp = useAction(async () => {
+    if (icch) {
+      const response = await api.icchAepsTxnOtp(icchPayload());
+      if (!response?.success || !response.data?.txnOtpRequestId) throw new Error(paysprintError(response));
+      setOtpRefId(response.data.txnOtpRequestId);
+      setOtpSent(true);
+      setOtp('');
+      setPidData(null);
+      return response;
+    }
     const response = await api.aepsInitiateOtp({
       aadhaarNumber,
       bankIIN: bankIin(bank!),
@@ -400,6 +454,16 @@ export const AepsScreen: React.FC = () => {
     // The OTP is bound into the PID block, so an earlier capture is now stale.
     setPidData(null);
     return response;
+  });
+
+  /** Icchhamati's doAeps shape; the backend fills the outlet and scanner serial. */
+  const icchPayload = () => ({
+    aepsType: ({ withdrawal: 'CW', balance: 'BE', statement: 'MS', aadhaarpay: 'M' } as const)[service as 'withdrawal'],
+    aadhaarNumber,
+    customerMobile: mobileNumber,
+    bankID: bankIin(bank!),
+    bankName: bankName(bank!),
+    amount: spec.amount ? amountValue : undefined,
   });
 
   const submit = useAction(async () => {
@@ -444,7 +508,14 @@ export const AepsScreen: React.FC = () => {
 
     let response: any;
     try {
-      response = await spec.call(payload);
+      response = icch
+        ? await api.icchAepsTransaction({
+            ...icchPayload(),
+            xml: pidData,
+            deviceType: providerDeviceName(device),
+            ...(needsOtp ? { otp, txnOtpRequestId: otpRefId } : {}),
+          })
+        : await spec.call(payload);
     } catch (err: any) {
       const body = err?.response?.data;
       setReceipt({
@@ -461,6 +532,14 @@ export const AepsScreen: React.FC = () => {
       recent.refresh();
       // A used PID block is never valid twice, whatever the outcome.
       setPidData(null);
+    }
+
+    // Icchhamati could not confirm either way: the customer may have been
+    // debited, so this is not a failure and must not be retried.
+    if (icch && response?.data?.verification === 'PENDING') {
+      setReceipt({ ...base, status: 'PENDING', message: response.message, stan: response.data?.referenceNo });
+      resetForm();
+      return null;
     }
 
     if (!response?.success) {
@@ -480,9 +559,12 @@ export const AepsScreen: React.FC = () => {
       status: 'SUCCESS',
       message: response.message,
       balanceAmount: readBalance(response.data),
-      rrn: response.data?.rrn || response.data?.bankrrn || response.data?.data?.rrn,
-      stan: response.data?.stan || response.data?.ackno || response.data?.data?.stan,
-      miniStatement: response.data?.ministatement || response.data?.data?.ministatement,
+      rrn: response.data?.rrn || response.data?.bankrrn || response.data?.bankRRN || response.data?.data?.rrn,
+      stan: response.data?.stan || response.data?.ackno || response.data?.fpTransactionId || response.data?.data?.stan,
+      miniStatement:
+        response.data?.ministatement ||
+        response.data?.data?.ministatement ||
+        icchStatement(response.data?.miniStatementStructureModel),
     });
     if (service === 'balance' || service === 'statement') invalidateOtp();
     else resetForm();
@@ -505,7 +587,13 @@ export const AepsScreen: React.FC = () => {
     setCapturing(true);
   };
 
-  const gateNote = !kycDone
+  const gateNote = icch
+    ? icchBlocker && {
+        text: icchBlocker,
+        action: icchStatus?.step === 'twofa' || icchBlocker.startsWith('Aadhaar Pay') ? 'Authenticate' : 'Continue',
+        onPress: () => setOnboarding(icchStatus?.step === 'ready' ? 'AP' : 'AEPS'),
+      }
+    : !kycDone
     ? { text: 'Merchant eKYC is pending. Withdrawals and Aadhaar pay unlock once it is done.', action: 'Complete eKYC', onPress: () => { setKycPipe(undefined); setShowKyc(true); } }
     : !activePipes.length
       ? { text: 'No AEPS pipe is active for your merchant code yet.' }
@@ -542,7 +630,7 @@ export const AepsScreen: React.FC = () => {
       <View>
         {/* BHIM's grey line-icon circles; the selected one gains an orange ring. */}
         <View style={styles.acts} accessibilityRole="radiogroup">
-          {SERVICES.map((s) => {
+          {services.map((s) => {
             const active = s.key === service;
             return (
               <Pressable
@@ -825,7 +913,7 @@ export const AepsScreen: React.FC = () => {
                 <View style={styles.itemRight}>
                   <Text style={styles.itemAmount}>{money(txn.amount)}</Text>
                   <StatusText status={txn.status} />
-                  {String(txn.status).toUpperCase() === 'PENDING' && (
+                  {!icch && String(txn.status).toUpperCase() === 'PENDING' && (
                     <Pressable
                       onPress={async () => {
                         const res = await checkTxnStatus.run(txn.transactionId);
@@ -879,6 +967,13 @@ export const AepsScreen: React.FC = () => {
           setKycPipe(nextPipe);
           setShowKyc(true);
         }}
+      />
+      <IcchhamatiOnboardingSheet
+        visible={!!onboarding}
+        status={icchStatus}
+        serviceType={onboarding ?? 'AEPS'}
+        onClose={() => setOnboarding(null)}
+        onChanged={status.refresh}
       />
       <TransactionReceipt data={receipt} onClose={() => setReceipt(null)} />
     </Screen>

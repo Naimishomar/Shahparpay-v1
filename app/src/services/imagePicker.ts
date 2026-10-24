@@ -45,3 +45,27 @@ export const pickImage = async (
   if (result.canceled || !result.assets?.length) return null;
   return toFile(result.assets[0], fallbackName);
 };
+
+/**
+ * Records a short video on the camera (Icchhamati video KYC). The provider
+ * takes MP4 up to 20 MB, so the clip is capped at 30 seconds of medium quality.
+ */
+export const recordVideo = async (fallbackName = 'video-kyc'): Promise<PickedFile | null> => {
+  const permission = await ImagePicker.requestCameraPermissionsAsync();
+  if (!permission.granted) return null;
+  const result = await ImagePicker.launchCameraAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+    videoMaxDuration: 30,
+    videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium,
+  });
+  if (result.canceled || !result.assets?.length) return null;
+  const asset = result.assets[0];
+  if (asset.fileSize && asset.fileSize > 20 * 1024 * 1024) {
+    throw new Error('The video is larger than 20 MB. Record a shorter clip.');
+  }
+  return {
+    uri: asset.uri,
+    name: asset.fileName || `${fallbackName}.mp4`,
+    type: asset.mimeType || 'video/mp4',
+  };
+};

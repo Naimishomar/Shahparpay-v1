@@ -8,7 +8,8 @@ import { GradientFill } from '@/components/ui/Gradient';
 import { ActionButton } from './BiometricCapture';
 
 export interface ReceiptData {
-  status: 'SUCCESS' | 'FAILED';
+  /** PENDING: the bank has not confirmed yet and the retailer must not retry. */
+  status: 'SUCCESS' | 'FAILED' | 'PENDING';
   /** "Cash withdrawal", "Balance enquiry"… — shown as the receipt heading. */
   service: string;
   message?: string;
@@ -82,6 +83,7 @@ export const TransactionReceipt: React.FC<{
   const insets = useModalInsets();
   if (!data) return null;
   const success = data.status === 'SUCCESS';
+  const pending = data.status === 'PENDING';
   const kv = (label: string, value?: React.ReactNode) =>
     value === undefined || value === null || value === '' ? null : (
       <View style={styles.kv} key={label}>
@@ -95,7 +97,7 @@ export const TransactionReceipt: React.FC<{
       <View style={styles.page}>
         <ScrollView contentContainerStyle={styles.scroll}>
           <View
-            style={[styles.band, success ? styles.bandSuccess : styles.bandFailed, { paddingTop: 40 + insets.top }]}
+            style={[styles.band, success ? styles.bandSuccess : pending ? styles.bandPending : styles.bandFailed, { paddingTop: 40 + insets.top }]}
             accessibilityLiveRegion="polite"
           >
             <View style={styles.shade} />
@@ -107,14 +109,14 @@ export const TransactionReceipt: React.FC<{
               <View style={styles.halo} />
               <View style={styles.tick}>
                 <Ionicons
-                  name={success ? 'checkmark' : 'close'}
+                  name={success ? 'checkmark' : pending ? 'time-outline' : 'close'}
                   size={36}
-                  color={success ? colors.success : colors.destructive}
+                  color={success ? colors.success : pending ? colors.warning : colors.destructive}
                 />
               </View>
             </View>
             <Text style={styles.bandTitle}>
-              {data.service} {success ? 'successful' : 'failed'}
+              {data.service} {success ? 'successful' : pending ? 'pending' : 'failed'}
             </Text>
             {data.amount !== undefined && <Text style={styles.amount}>{headline(data.amount)}</Text>}
             <Text style={styles.bandDate}>{data.dateTime}</Text>
@@ -179,6 +181,7 @@ const styles = themed((c, isDark) => ({
   band: { alignItems: 'center', paddingHorizontal: space.lg, paddingBottom: 108, overflow: 'hidden' },
   bandSuccess: { backgroundColor: c.success },
   bandFailed: { backgroundColor: c.destructive },
+  bandPending: { backgroundColor: c.warning },
   // Dark theme's status hues are tuned bright for text on black; a veil of
   // the ground deepens them to BHIM's band green / red under white type.
   shade: {

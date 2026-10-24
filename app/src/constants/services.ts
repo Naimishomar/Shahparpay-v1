@@ -19,6 +19,7 @@ export type ServiceKey = keyof typeof SERVICE_LABELS;
 /** Which service each navigator route belongs to. Routes not listed are never gated. */
 export const ROUTE_SERVICE: Record<string, ServiceKey> = {
   AEPS: 'aeps',
+  PipeStatus: 'aeps',
   MATM: 'matm',
   DMT: 'dmt',
   Recharge: 'recharge',
@@ -30,11 +31,27 @@ export const ROUTE_SERVICE: Record<string, ServiceKey> = {
   LeadGeneration: 'lead',
 };
 
+/** PaySprint's bank pipes mean nothing to a retailer on Icchhamati AEPS. */
+const PAYSPRINT_ONLY_ROUTES = ['PipeStatus'];
+
 /** Admins and distributors are never gated; a retailer is unless switched off. */
 export const isRouteEnabled = (
-  user: { role?: string; disabledServices?: string[] } | null | undefined,
+  user: { role?: string; disabledServices?: string[]; aepsProvider?: string } | null | undefined,
   route: string
 ) => {
   const key = ROUTE_SERVICE[route];
-  return !key || user?.role !== 'retailer' || !user.disabledServices?.includes(key);
+  if (!key || user?.role !== 'retailer') return true;
+  if (PAYSPRINT_ONLY_ROUTES.includes(route) && aepsProviderOf(user) !== 'paysprint') return false;
+  return !user.disabledServices?.includes(key);
 };
+
+/** AEPS providers; keys match backend/src/utils/services.js. */
+export const AEPS_PROVIDERS = [
+  { key: 'paysprint', label: 'PaySprint' },
+  { key: 'icchhamati', label: 'Icchhamati' },
+] as const;
+
+export type AepsProvider = (typeof AEPS_PROVIDERS)[number]['key'];
+
+export const aepsProviderOf = (user: { aepsProvider?: string } | null | undefined): AepsProvider =>
+  user?.aepsProvider === 'icchhamati' ? 'icchhamati' : 'paysprint';

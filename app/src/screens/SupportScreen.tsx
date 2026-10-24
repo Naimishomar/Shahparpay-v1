@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/Screen';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import { useAuth } from '@/context/AuthContext';
+import { isRouteEnabled } from '@/constants/services';
 import { PickedFile } from '@/services/imagePicker';
 import api from '@/services/api';
 
@@ -145,7 +146,7 @@ export const SupportScreen: React.FC = () => {
           {[
             { route: 'PipeStatus', icon: 'git-network-outline', title: 'AEPS pipe status', sub: 'Which bank pipes are live' },
             { route: 'BiometricSupport', icon: 'finger-print-outline', title: 'Biometric support', sub: 'Device drivers and RD service' },
-          ].map((link) => (
+          ].filter((link) => isRouteEnabled(user, link.route)).map((link) => (
             <Pressable
               key={link.route}
               onPress={() => navigation.navigate(link.route)}

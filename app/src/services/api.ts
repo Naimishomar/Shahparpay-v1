@@ -498,6 +498,52 @@ class ApiService {
     return this.post(API_ENDPOINTS.aeps.dailyAuth, data);
   }
 
+  // ------------------------------------------------------ Icchhamati AEPS
+  // The backend answers refusals with a 4xx and a retailer-facing message;
+  // these return that envelope instead of throwing so screens read one shape.
+  private async envelope(request: Promise<any>) {
+    try {
+      return await request;
+    } catch (error: any) {
+      const body = error?.response?.data;
+      if (body && typeof body === 'object') return body;
+      throw error;
+    }
+  }
+
+  async icchAepsStatus() {
+    return this.envelope(this.get(API_ENDPOINTS.icchAeps.status));
+  }
+
+  async icchAepsStates() {
+    return this.envelope(this.get(API_ENDPOINTS.icchAeps.states));
+  }
+
+  async icchAepsBanks() {
+    return this.envelope(this.get(API_ENDPOINTS.icchAeps.banks));
+  }
+
+  /** Any onboarding step, by path under /api/aeps/icchhamati (e.g. `pan/verify`). */
+  async icchAepsStep(path: string, data: Record<string, any> = {}) {
+    return this.envelope(this.post(`/api/aeps/icchhamati/${path}`, data));
+  }
+
+  async icchAepsVideoKyc(fields: Record<string, any>, video: { uri: string; name: string; type: string }) {
+    return this.envelope(this.postForm(API_ENDPOINTS.icchAeps.videoKyc, fields, { video }));
+  }
+
+  async icchAepsShopImage(fields: Record<string, any>, image: { uri: string; name: string; type: string }) {
+    return this.envelope(this.postForm(API_ENDPOINTS.icchAeps.shopImage, fields, { image }));
+  }
+
+  async icchAepsTxnOtp(data: Record<string, any>) {
+    return this.envelope(this.post(API_ENDPOINTS.icchAeps.txnOtp, data));
+  }
+
+  async icchAepsTransaction(data: Record<string, any>) {
+    return this.envelope(this.post(API_ENDPOINTS.icchAeps.transaction, data));
+  }
+
   // ---------------------------------------------------- Settlement / payout
   async getSettlementHistory(params?: { type?: string }) {
     return this.get(API_ENDPOINTS.settlement.history, params);

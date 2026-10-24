@@ -256,6 +256,23 @@ export const API_ENDPOINTS = {
     kycActivate: '/api/aeps/kyc/activate-merchant',
     dailyAuth: '/api/aeps/daily-auth',
   },
+  // Icchhamati (Fingpay) AEPS, for retailers onboarded there.
+  icchAeps: {
+    status: '/api/aeps/icchhamati/status',
+    states: '/api/aeps/icchhamati/states',
+    register: '/api/aeps/icchhamati/register',
+    shopImage: '/api/aeps/icchhamati/shop-image',
+    videoKyc: '/api/aeps/icchhamati/video-kyc',
+    onboard: '/api/aeps/icchhamati/onboard',
+    ekycSendOtp: '/api/aeps/icchhamati/ekyc/send-otp',
+    ekycVerifyOtp: '/api/aeps/icchhamati/ekyc/verify-otp',
+    ekycBiometric: '/api/aeps/icchhamati/ekyc/biometric',
+    twoFactor: '/api/aeps/icchhamati/2fa',
+    device: '/api/aeps/icchhamati/device',
+    banks: '/api/aeps/icchhamati/banks',
+    txnOtp: '/api/aeps/icchhamati/txn-otp',
+    transaction: '/api/aeps/icchhamati/transaction',
+  },
   settlement: {
     savedBanks: '/api/settlement/saved-banks',
     syncBanks: '/api/settlement/sync-banks',

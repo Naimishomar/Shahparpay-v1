@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { Input, SelectField } from '@/components/ui/Input';
 import { ImageField } from '@/components/ui/ImageField';
 import { Sheet } from '@/components/ui/Sheet';
-import { Banner, Row, SuccessBanner } from '@/components/ui/Screen';
+import { Banner, Row, Segmented, SuccessBanner } from '@/components/ui/Screen';
+import { AEPS_PROVIDERS, type AepsProvider } from '@/constants/services';
 import { useAction } from '@/hooks/useAsync';
 import { INDIAN_STATES } from '@/constants';
 import type { PickedFile } from '@/services/imagePicker';
@@ -93,6 +94,7 @@ export const OnboardMemberSheet: React.FC<{
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isExistingMerchant, setIsExistingMerchant] = useState(false);
+  const [aepsProvider, setAepsProvider] = useState<AepsProvider>('paysprint');
 
   const [businessName, setBusinessName] = useState('');
   const [businessAddress, setBusinessAddress] = useState('');
@@ -163,7 +165,9 @@ export const OnboardMemberSheet: React.FC<{
         website: website.trim(),
         supportEmail: supportEmail.trim(),
         supportMobile: supportMobile.trim(),
-        ...(kind === 'retailer' ? { isExistingMerchant } : {}),
+        ...(kind === 'retailer'
+          ? { aepsProvider, isExistingMerchant: isExistingMerchant && aepsProvider === 'paysprint' }
+          : {}),
         ...packages,
       },
       {
@@ -436,6 +440,19 @@ export const OnboardMemberSheet: React.FC<{
               />
 
               {kind === 'retailer' && (
+                <View>
+                  <Text style={styles.providerLabel}>AEPS provider</Text>
+                  <Segmented
+                    scroll={false}
+                    options={AEPS_PROVIDERS.map((p) => ({ key: p.key, label: p.label }))}
+                    value={aepsProvider}
+                    onChange={setAepsProvider}
+                  />
+                  <Text style={styles.providerHint}>They will onboard and transact on AEPS with this provider only.</Text>
+                </View>
+              )}
+
+              {kind === 'retailer' && aepsProvider === 'paysprint' && (
                 <Toggle
                   label="Already onboarded with PaySprint"
                   hint="Skips the new-merchant flow when the shop already has a PaySprint merchant code."
@@ -622,6 +639,8 @@ const Toggle: React.FC<{
 );
 
 const styles = themed((c) => ({
+  providerLabel: { fontSize: t.small, fontWeight: '500', color: c.foreground, marginBottom: 7 },
+  providerHint: { fontSize: t.micro, lineHeight: 16, color: c.mutedForeground, marginTop: 6 },
   footerRow: { flexDirection: 'row', gap: space.sm },
   flex: { flex: 1 },
   stepper: { flexDirection: 'row', gap: space.xs },
