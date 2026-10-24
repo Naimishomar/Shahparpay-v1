@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { isServiceEnabled } from '../lib/services';
 import { useNavigate } from 'react-router-dom';
 import MerchantKycModal from '../components/MerchantKycModal';
-import { aepsProviderOf } from '../lib/services';
+import { usesAepsProvider } from '../lib/services';
 import { toast } from "sonner";
 
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
@@ -277,7 +277,7 @@ const Dashboard = () => {
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {user && user.isMerchantKycComplete === false && aepsProviderOf(user) === 'paysprint' && (
+            {user && user.isMerchantKycComplete === false && usesAepsProvider(user, 'paysprint') && (
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between rounded-2xl border border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-4 text-amber-900 dark:text-amber-100">
                     <div className="flex items-start gap-3">
                         <div className="rounded-xl bg-amber-500/15 p-2 text-amber-600 dark:text-amber-400">

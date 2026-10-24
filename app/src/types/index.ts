@@ -22,7 +22,7 @@ export interface User {
   /** Services this retailer's distributor has switched off (see constants/services). */
   disabledServices?: string[];
   /** AEPS provider the retailer is onboarded with; absent means PaySprint. */
-  aepsProvider?: 'paysprint' | 'icchhamati';
+  aepsProvider?: 'paysprint' | 'icchhamati' | 'both';
   businessName?: string;
   businessAddress?: string;
   gstNumber?: string;

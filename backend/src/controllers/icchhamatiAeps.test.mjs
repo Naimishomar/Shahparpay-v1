@@ -2,7 +2,7 @@
 // The two calls that decide what a retailer sees and whether money moves.
 import assert from 'node:assert';
 import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks } from './icchhamatiAeps.controller.js';
-import { parseServicesUpdate } from '../utils/services.js';
+import { parseServicesUpdate, usesAepsProvider } from '../utils/services.js';
 
 // --- onboarding step ------------------------------------------------------
 
@@ -64,6 +64,15 @@ assert.deepEqual(parseServicesUpdate({ disabledServices: ['aeps'] }).set, {
   disabledServices: ['aeps'],
 });
 assert.ok(parseServicesUpdate({}).error);
+assert.deepEqual(parseServicesUpdate({ aepsProvider: 'both' }).set, { aepsProvider: 'both' });
+
+// --- which providers a retailer may use ------------------------------------
+
+assert.ok(usesAepsProvider({}, 'paysprint'), 'no choice recorded means PaySprint');
+assert.ok(!usesAepsProvider({}, 'icchhamati'));
+assert.ok(usesAepsProvider({ aepsProvider: 'both' }, 'paysprint'));
+assert.ok(usesAepsProvider({ aepsProvider: 'both' }, 'icchhamati'));
+assert.ok(!usesAepsProvider({ aepsProvider: 'icchhamati' }, 'paysprint'));
 
 // --- provider lists (shapes as the live gateway returns them) --------------
 

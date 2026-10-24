@@ -41,17 +41,27 @@ export const isRouteEnabled = (
 ) => {
   const key = ROUTE_SERVICE[route];
   if (!key || user?.role !== 'retailer') return true;
-  if (PAYSPRINT_ONLY_ROUTES.includes(route) && aepsProviderOf(user) !== 'paysprint') return false;
+  if (PAYSPRINT_ONLY_ROUTES.includes(route) && !usesAepsProvider(user, 'paysprint')) return false;
   return !user.disabledServices?.includes(key);
 };
 
-/** AEPS providers; keys match backend/src/utils/services.js. */
+/** AEPS choices for a retailer: one provider or both. Keys match backend/src/utils/services.js. */
 export const AEPS_PROVIDERS = [
   { key: 'paysprint', label: 'PaySprint' },
   { key: 'icchhamati', label: 'Icchhamati' },
+  { key: 'both', label: 'Both' },
 ] as const;
 
 export type AepsProvider = (typeof AEPS_PROVIDERS)[number]['key'];
 
 export const aepsProviderOf = (user: { aepsProvider?: string } | null | undefined): AepsProvider =>
-  user?.aepsProvider === 'icchhamati' ? 'icchhamati' : 'paysprint';
+  AEPS_PROVIDERS.find((p) => p.key === user?.aepsProvider)?.key ?? 'paysprint';
+
+/** Whether the retailer may use this provider's AEPS ('both' allows either). */
+export const usesAepsProvider = (
+  user: { aepsProvider?: string } | null | undefined,
+  provider: 'paysprint' | 'icchhamati'
+) => {
+  const chosen = aepsProviderOf(user);
+  return chosen === 'both' || chosen === provider;
+};

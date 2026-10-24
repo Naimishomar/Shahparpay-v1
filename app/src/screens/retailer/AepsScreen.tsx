@@ -35,7 +35,7 @@ import { coordsPayload } from '@/services/location';
 import { LocationGate } from '@/components/aeps/LocationGate';
 import { useLocationReady } from '@/hooks/useLocationReady';
 import api from '@/services/api';
-import { aepsProviderOf } from '@/constants/services';
+import { aepsProviderOf, usesAepsProvider } from '@/constants/services';
 import {
   IcchhamatiOnboardingSheet,
   providerDeviceName,
@@ -268,8 +268,11 @@ export const AepsScreen: React.FC = () => {
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
 
   const merchantcode = user?.retailerId || user?.code;
-  // Same screen, two providers: the retailer is on exactly one of them.
-  const icch = aepsProviderOf(user) === 'icchhamati';
+  // Same screen, two providers. A retailer on both switches between them;
+  // each keeps its own onboarding and daily login.
+  const onBoth = aepsProviderOf(user) === 'both';
+  const [active, setActive] = useState<'paysprint' | 'icchhamati'>('paysprint');
+  const icch = onBoth ? active === 'icchhamati' : usesAepsProvider(user, 'icchhamati');
   const [onboarding, setOnboarding] = useState<null | 'AEPS' | 'AP'>(null);
 
   const status = useAsync<any>(async () => {
@@ -626,6 +629,26 @@ export const AepsScreen: React.FC = () => {
       {/* Ahead of the form: a geo-fence refusal arrives as an opaque provider
           error, so the cause is surfaced while it can still be fixed. */}
       <LocationGate />
+
+      {onBoth && (
+        <View style={styles.gap}>
+          <Segmented
+            scroll={false}
+            options={[
+              { key: 'paysprint', label: 'PaySprint' },
+              { key: 'icchhamati', label: 'Icchhamati' },
+            ]}
+            value={active}
+            onChange={(next) => {
+              setActive(next);
+              // Nothing typed against one provider carries over to the other.
+              resetForm();
+              setService('withdrawal');
+              setPipe(null);
+            }}
+          />
+        </View>
+      )}
 
       <View>
         {/* BHIM's grey line-icon circles; the selected one gains an orange ring. */}

@@ -186,7 +186,7 @@ const UserDetail = ({
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3">
                         <div className="min-w-0">
                             <p className="text-sm font-semibold">AEPS provider</p>
-                            <p className="text-xs text-muted-foreground">The retailer sees and onboards only with this provider.</p>
+                            <p className="text-xs text-muted-foreground">The retailer sees and onboards only with the chosen provider (or both).</p>
                         </div>
                         <AepsProviderPicker value={aepsProviderOf(user)} onChange={setProvider} disabled={busy !== null} />
                     </div>

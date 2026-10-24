@@ -232,7 +232,7 @@ const DistributorPortal = () => {
         if (profilePicture) data.append('profilePicture', profilePicture);
         if (formData.otp) data.append('otp', formData.otp);
         data.append('merchantCode', merchantCode);
-        data.append('isExistingMerchant', String(isExistingMerchant && formData.aepsProvider === 'paysprint'));
+        data.append('isExistingMerchant', String(isExistingMerchant && formData.aepsProvider !== 'icchhamati'));
 
         try {
             const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/create-retailer`, {

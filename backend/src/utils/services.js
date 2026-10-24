@@ -32,10 +32,16 @@ export const parseDisabledServices = (value) => {
   return [...new Set(list.filter((key) => SERVICE_KEYS.includes(key)))];
 };
 
-/** The AEPS providers a retailer can be onboarded with; PaySprint is the default. */
-export const AEPS_PROVIDERS = ['paysprint', 'icchhamati'];
+/** The AEPS choices for a retailer: one provider or both. PaySprint is the default. */
+export const AEPS_PROVIDERS = ['paysprint', 'icchhamati', 'both'];
 
 export const aepsProviderOf = (retailer) => retailer?.aepsProvider || 'paysprint';
+
+/** Whether the retailer may use this provider's AEPS. */
+export const usesAepsProvider = (retailer, provider) => {
+  const chosen = aepsProviderOf(retailer);
+  return chosen === 'both' || chosen === provider;
+};
 
 /** null for anything that is not a known provider. */
 export const parseAepsProvider = (value) => (AEPS_PROVIDERS.includes(value) ? value : null);

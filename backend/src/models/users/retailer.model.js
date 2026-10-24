@@ -148,11 +148,12 @@ const retailerSchema = new mongoose.Schema(
       default: null,
     },
     // Which AEPS provider the retailer is onboarded with, chosen by their
-    // distributor or an admin. A retailer only sees and can use that provider's
-    // AEPS flow; documents written before this field existed are PaySprint.
+    // distributor or an admin: one of them, or 'both'. A retailer only sees and
+    // can use those providers' AEPS; documents written before this field
+    // existed are PaySprint.
     aepsProvider: {
       type: String,
-      enum: ['paysprint', 'icchhamati'],
+      enum: ['paysprint', 'icchhamati', 'both'],
       default: 'paysprint',
     },
     // Icchhamati (Fingpay) AEPS merchant. `outletId` is the MID their draft API

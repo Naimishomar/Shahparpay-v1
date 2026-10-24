@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE } from './shared';
 import { INDIAN_STATES } from '../../constants';
-import { AEPS_PROVIDERS, SERVICES } from '../../lib/services';
+import { AEPS_PROVIDERS, SERVICES, aepsProviderOf, usesAepsProvider } from '../../lib/services';
 import AepsProviderPicker from '../AepsProviderPicker';
 
 export type RetailerForm = Record<string, string | boolean>;
@@ -107,8 +107,8 @@ const CreateRetailerWizard = ({
 
     const v = (k: string) => String(formData[k] ?? '');
     const set = (k: string, value: string | boolean) => setFormData({ ...formData, [k]: value });
-    const provider = v('aepsProvider') === 'icchhamati' ? 'icchhamati' : 'paysprint';
-    const isPaysprint = provider === 'paysprint';
+    const provider = aepsProviderOf({ aepsProvider: v('aepsProvider') });
+    const isPaysprint = usesAepsProvider({ aepsProvider: provider }, 'paysprint');
 
     // Errors for every step, shown only once the user has tried to leave that step.
     const errors: Record<string, string>[] = [
@@ -290,13 +290,13 @@ const CreateRetailerWizard = ({
                                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b pb-4">
                                     <div>
                                         <p className="text-sm font-semibold">AEPS provider</p>
-                                        <p className="text-xs text-muted-foreground">They will onboard and transact on AEPS with this provider only.</p>
+                                        <p className="text-xs text-muted-foreground">They onboard and transact on AEPS only with the chosen provider (or both).</p>
                                     </div>
                                     <AepsProviderPicker
                                         value={provider}
                                         onChange={(p) => {
                                             set('aepsProvider', p);
-                                            if (p !== 'paysprint') setIsExistingMerchant(false);
+                                            if (p === 'icchhamati') setIsExistingMerchant(false);
                                         }}
                                     />
                                 </div>

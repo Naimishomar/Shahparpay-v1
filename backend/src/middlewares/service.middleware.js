@@ -1,4 +1,4 @@
-import { SERVICES, aepsProviderOf } from '../utils/services.js';
+import { SERVICES, usesAepsProvider } from '../utils/services.js';
 
 /**
  * Refuses a retailer's request for a service their distributor has switched
@@ -21,11 +21,11 @@ export const requireService = (service) => (req, res, next) => {
 };
 
 /**
- * Refuses a retailer's AEPS request to a provider they are not onboarded with:
- * each retailer is on exactly one, so the other provider's endpoints are closed.
+ * Refuses a retailer's AEPS request to a provider they are not onboarded with;
+ * a retailer on 'both' passes either way.
  */
 export const requireAepsProvider = (provider) => (req, res, next) => {
-  if (req.user?.role !== 'retailer' || aepsProviderOf(req.user) === provider) return next();
+  if (req.user?.role !== 'retailer' || usesAepsProvider(req.user, provider)) return next();
   return res.status(403).json({
     success: false,
     code: 'AEPS_PROVIDER_MISMATCH',
