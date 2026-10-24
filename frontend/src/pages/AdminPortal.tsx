@@ -12,6 +12,7 @@ import ActivityLog from '../components/admin/ActivityLog';
 import CreateRetailerWizard from '../components/distributor/CreateRetailerWizard';
 import DistributorProfile from '../components/distributor/DistributorProfile';
 import AdminFundRequests from '../components/admin/AdminFundRequests';
+import IcchhamatiAccount from '../components/admin/IcchhamatiAccount';
 
 const AdminPortal = () => {
     const { user, token, isInitializing } = useAuth();
@@ -357,6 +358,8 @@ const AdminPortal = () => {
                 )}
 
                 {activeTab === 'activity' && <ActivityLog token={token} onOpenUser={openUser} />}
+
+                {activeTab === 'icchhamati' && <IcchhamatiAccount token={token} />}
 
                 {activeTab === 'fund_requests' && (
                     <AdminFundRequests

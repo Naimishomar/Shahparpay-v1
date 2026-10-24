@@ -53,6 +53,7 @@ const adminProjects = [
   { name: "Users", url: "/admin/users", icon: Users },
   { name: "Activity Log", url: "/admin/activity", icon: History },
   { name: "Fund Requests", url: "/admin/fund-requests", icon: Store },
+  { name: "Icchhamati Account", url: "/admin/icchhamati", icon: Landmark },
   { name: "Add New", url: "/admin/create", icon: UserPlus },
   { name: "Notifications", url: "/admin/notifications", icon: Bell },
   { name: "Customer Support", url: "/admin/support", icon: Headset },

@@ -16,6 +16,7 @@ import {
   setRetailerServices,
   getActivity,
 } from '../controllers/adminConsole.controller.js';
+import { getWallets, getPayouts, selfTransfer } from '../controllers/adminIcchhamati.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 import { upload } from '../middlewares/multer.middleware.js';
 
@@ -34,6 +35,12 @@ router.get('/console/users/:role/:id', getUserDetail);
 router.patch('/console/users/:role/:id/status', setUserStatus);
 router.put('/console/retailers/:id/services', setRetailerServices);
 router.get('/console/activity', getActivity);
+
+// Shahparpay's own Icchhamati account: wallets, payouts sent from it, and
+// transfers between its wallets. Admin only.
+router.get('/icchhamati/wallets', getWallets);
+router.get('/icchhamati/payouts', getPayouts);
+router.post('/icchhamati/self-transfer', selfTransfer);
 router.get('/distributors', getDistributors);
 router.get('/profile', getAdminProfile);
 router.put(
