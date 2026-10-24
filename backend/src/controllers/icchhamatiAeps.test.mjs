@@ -68,11 +68,11 @@ assert.deepEqual(parseServicesUpdate({ aepsProvider: 'both' }).set, { aepsProvid
 
 // --- which providers a retailer may use ------------------------------------
 
-assert.ok(usesAepsProvider({}, 'paysprint'), 'no choice recorded means PaySprint');
-assert.ok(!usesAepsProvider({}, 'icchhamati'));
-assert.ok(usesAepsProvider({ aepsProvider: 'both' }, 'paysprint'));
-assert.ok(usesAepsProvider({ aepsProvider: 'both' }, 'icchhamati'));
-assert.ok(!usesAepsProvider({ aepsProvider: 'icchhamati' }, 'paysprint'));
+// PaySprint is switched off: every retailer is on Icchhamati whatever is stored.
+assert.ok(usesAepsProvider({}, 'icchhamati'));
+assert.ok(usesAepsProvider({ aepsProvider: 'paysprint' }, 'icchhamati'));
+assert.ok(!usesAepsProvider({ aepsProvider: 'paysprint' }, 'paysprint'));
+assert.ok(!usesAepsProvider({ aepsProvider: 'both' }, 'paysprint'));
 
 // --- provider lists (shapes as the live gateway returns them) --------------
 

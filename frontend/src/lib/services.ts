@@ -15,6 +15,14 @@ export const SERVICES = [
     { key: 'lead', label: 'Lead Generation', hint: 'Loans & credit cards' },
 ] as const;
 
+/**
+ * PaySprint withdrew its AEPS and Micro ATM APIs, so its flows are switched off:
+ * every retailer is on Icchhamati whatever was stored, and PaySprint-only UI is
+ * hidden. The code stays; set this to true (and restore the backend routes
+ * marked PAYSPRINT-DISABLED) to bring PaySprint back.
+ */
+export const PAYSPRINT_ENABLED: boolean = false;
+
 /** AEPS choices for a retailer: one provider or both. Keys match backend/src/utils/services.js. */
 export const AEPS_PROVIDERS = [
     { key: 'paysprint', label: 'PaySprint' },
@@ -25,7 +33,7 @@ export const AEPS_PROVIDERS = [
 export type AepsProvider = (typeof AEPS_PROVIDERS)[number]['key'];
 
 export const aepsProviderOf = (user: { aepsProvider?: string } | null | undefined): AepsProvider =>
-    AEPS_PROVIDERS.find((p) => p.key === user?.aepsProvider)?.key ?? 'paysprint';
+    PAYSPRINT_ENABLED ? AEPS_PROVIDERS.find((p) => p.key === user?.aepsProvider)?.key ?? 'paysprint' : 'icchhamati';
 
 /** The two providers on their own; a new retailer starts on exactly one. */
 export const SINGLE_AEPS_PROVIDERS = AEPS_PROVIDERS.filter((p) => p.key !== 'both') as { key: 'paysprint' | 'icchhamati'; label: string }[];

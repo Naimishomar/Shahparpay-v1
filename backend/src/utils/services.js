@@ -35,7 +35,10 @@ export const parseDisabledServices = (value) => {
 /** The AEPS choices for a retailer: one provider or both. PaySprint is the default. */
 export const AEPS_PROVIDERS = ['paysprint', 'icchhamati', 'both'];
 
-export const aepsProviderOf = (retailer) => retailer?.aepsProvider || 'paysprint';
+// PAYSPRINT-DISABLED: PaySprint withdrew its AEPS APIs, so every retailer is on
+// Icchhamati whatever was stored. Restore the line below to switch back.
+// export const aepsProviderOf = (retailer) => retailer?.aepsProvider || 'paysprint';
+export const aepsProviderOf = () => 'icchhamati';
 
 /** Whether the retailer may use this provider's AEPS. */
 export const usesAepsProvider = (retailer, provider) => {

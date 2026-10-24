@@ -20,6 +20,7 @@ import { OnboardMemberSheet } from '@/components/network/OnboardMemberSheet';
 import { EditRetailerSheet } from '@/components/network/EditRetailerSheet';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
+import { PAYSPRINT_ENABLED } from '@/constants/services';
 
 const KYC_CALLBACK = 'https://shahparpay-v1.vercel.app/kyc-callback';
 
@@ -155,7 +156,8 @@ export const RetailersScreen: React.FC = () => {
                     color={colors.mutedForeground}
                   />
                 </Pressable>
-                {!ret.isMerchantKycComplete && (
+                {/* The KYC link is PaySprint's onboarding URL. */}
+                {PAYSPRINT_ENABLED && !ret.isMerchantKycComplete && (
                   <Button
                     size="sm"
                     variant="outline"

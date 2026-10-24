@@ -7,7 +7,7 @@ import { Input, SelectField } from '@/components/ui/Input';
 import { ImageField } from '@/components/ui/ImageField';
 import { Sheet } from '@/components/ui/Sheet';
 import { Banner, Row, Segmented, SuccessBanner } from '@/components/ui/Screen';
-import { AEPS_PROVIDERS, type AepsProvider } from '@/constants/services';
+import { AEPS_PROVIDERS, PAYSPRINT_ENABLED, type AepsProvider } from '@/constants/services';
 import { useAction } from '@/hooks/useAsync';
 import { INDIAN_STATES } from '@/constants';
 import type { PickedFile } from '@/services/imagePicker';
@@ -94,7 +94,7 @@ export const OnboardMemberSheet: React.FC<{
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isExistingMerchant, setIsExistingMerchant] = useState(false);
-  const [aepsProvider, setAepsProvider] = useState<AepsProvider>('paysprint');
+  const [aepsProvider, setAepsProvider] = useState<AepsProvider>(PAYSPRINT_ENABLED ? 'paysprint' : 'icchhamati');
 
   const [businessName, setBusinessName] = useState('');
   const [businessAddress, setBusinessAddress] = useState('');
@@ -439,7 +439,7 @@ export const OnboardMemberSheet: React.FC<{
                 helperText="At least 6 characters. Share it with them securely."
               />
 
-              {kind === 'retailer' && (
+              {PAYSPRINT_ENABLED && kind === 'retailer' && (
                 <View>
                   <Text style={styles.providerLabel}>AEPS provider</Text>
                   <Segmented

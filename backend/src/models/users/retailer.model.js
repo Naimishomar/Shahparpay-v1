@@ -154,7 +154,8 @@ const retailerSchema = new mongoose.Schema(
     aepsProvider: {
       type: String,
       enum: ['paysprint', 'icchhamati', 'both'],
-      default: 'paysprint',
+      // PAYSPRINT-DISABLED: default: 'paysprint',
+      default: 'icchhamati',
     },
     // Icchhamati (Fingpay) AEPS merchant. `outletId` is the MID their draft API
     // assigns and every later call is keyed by; the device is the scanner the

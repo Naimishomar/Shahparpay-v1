@@ -27,6 +27,7 @@ import { INDIAN_STATES } from '@/constants';
 import { useResponsive } from '@/hooks/useResponsive';
 import { pickImage, type PickedFile } from '@/services/imagePicker';
 import api from '@/services/api';
+import { PAYSPRINT_ENABLED } from '@/constants/services';
 
 /** distributorId comes back populated on a retailer and as a plain id elsewhere. */
 const distributorLabel = (value: unknown) =>
@@ -70,7 +71,8 @@ export const ProfileScreen: React.FC = () => {
   const merchant = useAsync<any>(
     async () => (await api.getAepsMerchantStatus({ merchantcode: user?.retailerId || user?.code })).data,
     [user?.retailerId],
-    isRetailer
+    // PaySprint's merchant status; there is nothing to ask while it is off.
+    isRetailer && PAYSPRINT_ENABLED
   );
 
   const banks = useAsync<any[]>(async () => (await api.getSavedBanks()).data ?? [], [], isRetailer);
@@ -248,7 +250,7 @@ export const ProfileScreen: React.FC = () => {
       <View style={styles.body}>
         {!!notice && <SuccessBanner message={notice} />}
 
-        {isRetailer && (
+        {isRetailer && PAYSPRINT_ENABLED && (
           <Pressable
             onPress={() => (kycDone ? navigation.navigate('KycStatus') : setShowKyc(true))}
             style={({ pressed }) => [styles.card, styles.kycCard, pressed && { opacity: 0.85 }]}

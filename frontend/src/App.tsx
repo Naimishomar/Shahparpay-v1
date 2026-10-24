@@ -5,7 +5,7 @@ import ServiceGate from "./components/ServiceGate"
 
 import { Toaster } from 'sonner'
 import { useAuth } from './context/AuthContext'
-import { usesAepsProvider } from './lib/services'
+import { PAYSPRINT_ENABLED, usesAepsProvider } from './lib/services'
 import { Navigate, useLocation, Outlet } from 'react-router-dom'
 
 // Route-level code splitting: only the landing page ships in the initial bundle.
@@ -51,7 +51,9 @@ const AepsTerms = lazy(() => import("./pages/AepsTerms"))
 const RefundPolicy = lazy(() => import("./pages/RefundPolicy"))
 const RetailerTerms = lazy(() => import("./pages/RetailerTerms"))
 const Profile = lazy(() => import("./pages/Profile"))
+// PAYSPRINT-DISABLED: PaySprint MATM page; route below uses Icchhamati while PAYSPRINT_ENABLED is false.
 const MATM = lazy(() => import("./pages/MATM"))
+const IcchhamatiMATM = lazy(() => import("./pages/IcchhamatiMATM"))
 const Support = lazy(() => import("./pages/Support"))
 const NotFound = lazy(() => import("./pages/NotFound"))
 
@@ -113,7 +115,7 @@ function App() {
         <Route path="/aeps" element={<ServiceGate service="aeps"><AepsPage/></ServiceGate>}/>
         <Route path="/aeps/pipes" element={<PaysprintOnly><PipeStatus/></PaysprintOnly>}/>
         <Route path="/aeps-settlement" element={<AepsSettlement/>}/>
-        <Route path="/matm" element={<ServiceGate service="matm"><MATM/></ServiceGate>}/>
+        <Route path="/matm" element={<ServiceGate service="matm">{PAYSPRINT_ENABLED ? <MATM/> : <IcchhamatiMATM/>}</ServiceGate>}/>
         <Route path="/direct-payout" element={<ServiceGate service="payout"><DirectPayout/></ServiceGate>}/>
         <Route path="/dmt" element={<ServiceGate service="dmt"><DMT/></ServiceGate>}/>
         <Route path="/recharge" element={<ServiceGate service="recharge"><Recharge/></ServiceGate>}/>

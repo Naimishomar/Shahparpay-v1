@@ -22,6 +22,7 @@ import { useAsync, useAction } from '@/hooks/useAsync';
 import { useAuth } from '@/context/AuthContext';
 import { StatusText } from '@/components/aeps/TransactionReceipt';
 import api from '@/services/api';
+import { PAYSPRINT_ENABLED } from '@/constants/services';
 import { coordsPayload } from '@/services/location';
 
 const TRANSACTION_TYPES = [
@@ -46,7 +47,26 @@ const ensureBluetooth = async () => {
   }
 };
 
-export const MatmScreen: React.FC = () => {
+/**
+ * Micro ATM. PaySprint withdrew its MATM APIs, and Icchhamati's Micro ATM
+ * needs its own Android SDK, which is not in the app yet; until then the
+ * retailer is sent to the web portal, where Icchhamati's MATM driver works.
+ * The PaySprint flow below stays for when PAYSPRINT_ENABLED is switched back.
+ */
+export const MatmScreen: React.FC = () =>
+  PAYSPRINT_ENABLED ? (
+    <PaysprintMatmScreen />
+  ) : (
+    <Screen>
+      <EmptyState
+        icon="credit-card-outline"
+        title="Micro ATM is on the web portal for now"
+        subtitle="Use Micro ATM from the Shahparpay web portal on a computer with the Micro ATM driver installed. It is coming to the app soon."
+      />
+    </Screen>
+  );
+
+const PaysprintMatmScreen: React.FC = () => {
   const { user } = useAuth();
   const [mobile, setMobile] = useState(user?.contactNumber ?? '');
   const [amount, setAmount] = useState('');

@@ -10,7 +10,8 @@ import Admin from '../models/users/admin.model.js';
 import { uploadOnR2 } from '../utils/r2.js';
 import bcrypt from 'bcrypt';
 import Otp from '../models/otp.model.js';
-import { parseDisabledServices, parseAepsProvider } from '../utils/services.js';
+// PAYSPRINT-DISABLED: parseAepsProvider is used by the commented-out provider check.
+import { parseDisabledServices } from '../utils/services.js';
 import { logActivity } from '../utils/activity.js';
 import { sendEmailOTP } from '../utils/email.js';
 import {
@@ -222,16 +223,16 @@ export const verifyLoginOtp = async (req, res) => {
     // the actual protocol instead of assuming TLS.
     res.cookie('refreshToken', refreshToken, refreshCookieOptions(req));
 
-    // Fire off background pipe synchronization for retailers
-    if (role === 'retailer') {
-      import('./aepsPayment.controller.js')
-        .then(({ syncMerchantPipes }) => {
-          syncMerchantPipes(user.retailerId).catch((err) =>
-            console.error('Background sync failed:', err)
-          );
-        })
-        .catch((err) => console.error('Failed to import sync function:', err));
-    }
+    // PAYSPRINT-DISABLED: background PaySprint AEPS pipe sync for retailers.
+    // if (role === 'retailer') {
+    //   import('./aepsPayment.controller.js')
+    //     .then(({ syncMerchantPipes }) => {
+    //       syncMerchantPipes(user.retailerId).catch((err) =>
+    //         console.error('Background sync failed:', err)
+    //       );
+    //     })
+    //     .catch((err) => console.error('Failed to import sync function:', err));
+    // }
 
     return res.status(200).json({
       success: true,
@@ -654,10 +655,13 @@ export const createRetailer = async (req, res) => {
 
     const name = `${firstName} ${lastName}`;
 
-    // Omitted means PaySprint. A new retailer starts on exactly one provider: the
-    // two onboard on different criteria, so the second is added later, on its own.
-    if (aepsProvider !== undefined && (!parseAepsProvider(aepsProvider) || aepsProvider === 'both'))
-      return res.status(400).json({ success: false, message: 'Choose PaySprint or Icchhamati for AEPS.' });
+    // PAYSPRINT-DISABLED: with PaySprint off, every new retailer onboards on
+    // Icchhamati and the requested provider is ignored. To switch back:
+    // // Omitted means PaySprint. A new retailer starts on exactly one provider: the
+    // // two onboard on different criteria, so the second is added later, on its own.
+    // if (aepsProvider !== undefined && (!parseAepsProvider(aepsProvider) || aepsProvider === 'both'))
+    //   return res.status(400).json({ success: false, message: 'Choose PaySprint or Icchhamati for AEPS.' });
+    void aepsProvider;
 
     const profilePictureLocalPath = req.files?.profilePicture?.[0]?.path;
     const aadhaarPictureLocalPath = req.files?.aadhaarPicture?.[0]?.path;
@@ -743,7 +747,8 @@ export const createRetailer = async (req, res) => {
       supportMobile,
       isExistingMerchant: isExistingMerchant === 'true' || isExistingMerchant === true,
       disabledServices: parseDisabledServices(disabledServices) || [],
-      aepsProvider: aepsProvider || 'paysprint',
+      // PAYSPRINT-DISABLED: aepsProvider: aepsProvider || 'paysprint',
+      aepsProvider: 'icchhamati',
     });
 
     await newRetailer.save();

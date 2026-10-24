@@ -16,7 +16,7 @@ const retailerProjects = [
   { name: "Dashboard", url: "/dashboard", icon: BarChart3 },
   { name: "AEPS", url: "/aeps", service: "aeps", icon: ScanFace },
   { name: "AEPS Settlement", url: "/aeps-settlement", icon: Landmark },
-  // { name: "MATM", url: "/matm", icon: CreditCard },
+  { name: "Micro ATM", url: "/matm", service: "matm", icon: CreditCard },
   { name: "PAN Card", url: "/pan", service: "pan", icon: FileText },
   { name: "Lead Generation", url: "/lead-generation", service: "lead", icon: UserPlus },
   { name: "ITR Filing", url: "/itr", service: "itr", icon: FileText },

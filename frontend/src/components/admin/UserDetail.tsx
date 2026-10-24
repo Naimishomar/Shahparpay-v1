@@ -3,7 +3,7 @@ import { ArrowRight, Banknote, ChevronLeft, Clock, History, Loader2, Mail, MapPi
 import { toast } from 'sonner';
 import { CARD, LABEL, PENDING_PILL, SECONDARY_BUTTON, SILVER_TILE, STATUS_PILL, ago, inr, inrShort, serviceLabel, useApiGet } from '../distributor/shared';
 import { Avatar, Skeleton } from '../distributor/ui';
-import { AEPS_PROVIDERS, SERVICES, aepsProviderOf, type AepsProvider, type ServiceKey } from '../../lib/services';
+import { AEPS_PROVIDERS, PAYSPRINT_ENABLED, SERVICES, aepsProviderOf, type AepsProvider, type ServiceKey } from '../../lib/services';
 import { AepsProviderSwitches } from '../AepsProviderPicker';
 import { ActivityList, type Activity } from './ActivityLog';
 
@@ -183,6 +183,7 @@ const UserDetail = ({
                         </div>
                         <span className={LABEL}>{SERVICES.length - disabled.length} of {SERVICES.length} on</span>
                     </div>
+                    {PAYSPRINT_ENABLED && (
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3">
                         <div className="min-w-0">
                             <p className="text-sm font-semibold">AEPS provider</p>
@@ -190,6 +191,7 @@ const UserDetail = ({
                         </div>
                         <AepsProviderSwitches value={aepsProviderOf(user)} onChange={setProvider} disabled={busy !== null} />
                     </div>
+                    )}
                     <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
                         {SERVICES.map((svc) => {
                             const on = !disabled.includes(svc.key);

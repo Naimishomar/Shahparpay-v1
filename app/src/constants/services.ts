@@ -20,6 +20,7 @@ export type ServiceKey = keyof typeof SERVICE_LABELS;
 export const ROUTE_SERVICE: Record<string, ServiceKey> = {
   AEPS: 'aeps',
   PipeStatus: 'aeps',
+  KycStatus: 'aeps',
   MATM: 'matm',
   DMT: 'dmt',
   Recharge: 'recharge',
@@ -31,8 +32,16 @@ export const ROUTE_SERVICE: Record<string, ServiceKey> = {
   LeadGeneration: 'lead',
 };
 
-/** PaySprint's bank pipes mean nothing to a retailer on Icchhamati AEPS. */
-const PAYSPRINT_ONLY_ROUTES = ['PipeStatus'];
+/**
+ * PaySprint withdrew its AEPS and Micro ATM APIs, so its flows are switched off:
+ * every retailer is on Icchhamati whatever was stored, and PaySprint-only
+ * screens are hidden. The code stays; set this to true (and restore the backend
+ * routes marked PAYSPRINT-DISABLED) to bring PaySprint back.
+ */
+export const PAYSPRINT_ENABLED: boolean = false;
+
+/** PaySprint's bank pipes and merchant KYC mean nothing to a retailer on Icchhamati AEPS. */
+const PAYSPRINT_ONLY_ROUTES = ['PipeStatus', 'KycStatus'];
 
 /** Admins and distributors are never gated; a retailer is unless switched off. */
 export const isRouteEnabled = (
@@ -55,7 +64,7 @@ export const AEPS_PROVIDERS = [
 export type AepsProvider = (typeof AEPS_PROVIDERS)[number]['key'];
 
 export const aepsProviderOf = (user: { aepsProvider?: string } | null | undefined): AepsProvider =>
-  AEPS_PROVIDERS.find((p) => p.key === user?.aepsProvider)?.key ?? 'paysprint';
+  PAYSPRINT_ENABLED ? AEPS_PROVIDERS.find((p) => p.key === user?.aepsProvider)?.key ?? 'paysprint' : 'icchhamati';
 
 /** Whether the retailer may use this provider's AEPS ('both' allows either). */
 export const usesAepsProvider = (

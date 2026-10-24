@@ -16,7 +16,7 @@ import RetailerDirectory from '../components/distributor/RetailerDirectory';
 import RetailerDetail from '../components/distributor/RetailerDetail';
 import CreateRetailerWizard from '../components/distributor/CreateRetailerWizard';
 import DistributorProfile from '../components/distributor/DistributorProfile';
-import { SERVICES } from '../lib/services';
+import { PAYSPRINT_ENABLED, SERVICES } from '../lib/services';
 
 const DistributorPortal = () => {
     const { user, token, isInitializing } = useAuth();
@@ -44,7 +44,7 @@ const DistributorPortal = () => {
         dob: '', city: '', landmark: '', district: '', state: '', 
         businessName: '', businessAddress: '', 
         aadhaarNumber: '', panNumber: '', hasGst: false, gstNumber: '', otp: '',
-        aepsProvider: 'paysprint',
+        aepsProvider: PAYSPRINT_ENABLED ? 'paysprint' : 'icchhamati',
         // Every service is on by default; the distributor switches off what they don't want.
         ...Object.fromEntries(SERVICES.map((svc) => [`svc_${svc.key}`, 'Yes'])),
         

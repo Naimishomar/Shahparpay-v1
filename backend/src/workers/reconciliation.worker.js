@@ -271,14 +271,20 @@ export const startReconciliationWorker = () => {
         // transfer that may already have landed, so they are never resolved here.
         // An unresolved Aadhaar Pay is an inflow nothing was debited for, so the
         // default's "refund" would hand the retailer money they never paid.
-        const NO_RECONCILER_TYPES = ['DMT', 'AADHAAR_PAY'];
+        // A Micro ATM withdrawal the provider did not confirm: the customer's
+        // card may have been debited and the cash handed over, so it waits for
+        // an admin rather than being "refunded" money that was never debited.
+        const NO_RECONCILER_TYPES = ['DMT', 'AADHAAR_PAY', 'MATM'];
         if (AEPS_TYPES.includes(txn.type)) {
           try {
-            if (txn.type === 'AEPS_WITHDRAWAL') {
-              console.log(`CRON: ${await resolveAepsWithdrawal(txn)}`);
-            } else if (txn.type === 'AEPS_DEPOSIT') {
-              console.log(`CRON: ${await resolveAepsDeposit(txn)}`);
-            } else {
+            // PAYSPRINT-DISABLED: both resolvers ask PaySprint, whose AEPS APIs
+            // are gone; an unreachable status query must not decide anything.
+            // if (txn.type === 'AEPS_WITHDRAWAL') {
+            //   console.log(`CRON: ${await resolveAepsWithdrawal(txn)}`);
+            // } else if (txn.type === 'AEPS_DEPOSIT') {
+            //   console.log(`CRON: ${await resolveAepsDeposit(txn)}`);
+            // } else {
+            {
               console.log(
                 `CRON: Skipping AEPS transaction ${txn.transactionId} (${txn.type}) — no reconciler wired yet.`
               );

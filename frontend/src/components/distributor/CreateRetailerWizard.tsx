@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE } from './shared';
 import { INDIAN_STATES } from '../../constants';
-import { AEPS_PROVIDERS, SERVICES } from '../../lib/services';
+import { AEPS_PROVIDERS, PAYSPRINT_ENABLED, SERVICES } from '../../lib/services';
 import AepsProviderPicker from '../AepsProviderPicker';
 
 export type RetailerForm = Record<string, string | boolean>;
@@ -107,7 +107,7 @@ const CreateRetailerWizard = ({
 
     const v = (k: string) => String(formData[k] ?? '');
     const set = (k: string, value: string | boolean) => setFormData({ ...formData, [k]: value });
-    const provider = v('aepsProvider') === 'icchhamati' ? 'icchhamati' : 'paysprint';
+    const provider = PAYSPRINT_ENABLED && v('aepsProvider') !== 'icchhamati' ? 'paysprint' : 'icchhamati';
     const isPaysprint = provider === 'paysprint';
 
     // Errors for every step, shown only once the user has tried to leave that step.
@@ -287,6 +287,7 @@ const CreateRetailerWizard = ({
                             )}
                             {isRetailer && (
                             <div className="md:col-span-2 rounded-2xl border bg-background p-4">
+                                {PAYSPRINT_ENABLED && (
                                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b pb-4">
                                     <div>
                                         <p className="text-sm font-semibold">AEPS provider</p>
@@ -300,6 +301,7 @@ const CreateRetailerWizard = ({
                                         }}
                                     />
                                 </div>
+                                )}
                                 {isPaysprint && (
                                 <label className="flex cursor-pointer items-start gap-3">
                                     <input
@@ -521,7 +523,7 @@ const CreateRetailerWizard = ({
                             <div className={`rounded-xl p-2 ${SILVER_TILE}`}><Sparkles className="h-4 w-4" /></div>
                             <div className="text-sm">
                                 <p className="font-semibold">After you create them</p>
-                                <p className="mt-1 text-muted-foreground">{isRetailer ? <>They sign in with this email and password. Send them the KYC link from <b>Retailers</b> so they can start AEPS.</> : <>They sign in with this email and password and can start onboarding retailers right away. Find them under <b>Users</b>.</>}</p>
+                                <p className="mt-1 text-muted-foreground">{isRetailer ? <>They sign in with this email and password, then complete AEPS onboarding themselves from the AEPS page.</> : <>They sign in with this email and password and can start onboarding retailers right away. Find them under <b>Users</b>.</>}</p>
                             </div>
                         </div>
                     </section>

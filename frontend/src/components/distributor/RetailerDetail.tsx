@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { AEPS_PROVIDERS, SERVICES, aepsProviderOf, type AepsProvider, type ServiceKey } from '../../lib/services';
+import { AEPS_PROVIDERS, PAYSPRINT_ENABLED, SERVICES, aepsProviderOf, type AepsProvider, type ServiceKey } from '../../lib/services';
 import { AepsProviderSwitches } from '../AepsProviderPicker';
 import { Briefcase, Package, ChevronLeft, Edit2, Link2, Mail, MapPin, Phone, ShieldCheck, Clock, UserCircle, Activity } from 'lucide-react';
 import { CARD, LABEL, PENDING_PILL, PRIMARY_BUTTON, type RetailerPerformance, SECONDARY_BUTTON, SILVER_TILE, STATUS_PILL, ago, delta, inr, inrShort, serviceLabel, useDistributorData } from './shared';
@@ -133,7 +133,8 @@ const RetailerDetail = ({
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                             <RangeSwitch value={days} onChange={onDaysChange} />
-                            {!retailer.isMerchantKycComplete && (
+                            {/* The KYC link is PaySprint's onboarding URL. */}
+                            {PAYSPRINT_ENABLED && !retailer.isMerchantKycComplete && (
                                 <button onClick={onKycLink} className={`${SECONDARY_BUTTON} py-2`}><Link2 size={16} /> KYC link</button>
                             )}
                             <button onClick={onEdit} className={`${PRIMARY_BUTTON} py-2`}><Edit2 size={16} /> Edit details</button>
@@ -244,6 +245,7 @@ const RetailerDetail = ({
                     </div>
                     <span className={LABEL}>{SERVICES.length - disabled.length} of {SERVICES.length} on</span>
                 </div>
+                {PAYSPRINT_ENABLED && (
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3">
                     <div className="min-w-0">
                         <p className="text-sm font-semibold">AEPS provider</p>
@@ -251,6 +253,7 @@ const RetailerDetail = ({
                     </div>
                     <AepsProviderSwitches value={aepsProviderOf(retailer)} onChange={setProvider} disabled={savingKey !== null} />
                 </div>
+                )}
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                     {SERVICES.map((svc) => {
                         const on = !disabled.includes(svc.key);
