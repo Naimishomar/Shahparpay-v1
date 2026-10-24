@@ -5,6 +5,7 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
 import { toast } from 'sonner';
+import { PAYSPRINT_ENABLED } from '../lib/services';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -436,14 +437,15 @@ const Recharge = () => {
                                     </select>
                                 </div>
                             </div>
-                            <button
+                            {/* DTH customer details are PaySprint's (HLR lookup); Icchhamati has no equivalent. */}
+                            {PAYSPRINT_ENABLED && <button
                                 onClick={handleFetchDthInfo}
                                 disabled={loading}
                                 className="flex items-center justify-center gap-2 rounded-xl border bg-background px-6 py-3 font-semibold hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50"
                             >
                                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                                 Fetch Details
-                            </button>
+                            </button>}
                         </div>
 
                         {dthInfo && (

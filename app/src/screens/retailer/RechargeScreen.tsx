@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/Screen';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
+import { PAYSPRINT_ENABLED } from '@/constants/services';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -771,7 +772,8 @@ export const RechargeScreen: React.FC = () => {
           <Text style={styles.hint}>The provider did not return a circle for this number.</Text>
         )}
 
-        {type === 'dth' && (
+        {/* DTH customer details are PaySprint's (HLR lookup); Icchhamati has no equivalent. */}
+        {PAYSPRINT_ENABLED && type === 'dth' && (
           <Btn
             ghost
             icon="information-outline"
