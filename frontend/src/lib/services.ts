@@ -19,13 +19,16 @@ export const SERVICES = [
 export const AEPS_PROVIDERS = [
     { key: 'paysprint', label: 'PaySprint' },
     { key: 'icchhamati', label: 'Icchhamati' },
-    { key: 'both', label: 'Both' },
+    { key: 'both', label: 'PaySprint + Icchhamati' },
 ] as const;
 
 export type AepsProvider = (typeof AEPS_PROVIDERS)[number]['key'];
 
 export const aepsProviderOf = (user: { aepsProvider?: string } | null | undefined): AepsProvider =>
     AEPS_PROVIDERS.find((p) => p.key === user?.aepsProvider)?.key ?? 'paysprint';
+
+/** The two providers on their own; a new retailer starts on exactly one. */
+export const SINGLE_AEPS_PROVIDERS = AEPS_PROVIDERS.filter((p) => p.key !== 'both') as { key: 'paysprint' | 'icchhamati'; label: string }[];
 
 /** Whether the retailer may use this provider's AEPS ('both' allows either). */
 export const usesAepsProvider = (user: { aepsProvider?: string } | null | undefined, provider: 'paysprint' | 'icchhamati') => {

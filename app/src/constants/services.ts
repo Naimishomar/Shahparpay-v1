@@ -49,7 +49,7 @@ export const isRouteEnabled = (
 export const AEPS_PROVIDERS = [
   { key: 'paysprint', label: 'PaySprint' },
   { key: 'icchhamati', label: 'Icchhamati' },
-  { key: 'both', label: 'Both' },
+  { key: 'both', label: 'PaySprint + Icchhamati' },
 ] as const;
 
 export type AepsProvider = (typeof AEPS_PROVIDERS)[number]['key'];

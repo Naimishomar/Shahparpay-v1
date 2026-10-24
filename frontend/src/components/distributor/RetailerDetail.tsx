@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { AEPS_PROVIDERS, SERVICES, aepsProviderOf, type AepsProvider, type ServiceKey } from '../../lib/services';
-import AepsProviderPicker from '../AepsProviderPicker';
+import { AepsProviderSwitches } from '../AepsProviderPicker';
 import { Briefcase, Package, ChevronLeft, Edit2, Link2, Mail, MapPin, Phone, ShieldCheck, Clock, UserCircle, Activity } from 'lucide-react';
 import { CARD, LABEL, PENDING_PILL, PRIMARY_BUTTON, type RetailerPerformance, SECONDARY_BUTTON, SILVER_TILE, STATUS_PILL, ago, delta, inr, inrShort, serviceLabel, useDistributorData } from './shared';
 import { Avatar, DeltaBadge, RangeSwitch, ShareBar, Skeleton, TrendChart } from './ui';
@@ -90,7 +90,7 @@ const RetailerDetail = ({
             const json = await res.json();
             if (!json.success) throw new Error(json.message);
             onServicesChanged({ aepsProvider: json.data.aepsProvider });
-            toast.success(`AEPS provider set to ${AEPS_PROVIDERS.find((p) => p.key === aepsProvider)?.label}`);
+            toast.success(`AEPS: ${AEPS_PROVIDERS.find((p) => p.key === aepsProvider)?.label}`);
         } catch (error) {
             toast.error(error instanceof Error && error.message ? error.message : 'Could not change the AEPS provider');
         } finally {
@@ -247,9 +247,9 @@ const RetailerDetail = ({
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3">
                     <div className="min-w-0">
                         <p className="text-sm font-semibold">AEPS provider</p>
-                        <p className="text-xs text-muted-foreground">The retailer sees and onboards only with the chosen provider (or both).</p>
+                        <p className="text-xs text-muted-foreground">Add the second provider only once they meet its onboarding criteria.</p>
                     </div>
-                    <AepsProviderPicker value={aepsProviderOf(retailer)} onChange={setProvider} disabled={savingKey !== null} />
+                    <AepsProviderSwitches value={aepsProviderOf(retailer)} onChange={setProvider} disabled={savingKey !== null} />
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                     {SERVICES.map((svc) => {

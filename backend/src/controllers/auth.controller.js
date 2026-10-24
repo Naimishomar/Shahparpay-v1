@@ -654,9 +654,10 @@ export const createRetailer = async (req, res) => {
 
     const name = `${firstName} ${lastName}`;
 
-    // Omitted means PaySprint; anything else unknown is a client bug worth refusing.
-    if (aepsProvider !== undefined && !parseAepsProvider(aepsProvider))
-      return res.status(400).json({ success: false, message: 'Invalid AEPS provider.' });
+    // Omitted means PaySprint. A new retailer starts on exactly one provider: the
+    // two onboard on different criteria, so the second is added later, on its own.
+    if (aepsProvider !== undefined && (!parseAepsProvider(aepsProvider) || aepsProvider === 'both'))
+      return res.status(400).json({ success: false, message: 'Choose PaySprint or Icchhamati for AEPS.' });
 
     const profilePictureLocalPath = req.files?.profilePicture?.[0]?.path;
     const aadhaarPictureLocalPath = req.files?.aadhaarPicture?.[0]?.path;

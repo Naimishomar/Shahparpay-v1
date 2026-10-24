@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { CARD, LABEL, PENDING_PILL, SECONDARY_BUTTON, SILVER_TILE, STATUS_PILL, ago, inr, inrShort, serviceLabel, useApiGet } from '../distributor/shared';
 import { Avatar, Skeleton } from '../distributor/ui';
 import { AEPS_PROVIDERS, SERVICES, aepsProviderOf, type AepsProvider, type ServiceKey } from '../../lib/services';
-import AepsProviderPicker from '../AepsProviderPicker';
+import { AepsProviderSwitches } from '../AepsProviderPicker';
 import { ActivityList, type Activity } from './ActivityLog';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -78,7 +78,7 @@ const UserDetail = ({
     };
 
     const setProvider = (aepsProvider: AepsProvider) =>
-        call('aepsProvider', `/api/admin/console/retailers/${id}/services`, 'PUT', { aepsProvider }, `AEPS provider set to ${AEPS_PROVIDERS.find((p) => p.key === aepsProvider)?.label}`);
+        call('aepsProvider', `/api/admin/console/retailers/${id}/services`, 'PUT', { aepsProvider }, `AEPS: ${AEPS_PROVIDERS.find((p) => p.key === aepsProvider)?.label}`);
 
     if (loading && !data) {
         return <div className="flex flex-col gap-6"><Skeleton className="h-56 rounded-3xl" /><Skeleton className="h-64 rounded-2xl" /></div>;
@@ -186,9 +186,9 @@ const UserDetail = ({
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3">
                         <div className="min-w-0">
                             <p className="text-sm font-semibold">AEPS provider</p>
-                            <p className="text-xs text-muted-foreground">The retailer sees and onboards only with the chosen provider (or both).</p>
+                            <p className="text-xs text-muted-foreground">Add the second provider only once they meet its onboarding criteria.</p>
                         </div>
-                        <AepsProviderPicker value={aepsProviderOf(user)} onChange={setProvider} disabled={busy !== null} />
+                        <AepsProviderSwitches value={aepsProviderOf(user)} onChange={setProvider} disabled={busy !== null} />
                     </div>
                     <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
                         {SERVICES.map((svc) => {

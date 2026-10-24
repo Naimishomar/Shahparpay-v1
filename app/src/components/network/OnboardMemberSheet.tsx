@@ -166,7 +166,7 @@ export const OnboardMemberSheet: React.FC<{
         supportEmail: supportEmail.trim(),
         supportMobile: supportMobile.trim(),
         ...(kind === 'retailer'
-          ? { aepsProvider, isExistingMerchant: isExistingMerchant && aepsProvider !== 'icchhamati' }
+          ? { aepsProvider, isExistingMerchant: isExistingMerchant && aepsProvider === 'paysprint' }
           : {}),
         ...packages,
       },
@@ -444,15 +444,15 @@ export const OnboardMemberSheet: React.FC<{
                   <Text style={styles.providerLabel}>AEPS provider</Text>
                   <Segmented
                     scroll={false}
-                    options={AEPS_PROVIDERS.map((p) => ({ key: p.key, label: p.label }))}
+                    options={AEPS_PROVIDERS.filter((p) => p.key !== 'both').map((p) => ({ key: p.key, label: p.label }))}
                     value={aepsProvider}
                     onChange={setAepsProvider}
                   />
-                  <Text style={styles.providerHint}>They onboard and transact on AEPS only with the chosen provider (or both).</Text>
+                  <Text style={styles.providerHint}>They start on this provider. You can add the other one later from the web portal.</Text>
                 </View>
               )}
 
-              {kind === 'retailer' && aepsProvider !== 'icchhamati' && (
+              {kind === 'retailer' && aepsProvider === 'paysprint' && (
                 <Toggle
                   label="Already onboarded with PaySprint"
                   hint="Skips the new-merchant flow when the shop already has a PaySprint merchant code."
