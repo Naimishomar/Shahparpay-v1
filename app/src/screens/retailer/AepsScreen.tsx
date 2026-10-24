@@ -290,7 +290,9 @@ export const AepsScreen: React.FC = () => {
     []
   );
 
-  const icchStatus: IcchStatus | null = icch ? status.data ?? null : null;
+  // Only an Icchhamati answer counts: right after a switch, or when the new
+  // provider's status failed to load, `status.data` can still be PaySprint's.
+  const icchStatus: IcchStatus | null = icch && status.data?.step ? status.data : null;
   const activePipes: string[] = icch ? [] : status.data?.activePipes ?? [];
   const kycDone = !!status.data?.isMerchantKycComplete;
   const dailyAuthDone = !!status.data?.isDailyAuthDoneToday;
@@ -370,7 +372,7 @@ export const AepsScreen: React.FC = () => {
   // Ordered so the retailer is shown the first thing actually blocking them.
   // Icchhamati refuses every service, enquiries included, until onboarded and logged in today.
   const icchBlocker = !icchStatus
-    ? null
+    ? 'AEPS status could not be loaded. Pull down to retry.'
     : icchStatus.step === 'twofa'
       ? 'Daily login is pending. Authenticate once to unlock transactions for today.'
       : icchStatus.step !== 'ready'
@@ -591,7 +593,9 @@ export const AepsScreen: React.FC = () => {
   };
 
   const gateNote = icch
-    ? icchBlocker && {
+    ? icchBlocker && !icchStatus
+      ? { text: icchBlocker }
+      : icchBlocker && {
         text: icchBlocker,
         action: icchStatus?.step === 'twofa' || icchBlocker.startsWith('Aadhaar Pay') ? 'Authenticate' : 'Continue',
         onPress: () => setOnboarding(icchStatus?.step === 'ready' ? 'AP' : 'AEPS'),
@@ -641,7 +645,10 @@ export const AepsScreen: React.FC = () => {
             value={active}
             onChange={(next) => {
               setActive(next);
-              // Nothing typed against one provider carries over to the other.
+              // Nothing from one provider carries over to the other: not the
+              // form, and not its status or bank list while the new ones load.
+              status.setData(null);
+              banks.setData(null);
               resetForm();
               setService('withdrawal');
               setPipe(null);
@@ -936,7 +943,7 @@ export const AepsScreen: React.FC = () => {
                 <View style={styles.itemRight}>
                   <Text style={styles.itemAmount}>{money(txn.amount)}</Text>
                   <StatusText status={txn.status} />
-                  {!icch && String(txn.status).toUpperCase() === 'PENDING' && (
+                  {txn.metadata?.provider !== 'icchhamati' && String(txn.status).toUpperCase() === 'PENDING' && (
                     <Pressable
                       onPress={async () => {
                         const res = await checkTxnStatus.run(txn.transactionId);
