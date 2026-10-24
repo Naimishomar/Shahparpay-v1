@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { User, Mail, Phone, MapPin, Building2, ShieldCheck, KeyRound, Lock, ChevronRight, Camera, Edit2, Save, X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
@@ -455,7 +456,8 @@ const Profile = () => {
                             </p>
                         </div>
                         {!kycComplete && (
-                            <button className={`${PRIMARY_BUTTON} mt-4 w-full`}>Complete now</button>
+                            // AEPS KYC is the Icchhamati onboarding, which runs step by step on the AEPS page.
+                            <Link to="/aeps" className={`${PRIMARY_BUTTON} mt-4 w-full`}>Complete now</Link>
                         )}
                         <p className="mt-4 rounded-xl border bg-background px-3 py-2.5 text-xs text-muted-foreground">
                             Identity details can't be changed here. Contact support for help with KYC details.
