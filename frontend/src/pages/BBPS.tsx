@@ -4,6 +4,7 @@ import axios from "axios";
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
+import { billerField, billerInputValid, cleanBillerInput } from '../lib/billerField';
 import { toast } from "sonner";
 
 // Same black (light) / silver (dark) language as the dashboard.
@@ -91,6 +92,10 @@ const BBPS = () => {
     const selectedOperator = operators.find(
         (op: any) => String(op.id) === String(operatorId)
     );
+    // The one identifier this biller asks for, named and shaped its way.
+    const field = billerField(selectedOperator);
+    // When that identifier is the customer's mobile, a second mobile box only repeats it.
+    const mobileForBill = field.kind === 'mobile' ? consumerNumber : customerMobile;
 
     const fetchOperators = async (type: string) => {
         try {
@@ -131,8 +136,8 @@ const BBPS = () => {
         needsDob && dob ? `${consumerNumber.trim()}|${dob.split('-').reverse().join('/')}` : consumerNumber.trim();
 
     const handleFetchBill = async () => {
-        if (!operatorId || !consumerNumber) {
-            toast.error("Please select an operator and enter the consumer number");
+        if (!operatorId || !billerInputValid(field, consumerNumber)) {
+            toast.error(`Enter a valid ${field.label}`);
             return;
         }
         if (needsDob && !dob) {
@@ -147,7 +152,7 @@ const BBPS = () => {
                 caNumber: accountNumber(),
                 type: selectedService?.id,
                 category: selectedService?.providerCategory,
-                customerMobile: customerMobile || undefined,
+                customerMobile: mobileForBill || undefined,
             });
 
             if (response.data.success) {
@@ -167,7 +172,7 @@ const BBPS = () => {
     };
 
     const handlePayment = async () => {
-        if (!selectedService || !operatorId || !consumerNumber.trim() || !amount || Number(amount) < 10 || pin.length !== 4) {
+        if (!selectedService || !operatorId || !billerInputValid(field, consumerNumber) || !amount || Number(amount) < 10 || pin.length !== 4) {
             toast.error("Please fill all fields");
             return;
         }
@@ -186,7 +191,7 @@ const BBPS = () => {
                 amount: amount,
                 pin: pin,
                 customerName: fetchedBill?.customerName || undefined,
-                customerMobile: customerMobile || undefined,
+                customerMobile: mobileForBill || undefined,
                 billDetails: fetchedBill || undefined,
             });
 
@@ -197,7 +202,7 @@ const BBPS = () => {
                     billDetails: response.data.data?.billDetails || fetchedBill,
                     billerName: selectedOperator?.name,
                     customerName: response.data.data?.customerName || fetchedBill?.customerName,
-                    customerMobile: response.data.data?.customerMobile || customerMobile,
+                    customerMobile: response.data.data?.customerMobile || mobileForBill,
                     status: pending ? 'PENDING' : 'SUCCESS',
                     isSuccess: !pending,
                 });
@@ -217,7 +222,7 @@ const BBPS = () => {
                     operator: operatorId,
                     billerName: selectedOperator?.name,
                     customerName: fetchedBill?.customerName,
-                    customerMobile,
+                    customerMobile: mobileForBill,
                     billDetails: fetchedBill,
                     type: apiType,
                     errorReason: errorMsg,
@@ -238,7 +243,7 @@ const BBPS = () => {
                 operator: operatorId,
                 billerName: selectedOperator?.name,
                 customerName: fetchedBill?.customerName,
-                customerMobile,
+                customerMobile: mobileForBill,
                 billDetails: fetchedBill,
                 type: selectedService?.id || 'unknown',
                 errorReason: finalMsg,
@@ -364,21 +369,25 @@ const BBPS = () => {
                                     </select>
                                 </div>
 
+                                {/* Nothing but the biller until one is chosen: the fields below are that biller's. */}
+                                {!selectedOperator ? (
+                                    <p className="text-sm text-muted-foreground">Choose the biller to see what it needs.</p>
+                                ) : (<>
                                 <div className="space-y-1.5 mt-4">
-                                    <label className="text-sm font-medium text-foreground">
-                                        {selectedOperator?.label || "Consumer / Account Number"}
-                                    </label>
+                                    <label className="text-sm font-medium text-foreground">{field.label}</label>
                                     <input 
                                         type="text"
-                                        className={INPUT}
-                                        placeholder={selectedOperator?.label ? `Enter ${selectedOperator.label}` : "Enter number"}
+                                        inputMode={field.numeric ? "numeric" : "text"}
+                                        className={`${INPUT} ${field.kind === 'vehicle' ? 'uppercase' : ''}`}
+                                        placeholder={field.placeholder}
+                                        maxLength={field.maxLength}
                                         value={consumerNumber}
-                                        onChange={(e) => setConsumerNumber(e.target.value.slice(0, 40))}
+                                        onChange={(e) => setConsumerNumber(cleanBillerInput(field, e.target.value))}
                                         readOnly={!!fetchedBill}
                                     />
                                 </div>
 
-                                <div className="space-y-1.5 mt-4">
+                                {field.kind !== 'mobile' && <div className="space-y-1.5 mt-4">
                                     <label className="text-sm font-medium text-foreground">Customer Mobile (optional)</label>
                                     <input
                                         type="tel"
@@ -390,7 +399,7 @@ const BBPS = () => {
                                         onChange={(e) => setCustomerMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
                                         readOnly={!!fetchedBill}
                                     />
-                                </div>
+                                </div>}
 
                                 {needsDob && (
                                     <div className="space-y-1.5 mt-4">
@@ -497,6 +506,7 @@ const BBPS = () => {
                                         </button>}
                                     </>
                                 )}
+                                </>)}
                             </div>
                         </div>
                     </div>

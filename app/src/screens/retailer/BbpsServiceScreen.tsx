@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/Screen";
 import { useAsync, useAction } from "@/hooks/useAsync";
 import api from "@/services/api";
+import { billerField, billerInputValid, cleanBillerInput } from "./billerField";
 
 interface Biller {
   id: string | number;
@@ -119,6 +120,11 @@ export const BbpsServiceScreen: React.FC = () => {
     [],
   );
 
+  // The one identifier this biller asks for, named and shaped its way.
+  const field = billerField(biller);
+  // When that identifier is the customer's mobile, a second mobile box only repeats it.
+  const mobileForBill = field.kind === "mobile" ? caNumber : customerMobile;
+
   // The gateway takes a date of birth only joined to the account: "policy|DD/MM/YYYY".
   const accountNumber = needsDob && dob ? `${caNumber.trim()}|${dob}` : caNumber.trim();
   const dobInvalid = needsDob && !/^\d{2}\/\d{2}\/\d{4}$/.test(dob);
@@ -130,7 +136,7 @@ export const BbpsServiceScreen: React.FC = () => {
       caNumber: accountNumber,
       operator: String(biller?.id),
       type: category,
-      customerMobile: customerMobile || undefined,
+      customerMobile: mobileForBill || undefined,
       // Some billers quote against an amount rather than returning one.
       ...(Number(amount) > 0 ? { amount: Number(amount) } : {}),
     })
@@ -149,7 +155,7 @@ export const BbpsServiceScreen: React.FC = () => {
       amount: Number(amount),
       pin,
       type: category,
-      customerMobile: customerMobile || undefined,
+      customerMobile: mobileForBill || undefined,
       // What the biller told us about this bill. Without it the payment is
       // stored with no customer name, bill number or due date, and every
       // receipt and report for it reads blank.
@@ -182,24 +188,30 @@ export const BbpsServiceScreen: React.FC = () => {
     !!amount && Number(amount) > 0 && Number(amount) < MIN_AMOUNT;
   const mobileInvalid =
     customerMobile.length > 0 && customerMobile.length !== 10;
-  const valid = bbpsFormValid({
-    biller,
-    caNumber,
-    amount,
-    available,
-    customerMobile,
-    pin,
-  });
+  const optionalMobile = field.kind === "mobile" ? "" : customerMobile;
+  const identifierValid = billerInputValid(field, caNumber);
+  const valid =
+    identifierValid &&
+    bbpsFormValid({
+      biller,
+      caNumber,
+      amount,
+      available,
+      customerMobile: optionalMobile,
+      pin,
+    });
   // Everything but the PIN, which the PIN step collects: the same rule with a
   // stand-in PIN, so the two gates can never disagree.
-  const ready = bbpsFormValid({
-    biller,
-    caNumber,
-    amount,
-    available,
-    customerMobile,
-    pin: "0000",
-  });
+  const ready =
+    identifierValid &&
+    bbpsFormValid({
+      biller,
+      caNumber,
+      amount,
+      available,
+      customerMobile: optionalMobile,
+      pin: "0000",
+    });
 
   // A failed fetch or payment is news, not a state: shown as a toast, then drained.
   const [toast, setToast] = useState("");
@@ -396,23 +408,24 @@ export const BbpsServiceScreen: React.FC = () => {
             </View>
           )}
 
-          {/* The biller names its own identifier; a top-up like FASTag calls it a
-            vehicle number rather than a consumer number. */}
+          {/* Nothing but the biller until one is chosen: every field below is
+            that biller's, named and shaped the way it asks for it. */}
+          {!biller ? (
+            <Text style={styles.hint}>Choose the biller to see what it needs.</Text>
+          ) : (<>
           <View>
             <Field
-              label={biller?.label || "Consumer number"}
+              label={field.label}
               value={caNumber}
-              onChangeText={setCaNumber}
+              onChangeText={(v) => setCaNumber(cleanBillerInput(field, v))}
               autoCapitalize="characters"
-              placeholder={
-                biller?.label
-                  ? `Enter ${biller.label}`
-                  : "As printed on your bill"
-              }
+              keyboardType={field.numeric ? "number-pad" : "default"}
+              maxLength={field.maxLength}
+              placeholder={field.placeholder}
             />
           </View>
 
-          <View>
+          {field.kind !== "mobile" && <View>
             <Field
               label="Customer mobile (optional)"
               value={customerMobile}
@@ -428,7 +441,7 @@ export const BbpsServiceScreen: React.FC = () => {
                   : undefined
               }
             />
-          </View>
+          </View>}
 
           {needsDob && (
             <View>
@@ -456,7 +469,7 @@ export const BbpsServiceScreen: React.FC = () => {
                 label="Fetch bill"
                 onPress={onFetchBill}
                 loading={fetchBill.pending}
-                disabled={!biller || caNumber.trim().length < 4}
+                disabled={!biller || !identifierValid}
               />
             </View>
           )}
@@ -520,6 +533,7 @@ export const BbpsServiceScreen: React.FC = () => {
             onPress={() => setStep("pin")}
             disabled={!ready}
           />
+          </>)}
         </View>
 
         <View style={styles.form}>
@@ -586,6 +600,7 @@ export const BbpsServiceScreen: React.FC = () => {
 const styles = themed((c) => ({
   flex: { flex: 1, minWidth: 0 },
   form: { gap: space.lg },
+  hint: { fontSize: t.small, color: c.mutedForeground },
   card: {
     padding: space.lg,
     borderRadius: radius.lg,
