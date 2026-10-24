@@ -76,7 +76,7 @@ export const generateLead = async (req, res) => {
       product,
       redirect_url: process.env.FRONTEND_URL
         ? `${process.env.FRONTEND_URL}/lead-generation`
-        : 'https://shahparpay-v1.vercel.app/lead-generation',
+        : 'https://shahparpay.in/lead-generation',
     };
 
     const psResponse = await generateLeadUrl(payload);
