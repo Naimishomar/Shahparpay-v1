@@ -56,6 +56,22 @@ export const icchhamatiPost = async (path, body = {}) => {
   }
 };
 
+/** Multipart POST (file uploads). The runtime sets the boundary, so no Content-Type. */
+export const icchhamatiPostForm = async (path, form) => {
+  const startedAt = Date.now();
+  const { 'Content-Type': _json, ...headers } = getHeaders();
+  try {
+    const response = await axios.post(`${getBase()}${path}`, form, {
+      headers, validateStatus: () => true, timeout: 120000, maxBodyLength: Infinity,
+    });
+    logIntegration('provider_response', { provider: 'icchhamati', method: 'POST', path, httpStatus: response.status, providerStatus: response.data?.status, durationMs: Date.now() - startedAt });
+    return response.data;
+  } catch (error) {
+    logIntegrationError('provider_request_error', error, { provider: 'icchhamati', method: 'POST', path, durationMs: Date.now() - startedAt });
+    throw error;
+  }
+};
+
 /** Deleting a beneficiary carries its OTP in the body, so DELETE needs one too. */
 export const icchhamatiDelete = async (path, body = {}) => {
   const startedAt = Date.now();

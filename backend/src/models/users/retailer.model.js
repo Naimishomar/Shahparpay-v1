@@ -147,6 +147,23 @@ const retailerSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Which AEPS provider the retailer is onboarded with, chosen by their
+    // distributor or an admin. A retailer only sees and can use that provider's
+    // AEPS flow; documents written before this field existed are PaySprint.
+    aepsProvider: {
+      type: String,
+      enum: ['paysprint', 'icchhamati'],
+      default: 'paysprint',
+    },
+    // Icchhamati (Fingpay) AEPS merchant. `outletId` is the MID their draft API
+    // assigns and every later call is keyed by; the device is the scanner the
+    // merchant registered for eKYC and 2FA.
+    icchhamatiAeps: {
+      outletId: { type: String, default: null },
+      draftId: { type: Number, default: null },
+      deviceIMEI: { type: String, default: null },
+      deviceName: { type: String, default: null },
+    },
     // PaySprint's registered base location for AEPS geo-fencing, and the audit
     // trail behind it. PaySprint caps base-location changes at three per
     // merchant per calendar year and silently no-ops past that, so every

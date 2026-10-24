@@ -9,7 +9,7 @@ import FundRequest from '../models/fundRequest.model.js';
 import SupportTicket from '../models/supportTicket.model.js';
 import ActivityLog from '../models/activityLog.model.js';
 import { SERVICE_TYPES, ALLOWED_DAYS, windowFor } from './distributorAnalytics.controller.js';
-import { parseDisabledServices } from '../utils/services.js';
+import { parseServicesUpdate } from '../utils/services.js';
 import { logActivity } from '../utils/activity.js';
 
 const TZ = 'Asia/Kolkata';
@@ -478,23 +478,23 @@ export const setUserStatus = async (req, res) => {
   }
 };
 
-/** PUT /api/admin/console/retailers/:id/services  { disabledServices: string[] } */
+/** PUT /api/admin/console/retailers/:id/services  { disabledServices?: string[], aepsProvider?: string } */
 export const setRetailerServices = async (req, res) => {
   try {
     if (forbid(req, res)) return;
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid retailer id' });
-    const disabledServices = parseDisabledServices(req.body?.disabledServices);
-    if (!disabledServices) return res.status(400).json({ success: false, message: 'Invalid services list' });
+    const update = parseServicesUpdate(req.body);
+    if (update.error) return res.status(400).json({ success: false, message: update.error });
 
-    const retailer = await Retailer.findByIdAndUpdate(req.params.id, { $set: { disabledServices } }, { new: true }).select('name disabledServices');
+    const retailer = await Retailer.findByIdAndUpdate(req.params.id, { $set: update.set }, { new: true }).select('name disabledServices aepsProvider');
     if (!retailer) return res.status(404).json({ success: false, message: 'Retailer not found' });
 
     logActivity({
       req,
       action: 'retailer.services',
       target: { _id: retailer._id, role: 'retailer', name: retailer.name },
-      summary: disabledServices.length ? `Switched off: ${disabledServices.join(', ')}` : 'All services switched on',
-      meta: { disabledServices },
+      summary: update.summary,
+      meta: update.set,
     });
     return res.status(200).json({ success: true, message: 'Services updated', data: retailer });
   } catch (error) {

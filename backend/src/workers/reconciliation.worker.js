@@ -66,6 +66,12 @@ const verifyPayoutStatus = async (transaction) => {
  * Returns a human-readable result string for the cron log.
  */
 const resolveAepsWithdrawal = async (txn) => {
+  // PaySprint has never heard of an Icchhamati withdrawal and would answer
+  // "not found", which reads as FAILED. Icchhamati's doAeps takes no client
+  // reference to look one up by, so these wait for an admin.
+  if (txn.metadata?.provider === 'icchhamati') {
+    return `AEPS withdrawal ${txn.transactionId} is Icchhamati's; left PROCESSING for manual review.`;
+  }
   const reconciled = await queryAepsTransactionStatus(txn.transactionId);
 
   if (reconciled.status === 'SUCCESS') {
@@ -263,7 +269,9 @@ export const startReconciliationWorker = () => {
         // Money that has left our wallet on an outward rail with no status
         // endpoint behind it. Auto-failing one of these refunds a retailer for a
         // transfer that may already have landed, so they are never resolved here.
-        const NO_RECONCILER_TYPES = ['DMT'];
+        // An unresolved Aadhaar Pay is an inflow nothing was debited for, so the
+        // default's "refund" would hand the retailer money they never paid.
+        const NO_RECONCILER_TYPES = ['DMT', 'AADHAAR_PAY'];
         if (AEPS_TYPES.includes(txn.type)) {
           try {
             if (txn.type === 'AEPS_WITHDRAWAL') {

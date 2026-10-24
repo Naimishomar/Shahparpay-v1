@@ -5,7 +5,7 @@ import MainWallet from '../models/mainWallet.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
 import { uploadOnR2 } from '../utils/r2.js';
 import { lifetimeFor } from './distributorAnalytics.controller.js';
-import { parseDisabledServices } from '../utils/services.js';
+import { parseDisabledServices, parseServicesUpdate } from '../utils/services.js';
 import { logActivity } from '../utils/activity.js';
 
 // Get dashboard statistics for distributor
@@ -246,7 +246,7 @@ export const updateRetailer = async (req, res) => {
 };
 
 /**
- * PUT /api/distributor/retailers/:id/services  { disabledServices: string[] }
+ * PUT /api/distributor/retailers/:id/services  { disabledServices?: string[], aepsProvider?: string }
  * Switches services on or off for one of this distributor's retailers. Takes
  * effect on the retailer's next request; their menus refresh within 15 minutes.
  */
@@ -258,22 +258,21 @@ export const updateRetailerServices = async (req, res) => {
     if (!mongoose.isValidObjectId(req.params.id))
       return res.status(400).json({ success: false, message: 'Invalid retailer id' });
 
-    const disabledServices = parseDisabledServices(req.body?.disabledServices);
-    if (!disabledServices)
-      return res.status(400).json({ success: false, message: 'Invalid services list' });
+    const update = parseServicesUpdate(req.body);
+    if (update.error) return res.status(400).json({ success: false, message: update.error });
 
     const retailer = await Retailer.findOneAndUpdate(
       { _id: req.params.id, distributorId: req.user.id },
-      { $set: { disabledServices } },
+      { $set: update.set },
       { new: true }
-    ).select('_id name disabledServices');
+    ).select('_id name disabledServices aepsProvider');
     if (!retailer) return res.status(404).json({ success: false, message: 'Retailer not found' });
     logActivity({
       req,
       action: 'retailer.services',
       target: { _id: retailer._id, role: 'retailer', name: retailer.name },
-      summary: disabledServices.length ? `Switched off: ${disabledServices.join(', ')}` : 'All services switched on',
-      meta: { disabledServices },
+      summary: update.summary,
+      meta: update.set,
     });
 
     return res.status(200).json({ success: true, message: 'Services updated', data: retailer });

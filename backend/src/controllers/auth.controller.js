@@ -10,7 +10,7 @@ import Admin from '../models/users/admin.model.js';
 import { uploadOnR2 } from '../utils/r2.js';
 import bcrypt from 'bcrypt';
 import Otp from '../models/otp.model.js';
-import { parseDisabledServices } from '../utils/services.js';
+import { parseDisabledServices, parseAepsProvider } from '../utils/services.js';
 import { logActivity } from '../utils/activity.js';
 import { sendEmailOTP } from '../utils/email.js';
 import {
@@ -649,9 +649,14 @@ export const createRetailer = async (req, res) => {
       supportMobile,
       isExistingMerchant,
       disabledServices,
+      aepsProvider,
     } = req.body;
 
     const name = `${firstName} ${lastName}`;
+
+    // Omitted means PaySprint; anything else unknown is a client bug worth refusing.
+    if (aepsProvider !== undefined && !parseAepsProvider(aepsProvider))
+      return res.status(400).json({ success: false, message: 'Invalid AEPS provider.' });
 
     const profilePictureLocalPath = req.files?.profilePicture?.[0]?.path;
     const aadhaarPictureLocalPath = req.files?.aadhaarPicture?.[0]?.path;
@@ -737,6 +742,7 @@ export const createRetailer = async (req, res) => {
       supportMobile,
       isExistingMerchant: isExistingMerchant === 'true' || isExistingMerchant === true,
       disabledServices: parseDisabledServices(disabledServices) || [],
+      aepsProvider: aepsProvider || 'paysprint',
     });
 
     await newRetailer.save();
