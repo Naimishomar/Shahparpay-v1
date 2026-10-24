@@ -3,7 +3,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import {
     BadgeCheck, CheckCircle2, Clock, CreditCard, FileText, Fingerprint, IndianRupee, Landmark, Loader2, MapPin,
-    RefreshCcw, ShieldCheck, Store, Video, Wallet, XCircle,
+    RefreshCcw, ShieldCheck, Store, Upload, Video, Wallet, XCircle,
 } from 'lucide-react';
 import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, inr } from '../components/distributor/shared';
 import { useLocationContext } from '../context/LocationContext';
@@ -47,6 +47,57 @@ const SHOP_PHOTOS = [
     { key: 'shop_inner', label: 'Inside the shop' },
     { key: 'shop_outer', label: 'Shop front' },
 ];
+
+const MAX_VIDEO_BYTES = 20 * 1024 * 1024;
+
+/** Drag a video in, or click to pick or record one; previews what will be uploaded. */
+const VideoDrop = ({ video, onChange, disabled }: { video: File | null; onChange: (f: File | null) => void; disabled?: boolean }) => {
+    const [dragging, setDragging] = useState(false);
+    const [preview, setPreview] = useState<string | null>(null);
+
+    const take = (file?: File | null) => {
+        if (!file) return;
+        if (!file.type.startsWith('video/')) return toast.error('That is not a video. Choose an MP4 recording.');
+        if (file.size > MAX_VIDEO_BYTES) return toast.error('The video must be 20 MB or smaller.');
+        if (preview) URL.revokeObjectURL(preview);
+        setPreview(URL.createObjectURL(file));
+        onChange(file);
+    };
+    const clear = () => {
+        if (preview) URL.revokeObjectURL(preview);
+        setPreview(null);
+        onChange(null);
+    };
+
+    if (video) {
+        return (
+            <div className="flex items-center gap-4 rounded-xl border bg-background p-3">
+                {preview && <video src={preview} controls className="h-28 w-48 shrink-0 rounded-lg bg-black object-contain" />}
+                <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{video.name}</p>
+                    <p className="text-xs text-muted-foreground">{(video.size / 1024 / 1024).toFixed(1)} MB</p>
+                </div>
+                <button type="button" onClick={clear} disabled={disabled} className="rounded-full p-1.5 text-muted-foreground hover:bg-black/5 hover:text-foreground disabled:opacity-50 dark:hover:bg-white/10" aria-label="Remove video">
+                    <XCircle size={18} />
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <label
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => { e.preventDefault(); setDragging(false); take(e.dataTransfer.files?.[0]); }}
+            className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-10 text-center transition ${dragging ? 'border-primary bg-primary/5' : 'bg-background hover:border-zinc-400'} ${disabled ? 'pointer-events-none opacity-60' : ''}`}
+        >
+            <div className={`rounded-xl p-2.5 ${SILVER_TILE}`}><Upload className="h-5 w-5" /></div>
+            <span className="text-sm font-semibold">{dragging ? 'Drop the video here' : 'Drag and drop the KYC video'}</span>
+            <span className="text-xs text-muted-foreground">or click to choose or record one · MP4, up to 20 MB</span>
+            <input type="file" accept="video/*" capture="user" className="hidden" onChange={(e) => { take(e.target.files?.[0]); e.target.value = ''; }} />
+        </label>
+    );
+};
 
 const TXN_TABS = [
     { key: 'BE', label: 'Balance Enquiry', icon: Wallet },
@@ -361,8 +412,7 @@ const OnboardingStep = ({ status, busy, run, coords, device, ensureDevice, captu
                             </label>
                         ))}
                     </div>
-                    <input type="file" accept="video/*" capture="user" onChange={(e) => setVideo(e.target.files?.[0] || null)} className="block text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-muted file:px-3 file:py-2 file:text-sm file:font-semibold" />
-                    {video && <p className="mt-2 text-xs text-muted-foreground">{video.name} · {(video.size / 1024 / 1024).toFixed(1)} MB</p>}
+                    <VideoDrop video={video} onChange={setVideo} disabled={busy} />
                     <button
                         disabled={busy || !video || SHOP_PHOTOS.some((p) => !shopPhotos[p.key])}
                         className={`${PRIMARY_BUTTON} mt-6`}
