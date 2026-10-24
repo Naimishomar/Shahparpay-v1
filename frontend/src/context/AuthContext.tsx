@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { AepsProvider } from '../lib/services';
 
 type UserRole = 'admin' | 'distributor' | 'retailer';
 
@@ -20,6 +21,8 @@ interface User {
     dob?: string;
     /** Services this retailer's distributor has switched off. */
     disabledServices?: string[];
+    /** The AEPS provider this retailer is onboarded with; absent means PaySprint. */
+    aepsProvider?: AepsProvider;
 }
 
 interface AuthContextType {

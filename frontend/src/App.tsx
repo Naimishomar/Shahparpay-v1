@@ -5,6 +5,7 @@ import ServiceGate from "./components/ServiceGate"
 
 import { Toaster } from 'sonner'
 import { useAuth } from './context/AuthContext'
+import { aepsProviderOf } from './lib/services'
 import { Navigate, useLocation, Outlet } from 'react-router-dom'
 
 // Route-level code splitting: only the landing page ships in the initial bundle.
@@ -14,6 +15,12 @@ const Dashboard = lazy(() => import("./pages/Dashboard"))
 const AEPS = lazy(() => import("./pages/AEPS"))
 const AepsSettlement = lazy(() => import("./pages/AepsSettlement"))
 const PipeStatus = lazy(() => import("./pages/PipeStatus"))
+const IcchhamatiAEPS = lazy(() => import("./pages/IcchhamatiAEPS"))
+
+// A retailer sees only the AEPS of the provider they are onboarded with.
+const AepsForProvider = () => (aepsProviderOf(useAuth().user) === 'icchhamati' ? <IcchhamatiAEPS /> : <AEPS />)
+const PaysprintOnly = ({ children }: { children: React.ReactNode }) =>
+  aepsProviderOf(useAuth().user) === 'icchhamati' ? <Navigate to="/aeps" replace /> : <>{children}</>
 const DirectPayout = lazy(() => import("./pages/DirectPayout"))
 const DMT = lazy(() => import("./pages/DMT"))
 const Recharge = lazy(() => import("./pages/Recharge"))
@@ -106,8 +113,8 @@ function App() {
         <Route path="/distributor" element={<DistributorPortal/>}/>
         <Route path="/distributor/:tab" element={<DistributorPortal/>}/>
  
-        <Route path="/aeps" element={<ServiceGate service="aeps"><AEPS/></ServiceGate>}/>
-        <Route path="/aeps/pipes" element={<PipeStatus/>}/>
+        <Route path="/aeps" element={<ServiceGate service="aeps"><AepsForProvider/></ServiceGate>}/>
+        <Route path="/aeps/pipes" element={<PaysprintOnly><PipeStatus/></PaysprintOnly>}/>
         <Route path="/aeps-settlement" element={<AepsSettlement/>}/>
         <Route path="/matm" element={<ServiceGate service="matm"><MATM/></ServiceGate>}/>
         <Route path="/direct-payout" element={<ServiceGate service="payout"><DirectPayout/></ServiceGate>}/>

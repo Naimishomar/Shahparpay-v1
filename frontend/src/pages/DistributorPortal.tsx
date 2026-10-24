@@ -44,6 +44,7 @@ const DistributorPortal = () => {
         dob: '', city: '', landmark: '', district: '', state: '', 
         businessName: '', businessAddress: '', 
         aadhaarNumber: '', panNumber: '', hasGst: false, gstNumber: '', otp: '',
+        aepsProvider: 'paysprint',
         // Every service is on by default; the distributor switches off what they don't want.
         ...Object.fromEntries(SERVICES.map((svc) => [`svc_${svc.key}`, 'Yes'])),
         
@@ -231,7 +232,7 @@ const DistributorPortal = () => {
         if (profilePicture) data.append('profilePicture', profilePicture);
         if (formData.otp) data.append('otp', formData.otp);
         data.append('merchantCode', merchantCode);
-        data.append('isExistingMerchant', String(isExistingMerchant));
+        data.append('isExistingMerchant', String(isExistingMerchant && formData.aepsProvider === 'paysprint'));
 
         try {
             const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/create-retailer`, {
@@ -480,9 +481,9 @@ const DistributorPortal = () => {
                             onBack={() => setSelectedRetailer(null)}
                             onEdit={() => setEditingRetailer(selectedRetailer)}
                             onKycLink={() => handleGenerateKycLink(selectedRetailer._id)}
-                            onServicesChanged={(disabled) => {
-                                setSelectedRetailer({ ...selectedRetailer, disabledServices: disabled });
-                                setRetailers((list) => list.map((r) => (r._id === selectedRetailer._id ? { ...r, disabledServices: disabled } : r)));
+                            onServicesChanged={(patch) => {
+                                setSelectedRetailer({ ...selectedRetailer, ...patch });
+                                setRetailers((list) => list.map((r) => (r._id === selectedRetailer._id ? { ...r, ...patch } : r)));
                             }}
                         />
                     ) : (

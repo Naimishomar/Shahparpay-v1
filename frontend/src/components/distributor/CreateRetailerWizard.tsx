@@ -5,7 +5,8 @@ import {
 } from 'lucide-react';
 import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE } from './shared';
 import { INDIAN_STATES } from '../../constants';
-import { SERVICES } from '../../lib/services';
+import { AEPS_PROVIDERS, SERVICES } from '../../lib/services';
+import AepsProviderPicker from '../AepsProviderPicker';
 
 export type RetailerForm = Record<string, string | boolean>;
 
@@ -106,6 +107,8 @@ const CreateRetailerWizard = ({
 
     const v = (k: string) => String(formData[k] ?? '');
     const set = (k: string, value: string | boolean) => setFormData({ ...formData, [k]: value });
+    const provider = v('aepsProvider') === 'icchhamati' ? 'icchhamati' : 'paysprint';
+    const isPaysprint = provider === 'paysprint';
 
     // Errors for every step, shown only once the user has tried to leave that step.
     const errors: Record<string, string>[] = [
@@ -116,7 +119,7 @@ const CreateRetailerWizard = ({
             ...(!MOBILE.test(v('contactNumber')) && { contactNumber: 'Enter a 10-digit mobile number' }),
             ...(!v('dob') && { dob: 'Required' }),
             ...(v('password').length < 6 && { password: 'At least 6 characters' }),
-            ...(isRetailer && isExistingMerchant && !merchantCode.trim() && { merchantCode: 'Enter the existing merchant ID' }),
+            ...(isRetailer && isPaysprint && isExistingMerchant && !merchantCode.trim() && { merchantCode: 'Enter the existing merchant ID' }),
         },
         {
             ...(!v('businessName').trim() && { businessName: 'Required' }),
@@ -284,6 +287,20 @@ const CreateRetailerWizard = ({
                             )}
                             {isRetailer && (
                             <div className="md:col-span-2 rounded-2xl border bg-background p-4">
+                                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b pb-4">
+                                    <div>
+                                        <p className="text-sm font-semibold">AEPS provider</p>
+                                        <p className="text-xs text-muted-foreground">They will onboard and transact on AEPS with this provider only.</p>
+                                    </div>
+                                    <AepsProviderPicker
+                                        value={provider}
+                                        onChange={(p) => {
+                                            set('aepsProvider', p);
+                                            if (p !== 'paysprint') setIsExistingMerchant(false);
+                                        }}
+                                    />
+                                </div>
+                                {isPaysprint && (
                                 <label className="flex cursor-pointer items-start gap-3">
                                     <input
                                         type="checkbox"
@@ -296,6 +313,7 @@ const CreateRetailerWizard = ({
                                         <p className="text-xs text-muted-foreground">Tick this to migrate them with their existing merchant ID instead of a new one.</p>
                                     </div>
                                 </label>
+                                )}
                                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                                     <Field label={isExistingMerchant ? 'Existing merchant ID' : 'Retailer ID (auto-generated)'} error={err('merchantCode')}>
                                         <input
@@ -421,7 +439,8 @@ const CreateRetailerWizard = ({
                                 { title: 'Account', to: 0, rows: [
                                     ['Name', `${v('prefix')} ${v('firstName')} ${v('lastName')}`],
                                     ['Email', v('email')], ['Mobile', v('contactNumber') && `+91 ${v('contactNumber')}`],
-                                    ['Date of birth', v('dob')], [isRetailer ? 'Retailer ID' : 'Distributor ID', merchantCode + (isRetailer && isExistingMerchant ? ' (existing)' : '')],
+                                    ['Date of birth', v('dob')], [isRetailer ? 'Retailer ID' : 'Distributor ID', merchantCode + (isRetailer && isPaysprint && isExistingMerchant ? ' (existing)' : '')],
+                                    ...(isRetailer ? [['AEPS provider', AEPS_PROVIDERS.find((p) => p.key === provider)?.label || '']] : []),
                                 ] },
                                 { title: 'KYC & business', to: 1, rows: [
                                     ['Aadhaar', v('aadhaarNumber') && `XXXX XXXX ${v('aadhaarNumber').slice(-4)}`], ['PAN', v('panNumber')],

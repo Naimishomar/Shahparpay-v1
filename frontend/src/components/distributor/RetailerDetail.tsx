@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { SERVICES, type ServiceKey } from '../../lib/services';
+import { AEPS_PROVIDERS, SERVICES, aepsProviderOf, type AepsProvider, type ServiceKey } from '../../lib/services';
+import AepsProviderPicker from '../AepsProviderPicker';
 import { Briefcase, Package, ChevronLeft, Edit2, Link2, Mail, MapPin, Phone, ShieldCheck, Clock, UserCircle, Activity } from 'lucide-react';
 import { CARD, LABEL, PENDING_PILL, PRIMARY_BUTTON, type RetailerPerformance, SECONDARY_BUTTON, SILVER_TILE, STATUS_PILL, ago, delta, inr, inrShort, serviceLabel, useDistributorData } from './shared';
 import { Avatar, DeltaBadge, RangeSwitch, ShareBar, Skeleton, TrendChart } from './ui';
@@ -42,7 +43,7 @@ const RetailerDetail = ({
     onBack: () => void;
     onEdit: () => void;
     onKycLink: () => void;
-    onServicesChanged: (disabled: string[]) => void;
+    onServicesChanged: (patch: { disabledServices?: string[]; aepsProvider?: AepsProvider }) => void;
 }) => {
     const { data, loading } = useDistributorData<RetailerPerformance>(token, `/api/distributor/retailers/${retailer._id}/performance`, days);
     const [metric, setMetric] = useState<'earned' | 'volume' | 'count'>('volume');
@@ -67,13 +68,32 @@ const RetailerDetail = ({
             });
             const json = await res.json();
             if (!json.success) throw new Error(json.message);
-            onServicesChanged(json.data.disabledServices);
+            onServicesChanged({ disabledServices: json.data.disabledServices });
             const label = SERVICES.find((s) => s.key === key)?.label;
             toast.success(`${label} ${next.includes(key) ? 'switched off' : 'switched on'}`);
         } catch (error) {
             toast.error(error instanceof Error && error.message ? error.message : 'Could not update services');
         } finally {
             setOptimistic(null);
+            setSavingKey(null);
+        }
+    };
+
+    const setProvider = async (aepsProvider: AepsProvider) => {
+        setSavingKey('aepsProvider');
+        try {
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/distributor/retailers/${retailer._id}/services`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ aepsProvider }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.message);
+            onServicesChanged({ aepsProvider: json.data.aepsProvider });
+            toast.success(`AEPS provider set to ${AEPS_PROVIDERS.find((p) => p.key === aepsProvider)?.label}`);
+        } catch (error) {
+            toast.error(error instanceof Error && error.message ? error.message : 'Could not change the AEPS provider');
+        } finally {
             setSavingKey(null);
         }
     };
@@ -223,6 +243,13 @@ const RetailerDetail = ({
                         </div>
                     </div>
                     <span className={LABEL}>{SERVICES.length - disabled.length} of {SERVICES.length} on</span>
+                </div>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3">
+                    <div className="min-w-0">
+                        <p className="text-sm font-semibold">AEPS provider</p>
+                        <p className="text-xs text-muted-foreground">The retailer sees and onboards only with this provider.</p>
+                    </div>
+                    <AepsProviderPicker value={aepsProviderOf(retailer)} onChange={setProvider} disabled={savingKey !== null} />
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                     {SERVICES.map((svc) => {

@@ -15,6 +15,17 @@ export const SERVICES = [
     { key: 'lead', label: 'Lead Generation', hint: 'Loans & credit cards' },
 ] as const;
 
+/** AEPS providers a retailer can be onboarded with; keys match backend/src/utils/services.js. */
+export const AEPS_PROVIDERS = [
+    { key: 'paysprint', label: 'PaySprint' },
+    { key: 'icchhamati', label: 'Icchhamati' },
+] as const;
+
+export type AepsProvider = (typeof AEPS_PROVIDERS)[number]['key'];
+
+export const aepsProviderOf = (user: { aepsProvider?: string } | null | undefined): AepsProvider =>
+    user?.aepsProvider === 'icchhamati' ? 'icchhamati' : 'paysprint';
+
 export type ServiceKey = (typeof SERVICES)[number]['key'];
 
 export const serviceLabel = (key: ServiceKey) => SERVICES.find((s) => s.key === key)?.label ?? key;
