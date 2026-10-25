@@ -492,9 +492,10 @@ const uploadToProviderSlot = async (retailer, filePath) => {
 };
 
 /**
- * POST /video-kyc (multipart `video`). The provider hands out a Bunny Stream
- * upload slot; the file goes there from here so its API key never reaches a
- * browser, then the resulting URL is registered against the merchant.
+ * POST /video-kyc (multipart `video`). The video is sent to Icchhamati as a
+ * file, as their docs describe; if they refuse it, it is hosted (their Bunny
+ * Stream slot, else our R2) and the URL is registered instead. Either way the
+ * upload goes from here, so no provider key ever reaches a browser.
  */
 export const uploadVideoKyc = async (req, res) => {
   const filePath = req.file?.path;
@@ -507,27 +508,50 @@ export const uploadVideoKyc = async (req, res) => {
     if (!latitude || !longitude)
       return res.status(400).json({ success: false, message: 'Location is required.' });
 
-    // Icchhamati's own upload slot (Bunny Stream) first, as their portal does.
-    // It is not set up for every partner ("Video upload service not
-    // configured"); then, like their portal's fallback, the video goes to our
-    // own storage and only its URL is registered with them.
-    let videoUrl = await uploadToProviderSlot(retailer, filePath);
-    if (!videoUrl) {
-      const stored = await uploadOnR2(filePath, req.file.mimetype || 'video/mp4');
-      if (!stored?.url) {
-        return res
-          .status(502)
-          .json({ success: false, message: 'The video could not be uploaded. Please try again.' });
-      }
-      videoUrl = stored.url;
-    }
-
-    const data = await icchhamatiPost('/api/v2/aeps/upload-video-kyc', {
+    const place = {
       ...merchantKeys(retailer),
-      video_url: videoUrl,
       latitude: String(latitude),
       longitude: String(longitude),
-    });
+    };
+
+    // The documented way: the video itself, as the multipart field video_url.
+    // Icchhamati hosts it and answers with its own URL.
+    const form = new FormData();
+    for (const [key, value] of Object.entries(place)) form.append(key, value);
+    const type = req.file.mimetype || 'video/mp4';
+    form.append(
+      'video_url',
+      new Blob([await fs.readFile(filePath)], { type }),
+      `video-kyc${type === 'video/quicktime' ? '.mov' : '.mp4'}`
+    );
+    let data = await icchhamatiPostForm('/api/v2/aeps/upload-video-kyc', form);
+
+    if (!isOk(data)) {
+      // What their portal does instead: host the video and register its URL.
+      // Their Bunny Stream slot first; it is not set up for every partner
+      // ("Video upload service not configured"), so then our own storage.
+      console.warn(
+        'Icchhamati video KYC file upload refused, registering a URL:',
+        providerMessage(data, 'no message')
+      );
+      let videoUrl = await uploadToProviderSlot(retailer, filePath);
+      if (!videoUrl) {
+        const stored = await uploadOnR2(filePath, type);
+        if (!stored?.url) {
+          return res
+            .status(502)
+            .json({
+              success: false,
+              message: 'The video could not be uploaded. Please try again.',
+            });
+        }
+        videoUrl = stored.url;
+      }
+      data = await icchhamatiPost('/api/v2/aeps/upload-video-kyc', {
+        ...place,
+        video_url: videoUrl,
+      });
+    }
     return relay(res, data, 'Video KYC submitted', 'Video KYC could not be saved.');
   } catch (error) {
     return fail(res, 'video KYC', error);
