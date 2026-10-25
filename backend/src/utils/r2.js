@@ -15,7 +15,7 @@ const s3Client = new S3Client({
   },
 });
 
-export const uploadOnR2 = async (localFilePath) => {
+export const uploadOnR2 = async (localFilePath, contentType = 'image/jpeg') => {
   try {
     if (!localFilePath) return null;
 
@@ -26,7 +26,9 @@ export const uploadOnR2 = async (localFilePath) => {
       Bucket: process.env.R2_BUCKET_NAME,
       Key: fileName,
       Body: fileContent,
-      ContentType: 'image/jpeg', // Multer saves without extension sometimes, we can default or dynamically resolve
+      // Multer saves without an extension, so callers that store something other
+      // than a photo (the AEPS KYC video) say what it is.
+      ContentType: contentType,
     };
 
     const command = new PutObjectCommand(uploadParams);

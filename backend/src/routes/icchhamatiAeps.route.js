@@ -32,7 +32,13 @@ router.use(authMiddlewares, requireAepsProvider('icchhamati'));
 const videoUpload = multer({
   storage: multer.diskStorage({
     destination: path.join(process.cwd(), 'public', 'temp'),
-    filename: (req, file, cb) => cb(null, `${Date.now()}-${crypto.randomUUID()}.video`),
+    // The extension rides into the stored file's URL, which Icchhamati's
+    // reviewers open; a phone's MP4 must not arrive as ".video".
+    filename: (req, file, cb) =>
+      cb(
+        null,
+        `${Date.now()}-${crypto.randomUUID()}${file.mimetype === 'video/quicktime' ? '.mov' : '.mp4'}`
+      ),
   }),
   limits: { fileSize: 20 * 1024 * 1024, files: 1 },
   fileFilter: (req, file, cb) =>

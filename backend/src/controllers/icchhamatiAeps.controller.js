@@ -16,6 +16,7 @@ import {
 } from '../utils/icchhamati.util.js';
 import { applyAepsWithdrawalSuccess } from '../utils/wallet.util.js';
 import { aepsKycDone } from '../utils/services.js';
+import { uploadOnR2 } from '../utils/r2.js';
 import { AEPS_OTP_THRESHOLD } from './aepsPayment.controller.js';
 
 /**
@@ -144,7 +145,8 @@ export const refreshAepsStep = async (retailer) => {
   let step = 'register';
   if (outletId) {
     const data = await icchhamatiPost('/api/v2/aeps/draft-data', { outletId });
-    if (!isOk(data)) throw new Error(providerMessage(data, 'Could not load AEPS registration status.'));
+    if (!isOk(data))
+      throw new Error(providerMessage(data, 'Could not load AEPS registration status.'));
     step = onboardingStep(data.data || {});
   }
   await recordStep(retailer, step);
@@ -450,6 +452,45 @@ export const uploadShopImage = async (req, res) => {
   }
 };
 
+/** Uploads to Icchhamati's Bunny Stream slot; null when they hand out none or the upload fails. */
+const uploadToProviderSlot = async (retailer, filePath) => {
+  const slot = await icchhamatiPost('/api/v2/aeps/generate-upload-token', {
+    ...merchantKeys(retailer),
+  });
+  const {
+    library_id: libraryId,
+    video_id: videoId,
+    api_key: apiKey,
+    video_url: videoUrl,
+  } = slot?.data && typeof slot.data === 'object' ? slot.data : {};
+  if (!isOk(slot) || !libraryId || !videoId || !apiKey || !videoUrl) {
+    console.warn(
+      'Icchhamati video slot unavailable, using our storage:',
+      providerMessage(slot, 'no slot')
+    );
+    return null;
+  }
+  const upload = await axios.put(
+    `https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`,
+    await fs.readFile(filePath),
+    {
+      headers: { AccessKey: apiKey, 'Content-Type': 'application/octet-stream' },
+      maxBodyLength: Infinity,
+      timeout: 120000,
+      validateStatus: () => true,
+    }
+  );
+  if (upload.status >= 300) {
+    console.error(
+      'Icchhamati video KYC upload failed, using our storage:',
+      upload.status,
+      upload.data
+    );
+    return null;
+  }
+  return videoUrl;
+};
+
 /**
  * POST /video-kyc (multipart `video`). The provider hands out a Bunny Stream
  * upload slot; the file goes there from here so its API key never reaches a
@@ -466,37 +507,19 @@ export const uploadVideoKyc = async (req, res) => {
     if (!latitude || !longitude)
       return res.status(400).json({ success: false, message: 'Location is required.' });
 
-    const slot = await icchhamatiPost('/api/v2/aeps/generate-upload-token', {
-      ...merchantKeys(retailer),
-    });
-    const {
-      library_id: libraryId,
-      video_id: videoId,
-      api_key: apiKey,
-      video_url: videoUrl,
-    } = slot?.data || {};
-    if (!isOk(slot) || !libraryId || !videoId || !apiKey || !videoUrl) {
-      return res.status(502).json({
-        success: false,
-        message: providerMessage(slot, 'Could not start the video upload.'),
-      });
-    }
-
-    const upload = await axios.put(
-      `https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`,
-      await fs.readFile(filePath),
-      {
-        headers: { AccessKey: apiKey, 'Content-Type': 'application/octet-stream' },
-        maxBodyLength: Infinity,
-        timeout: 120000,
-        validateStatus: () => true,
+    // Icchhamati's own upload slot (Bunny Stream) first, as their portal does.
+    // It is not set up for every partner ("Video upload service not
+    // configured"); then, like their portal's fallback, the video goes to our
+    // own storage and only its URL is registered with them.
+    let videoUrl = await uploadToProviderSlot(retailer, filePath);
+    if (!videoUrl) {
+      const stored = await uploadOnR2(filePath, req.file.mimetype || 'video/mp4');
+      if (!stored?.url) {
+        return res
+          .status(502)
+          .json({ success: false, message: 'The video could not be uploaded. Please try again.' });
       }
-    );
-    if (upload.status >= 300) {
-      console.error('Icchhamati video KYC upload failed:', upload.status, upload.data);
-      return res
-        .status(502)
-        .json({ success: false, message: 'The video could not be uploaded. Please try again.' });
+      videoUrl = stored.url;
     }
 
     const data = await icchhamatiPost('/api/v2/aeps/upload-video-kyc', {
