@@ -305,7 +305,8 @@ class ApiService {
   async postForm<T = any>(
     url: string,
     fields: Record<string, any>,
-    files?: Record<string, { uri: string; name: string; type: string } | undefined>
+    files?: Record<string, { uri: string; name: string; type: string } | undefined>,
+    timeout?: number
   ) {
     this.invalidateCache();
     const form = new FormData();
@@ -318,6 +319,7 @@ class ApiService {
     const response = await this.client.post<T>(url, form, {
       headers: { 'Content-Type': 'multipart/form-data' },
       transformRequest: (data) => data,
+      ...(timeout ? { timeout } : {}),
     });
     return response.data;
   }
@@ -529,7 +531,9 @@ class ApiService {
   }
 
   async icchAepsVideoKyc(fields: Record<string, any>, video: { uri: string; name: string; type: string }) {
-    return this.envelope(this.postForm(API_ENDPOINTS.icchAeps.videoKyc, fields, { video }));
+    // Up to 100 MB from a phone, then on from our server to Icchhamati: the
+    // default 30 s cut the upload off mid-way on mobile data.
+    return this.envelope(this.postForm(API_ENDPOINTS.icchAeps.videoKyc, fields, { video }, 5 * 60 * 1000));
   }
 
   async icchAepsShopImage(fields: Record<string, any>, image: { uri: string; name: string; type: string }) {

@@ -48,7 +48,7 @@ const SHOP_PHOTOS = [
     { key: 'shop_outer', label: 'Shop front' },
 ];
 
-const MAX_VIDEO_BYTES = 20 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
 
 /** Drag a video in, or click to pick or record one; previews what will be uploaded. */
 const VideoDrop = ({ video, onChange, disabled }: { video: File | null; onChange: (f: File | null) => void; disabled?: boolean }) => {
@@ -58,7 +58,7 @@ const VideoDrop = ({ video, onChange, disabled }: { video: File | null; onChange
     const take = (file?: File | null) => {
         if (!file) return;
         if (!file.type.startsWith('video/')) return toast.error('That is not a video. Choose an MP4 recording.');
-        if (file.size > MAX_VIDEO_BYTES) return toast.error('The video must be 20 MB or smaller.');
+        if (file.size > MAX_VIDEO_BYTES) return toast.error('The video must be 100 MB or smaller.');
         if (preview) URL.revokeObjectURL(preview);
         setPreview(URL.createObjectURL(file));
         onChange(file);
@@ -93,7 +93,7 @@ const VideoDrop = ({ video, onChange, disabled }: { video: File | null; onChange
         >
             <div className={`rounded-xl p-2.5 ${SILVER_TILE}`}><Upload className="h-5 w-5" /></div>
             <span className="text-sm font-semibold">{dragging ? 'Drop the video here' : 'Drag and drop the KYC video'}</span>
-            <span className="text-xs text-muted-foreground">or click to choose or record one · MP4, up to 20 MB</span>
+            <span className="text-xs text-muted-foreground">or click to choose or record one · MP4, up to 100 MB</span>
             <input type="file" accept="video/*" capture="user" className="hidden" onChange={(e) => { take(e.target.files?.[0]); e.target.value = ''; }} />
         </label>
     );
@@ -419,7 +419,7 @@ const OnboardingStep = ({ status, busy, run, coords, device, ensureDevice, captu
                         onClick={async () => {
                             const c = coords();
                             if (!c || !video) return;
-                            if (video.size > 20 * 1024 * 1024) return toast.error('The video must be 20 MB or smaller.');
+                            if (video.size > MAX_VIDEO_BYTES) return toast.error('The video must be 100 MB or smaller.');
                             const body = new FormData();
                             body.append('video', video);
                             body.append('latitude', c.latitude);

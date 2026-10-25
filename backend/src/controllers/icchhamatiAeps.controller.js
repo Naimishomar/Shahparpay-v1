@@ -452,6 +452,9 @@ export const uploadShopImage = async (req, res) => {
   }
 };
 
+/** The largest video Icchhamati takes as a file on upload-video-kyc. */
+const ICCHHAMATI_VIDEO_FILE_LIMIT = 20 * 1024 * 1024;
+
 /** Uploads to Icchhamati's Bunny Stream slot; null when they hand out none or the upload fails. */
 const uploadToProviderSlot = async (retailer, filePath) => {
   const slot = await icchhamatiPost('/api/v2/aeps/generate-upload-token', {
@@ -514,36 +517,40 @@ export const uploadVideoKyc = async (req, res) => {
       longitude: String(longitude),
     };
 
-    // The documented way: the video itself, as the multipart field video_url.
-    // Icchhamati hosts it and answers with its own URL.
-    const form = new FormData();
-    for (const [key, value] of Object.entries(place)) form.append(key, value);
+    // The documented way: the video itself, as the multipart field video_url,
+    // which Icchhamati hosts and answers with its own URL. They take 20 MB that
+    // way; a larger clip (any Android phone) goes straight to the URL route.
     const type = req.file.mimetype || 'video/mp4';
-    form.append(
-      'video_url',
-      new Blob([await fs.readFile(filePath)], { type }),
-      `video-kyc${type === 'video/quicktime' ? '.mov' : '.mp4'}`
-    );
-    let data = await icchhamatiPostForm('/api/v2/aeps/upload-video-kyc', form);
+    let data = null;
+    if (req.file.size <= ICCHHAMATI_VIDEO_FILE_LIMIT) {
+      const form = new FormData();
+      for (const [key, value] of Object.entries(place)) form.append(key, value);
+      form.append(
+        'video_url',
+        new Blob([await fs.readFile(filePath)], { type }),
+        `video-kyc${type === 'video/quicktime' ? '.mov' : '.mp4'}`
+      );
+      data = await icchhamatiPostForm('/api/v2/aeps/upload-video-kyc', form);
+    }
 
     if (!isOk(data)) {
       // What their portal does instead: host the video and register its URL.
       // Their Bunny Stream slot first; it is not set up for every partner
       // ("Video upload service not configured"), so then our own storage.
-      console.warn(
-        'Icchhamati video KYC file upload refused, registering a URL:',
-        providerMessage(data, 'no message')
-      );
+      if (data) {
+        console.warn(
+          'Icchhamati video KYC file upload refused, registering a URL:',
+          providerMessage(data, 'no message')
+        );
+      }
       let videoUrl = await uploadToProviderSlot(retailer, filePath);
       if (!videoUrl) {
         const stored = await uploadOnR2(filePath, type);
         if (!stored?.url) {
-          return res
-            .status(502)
-            .json({
-              success: false,
-              message: 'The video could not be uploaded. Please try again.',
-            });
+          return res.status(502).json({
+            success: false,
+            message: 'The video could not be uploaded. Please try again.',
+          });
         }
         videoUrl = stored.url;
       }
