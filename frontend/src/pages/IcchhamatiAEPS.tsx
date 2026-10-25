@@ -301,6 +301,7 @@ const OnboardingStep = ({ status, busy, run, coords, device, ensureDevice, captu
         state_id: '', shop_pin_code: '', account_number: '', ifsc_code: '', bank_name: '', bank_branch: '',
     });
     const [states, setStates] = useState<{ stateId: string; stateName: string }[]>([]);
+    const [bankNames, setBankNames] = useState<string[]>([]);
     const [otp, setOtp] = useState('');
     const [otpSent, setOtpSent] = useState(false);
     const [txnid, setTxnid] = useState('');
@@ -310,7 +311,9 @@ const OnboardingStep = ({ status, busy, run, coords, device, ensureDevice, captu
     const [shopPhotos, setShopPhotos] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
-        if (status.step === 'register') call('/states', undefined, 'get').then((r) => r.success && setStates(r.data || []));
+        if (status.step !== 'register') return;
+        call('/states', undefined, 'get').then((r) => r.success && setStates(r.data || []));
+        call('/settlement-banks', undefined, 'get').then((r) => r.success && setBankNames(r.data || []));
     }, [status.step]);
 
     const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm({ ...form, [k]: e.target.value });
@@ -336,7 +339,10 @@ const OnboardingStep = ({ status, busy, run, coords, device, ensureDevice, captu
                             </select>
                         </Field>
                         <Field label="Pincode"><input required inputMode="numeric" pattern="\d{6}" maxLength={6} value={form.shop_pin_code} onChange={set('shop_pin_code')} className={INPUT} /></Field>
-                        <Field label="Bank name"><input required value={form.bank_name} onChange={set('bank_name')} className={INPUT} /></Field>
+                        <Field label="Bank name">
+                            <input required list="icch-settlement-banks" placeholder="Search or type your bank" value={form.bank_name} onChange={set('bank_name')} className={INPUT} />
+                            <datalist id="icch-settlement-banks">{bankNames.map((n) => <option key={n} value={n} />)}</datalist>
+                        </Field>
                         <Field label="Account number"><input required inputMode="numeric" pattern="\d{9,18}" value={form.account_number} onChange={set('account_number')} className={`${INPUT} font-mono`} /></Field>
                         <Field label="IFSC"><input required pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" value={form.ifsc_code} onChange={(e) => setForm({ ...form, ifsc_code: e.target.value.toUpperCase() })} className={`${INPUT} font-mono uppercase`} /></Field>
                         <Field label="Branch"><input required value={form.bank_branch} onChange={set('bank_branch')} className={INPUT} /></Field>

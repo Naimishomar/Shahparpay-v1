@@ -521,6 +521,10 @@ class ApiService {
     return this.envelope(this.get(API_ENDPOINTS.icchAeps.states));
   }
 
+  async icchAepsSettlementBanks() {
+    return this.envelope(this.get(API_ENDPOINTS.icchAeps.settlementBanks));
+  }
+
   async icchAepsBanks() {
     return this.envelope(this.get(API_ENDPOINTS.icchAeps.banks));
   }

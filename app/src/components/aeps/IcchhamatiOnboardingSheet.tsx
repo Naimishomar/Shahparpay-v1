@@ -402,9 +402,11 @@ const RegisterStep: React.FC<{ status: IcchStatus; onChanged: () => void }> = ({
   });
   const [states, setStates] = useState<{ stateId: string; stateName: string }[]>([]);
   const [showStates, setShowStates] = useState(false);
+  const [bankNames, setBankNames] = useState<string[]>([]);
 
   useEffect(() => {
     api.icchAepsStates().then((res) => res?.success && setStates(res.data || [])).catch(() => {});
+    api.icchAepsSettlementBanks().then((res) => res?.success && setBankNames(res.data || [])).catch(() => {});
   }, []);
 
   const save = useAction(async () => {
@@ -421,6 +423,11 @@ const RegisterStep: React.FC<{ status: IcchStatus; onChanged: () => void }> = ({
     /^\d{9,18}$/.test(form.account_number) &&
     /^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.ifsc_code);
   const stateName = states.find((s) => String(s.stateId) === form.state_id)?.stateName;
+  // Suggestions while typing; a bank missing from the list can still be typed in full.
+  const bankQuery = form.bank_name.trim().toLowerCase();
+  const bankMatches = bankQuery && !bankNames.some((n) => n.toLowerCase() === bankQuery)
+    ? bankNames.filter((n) => n.toLowerCase().includes(bankQuery)).slice(0, 6)
+    : [];
 
   return (
     <>
@@ -453,7 +460,21 @@ const RegisterStep: React.FC<{ status: IcchStatus; onChanged: () => void }> = ({
         </ScrollView>
       )}
       <Input label="Pincode" required value={form.shop_pin_code} onChangeText={set('shop_pin_code', digits(6))} keyboardType="number-pad" />
-      <Input label="Bank name" required value={form.bank_name} onChangeText={set('bank_name')} />
+      <Input label="Bank name" required value={form.bank_name} onChangeText={set('bank_name')} placeholder="Search or type your bank" />
+      {bankMatches.length > 0 && (
+        <View style={styles.list}>
+          {bankMatches.map((n) => (
+            <Pressable
+              key={n}
+              onPress={() => setForm((f) => ({ ...f, bank_name: n }))}
+              style={({ pressed }) => [styles.listItem, pressed && { opacity: 0.7 }]}
+              accessibilityRole="button"
+            >
+              <Text style={styles.listText}>{n}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
       <Input label="Account number" required value={form.account_number} onChangeText={set('account_number', digits(18))} keyboardType="number-pad" />
       <Input label="IFSC" required value={form.ifsc_code} onChangeText={set('ifsc_code', (v) => v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11))} autoCapitalize="characters" />
       <Input label="Branch" required value={form.bank_branch} onChangeText={set('bank_branch')} />

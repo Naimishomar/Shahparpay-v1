@@ -260,6 +260,7 @@ export const API_ENDPOINTS = {
   icchAeps: {
     status: '/api/aeps/icchhamati/status',
     states: '/api/aeps/icchhamati/states',
+    settlementBanks: '/api/aeps/icchhamati/settlement-banks',
     register: '/api/aeps/icchhamati/register',
     shopImage: '/api/aeps/icchhamati/shop-image',
     videoKyc: '/api/aeps/icchhamati/video-kyc',

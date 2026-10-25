@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import {
   getStatus,
   getStates,
+  getSettlementBanks,
   register,
   verifyStep,
   VERIFY_STEP_ROUTES,
@@ -88,6 +89,7 @@ router.post('/2fa', twoFactor);
 router.post('/device', changeDevice);
 
 router.get('/banks', getBanks);
+router.get('/settlement-banks', getSettlementBanks);
 router.post('/txn-otp', requireService('aeps'), sendTxnOtp);
 router.post('/transaction', requireService('aeps'), doTransaction);
 

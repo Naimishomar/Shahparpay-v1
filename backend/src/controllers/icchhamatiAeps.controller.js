@@ -236,6 +236,33 @@ export const normaliseBanks = (rows) =>
     .filter((row) => /^\d+$/.test(String(row?.iinno ?? '')) && Number(row.activeFlag) !== 0)
     .map((row) => ({ iinno: String(row.iinno), bankName: String(row.bankName ?? '').trim() }));
 
+let settlementBanks = null;
+let settlementBanksAt = 0;
+
+/**
+ * GET /settlement-banks — bank names for the registration form. The AEPS bank
+ * list needs an outlet, which a retailer has only after registering, so this
+ * reads the cash-deposit list, which needs none. It is not every bank in
+ * India, so the form still takes a typed name.
+ */
+export const getSettlementBanks = async (req, res) => {
+  try {
+    if (!settlementBanks || Date.now() - settlementBanksAt > 24 * 3600 * 1000) {
+      const data = await icchhamatiPost('/api/v2/cash-deposit/bank-list', {});
+      if (isOk(data) && Array.isArray(data.data)) {
+        settlementBanks = [...new Set(normaliseBanks(data.data).map((b) => b.bankName).filter(Boolean))].sort(
+          (a, b) => a.localeCompare(b)
+        );
+        settlementBanksAt = Date.now();
+      }
+    }
+    return res.status(200).json({ success: true, data: settlementBanks || [] });
+  } catch (error) {
+    console.error('Icchhamati settlement banks error:', error?.message);
+    return res.status(200).json({ success: true, data: settlementBanks || [] });
+  }
+};
+
 export const getStates = async (req, res) => {
   try {
     const data = await icchhamatiGet('/api/v2/aeps/state-list');
