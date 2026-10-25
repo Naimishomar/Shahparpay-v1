@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { logIntegration, logIntegrationError } from './integrationLogger.js';
+import { logIntegration, logIntegrationError, loggableResponse } from './integrationLogger.js';
 
 /**
  * Icchhamati Data Service ("Banking Service") API.
@@ -44,7 +44,7 @@ export const icchhamatiPost = async (path, body = {}) => {
     const response = await axios.post(`${getBase()}${path}`, body, {
       headers: getHeaders(), validateStatus: () => true, timeout: 60000,
     });
-    logIntegration('provider_response', { provider: 'icchhamati', method: 'POST', path, httpStatus: response.status, providerStatus: response.data?.status, durationMs: Date.now() - startedAt, transactionId: body?.transaction_id || body?.txnid || null });
+    logIntegration('provider_response', { provider: 'icchhamati', method: 'POST', path, httpStatus: response.status, providerStatus: response.data?.status, durationMs: Date.now() - startedAt, transactionId: body?.transaction_id || body?.txnid || null, providerMessage: response.data?.message ?? null, response: loggableResponse(response.data) });
     // Non-enumerable, so it stays out of anything that spreads or stores the body.
     if (response.data && typeof response.data === 'object') {
       Object.defineProperty(response.data, 'httpStatus', { value: response.status });
@@ -64,7 +64,7 @@ export const icchhamatiPostForm = async (path, form) => {
     const response = await axios.post(`${getBase()}${path}`, form, {
       headers, validateStatus: () => true, timeout: 120000, maxBodyLength: Infinity,
     });
-    logIntegration('provider_response', { provider: 'icchhamati', method: 'POST', path, httpStatus: response.status, providerStatus: response.data?.status, durationMs: Date.now() - startedAt });
+    logIntegration('provider_response', { provider: 'icchhamati', method: 'POST', path, httpStatus: response.status, providerStatus: response.data?.status, durationMs: Date.now() - startedAt, providerMessage: response.data?.message ?? null, response: loggableResponse(response.data) });
     return response.data;
   } catch (error) {
     logIntegrationError('provider_request_error', error, { provider: 'icchhamati', method: 'POST', path, durationMs: Date.now() - startedAt });
@@ -77,7 +77,7 @@ export const icchhamatiDelete = async (path, body = {}) => {
   const startedAt = Date.now();
   try {
     const response = await axios.delete(`${getBase()}${path}`, { headers: getHeaders(), data: body, validateStatus: () => true, timeout: 60000 });
-    logIntegration('provider_response', { provider: 'icchhamati', method: 'DELETE', path, httpStatus: response.status, providerStatus: response.data?.status, durationMs: Date.now() - startedAt });
+    logIntegration('provider_response', { provider: 'icchhamati', method: 'DELETE', path, httpStatus: response.status, providerStatus: response.data?.status, durationMs: Date.now() - startedAt, providerMessage: response.data?.message ?? null, response: loggableResponse(response.data) });
     return response.data;
   } catch (error) {
     logIntegrationError('provider_request_error', error, { provider: 'icchhamati', method: 'DELETE', path, durationMs: Date.now() - startedAt });
@@ -89,7 +89,7 @@ export const icchhamatiGet = async (path, params = {}) => {
   const startedAt = Date.now();
   try {
     const response = await axios.get(`${getBase()}${path}`, { headers: getHeaders(), params, validateStatus: () => true, timeout: 60000 });
-    logIntegration('provider_response', { provider: 'icchhamati', method: 'GET', path, httpStatus: response.status, providerStatus: response.data?.status, durationMs: Date.now() - startedAt });
+    logIntegration('provider_response', { provider: 'icchhamati', method: 'GET', path, httpStatus: response.status, providerStatus: response.data?.status, durationMs: Date.now() - startedAt, providerMessage: response.data?.message ?? null, response: loggableResponse(response.data) });
     return response.data;
   } catch (error) {
     logIntegrationError('provider_request_error', error, { provider: 'icchhamati', method: 'GET', path, durationMs: Date.now() - startedAt });
