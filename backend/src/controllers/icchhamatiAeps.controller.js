@@ -17,6 +17,7 @@ import {
 import { applyAepsWithdrawalSuccess } from '../utils/wallet.util.js';
 import { aepsKycDone } from '../utils/services.js';
 import { uploadOnR2 } from '../utils/r2.js';
+import { loggableResponse } from '../utils/integrationLogger.js';
 import { AEPS_OTP_THRESHOLD } from './aepsPayment.controller.js';
 
 /**
@@ -57,8 +58,14 @@ const needOutlet = (retailer, res) => {
 };
 
 /** Relays a provider answer in our envelope, with a readable message either way. */
+/**
+ * Fingpay's own answer sits inside Icchhamati's: { status: 1, message: "Success",
+ * data: { status: false, message: "<why>" } } is a failure, not a success.
+ */
+export const fingpayFailed = (data) => data?.data?.status === false;
+
 const relay = (res, data, okMessage, failMessage) =>
-  isOk(data)
+  isOk(data) && !fingpayFailed(data)
     ? res.status(200).json({
         success: true,
         message: providerMessage(data, okMessage),
@@ -67,7 +74,7 @@ const relay = (res, data, okMessage, failMessage) =>
       })
     : res.status(400).json({
         success: false,
-        message: providerMessage(data, failMessage),
+        message: fingpayFailed(data) ? data.data.message || failMessage : providerMessage(data, failMessage),
         data: data?.data ?? null,
       });
 
@@ -640,7 +647,23 @@ export const ekycSendOtp = async (req, res) => {
       deviceIMEI,
       ...merchantKeys(retailer),
     });
-    return relay(res, data, 'OTP sent', 'Could not send the eKYC OTP.');
+    if (!isOk(data) || fingpayFailed(data)) return relay(res, data, 'OTP sent', 'Could not send the eKYC OTP.');
+    // Verify-otp and the fingerprint step need both ids; without them the OTP is useless.
+    const inner = data.data?.data ?? data.data ?? {};
+    const primaryKeyId = inner.primaryKeyId ?? data.data?.primaryKeyId ?? data.primaryKeyId;
+    const encodeFPTxnId = inner.encodeFPTxnId ?? data.data?.encodeFPTxnId ?? data.encodeFPTxnId;
+    if (!primaryKeyId || !encodeFPTxnId) {
+      console.error('Icchhamati eKYC OTP returned no ids:', JSON.stringify(loggableResponse(data)));
+      return res.status(502).json({
+        success: false,
+        message: inner.message || data.data?.message || 'The provider did not start eKYC. Please try again.',
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      message: inner.message || data.data?.message || 'OTP sent',
+      data: { primaryKeyId: String(primaryKeyId), encodeFPTxnId: String(encodeFPTxnId) },
+    });
   } catch (error) {
     return fail(res, 'eKYC OTP', error);
   }

@@ -1,8 +1,14 @@
 // Run: node src/controllers/icchhamatiAeps.test.mjs
 // The two calls that decide what a retailer sees and whether money moves.
 import assert from 'node:assert';
-import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks, recordStep } from './icchhamatiAeps.controller.js';
+import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks, recordStep, fingpayFailed } from './icchhamatiAeps.controller.js';
 import { parseServicesUpdate, usesAepsProvider } from '../utils/services.js';
+
+// --- Fingpay's answer inside Icchhamati's ---------------------------------
+
+assert.equal(fingpayFailed({ status: 1, message: 'Success', data: { status: false, message: 'Invalid device' } }), true);
+assert.equal(fingpayFailed({ status: 1, data: { status: true, primaryKeyId: '1' } }), false);
+assert.equal(fingpayFailed({ status: 1, data: { aeps_status: 0 } }), false);
 
 // --- onboarding step ------------------------------------------------------
 
