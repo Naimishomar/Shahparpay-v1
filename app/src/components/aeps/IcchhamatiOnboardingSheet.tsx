@@ -311,18 +311,23 @@ const StepBody: React.FC<{
               Send OTP
             </Button>
           ) : !otpVerified ? (
-            <Button
-              icon="check"
-              loading={action.pending}
-              disabled={otp.length < 4}
-              fullWidth
-              onPress={async () => {
-                const res = await action.run(stepCall('ekyc/verify-otp', { otp, deviceIMEI: serial, ...fpIds }), false);
-                if (res) setOtpVerified(true);
-              }}
-            >
-              Verify OTP
-            </Button>
+            <>
+              <Button
+                icon="check"
+                loading={action.pending}
+                disabled={otp.length < 4}
+                fullWidth
+                onPress={async () => {
+                  const res = await action.run(stepCall('ekyc/verify-otp', { otp, deviceIMEI: serial, ...fpIds }), false);
+                  if (res) setOtpVerified(true);
+                }}
+              >
+                Verify OTP
+              </Button>
+              <Button icon="refresh" variant="ghost" disabled={action.pending} fullWidth onPress={() => { setFpIds(null); setOtp(''); }}>
+                OTP not received? Send again
+              </Button>
+            </>
           ) : (
             <Button icon="shield-check-outline" loading={action.pending} disabled={!pidData} fullWidth onPress={() => action.run(stepCall('ekyc/biometric', { xml: pidData, deviceIMEI: serial, ...fpIds }))}>
               Complete eKYC

@@ -471,6 +471,7 @@ const OnboardingStep = ({ status, busy, run, coords, device, ensureDevice, captu
                                 const res = await run('/ekyc/verify-otp', { otp, deviceIMEI: device.serial, ...fpIds }, { reload: false });
                                 if (res.success) setEkycOtpOk(true);
                             }}>Verify</button>
+                            <button disabled={busy} className={SECONDARY_BUTTON} onClick={() => { setFpIds(null); setOtp(''); }}>Resend</button>
                         </div>
                     ) : (
                         <button disabled={busy} className={PRIMARY_BUTTON} onClick={async () => {
