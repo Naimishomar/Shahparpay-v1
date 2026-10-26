@@ -353,8 +353,8 @@ class ApiService {
     return this.post(API_ENDPOINTS.auth.verifyOtp, { identifier, otp });
   }
 
-  async logout() {
-    return this.post(API_ENDPOINTS.auth.logout);
+  async logout(everywhere = false) {
+    return this.post(API_ENDPOINTS.auth.logout, { everywhere });
   }
 
   async refreshToken() {

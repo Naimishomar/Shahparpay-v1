@@ -149,8 +149,9 @@ export const ProfileScreen: React.FC = () => {
 
   const confirmLogout = () =>
     Alert.alert('Log out?', 'You will need your password and an email OTP to sign back in.', [
-      { text: 'Stay signed in', style: 'cancel' },
-      { text: 'Log out', style: 'destructive', onPress: logout },
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'This device', style: 'destructive', onPress: () => logout(false) },
+      { text: 'All devices', style: 'destructive', onPress: () => logout(true) },
     ]);
 
   const avatarUri = photo?.uri || user?.profilePicture;

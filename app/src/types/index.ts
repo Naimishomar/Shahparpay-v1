@@ -43,7 +43,7 @@ export interface AuthState {
   token: string | null;
   isInitializing: boolean;
   login: (token: string, user: User, refreshToken?: string) => Promise<void>;
-  logout: () => Promise<void>;
+  logout: (everywhere?: boolean) => Promise<void>;
   checkSession: () => Promise<void>;
 }
 

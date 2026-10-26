@@ -25,6 +25,7 @@ const WALLET_TILES = {
 const Header = () => {
     const { theme, setTheme } = useTheme();
     const { user, token, logout } = useAuth();
+    const [askLogout, setAskLogout] = useState(false);
     const [balances, setBalances] = useState({ aepsBalance: 0, mainBalance: 0, adminBalance: 0 });
 
     useEffect(() => {
@@ -110,7 +111,7 @@ const Header = () => {
             </button>
 
             {/* User Profile */}
-            <Popover>
+            <Popover onOpenChange={(open) => { if (!open) setAskLogout(false); }}>
                 <PopoverTrigger asChild>
                     <button className="flex items-center gap-3 rounded-full border bg-card/70 py-1 pl-1 pr-3 shadow-sm hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
                         {avatar('w-9 h-9')}
@@ -135,10 +136,24 @@ const Header = () => {
                             <UserCircle className="w-4 h-4 text-muted-foreground" /> My profile
                         </Link>
                         {user && <LanguageSelector />}
-                        {user && (
-                            <button onClick={logout} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-500/10">
+                        {user && !askLogout && (
+                            <button onClick={() => setAskLogout(true)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-500/10">
                                 <LogOut className="w-4 h-4" /> Logout
                             </button>
+                        )}
+                        {user && askLogout && (
+                            <div className="rounded-xl border border-red-500/20 p-2">
+                                <p className="px-1 pb-2 text-xs text-muted-foreground">Log out from</p>
+                                <button onClick={() => logout(false)} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-500/10">
+                                    <LogOut className="w-4 h-4" /> This device
+                                </button>
+                                <button onClick={() => logout(true)} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-500/10">
+                                    <LogOut className="w-4 h-4" /> All devices
+                                </button>
+                                <button onClick={() => setAskLogout(false)} className="w-full rounded-lg px-3 py-2 text-left text-sm text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5">
+                                    Cancel
+                                </button>
+                            </div>
                         )}
                     </div>
                 </PopoverContent>

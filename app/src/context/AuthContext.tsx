@@ -189,9 +189,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ]);
   };
 
-  const logout = async () => {
+  const logout = async (everywhere = false) => {
     try {
-      await api.logout();
+      await api.logout(everywhere);
     } catch (error) {
       console.error('Logout API failed:', error);
     }

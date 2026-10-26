@@ -338,11 +338,20 @@ export const refreshAccessToken = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/auth/logout { everywhere?: boolean }
+ *
+ * By default only this device signs out: it drops its own tokens. With
+ * `everywhere`, tokenVersion is bumped and every device's refresh token dies.
+ * ponytail: a single-device logout does not revoke that device's refresh token
+ * server-side (rotated tokens are not revoked either); a jti denylist would.
+ */
 export const logoutUser = async (req, res) => {
   try {
-    // Must mirror the attributes used when setting it, or the browser keeps it.
+    if (req.body?.everywhere === true) {
+      await MODEL_BY_ROLE[req.user.role]?.updateOne({ _id: req.user._id }, { $inc: { tokenVersion: 1 } });
+    }
     // Flags must match the ones the cookie was set with, or the browser keeps it.
-    await MODEL_BY_ROLE[req.user.role]?.updateOne({ _id: req.user._id }, { $inc: { tokenVersion: 1 } });
     const { maxAge: _ignored, ...clearOptions } = refreshCookieOptions(req);
     res.clearCookie('refreshToken', clearOptions);
     return res.status(200).json({ success: true, message: 'Logged out successfully' });

@@ -30,7 +30,7 @@ interface AuthContextType {
     token: string | null;
     isInitializing: boolean;
     login: (token: string, user: User, refreshToken?: string) => void;
-    logout: () => void;
+    logout: (everywhere?: boolean) => void;
     checkSession: () => Promise<void>;
 }
 
@@ -122,12 +122,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('user', JSON.stringify(newUser));
     };
 
-    const logout = async () => {
+    const logout = async (everywhere = false) => {
         try {
-            await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/logout`, { 
+            await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/logout`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                credentials: 'include' 
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ everywhere }),
+                credentials: 'include'
             });
         } catch (e) {
             console.error("Logout API failed", e);
