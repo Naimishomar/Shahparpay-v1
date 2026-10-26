@@ -22,6 +22,7 @@ type Status = {
     step: Step;
     outletId: string | null;
     aadhaarPayReady?: boolean;
+    remarks?: string | null;
     primaryKeyId?: string | null;
     encodeFPTxnId?: string | null;
     deviceIMEI?: string;
@@ -390,6 +391,7 @@ const OnboardingStep = ({ status, busy, run, coords, device, ensureDevice, captu
             return (
                 <div>
                     <Title icon={Video} title="Shop photos & video KYC" hint="Two photos of your shop, then a short video of yourself holding your PAN card inside it." />
+                    {status.remarks && <p className="mb-4 rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-sm text-red-500">Sent back by the provider: {status.remarks}</p>}
                     <div className="mb-6 grid gap-3 sm:grid-cols-2">
                         {SHOP_PHOTOS.map(({ key, label }) => (
                             <label key={key} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 ${shopPhotos[key] ? 'border-emerald-500/40 bg-emerald-500/5' : 'bg-background'}`}>

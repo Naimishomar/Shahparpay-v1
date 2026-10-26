@@ -28,6 +28,7 @@ export interface IcchStatus {
   step: IcchStep;
   outletId: string | null;
   aadhaarPayReady?: boolean;
+  remarks?: string | null;
   primaryKeyId?: string | null;
   encodeFPTxnId?: string | null;
   deviceIMEI?: string;
@@ -206,6 +207,7 @@ const StepBody: React.FC<{
     case 'video':
       return (
         <>
+          {!!status.remarks && <Banner tone="error" message={`Sent back by the provider: ${status.remarks}`} />}
           <Text style={styles.body}>Two photos of your shop, then a short video (up to 30 seconds) of yourself holding your PAN card inside it.</Text>
           {SHOP_PHOTOS.map(({ key, label }) => (
             <Button

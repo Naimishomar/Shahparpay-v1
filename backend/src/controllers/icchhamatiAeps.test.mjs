@@ -28,7 +28,11 @@ assert.equal(
 assert.equal(onboardingStep({ ...verified, email_verified_at: 0 }), 'email');
 assert.equal(onboardingStep({ ...verified, bank_verified_at: 0 }), 'bank');
 assert.equal(onboardingStep({ ...verified, aeps_status: 3 }), 'video', 'no video yet');
-const filmed = { ...verified, video_url: 'https://x/v.mp4' };
+const filmed = { ...verified, video_url: 'https://x/v.mp4', shop_inner: 'https://x/i.jpg', shop_outer: 'https://x/o.jpg' };
+assert.equal(onboardingStep({ ...filmed, video_kyc_status: 2, aeps_status: 0 }), 'video', 'rejected video goes back');
+assert.equal(onboardingStep({ ...filmed, shop_inner: null, video_kyc_status: 1, aeps_status: 0 }), 'video', 'rejected photo goes back');
+assert.equal(onboardingStep({ ...filmed, shop_outer: '', video_kyc_status: 1, aeps_status: 3 }), 'ready', 'live merchants keep working');
+assert.equal(onboardingStep({ ...filmed, bank_verified_at: 0, video_kyc_status: 1, aeps_status: 0 }), 'bank', 'a cleared check goes back');
 assert.equal(onboardingStep({ ...filmed, video_kyc_status: 0, aeps_status: 0 }), 'video_review');
 assert.equal(onboardingStep({ ...filmed, video_kyc_status: 1, aeps_status: 0 }), 'onboard');
 assert.equal(onboardingStep({ ...filmed, video_kyc_status: 1, aeps_status: 1 }), 'ekyc');

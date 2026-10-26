@@ -92,6 +92,10 @@ const fail = (res, label, error) => {
  *
  *   aeps_status 0 not onboarded, 1 needs eKYC, 2 needs today's 2FA, 3 ready.
  *   ap_status 0 means Aadhaar Pay needs its own 2FA even when AEPS is ready.
+ *   video_kyc_status 0 under review, 1 approved, 2 rejected.
+ *
+ * Read fresh on every status check, so a step Icchhamati resets (a verified
+ * flag cleared, the video or shop photos rejected) sends the retailer back.
  */
 export const onboardingStep = (draft) => {
   if (!draft) return 'register';
@@ -100,9 +104,11 @@ export const onboardingStep = (draft) => {
   if (Number(draft.email_verified_at) === 0) return 'email';
   if (Number(draft.aadhaar_verified_at) === 0) return 'aadhaar';
   if (Number(draft.bank_verified_at) === 0) return 'bank';
-  if (!draft.video_url) return 'video';
-  if (Number(draft.video_kyc_status) === 0) return 'video_review';
   const aeps = Number(draft.aeps_status);
+  // Shop photos predate some live merchants, so they only matter before onboarding.
+  const photosMissing = aeps === 0 && (!draft.shop_inner || !draft.shop_outer);
+  if (!draft.video_url || Number(draft.video_kyc_status) === 2 || photosMissing) return 'video';
+  if (Number(draft.video_kyc_status) === 0) return 'video_review';
   if (aeps === 0) return 'onboard';
   if (aeps === 1) return 'ekyc';
   if (aeps === 2) return 'twofa';
@@ -203,6 +209,8 @@ export const getStatus = async (req, res) => {
         step,
         outletId,
         aadhaarPayReady: Number(draft.ap_status) !== 0,
+        // Why Icchhamati sent the retailer back, when it says.
+        remarks: draft.remarks || null,
         primaryKeyId: draft.primaryKeyId ?? null,
         encodeFPTxnId: draft.encodeFPTxnId ?? null,
         deviceIMEI: draft.deviceIMEI || retailer.icchhamatiAeps?.deviceIMEI || '',
