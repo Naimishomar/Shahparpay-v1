@@ -20,13 +20,14 @@ const formatBalance = (value: unknown) => {
 const WALLET_TILES = {
     silver: 'icon-chip',
     emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-emerald-500/20',
+    cyan: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 ring-cyan-500/20',
 };
 
 const Header = () => {
     const { theme, setTheme } = useTheme();
     const { user, token, logout } = useAuth();
     const [askLogout, setAskLogout] = useState(false);
-    const [balances, setBalances] = useState({ aepsBalance: 0, mainBalance: 0, adminBalance: 0 });
+    const [balances, setBalances] = useState({ aepsBalance: 0, mainBalance: 0, qrBalance: 0, adminBalance: 0 });
 
     useEffect(() => {
         const fetchBalances = async () => {
@@ -60,6 +61,8 @@ const Header = () => {
         : [
             { label: 'AEPS Wallet', value: balances.aepsBalance, tile: WALLET_TILES.silver },
             { label: 'Main Wallet', value: balances.mainBalance, tile: WALLET_TILES.emerald },
+            // Counter-QR collections; only retailers own a QR.
+            ...(user?.role === 'retailer' ? [{ label: 'QR Wallet', value: balances.qrBalance, tile: WALLET_TILES.cyan }] : []),
         ];
 
     const avatar = (size: string) => (

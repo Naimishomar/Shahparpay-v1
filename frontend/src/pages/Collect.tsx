@@ -218,6 +218,8 @@ const Collect = () => {
                     </button>
                 </section>
 
+                <CounterQr api={api} getHeaders={getHeaders} />
+
                 {/* Active request */}
                 <section className="rounded-2xl border bg-card p-6 shadow-sm">
                     {order ? (
@@ -273,9 +275,9 @@ const Collect = () => {
                         </div>
                     )}
                 </section>
-            </div>
 
-            <CounterQr api={api} getHeaders={getHeaders} history={history} />
+                <QrWallet getHeaders={getHeaders} history={history} />
+            </div>
 
             {/* Collections */}
             <section className="rounded-2xl border bg-card p-6 shadow-sm">
@@ -337,24 +339,13 @@ const Collect = () => {
 
 type Qr = { virtualAccountId: string; upiHandle: string | null; qrImage: string | null; name: string | null; qrPdf?: string | null };
 
-/** The retailer's standing counter QR, and the QR wallet its payments land in. */
-const CounterQr = ({ api, getHeaders, history }: { api: string; getHeaders: () => object; history: any[] }) => {
+/** The retailer's standing counter QR. */
+const CounterQr = ({ api, getHeaders }: { api: string; getHeaders: () => object }) => {
     const { user } = useAuth();
     const [qr, setQr] = useState<Qr | null>(null);
     const [qrLoaded, setQrLoaded] = useState(false);
     const [form, setForm] = useState({ name: user?.name || '', account_number: '', account_ifsc: '' });
     const [generating, setGenerating] = useState(false);
-    const [qrBalance, setQrBalance] = useState(0);
-    const [move, setMove] = useState({ amount: '', pin: '' });
-    const [moving, setMoving] = useState(false);
-    const walletApi = `${import.meta.env.VITE_BACKEND_URL}/api/wallet`;
-
-    const fetchBalance = async () => {
-        try {
-            const res = await axios.get(`${walletApi}/balance`, getHeaders());
-            if (res.data.success) setQrBalance(Number(res.data.data?.qrBalance) || 0);
-        } catch { /* the balance tile just stays as it was */ }
-    };
 
     useEffect(() => {
         axios.get(`${api}/qr`, getHeaders())
@@ -362,10 +353,6 @@ const CounterQr = ({ api, getHeaders, history }: { api: string; getHeaders: () =
             .catch(() => {})
             .finally(() => setQrLoaded(true));
     }, []);
-
-    // A QR payment arrives by webhook and shows up in the history; the balance follows it.
-    const qrCredits = history.filter((r) => r.metadata?.collectionChannel === 'QR').length;
-    useEffect(() => { fetchBalance(); }, [qrCredits]);
 
     const generate = async () => {
         if (!form.name.trim() || !form.account_number || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.account_ifsc)) {
@@ -384,6 +371,78 @@ const CounterQr = ({ api, getHeaders, history }: { api: string; getHeaders: () =
             setGenerating(false);
         }
     };
+
+    return (
+        <section className="rounded-2xl border bg-card p-6 shadow-sm">
+            <h2 className="text-lg font-semibold">Counter QR</h2>
+            <p className="mb-4 text-sm text-muted-foreground">A standing UPI QR to print for your counter. Every payment is credited to your QR wallet automatically.</p>
+            {!qrLoaded ? (
+                <div className="flex min-h-[200px] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : qr ? (
+                <div className="flex flex-col items-center gap-3 text-center">
+                    {qr.qrImage && <img src={qr.qrImage} alt="Your UPI QR code" className="w-56 rounded-xl border bg-white p-2" />}
+                    {qr.upiHandle && <p className="break-all font-mono text-sm font-medium">{qr.upiHandle}</p>}
+                    <p className="text-xs text-muted-foreground">Virtual account {qr.virtualAccountId}</p>
+                    <div className="grid w-full grid-cols-2 gap-3">
+                        {qr.qrImage && (
+                            <a href={qr.qrImage} download="shahparpay-qr.png" className="flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5">
+                                <Download className="h-4 w-4" /> Image
+                            </a>
+                        )}
+                        {qr.qrPdf && (
+                            <a href={qr.qrPdf} download="shahparpay-qr.pdf" className="flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5">
+                                <Download className="h-4 w-4" /> Printable PDF
+                            </a>
+                        )}
+                    </div>
+                </div>
+            ) : (
+                <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium text-foreground">Account holder name</label>
+                        <input className={INPUT} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm font-medium text-foreground">Account number</label>
+                            <input className={`${INPUT} font-mono`} inputMode="numeric" value={form.account_number} onChange={(e) => setForm({ ...form, account_number: e.target.value.replace(/\D/g, '').slice(0, 18) })} />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm font-medium text-foreground">IFSC</label>
+                            <input className={`${INPUT} font-mono uppercase`} value={form.account_ifsc} onChange={(e) => setForm({ ...form, account_ifsc: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11) })} />
+                        </div>
+                    </div>
+                    <button onClick={generate} disabled={generating} className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold disabled:opacity-50 ${ACTIVE_BUTTON}`}>
+                        {generating ? <Loader2 className="h-5 w-5 animate-spin" /> : <QrCode className="h-5 w-5" />}
+                        {generating ? 'Generating...' : 'Generate QR'}
+                    </button>
+                </div>
+            )}
+        </section>
+    );
+};
+
+/** The QR wallet counter-QR payments land in, and the move to Main. */
+const QrWallet = ({ getHeaders, history }: { getHeaders: () => object; history: any[] }) => {
+    const [qrBalance, setQrBalance] = useState(0);
+    const [move, setMove] = useState({ amount: '', pin: '' });
+    const [moving, setMoving] = useState(false);
+    const walletApi = `${import.meta.env.VITE_BACKEND_URL}/api/wallet`;
+
+    const fetchBalance = async () => {
+        try {
+            const res = await axios.get(`${walletApi}/balance`, getHeaders());
+            if (res.data.success) setQrBalance(Number(res.data.data?.qrBalance) || 0);
+        } catch { /* the balance tile just stays as it was */ }
+    };
+
+    // A QR payment arrives by webhook and shows up in the history; the balance
+    // here and in the header follow it.
+    const qrCredits = history.filter((r) => r.metadata?.collectionChannel === 'QR').length;
+    useEffect(() => {
+        fetchBalance();
+        if (qrCredits) window.dispatchEvent(new Event('wallet-updated'));
+    }, [qrCredits]);
 
     const moveToMain = async () => {
         const amount = Number(move.amount);
@@ -407,87 +466,38 @@ const CounterQr = ({ api, getHeaders, history }: { api: string; getHeaders: () =
     };
 
     return (
-        <div className="grid gap-6 lg:grid-cols-2">
-            <section className="rounded-2xl border bg-card p-6 shadow-sm">
-                <h2 className="text-lg font-semibold">Counter QR</h2>
-                <p className="mb-4 text-sm text-muted-foreground">A standing UPI QR to print for your counter. Every payment is credited to your QR wallet automatically.</p>
-                {!qrLoaded ? (
-                    <div className="flex min-h-[200px] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-                ) : qr ? (
-                    <div className="flex flex-col items-center gap-3 text-center">
-                        {qr.qrImage && <img src={qr.qrImage} alt="Your UPI QR code" className="w-56 rounded-xl border bg-white p-2" />}
-                        {qr.upiHandle && <p className="break-all font-mono text-sm font-medium">{qr.upiHandle}</p>}
-                        <p className="text-xs text-muted-foreground">Virtual account {qr.virtualAccountId}</p>
-                        <div className="grid w-full grid-cols-2 gap-3">
-                            {qr.qrImage && (
-                                <a href={qr.qrImage} download="shahparpay-qr.png" className="flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5">
-                                    <Download className="h-4 w-4" /> Image
-                                </a>
-                            )}
-                            {qr.qrPdf && (
-                                <a href={qr.qrPdf} download="shahparpay-qr.pdf" className="flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5">
-                                    <Download className="h-4 w-4" /> Printable PDF
-                                </a>
-                            )}
-                        </div>
-                    </div>
-                ) : (
-                    <div className="flex flex-col gap-4">
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-medium text-foreground">Account holder name</label>
-                            <input className={INPUT} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                        </div>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-medium text-foreground">Account number</label>
-                                <input className={`${INPUT} font-mono`} inputMode="numeric" value={form.account_number} onChange={(e) => setForm({ ...form, account_number: e.target.value.replace(/\D/g, '').slice(0, 18) })} />
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-medium text-foreground">IFSC</label>
-                                <input className={`${INPUT} font-mono uppercase`} value={form.account_ifsc} onChange={(e) => setForm({ ...form, account_ifsc: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11) })} />
-                            </div>
-                        </div>
-                        <button onClick={generate} disabled={generating} className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold disabled:opacity-50 ${ACTIVE_BUTTON}`}>
-                            {generating ? <Loader2 className="h-5 w-5 animate-spin" /> : <QrCode className="h-5 w-5" />}
-                            {generating ? 'Generating...' : 'Generate QR'}
-                        </button>
-                    </div>
-                )}
-            </section>
-
-            <section className="flex flex-col gap-4 rounded-2xl border bg-card p-6 shadow-sm">
-                <div className="flex items-start justify-between gap-3">
-                    <div>
-                        <h2 className="text-lg font-semibold">QR wallet</h2>
-                        <p className="text-sm text-muted-foreground">Counter QR payments land here, less the provider's charge.</p>
-                    </div>
-                    <div className={`rounded-xl p-2.5 ${SILVER_TILE}`}><Wallet className="h-5 w-5" /></div>
+        <section className="flex flex-col gap-4 rounded-2xl border bg-card p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+                <div>
+                    <h2 className="text-lg font-semibold">QR wallet</h2>
+                    <p className="text-sm text-muted-foreground">Counter QR payments land here, less the provider's charge.</p>
                 </div>
-                <p className="text-4xl font-bold tracking-tight tabular-nums">₹{qrBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-foreground">Amount</label>
-                        <div className="relative">
-                            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 font-semibold text-muted-foreground">₹</span>
-                            <input inputMode="decimal" className={`${INPUT} pl-8 tabular-nums`} value={move.amount} onChange={(e) => setMove({ ...move, amount: e.target.value.replace(/[^\d.]/g, '') })} />
-                        </div>
-                        <button type="button" onClick={() => setMove({ ...move, amount: String(qrBalance) })} className="self-start text-xs font-semibold text-muted-foreground hover:text-foreground">Use full balance</button>
+                <div className={`rounded-xl p-2.5 ${SILVER_TILE}`}><Wallet className="h-5 w-5" /></div>
+            </div>
+            <p className="text-4xl font-bold tracking-tight tabular-nums">₹{qrBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-foreground">Amount</label>
+                    <div className="relative">
+                        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 font-semibold text-muted-foreground">₹</span>
+                        <input inputMode="decimal" className={`${INPUT} pl-8 tabular-nums`} value={move.amount} onChange={(e) => setMove({ ...move, amount: e.target.value.replace(/[^\d.]/g, '') })} />
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-foreground">Wallet PIN</label>
-                        <div className="relative">
-                            <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <input type="password" inputMode="numeric" autoComplete="off" className={`${INPUT} pl-10 tracking-[0.4em]`} value={move.pin} onChange={(e) => setMove({ ...move, pin: e.target.value.replace(/\D/g, '').slice(0, 4) })} />
-                        </div>
+                    <button type="button" onClick={() => setMove({ ...move, amount: String(qrBalance) })} className="self-start text-xs font-semibold text-muted-foreground hover:text-foreground">Use full balance</button>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-foreground">Wallet PIN</label>
+                    <div className="relative">
+                        <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <input type="password" inputMode="numeric" autoComplete="off" className={`${INPUT} pl-10 tracking-[0.4em]`} value={move.pin} onChange={(e) => setMove({ ...move, pin: e.target.value.replace(/\D/g, '').slice(0, 4) })} />
                     </div>
                 </div>
-                <button onClick={moveToMain} disabled={moving || qrBalance <= 0} className={`mt-auto flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold disabled:opacity-50 ${ACTIVE_BUTTON}`}>
-                    {moving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Landmark className="h-5 w-5" />}
-                    {moving ? 'Moving...' : 'Move to main wallet'}
-                    {!moving && <ArrowRight className="h-4 w-4" />}
-                </button>
-            </section>
-        </div>
+            </div>
+            <button onClick={moveToMain} disabled={moving || qrBalance <= 0} className={`mt-auto flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold disabled:opacity-50 ${ACTIVE_BUTTON}`}>
+                {moving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Landmark className="h-5 w-5" />}
+                {moving ? 'Moving...' : 'Move to main wallet'}
+                {!moving && <ArrowRight className="h-4 w-4" />}
+            </button>
+        </section>
     );
 };
 
