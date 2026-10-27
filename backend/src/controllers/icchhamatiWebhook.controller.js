@@ -1,10 +1,13 @@
 import Transaction from '../models/transaction.model.js';
 import { collectionWebhook } from './collect.controller.js';
+import { hasCallbackKey } from '../utils/callbackKey.js';
 
 // Icchhamati's panel holds exactly ONE callback URL for the whole account
 // (Settings -> Callback URL); events are told apart by `type` in the body: the
 // PAN webhooks and `vpa_transaction` (a counter-QR payment). Any other type is
-// acknowledged and ignored. Every type authenticates with mid/mkey headers.
+// acknowledged and ignored. A callback is accepted with our mid/mkey headers or
+// with ICCHHAMATI_CALLBACK_KEY as `?key=` on the URL saved in their panel: the
+// QR callback was seen arriving without the headers.
 
 // Their documented reply shape. Anything else and they keep retrying.
 const ack = (res, message) => res.status(200).json({ status: 1, message });
@@ -116,7 +119,10 @@ export const icchhamatiWebhook = async (req, res) => {
   }
 
   // Checked before any handler: a QR callback credits a wallet on its say-so.
-  if (!isAuthorisedPanWebhook(req)) {
+  if (!isAuthorisedPanWebhook(req) && !hasCallbackKey(req, 'ICCHHAMATI_CALLBACK_KEY')) {
+    // Names only, never values: enough to see how Icchhamati identifies itself.
+    console.warn('[Icchhamati Webhook] Refused, headers:', Object.keys(req.headers || {}).join(','),
+      'query:', Object.keys(req.query || {}).join(','), 'body:', JSON.stringify(req.body));
     return res.status(401).json({ status: 0, message: 'Invalid mid/mkey' });
   }
   if (!panHandler) return collectionWebhook(req, res);

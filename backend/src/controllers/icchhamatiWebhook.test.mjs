@@ -95,6 +95,14 @@ process.env.ICCHHAMATI_MID = 'MID_1001';
   await icchhamatiWebhook(req({ headers: { mkey: 'wrong' }, body: { type: 'vpa_transaction', data: {} } }), r);
   assert.strictEqual(r.captured.code, 401);
 }
+// The key on the callback URL stands in for the headers.
+process.env.ICCHHAMATI_CALLBACK_KEY = 'cb-key-123';
+for (const [key, code] of [['cb-key-123', 400], ['wrong-key', 401]]) {
+  const r = res();
+  await icchhamatiWebhook(req({ headers: { mid: '', mkey: '' }, query: { key }, body: { type: 'vpa_transaction', data: {} } }), r);
+  assert.strictEqual(r.captured.code, code, `key ${key}`);
+}
+
 // With them it is handed over; an empty one is rejected there as incomplete.
 {
   const r = res();
