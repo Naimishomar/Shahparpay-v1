@@ -192,6 +192,7 @@ const retailerSchema = new mongoose.Schema(
       upiHandle: { type: String, default: null },
       virtualAccountNumber: { type: String, default: null },
       qrImage: { type: String, default: null },
+      qrPdf: { type: String, default: null },
       name: { type: String, default: null },
       accountNumber: { type: String, default: null },
       ifsc: { type: String, default: null },

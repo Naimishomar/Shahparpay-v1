@@ -180,101 +180,87 @@ const Collect = () => {
             </section>
 
             <div className="grid gap-6 lg:grid-cols-2">
-                {/* New request */}
-                <section className="flex flex-col gap-4 rounded-2xl border bg-card p-6 shadow-sm">
-                    <h2 className="text-lg font-semibold">New Payment Request</h2>
-                    {fields.map(({ key, label, icon: Icon, type, placeholder, clean }) => (
-                        <div key={key} className="flex flex-col gap-1.5">
-                            <label className="text-sm font-medium text-foreground">{label}</label>
-                            <div className="relative">
-                                <Icon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                <input type={type} className={`${INPUT} pl-10`} placeholder={placeholder} value={form[key]} onChange={e => setForm({ ...form, [key]: clean(e.target.value) })} />
-                            </div>
-                        </div>
-                    ))}
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-foreground">Amount</label>
-                        <div className="relative">
-                            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-semibold text-muted-foreground">₹</span>
-                            <input type="text" inputMode="numeric" className={`${INPUT} pl-8 text-lg font-semibold tabular-nums`} value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value.replace(/\D/g, '') })} placeholder="Minimum ₹200" />
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {[200, 500, 1000, 2000, 5000].map((v) => (
-                                <button
-                                    key={v}
-                                    type="button"
-                                    onClick={() => setForm({ ...form, amount: String(v) })}
-                                    className={`rounded-full border px-3 py-1 text-xs font-semibold tabular-nums transition-all ${form.amount === String(v) ? `${ACTIVE_BUTTON} border-transparent` : 'bg-background hover:bg-black/5 dark:hover:bg-white/5'}`}
-                                >
-                                    ₹{v.toLocaleString('en-IN')}
-                                </button>
+                {/* New request: the form, and beside it the link's QR once created */}
+                <section className="rounded-2xl border bg-card p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold">New Payment Request</h2>
+                    <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_200px]">
+                        <div className="flex min-w-0 flex-col gap-3">
+                            {fields.map(({ key, label, icon: Icon, type, placeholder, clean }) => (
+                                <div key={key} className="flex flex-col gap-1.5">
+                                    <label className="text-sm font-medium text-foreground">{label}</label>
+                                    <div className="relative">
+                                        <Icon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                        <input type={type} className={`${INPUT} pl-10`} placeholder={placeholder} value={form[key]} onChange={e => setForm({ ...form, [key]: clean(e.target.value) })} />
+                                    </div>
+                                </div>
                             ))}
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-sm font-medium text-foreground">Amount</label>
+                                <div className="relative">
+                                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-semibold text-muted-foreground">₹</span>
+                                    <input type="text" inputMode="numeric" className={`${INPUT} pl-8 text-lg font-semibold tabular-nums`} value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value.replace(/\D/g, '') })} placeholder="Minimum ₹200" />
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {[200, 500, 1000, 2000, 5000].map((v) => (
+                                        <button
+                                            key={v}
+                                            type="button"
+                                            onClick={() => setForm({ ...form, amount: String(v) })}
+                                            className={`rounded-full border px-2.5 py-1 text-xs font-semibold tabular-nums transition-all ${form.amount === String(v) ? `${ACTIVE_BUTTON} border-transparent` : 'bg-background hover:bg-black/5 dark:hover:bg-white/5'}`}
+                                        >
+                                            ₹{v.toLocaleString('en-IN')}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <button onClick={createOrder} disabled={loading} className={`mt-1 flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold disabled:opacity-50 disabled:shadow-none ${ACTIVE_BUTTON}`}>
+                                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Link2 className="h-5 w-5" />}
+                                {loading ? 'Creating...' : 'Create Payment Link'}
+                            </button>
                         </div>
-                    </div>
 
-                    <button onClick={createOrder} disabled={loading} className={`mt-2 flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold disabled:opacity-50 disabled:shadow-none ${ACTIVE_BUTTON}`}>
-                        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Link2 className="h-5 w-5" />}
-                        {loading ? 'Creating...' : 'Create Payment Link'}
-                    </button>
+                        {order ? (
+                            <div className="flex flex-col items-center gap-3 rounded-2xl border bg-background/50 p-4 text-center">
+                                {order.paymentUrl && (
+                                    <div className="rounded-xl bg-white p-2 shadow-sm">
+                                        <QRCodeSVG value={order.paymentUrl} size={148} />
+                                    </div>
+                                )}
+                                <p className="text-2xl font-bold tracking-tight tabular-nums">₹{Number(order.amount).toLocaleString('en-IN')}</p>
+                                {statusChip(order.status)}
+                                <p className="w-full truncate font-mono text-[11px] text-muted-foreground">Order {order.orderId}</p>
+                                <div className="grid w-full gap-2">
+                                    <button onClick={copyLink} className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold ${ACTIVE_BUTTON}`}>
+                                        {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                                        {copied ? 'Copied' : 'Copy link'}
+                                    </button>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <a href={order.paymentUrl} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-medium hover:bg-black/5 dark:hover:bg-white/5">
+                                            <ExternalLink className="h-3.5 w-3.5" /> Open
+                                        </a>
+                                        <button onClick={() => verify(order.transactionId)} disabled={verifying} className="flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-medium hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50">
+                                            <RefreshCw className={`h-3.5 w-3.5 ${verifying ? 'animate-spin' : ''}`} /> Status
+                                        </button>
+                                    </div>
+                                </div>
+                                <p className="flex items-start gap-1 text-left text-[11px] text-muted-foreground">
+                                    <ShieldCheck className="mt-px h-3.5 w-3.5 shrink-0" />
+                                    Credited only once the gateway confirms it.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed p-4 text-center">
+                                <div className={`mb-3 rounded-2xl p-3 ${SILVER_TILE}`}>
+                                    <QrCode className="h-7 w-7" />
+                                </div>
+                                <p className="text-sm font-semibold">No active request</p>
+                                <p className="mt-1 text-xs text-muted-foreground">The payment link and its QR appear here.</p>
+                            </div>
+                        )}
+                    </div>
                 </section>
 
                 <CounterQr api={api} getHeaders={getHeaders} />
-
-                {/* Active request */}
-                <section className="rounded-2xl border bg-card p-6 shadow-sm">
-                    {order ? (
-                        <div className="flex flex-col gap-4">
-                            <div className="relative overflow-hidden rounded-2xl hero-panel p-5">
-                                <div aria-hidden className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-[#F47920]/25 blur-2xl" />
-                                <div className="relative flex items-start justify-between gap-4">
-                                    <div className="min-w-0">
-                                        <p className="text-xs uppercase tracking-wider opacity-70">Payment request</p>
-                                        <p className="mt-1 text-4xl font-bold tracking-tight tabular-nums">₹{Number(order.amount).toLocaleString('en-IN')}</p>
-                                        <p className="mt-2 truncate font-mono text-xs opacity-70">Order {order.orderId}</p>
-                                        <div className="mt-3">{statusChip(order.status)}</div>
-                                    </div>
-                                    {order.paymentUrl && (
-                                        <div className="shrink-0 rounded-xl bg-white p-2 shadow-md">
-                                            <QRCodeSVG value={order.paymentUrl} size={112} />
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            <p className="text-center text-xs text-muted-foreground">The customer can scan the QR or open the link you send.</p>
-
-                            <div className="flex items-center gap-2 rounded-xl border bg-background/50 p-2 pl-3">
-                                <p className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">{order.paymentUrl}</p>
-                                <button onClick={copyLink} className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold ${ACTIVE_BUTTON}`}>
-                                    {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                                    {copied ? 'Copied' : 'Copy'}
-                                </button>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <a href={order.paymentUrl} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 rounded-xl border py-2.5 font-medium hover:bg-black/5 dark:hover:bg-white/5">
-                                    <ExternalLink className="w-4 h-4" /> Open
-                                </a>
-                                <button onClick={() => verify(order.transactionId)} disabled={verifying} className="flex items-center justify-center gap-2 rounded-xl border py-2.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50">
-                                    <RefreshCw className={`w-4 h-4 ${verifying ? 'animate-spin' : ''}`} />
-                                    {verifying ? 'Checking...' : 'Check Status'}
-                                </button>
-                            </div>
-
-                            <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                                <ShieldCheck className="h-3.5 w-3.5" />
-                                Your wallet is credited only once the gateway confirms the payment.
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="flex h-full min-h-[320px] flex-col items-center justify-center text-center">
-                            <div className={`mb-4 rounded-2xl p-4 ${SILVER_TILE}`}>
-                                <QrCode className="h-8 w-8" />
-                            </div>
-                            <h3 className="mb-1 text-lg font-semibold">No active request</h3>
-                            <p className="max-w-xs text-sm text-muted-foreground">Fill in the customer's details to create a payment link and QR you can share.</p>
-                        </div>
-                    )}
-                </section>
 
                 <QrWallet getHeaders={getHeaders} history={history} />
             </div>
@@ -339,6 +325,23 @@ const Collect = () => {
 
 type Qr = { virtualAccountId: string; upiHandle: string | null; qrImage: string | null; name: string | null; qrPdf?: string | null };
 
+/**
+ * Saves a file the browser would otherwise just open: `download` is ignored on
+ * a cross-origin link such as the provider's S3 QR, so it is fetched first.
+ * If the host refuses the fetch, the file opens in a new tab to save from there.
+ */
+const saveFile = async (url: string, name: string) => {
+    try {
+        const blob = await (await fetch(url)).blob();
+        const href = URL.createObjectURL(blob);
+        const a = Object.assign(document.createElement('a'), { href, download: name });
+        a.click();
+        URL.revokeObjectURL(href);
+    } catch {
+        window.open(url, '_blank', 'noopener');
+    }
+};
+
 /** The retailer's standing counter QR. */
 const CounterQr = ({ api, getHeaders }: { api: string; getHeaders: () => object }) => {
     const { user } = useAuth();
@@ -383,16 +386,16 @@ const CounterQr = ({ api, getHeaders }: { api: string; getHeaders: () => object 
                     {qr.qrImage && <img src={qr.qrImage} alt="Your UPI QR code" className="w-56 rounded-xl border bg-white p-2" />}
                     {qr.upiHandle && <p className="break-all font-mono text-sm font-medium">{qr.upiHandle}</p>}
                     <p className="text-xs text-muted-foreground">Virtual account {qr.virtualAccountId}</p>
-                    <div className="grid w-full grid-cols-2 gap-3">
+                    <div className="flex flex-wrap justify-center gap-3">
                         {qr.qrImage && (
-                            <a href={qr.qrImage} download="shahparpay-qr.png" className="flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5">
-                                <Download className="h-4 w-4" /> Image
-                            </a>
+                            <button type="button" onClick={() => saveFile(qr.qrImage!, 'shahparpay-qr.png')} className="flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5">
+                                <Download className="h-4 w-4" /> Download QR
+                            </button>
                         )}
                         {qr.qrPdf && (
-                            <a href={qr.qrPdf} download="shahparpay-qr.pdf" className="flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5">
+                            <button type="button" onClick={() => saveFile(qr.qrPdf!, 'shahparpay-qr.pdf')} className="flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5">
                                 <Download className="h-4 w-4" /> Printable PDF
-                            </a>
+                            </button>
                         )}
                     </div>
                 </div>
@@ -466,16 +469,18 @@ const QrWallet = ({ getHeaders, history }: { getHeaders: () => object; history: 
     };
 
     return (
-        <section className="flex flex-col gap-4 rounded-2xl border bg-card p-6 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-                <div>
-                    <h2 className="text-lg font-semibold">QR wallet</h2>
-                    <p className="text-sm text-muted-foreground">Counter QR payments land here, less the provider's charge.</p>
+        <section className="grid gap-6 rounded-2xl border bg-card p-6 shadow-sm lg:col-span-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:items-end">
+            <div className="flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-3">
+                    <div>
+                        <h2 className="text-lg font-semibold">QR wallet</h2>
+                        <p className="text-sm text-muted-foreground">Counter QR payments land here, less the provider's charge.</p>
+                    </div>
+                    <div className={`rounded-xl p-2.5 ${SILVER_TILE}`}><Wallet className="h-5 w-5" /></div>
                 </div>
-                <div className={`rounded-xl p-2.5 ${SILVER_TILE}`}><Wallet className="h-5 w-5" /></div>
+                <p className="text-4xl font-bold tracking-tight tabular-nums">₹{qrBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
-            <p className="text-4xl font-bold tracking-tight tabular-nums">₹{qrBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-start">
                 <div className="flex flex-col gap-1.5">
                     <label className="text-sm font-medium text-foreground">Amount</label>
                     <div className="relative">
@@ -491,12 +496,12 @@ const QrWallet = ({ getHeaders, history }: { getHeaders: () => object; history: 
                         <input type="password" inputMode="numeric" autoComplete="off" className={`${INPUT} pl-10 tracking-[0.4em]`} value={move.pin} onChange={(e) => setMove({ ...move, pin: e.target.value.replace(/\D/g, '').slice(0, 4) })} />
                     </div>
                 </div>
+                <button onClick={moveToMain} disabled={moving || qrBalance <= 0} className={`flex items-center justify-center gap-2 whitespace-nowrap rounded-xl px-5 py-2.5 font-bold disabled:opacity-50 sm:mt-[26px] ${ACTIVE_BUTTON}`}>
+                    {moving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Landmark className="h-5 w-5" />}
+                    {moving ? 'Moving...' : 'Move to main wallet'}
+                    {!moving && <ArrowRight className="h-4 w-4" />}
+                </button>
             </div>
-            <button onClick={moveToMain} disabled={moving || qrBalance <= 0} className={`mt-auto flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold disabled:opacity-50 ${ACTIVE_BUTTON}`}>
-                {moving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Landmark className="h-5 w-5" />}
-                {moving ? 'Moving...' : 'Move to main wallet'}
-                {!moving && <ArrowRight className="h-4 w-4" />}
-            </button>
         </section>
     );
 };

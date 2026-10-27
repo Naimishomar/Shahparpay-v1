@@ -330,6 +330,8 @@ const qrView = (qr) => ({
   virtualAccountId: qr.virtualAccountId,
   upiHandle: qr.upiHandle || null,
   qrImage: qr.qrImage || null,
+  // QRs saved before the PDF was kept: the provider names it after the image.
+  qrPdf: qr.qrPdf || (qr.qrImage?.endsWith('.png') ? qr.qrImage.replace(/\.png$/, '.pdf') : null),
   name: qr.name || null,
   generatedAt: qr.generatedAt || null,
 });
@@ -388,6 +390,7 @@ export const generateQr = async (req, res) => {
       upiHandle: qr.virtual_upi_handle || null,
       virtualAccountNumber: qr.virtual_account_number || null,
       qrImage: qr.qrcode_image || null,
+      qrPdf: qr.qrcode_pdf || null,
       name,
       accountNumber,
       ifsc,
@@ -398,7 +401,7 @@ export const generateQr = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: providerMessage(data, 'QR code generated.'),
-      data: { ...qrView(collectionQr), qrPdf: qr.qrcode_pdf || null },
+      data: qrView(collectionQr),
     });
   } catch (error) {
     console.error('Generate QR Error:', error?.response?.data || error?.message);
