@@ -121,6 +121,19 @@ const Collect = () => {
         }
     };
 
+    // Brings an earlier link back into the request card, to share or check again.
+    const showOrder = (row: any) => {
+        setOrder({
+            transactionId: row.transactionId,
+            orderId: row.metadata?.orderId || row.transactionId,
+            paymentUrl: row.metadata.paymentUrl,
+            amount: row.amount,
+            status: row.status,
+        });
+        setCopied(false);
+        document.getElementById('payment-request')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
     const copyLink = async () => {
         if (!order?.paymentUrl) return;
         await navigator.clipboard.writeText(order.paymentUrl);
@@ -181,7 +194,7 @@ const Collect = () => {
 
             <div className="grid gap-6 lg:grid-cols-2">
                 {/* New request: the form, and beside it the link's QR once created */}
-                <section className="rounded-2xl border bg-card p-6 shadow-sm">
+                <section id="payment-request" className="scroll-mt-24 rounded-2xl border bg-card p-6 shadow-sm">
                     <h2 className="mb-4 text-lg font-semibold">New Payment Request</h2>
                     <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_200px]">
                         <div className="flex min-w-0 flex-col gap-3">
@@ -298,10 +311,16 @@ const Collect = () => {
                                         <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{new Date(row.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}</td>
                                         <td className="px-4 py-3 font-medium">{row.metadata?.payerName || row.metadata?.remitterName || '—'}</td>
                                         <td className="px-4 py-3">
-                                            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                                                {row.metadata?.collectionChannel === 'QR' ? <QrCode className="h-3 w-3" /> : <Link2 className="h-3 w-3" />}
-                                                {row.metadata?.collectionChannel === 'QR' ? 'QR' : 'Link'}
-                                            </span>
+                                            {row.metadata?.paymentUrl ? (
+                                                <button type="button" onClick={() => showOrder(row)} title="Show this link and its QR" className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium text-muted-foreground transition hover:border-foreground/40 hover:text-foreground">
+                                                    <Link2 className="h-3 w-3" /> Link
+                                                </button>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                                    {row.metadata?.collectionChannel === 'QR' ? <QrCode className="h-3 w-3" /> : <Link2 className="h-3 w-3" />}
+                                                    {row.metadata?.collectionChannel === 'QR' ? 'QR' : 'Link'}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 font-semibold tabular-nums">₹ {row.amount}</td>
                                         <td className="px-4 py-3">{statusChip(row.status)}</td>
