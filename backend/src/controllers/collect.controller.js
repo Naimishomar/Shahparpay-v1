@@ -6,6 +6,8 @@ import {
 } from '../utils/icchhamati.util.js';
 import Transaction from '../models/transaction.model.js';
 import MainWallet from '../models/mainWallet.model.js';
+import QrWallet from '../models/qrWallet.model.js';
+import Retailer from '../models/users/retailer.model.js';
 
 /**
  * Collecting money from a customer through the payment gateway: the retailer
@@ -314,5 +316,179 @@ export const getCollectionHistory = async (req, res) => {
   } catch (error) {
     console.error('Collection History Error:', error);
     return res.status(500).json({ success: false, message: 'Failed to fetch collections' });
+  }
+};
+
+// --- Counter QR -------------------------------------------------------------
+//
+// Icchhamati issues a virtual account QR; a customer's payment into it settles
+// into the platform's Icchhamati wallet, less their service charge, and
+// arrives as a `vpa_transaction` callback. The retailer is credited that net
+// amount in their QR wallet, which they move to Main themselves.
+
+const qrView = (qr) => ({
+  virtualAccountId: qr.virtualAccountId,
+  upiHandle: qr.upiHandle || null,
+  qrImage: qr.qrImage || null,
+  name: qr.name || null,
+  generatedAt: qr.generatedAt || null,
+});
+
+/** GET /qr — the retailer's QR, if one was generated. */
+export const getQr = async (req, res) => {
+  try {
+    const retailer = await Retailer.findById(req.user.id).select('collectionQr');
+    const qr = retailer?.collectionQr;
+    return res.status(200).json({ success: true, data: qr?.virtualAccountId ? qrView(qr) : null });
+  } catch (error) {
+    console.error('Get QR Error:', error?.message);
+    return res.status(500).json({ success: false, message: 'Failed to load the QR code' });
+  }
+};
+
+/** POST /qr — generates the retailer's standing UPI QR via /api/v2/generate-qr. */
+export const generateQr = async (req, res) => {
+  try {
+    // The callback finds a payment's owner on the Retailer collection, so only
+    // a retailer can own a QR: anyone else's would collect money nobody is credited.
+    if (req.user.role !== 'retailer') {
+      return res.status(403).json({ success: false, message: 'A collection QR can only be generated for a retailer account.' });
+    }
+    const name = String(req.body?.name ?? '').trim();
+    const accountNumber = String(req.body?.account_number ?? '').replace(/\D/g, '');
+    const ifsc = String(req.body?.account_ifsc ?? '').trim().toUpperCase();
+    if (!name || !accountNumber || !ifsc) {
+      return res.status(400).json({ success: false, message: 'Account holder name, account number and IFSC are required' });
+    }
+    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) {
+      return res.status(400).json({ success: false, message: 'Enter a valid IFSC code' });
+    }
+
+    const data = await icchhamatiPost('/api/v2/generate-qr', { name, account_number: accountNumber, account_ifsc: ifsc });
+    if (!isOk(data)) {
+      return res.status(400).json({ success: false, message: providerMessage(data, 'Could not generate the QR code.') });
+    }
+    const qr = data.data || {};
+    const virtualAccountId = String(qr.virtual_account_id ?? '').trim();
+    // Without a virtual account id no payment could ever be matched to this retailer.
+    if (!virtualAccountId) {
+      console.error('Generate QR: provider returned no virtual account id', JSON.stringify(data));
+      return res.status(502).json({ success: false, message: 'The provider did not return a usable QR. Please try again.' });
+    }
+    // A virtual account already mapped to another retailer would pay them for
+    // this retailer's customers, so it is never handed out twice.
+    const taken = await Retailer.exists({ _id: { $ne: req.user.id }, 'collectionQr.virtualAccountId': virtualAccountId });
+    if (taken) {
+      console.error(`Generate QR: virtual account ${virtualAccountId} already belongs to another retailer`);
+      return res.status(409).json({ success: false, message: 'The provider returned a QR that is already in use. Please contact support.' });
+    }
+
+    const collectionQr = {
+      virtualAccountId,
+      upiHandle: qr.virtual_upi_handle || null,
+      virtualAccountNumber: qr.virtual_account_number || null,
+      qrImage: qr.qrcode_image || null,
+      name,
+      accountNumber,
+      ifsc,
+      generatedAt: new Date(),
+      settlement: 'ICCHHAMATI_MAIN_WALLET',
+    };
+    await Retailer.updateOne({ _id: req.user.id }, { $set: { collectionQr } });
+    return res.status(200).json({
+      success: true,
+      message: providerMessage(data, 'QR code generated.'),
+      data: { ...qrView(collectionQr), qrPdf: qr.qrcode_pdf || null },
+    });
+  } catch (error) {
+    console.error('Generate QR Error:', error?.response?.data || error?.message);
+    return res.status(502).json({ success: false, message: 'Failed to generate the QR code' });
+  }
+};
+
+const money = (value) => Math.round(Number(value) * 100) / 100;
+
+/**
+ * A `vpa_transaction` callback: credits the QR's owner, once per provider
+ * transaction, with what actually reached the platform's wallet (amount less
+ * service_charge_with_gst). Reached through the shared Icchhamati callback,
+ * which has already checked the mid/mkey headers.
+ */
+export const collectionWebhook = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const data = body.data || {};
+    const status = normaliseStatus(data.status ?? body.status);
+    const accountIds = [...new Set([data.vpa_account_id, data.vpa_id]
+      .map((value) => String(value ?? '').trim()).filter(Boolean))];
+    const providerTxnId = String(data.txn_id ?? data.utr ?? '').trim();
+    const amount = money(data.amount);
+    const charge = money(data.service_charge_with_gst) || 0;
+    const credit = money(amount - charge);
+
+    if (!accountIds.length || !providerTxnId || !(amount > 0)) {
+      return res.status(400).json({ success: false, message: 'Incomplete QR payment notification' });
+    }
+    // Well-formed but not money: acknowledged so Icchhamati stops retrying.
+    if (status !== 'SUCCESS') {
+      console.warn(`[QR Webhook] ${providerTxnId} reported ${data.status}; nothing credited.`);
+      return res.status(200).json({ status: 1, message: 'Success', credited: false });
+    }
+
+    // generate-qr answers with three ids for one QR; which of them the callback
+    // carries in vpa_account_id is not documented, so any of the three matches.
+    const owners = await Retailer.find({
+      $or: ['virtualAccountId', 'upiHandle', 'virtualAccountNumber']
+        .map((field) => ({ [`collectionQr.${field}`]: { $in: accountIds } })),
+    }).select('_id').limit(2);
+    if (owners.length !== 1) {
+      console.error(`[QR Webhook] ${providerTxnId}: virtual account ${accountIds.join('/')} has ${owners.length ? 'several owners' : 'no owner'}; nothing credited.`);
+      return res.status(owners.length ? 409 : 404).json({ success: false, message: 'QR virtual account is not mapped to exactly one retailer' });
+    }
+    if (!(credit > 0)) {
+      console.error(`[QR Webhook] ${providerTxnId}: charge ${charge} leaves nothing to credit on ${amount}.`);
+      return res.status(200).json({ status: 1, message: 'Success', credited: false });
+    }
+    const userId = owners[0]._id;
+
+    // Inserted once per provider transaction: a retried callback finds the row
+    // already there (the update returns it) and credits nothing.
+    const transactionId = `QR_${providerTxnId}`;
+    const existing = await Transaction.findOneAndUpdate(
+      { transactionId },
+      {
+        $setOnInsert: {
+          transactionId,
+          userId,
+          type: 'PG_COLLECTION',
+          amount: credit,
+          status: 'SUCCESS',
+          commissions: { chargeDeducted: charge },
+          metadata: {
+            provider: 'ICCHHAMATI',
+            collectionChannel: 'QR',
+            virtualAccountId: accountIds[0],
+            providerTxnId,
+            grossAmount: amount,
+            utr: data.utr || null,
+            paymentMode: data.payment_mode || null,
+            remitterName: data.remitter_full_name || null,
+          },
+        },
+      },
+      { upsert: true, new: false, setDefaultsOnInsert: true }
+    );
+    if (!existing) {
+      await QrWallet.findOneAndUpdate(
+        { userId },
+        { $inc: { balance: credit }, $setOnInsert: { userModel: 'Retailer' } },
+        { upsert: true, setDefaultsOnInsert: true }
+      );
+    }
+    // `status: 1` is Icchhamati's documented acknowledgement; anything else is retried.
+    return res.status(200).json({ status: 1, message: 'Success', transactionId, credited: !existing });
+  } catch (error) {
+    console.error('QR Webhook Error:', error?.message);
+    return res.status(500).json({ success: false, message: 'QR payment reconciliation failed' });
   }
 };

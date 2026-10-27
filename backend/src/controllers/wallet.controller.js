@@ -1,9 +1,12 @@
 import AepsWallet from '../models/aepsWallet.model.js';
 import MainWallet from '../models/mainWallet.model.js';
+import QrWallet from '../models/qrWallet.model.js';
 import AdminWallet from '../models/adminWallet.model.js';
 import Transaction from '../models/transaction.model.js';
 import bcrypt from 'bcrypt';
 import Otp from '../models/otp.model.js';
+import { transferBetweenWallets } from '../utils/wallet.util.js';
+import { checkWalletPin } from '../utils/walletPin.js';
 
 // Helper to initialize wallets if they don't exist
 const initializeWallets = async (userId, userModel) => {
@@ -38,12 +41,14 @@ export const getBalances = async (req, res) => {
     const userModel = req.user.role === 'distributor' ? 'Distributor' : 'Retailer';
 
     const { aepsWallet, mainWallet } = await initializeWallets(userId, userModel);
+    const qrWallet = await QrWallet.findOne({ userId }).select('balance');
 
     return res.status(200).json({
       success: true,
       data: {
         aepsBalance: aepsWallet.balance,
         mainBalance: mainWallet.balance,
+        qrBalance: qrWallet?.balance ?? 0,
         hasPin: !!aepsWallet.pin,
       },
     });
@@ -123,6 +128,46 @@ export const changePin = async (req, res) => {
     return res.status(200).json({ success: true, message: 'PIN changed successfully.' });
   } catch (error) {
     console.error('Change PIN error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+/**
+ * Moves counter-QR collections to the Main wallet, behind the wallet PIN.
+ * @route POST /api/wallet/transfer
+ */
+export const transferQrToMain = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    if (req.user.role !== 'retailer') {
+      return res.status(403).json({ success: false, message: 'Only retailers can transfer wallet balance.' });
+    }
+    const amount = Math.round(Number(req.body?.amount) * 100) / 100;
+    if (!(amount > 0)) {
+      return res.status(400).json({ success: false, message: 'Invalid transfer amount.' });
+    }
+    if (!req.body?.pin) {
+      return res.status(400).json({ success: false, message: 'Transaction PIN is required.' });
+    }
+    const pinError = await checkWalletPin(await AepsWallet.findOne({ userId }), req.body.pin);
+    if (pinError) return res.status(pinError.status).json({ success: false, message: pinError.message });
+
+    let transaction;
+    try {
+      transaction = await transferBetweenWallets(userId, 'QR', 'MAIN', amount, {
+        transactionId: `QRM${Date.now()}${Math.floor(Math.random() * 1000)}`,
+        userId,
+        type: 'QRTO_MAIN',
+        amount,
+        status: 'SUCCESS',
+        metadata: { operator: 'QRTO_MAIN', source: 'LOCAL_WALLET_TRANSFER' },
+      });
+    } catch (error) {
+      return res.status(400).json({ success: false, message: error.message || 'Wallet transfer failed.' });
+    }
+    return res.status(200).json({ success: true, message: 'Moved to your main wallet.', transaction });
+  } catch (error) {
+    console.error('QR transfer error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

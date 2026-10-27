@@ -1,9 +1,10 @@
 import Transaction from '../models/transaction.model.js';
+import { collectionWebhook } from './collect.controller.js';
 
 // Icchhamati's panel holds exactly ONE callback URL for the whole account
-// (Settings -> Callback URL); PAN webhooks are told apart by `type` in the body.
-// The QR collection service is retired, so any other type is acknowledged and
-// ignored.
+// (Settings -> Callback URL); events are told apart by `type` in the body: the
+// PAN webhooks and `vpa_transaction` (a counter-QR payment). Any other type is
+// acknowledged and ignored. Every type authenticates with mid/mkey headers.
 
 // Their documented reply shape. Anything else and they keep retrying.
 const ack = (res, message) => res.status(200).json({ status: 1, message });
@@ -109,16 +110,16 @@ export const icchhamatiWebhook = async (req, res) => {
   const type = req.body?.type;
   const panHandler = PAN_WEBHOOK_HANDLERS[type];
 
-  // Acknowledged so Icchhamati stops retrying, but nothing is credited: QR
-  // collections (`vpa_transaction`) no longer have a wallet to land in.
-  if (!panHandler) {
+  if (!panHandler && type !== 'vpa_transaction') {
     console.warn('[Icchhamati Webhook] Ignoring unhandled type:', type, JSON.stringify(req.body));
     return ack(res, 'Ignored');
   }
 
+  // Checked before any handler: a QR callback credits a wallet on its say-so.
   if (!isAuthorisedPanWebhook(req)) {
     return res.status(401).json({ status: 0, message: 'Invalid mid/mkey' });
   }
+  if (!panHandler) return collectionWebhook(req, res);
 
   try {
     const problem = await panHandler(req.body?.data || {});

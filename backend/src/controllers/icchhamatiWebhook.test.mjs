@@ -88,11 +88,25 @@ process.env.ICCHHAMATI_MID = 'MID_1001';
   assert.strictEqual(r.captured.payload.message, 'vle_id and application_no are required');
 }
 
-// QR collections are retired: anything that is not a PAN type is acknowledged
-// (so Icchhamati stops retrying) and ignored.
-for (const body of [{ type: 'vpa_transaction', data: {} }, { status: 'SUCCESS', amount: 100 }]) {
+// A QR payment (`vpa_transaction`) reaches the collection handler only with the
+// right mid/mkey: without them it is refused before anything can be credited.
+{
   const r = res();
-  await icchhamatiWebhook(req({ body }), r);
+  await icchhamatiWebhook(req({ headers: { mkey: 'wrong' }, body: { type: 'vpa_transaction', data: {} } }), r);
+  assert.strictEqual(r.captured.code, 401);
+}
+// With them it is handed over; an empty one is rejected there as incomplete.
+{
+  const r = res();
+  await icchhamatiWebhook(req({ body: { type: 'vpa_transaction', data: {} } }), r);
+  assert.strictEqual(r.captured.code, 400);
+  assert.strictEqual(r.captured.payload.message, 'Incomplete QR payment notification');
+}
+
+// Any other type is acknowledged (so Icchhamati stops retrying) and ignored.
+{
+  const r = res();
+  await icchhamatiWebhook(req({ body: { status: 'SUCCESS', amount: 100 } }), r);
   assert.strictEqual(r.captured.code, 200);
   assert.strictEqual(r.captured.payload.message, 'Ignored');
 }

@@ -702,6 +702,20 @@ class ApiService {
     return this.get(API_ENDPOINTS.collect.history);
   }
 
+  /** The retailer's standing counter QR, or null before one is generated. */
+  async getCollectionQr() {
+    return this.get(API_ENDPOINTS.collect.qr);
+  }
+
+  async generateCollectionQr(data: { name: string; account_number: string; account_ifsc: string }) {
+    return this.post(API_ENDPOINTS.collect.qr, data);
+  }
+
+  /** QR wallet -> Main wallet, behind the wallet PIN. */
+  async transferQrToMain(data: { amount: number; pin: string }) {
+    return this.post(API_ENDPOINTS.wallet.transfer, data);
+  }
+
   // --------------------------------------------------------------- TOP-UP
   /** Mints a single-use Razorpay UPI QR for a wallet top-up. */
   async createTopupQr(amount: number) {

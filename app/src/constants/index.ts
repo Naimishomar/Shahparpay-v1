@@ -229,6 +229,7 @@ export const API_ENDPOINTS = {
     balance: '/api/wallet/balance',
     setPin: '/api/wallet/set-pin',
     changePin: '/api/wallet/change-pin',
+    transfer: '/api/wallet/transfer',
     history: '/api/wallet/history',
     ledger: '/api/wallet/ledger',
   },
@@ -310,6 +311,7 @@ export const API_ENDPOINTS = {
     order: '/api/collect/order',
     verify: '/api/collect/verify',
     history: '/api/collect/history',
+    qr: '/api/collect/qr',
   },
   topup: {
     qr: '/api/topup/qr',

@@ -57,6 +57,8 @@ export interface ApiResponse<T> {
 export interface WalletBalances {
   aepsBalance: number;
   mainBalance: number;
+  /** Counter-QR collections land here; only this wallet moves to Main. */
+  qrBalance?: number;
   adminBalance: number;
 }
 

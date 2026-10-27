@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Share, TextInput, Pressable, Linking } from 'react-native';
+import { View, Text, Share, TextInput, Pressable, Linking, Image } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import QRCode from 'react-native-qrcode-svg';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/Screen';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
 
 /** The gateway refuses anything smaller: "Minimum amount is 200.00". */
 const MIN_ORDER_AMOUNT = 200;
@@ -33,8 +34,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * why nothing here trusts the customer saying they paid and every order is
  * checked against the gateway.
  *
- * The standing counter QR is issued from UPI payments, not here, but its
- * proceeds are collections too, so they are listed below alongside the links.
+ * The standing counter QR is issued here too. Its payments settle into the
+ * platform's Icchhamati wallet and are credited to the retailer's QR wallet,
+ * less Icchhamati's charge, from which the retailer moves them to Main.
  */
 export const CollectScreen: React.FC = () => {
   const [name, setName] = useState('');
@@ -269,14 +271,16 @@ export const CollectScreen: React.FC = () => {
         </>
       )}
 
+      <CounterQr onMoved={history.reload} />
+
       <SectionTitle>Recent collections</SectionTitle>
       {history.loading ? <SkeletonRows count={3} /> : history.data?.length ? (
         <View style={styles.listCard}>
           {history.data.slice(0, 20).map((txn: any, index: number, list: any[]) => (
             <View key={txn.transactionId}>
               <TxnRow
-                icon="link-variant"
-                title={txn.metadata?.payerName || 'Payment link'}
+                icon={txn.metadata?.collectionChannel === 'QR' ? 'qrcode' : 'link-variant'}
+                title={txn.metadata?.payerName || txn.metadata?.remitterName || (txn.metadata?.collectionChannel === 'QR' ? 'Counter QR' : 'Payment link')}
                 subtitle={txn.transactionId}
                 date={shortDate(txn.createdAt)}
                 amount={`${txn.status === 'SUCCESS' ? '+ ' : ''}${money(txn.amount)}`}
@@ -307,7 +311,131 @@ export const CollectScreen: React.FC = () => {
   );
 };
 
+const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+
+/** The retailer's standing counter QR, and the QR wallet its payments land in. */
+const CounterQr: React.FC<{ onMoved: () => void }> = ({ onMoved }) => {
+  const { user } = useAuth();
+  const qr = useAsync<any>(async () => (await api.getCollectionQr()).data ?? null, []);
+  const balance = useAsync<number>(async () => Number((await api.getWalletBalance()).data?.qrBalance) || 0, []);
+  const [holder, setHolder] = useState(user?.name || '');
+  const [account, setAccount] = useState('');
+  const [ifsc, setIfsc] = useState('');
+  const [amount, setAmount] = useState('');
+  const [pin, setPin] = useState('');
+  const [notice, setNotice] = useState('');
+
+  const generate = useAction(async () => {
+    const res = await api.generateCollectionQr({ name: holder.trim(), account_number: account, account_ifsc: ifsc });
+    if (!res.success) throw new Error(res.message);
+    qr.reload();
+  });
+
+  const move = useAction(async () => {
+    const res = await api.transferQrToMain({ amount: Number(amount), pin });
+    if (!res.success) throw new Error(res.message);
+    setAmount('');
+    setPin('');
+    setNotice(res.message || 'Moved to your main wallet');
+    balance.reload();
+    onMoved();
+  });
+
+  const qrBalance = balance.data ?? 0;
+  const code = qr.data;
+
+  return (
+    <>
+      <SectionTitle>Counter QR</SectionTitle>
+      <View style={[styles.card, styles.form]}>
+        {qr.loading ? (
+          <SkeletonRows count={2} />
+        ) : code ? (
+          <View style={styles.counterQr}>
+            {!!code.qrImage && (
+              <View style={styles.qrFrame}>
+                <Image source={{ uri: code.qrImage }} style={styles.qrImage} accessibilityLabel="Your UPI QR code" />
+              </View>
+            )}
+            {!!code.upiHandle && <Text style={styles.payee} selectable>{code.upiHandle}</Text>}
+            <Text style={styles.payeeMeta}>Virtual account {code.virtualAccountId}</Text>
+            <Text style={styles.footnote}>Print this for your counter. Every payment is credited to your QR wallet automatically.</Text>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.payeeMeta}>A standing UPI QR for your counter. Payments are credited to your QR wallet automatically.</Text>
+            <Input label="Account holder name" required value={holder} onChangeText={setHolder} leftIcon="account-outline" />
+            <Input
+              label="Account number"
+              required
+              value={account}
+              onChangeText={(v) => setAccount(v.replace(/\D/g, '').slice(0, 18))}
+              keyboardType="number-pad"
+              leftIcon="bank-outline"
+            />
+            <Input
+              label="IFSC"
+              required
+              value={ifsc}
+              onChangeText={(v) => setIfsc(v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11))}
+              autoCapitalize="characters"
+              error={ifsc.length === 11 && !IFSC_RE.test(ifsc) ? 'Enter a valid IFSC' : undefined}
+            />
+            {!!generate.error && <ErrorBanner message={generate.error} />}
+            <Button
+              icon="qrcode"
+              onPress={() => generate.run()}
+              loading={generate.pending}
+              disabled={holder.trim().length < 3 || account.length < 6 || !IFSC_RE.test(ifsc)}
+              fullWidth
+            >
+              Generate QR
+            </Button>
+          </>
+        )}
+      </View>
+
+      <SectionTitle>QR wallet</SectionTitle>
+      <View style={[styles.card, styles.form]}>
+        <View>
+          <Text style={styles.payeeAmount}>{money(qrBalance)}</Text>
+          <Text style={styles.payeeMeta}>Counter QR payments land here, less the provider's charge.</Text>
+        </View>
+        <Input
+          label="Amount"
+          value={amount}
+          onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))}
+          keyboardType="decimal-pad"
+          leftIcon="currency-inr"
+          error={Number(amount) > qrBalance ? 'More than your QR wallet balance' : undefined}
+        />
+        <Input
+          label="Wallet PIN"
+          value={pin}
+          onChangeText={(v) => setPin(v.replace(/\D/g, '').slice(0, 4))}
+          keyboardType="number-pad"
+          secureTextEntry
+          leftIcon="lock-outline"
+        />
+        {!!move.error && <ErrorBanner message={move.error} />}
+        {!!notice && <SuccessBanner message={notice} />}
+        <Button
+          icon="bank-transfer-in"
+          onPress={() => { setNotice(''); move.run(); }}
+          loading={move.pending}
+          disabled={!(Number(amount) > 0) || Number(amount) > qrBalance || pin.length !== 4}
+          fullWidth
+        >
+          Move to main wallet
+        </Button>
+      </View>
+    </>
+  );
+};
+
 const styles = themed((c) => ({
+  counterQr: { alignItems: 'center', gap: space.sm },
+  qrImage: { width: 220, height: 220 },
   entry: { alignItems: 'center', paddingTop: space.lg, paddingBottom: space.sm, gap: space.md },
   entryTitle: { fontSize: t.bodyLg, fontWeight: '500', color: c.foreground },
   amountRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: space.sm },

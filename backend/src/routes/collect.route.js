@@ -3,6 +3,8 @@ import {
   createOrder,
   verifyOrder,
   getCollectionHistory,
+  getQr,
+  generateQr,
 } from '../controllers/collect.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 import { requireService } from '../middlewares/service.middleware.js';
@@ -17,5 +19,7 @@ router.use(requireService('collect'));
 router.post('/order', createOrder);
 router.post('/verify', verifyOrder);
 router.get('/history', getCollectionHistory);
+router.get('/qr', getQr);
+router.post('/qr', generateQr);
 
 export default router;
