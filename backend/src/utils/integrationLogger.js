@@ -11,8 +11,11 @@ const mask = (value) => {
   return `${text.slice(0, 2)}***${text.slice(-2)}`;
 };
 
+// Matched by "key" but only a provider reference, which support asks for in full.
+const REFERENCE_KEYS = new Set(['primaryKeyId']);
+
 export const redact = (value, key = '') => {
-  if (SENSITIVE_KEYS.test(key)) return mask(value);
+  if (SENSITIVE_KEYS.test(key) && !REFERENCE_KEYS.has(key)) return mask(value);
   if (Array.isArray(value)) return value.map((item) => redact(item));
   if (value && typeof value === 'object') {
     return Object.fromEntries(Object.entries(value).map(([childKey, childValue]) => [childKey, redact(childValue, childKey)]));

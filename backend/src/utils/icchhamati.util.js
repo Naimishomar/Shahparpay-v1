@@ -44,7 +44,7 @@ export const icchhamatiPost = async (path, body = {}) => {
     const response = await axios.post(`${getBase()}${path}`, body, {
       headers: getHeaders(), validateStatus: () => true, timeout: 60000,
     });
-    logIntegration('provider_response', { provider: 'icchhamati', method: 'POST', path, httpStatus: response.status, providerStatus: response.data?.status, durationMs: Date.now() - startedAt, transactionId: body?.transaction_id || body?.txnid || null, providerMessage: response.data?.message ?? null, response: loggableResponse(response.data) });
+    logIntegration('provider_response', { provider: 'icchhamati', method: 'POST', path, request: body, httpStatus: response.status, providerStatus: response.data?.status, durationMs: Date.now() - startedAt, transactionId: body?.transaction_id || body?.txnid || null, providerMessage: response.data?.message ?? null, response: loggableResponse(response.data) });
     // Non-enumerable, so it stays out of anything that spreads or stores the body.
     if (response.data && typeof response.data === 'object') {
       Object.defineProperty(response.data, 'httpStatus', { value: response.status });
