@@ -178,7 +178,7 @@ export const getStatus = async (req, res) => {
       email: retailer.email,
       phone: retailer.contactNumber,
       pan: retailer.panNumber,
-      aadhaar: maskAadhaar(retailer.aadhaarNumber),
+      aadhaar: retailer.aadhaarNumber,
       shopName: retailer.businessName,
       shopAddress: retailer.businessAddress,
       city: retailer.address?.city,
