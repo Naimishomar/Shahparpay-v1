@@ -90,7 +90,8 @@ const fail = (res, label, error) => {
  * Where the merchant is in onboarding, from /draft-data. Mirrors the order the
  * provider's own portal walks a merchant through.
  *
- *   aeps_status 0 not onboarded, 1 needs eKYC, 2 needs today's 2FA, 3 ready.
+ *   aeps_status 0 not onboarded, 1 needs the eKYC OTP, 2 needs the eKYC
+ *   fingerprint, 3 needs today's 2FA, 4 working (Icchhamati's own admin labels).
  *   ap_status 0 means Aadhaar Pay needs its own 2FA even when AEPS is ready.
  *   video_kyc_status 0 under review, 1 approved, 2 rejected.
  *
@@ -110,9 +111,9 @@ export const onboardingStep = (draft) => {
   if (!draft.video_url || Number(draft.video_kyc_status) === 2 || photosMissing) return 'video';
   if (Number(draft.video_kyc_status) === 0) return 'video_review';
   if (aeps === 0) return 'onboard';
-  if (aeps === 1) return 'ekyc';
-  if (aeps === 2) return 'twofa';
-  if (aeps === 3) return 'ready';
+  if (aeps === 1 || aeps === 2) return 'ekyc';
+  if (aeps === 3) return 'twofa';
+  if (aeps === 4) return 'ready';
   return 'onboard';
 };
 
@@ -209,6 +210,8 @@ export const getStatus = async (req, res) => {
         step,
         outletId,
         aadhaarPayReady: Number(draft.ap_status) !== 0,
+        // OTP already verified: eKYC resumes at the fingerprint, with the draft's ids.
+        ekycOtpVerified: Number(draft.aeps_status) === 2,
         // Why Icchhamati sent the retailer back, when it says.
         remarks: draft.remarks || null,
         primaryKeyId: draft.primaryKeyId ?? null,

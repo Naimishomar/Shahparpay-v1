@@ -22,6 +22,7 @@ type Status = {
     step: Step;
     outletId: string | null;
     aadhaarPayReady?: boolean;
+    ekycOtpVerified?: boolean;
     remarks?: string | null;
     primaryKeyId?: string | null;
     encodeFPTxnId?: string | null;
@@ -306,8 +307,11 @@ const OnboardingStep = ({ status, busy, run, coords, device, ensureDevice, captu
     const [otp, setOtp] = useState('');
     const [otpSent, setOtpSent] = useState(false);
     const [txnid, setTxnid] = useState('');
-    const [fpIds, setFpIds] = useState<{ primaryKeyId: string; encodeFPTxnId: string } | null>(null);
-    const [ekycOtpOk, setEkycOtpOk] = useState(false);
+    // OTP verified earlier: resume at the fingerprint with the ids Icchhamati kept.
+    const resumeIds = status.ekycOtpVerified && status.primaryKeyId && status.encodeFPTxnId
+        ? { primaryKeyId: String(status.primaryKeyId), encodeFPTxnId: status.encodeFPTxnId } : null;
+    const [fpIds, setFpIds] = useState<{ primaryKeyId: string; encodeFPTxnId: string } | null>(resumeIds);
+    const [ekycOtpOk, setEkycOtpOk] = useState(!!resumeIds);
     const [video, setVideo] = useState<File | null>(null);
     const [shopPhotos, setShopPhotos] = useState<Record<string, boolean>>({});
 
