@@ -15,6 +15,7 @@ import {
   setUserStatus,
   setRetailerServices,
   getRetailerAepsStatus,
+  updateRetailerAepsAddress,
   getActivity,
 } from '../controllers/adminConsole.controller.js';
 import { getWallets, getPayouts, selfTransfer } from '../controllers/adminIcchhamati.controller.js';
@@ -36,6 +37,7 @@ router.get('/console/users/:role/:id', getUserDetail);
 router.patch('/console/users/:role/:id/status', setUserStatus);
 router.put('/console/retailers/:id/services', setRetailerServices);
 router.get('/console/retailers/:id/aeps-status', getRetailerAepsStatus);
+router.put('/console/retailers/:id/aeps-address', updateRetailerAepsAddress);
 router.get('/console/activity', getActivity);
 
 // Shahparpay's own Icchhamati account: wallets, payouts sent from it, and

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, Banknote, ChevronLeft, Clock, History, Loader2, Mail, MapPin, Package, Phone, Power, Receipt, RefreshCcw, ShieldCheck, Store, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import { CARD, LABEL, PENDING_PILL, SECONDARY_BUTTON, SILVER_TILE, STATUS_PILL, ago, inr, inrShort, serviceLabel, useApiGet } from '../distributor/shared';
+import { CARD, INPUT, LABEL, PENDING_PILL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, STATUS_PILL, ago, inr, inrShort, serviceLabel, useApiGet } from '../distributor/shared';
 import { Avatar, Skeleton } from '../distributor/ui';
 import { AEPS_PROVIDERS, PAYSPRINT_ENABLED, SERVICES, aepsKycDone, aepsProviderOf, aepsStepLabel, type AepsProvider, type ServiceKey } from '../../lib/services';
 import { AepsProviderSwitches } from '../AepsProviderPicker';
@@ -238,6 +238,10 @@ const UserDetail = ({
                 </section>
             )}
 
+            {role === 'retailer' && user.icchhamatiAeps?.outletId && !aepsKycDone(user) && (
+                <AepsAddressCard id={id} token={token} user={user} onSaved={reload} />
+            )}
+
             {role === 'distributor' && (
                 <section className={`${CARD} overflow-hidden p-0`}>
                     <div className="flex items-center justify-between p-6 pb-4">
@@ -363,3 +367,76 @@ const UserDetail = ({
 };
 
 export default UserDetail;
+
+/**
+ * Corrects the shop address on the retailer's Icchhamati AEPS draft. The
+ * retailer cannot reopen the Shop & bank step, and Icchhamati refuses to
+ * activate a merchant whose address fails its validation.
+ */
+const AepsAddressCard = ({ id, token, user, onSaved }: { id: string; token: string | null; user: any; onSaved: () => void }) => {
+    const [form, setForm] = useState({
+        shop_address: user.businessAddress || '',
+        shop_city: user.address?.city || '',
+        shop_district: user.address?.district || '',
+        shop_pin_code: user.address?.pincode || '',
+    });
+    const [saving, setSaving] = useState(false);
+    const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [key]: e.target.value });
+
+    const save = async () => {
+        setSaving(true);
+        try {
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/console/retailers/${id}/aeps-address`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify(form),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.message);
+            toast.success(json.message || 'Shop address updated');
+            onSaved();
+        } catch (e) {
+            toast.error(e instanceof Error && e.message ? e.message : 'Could not update the address');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <section className={CARD}>
+            <div className="mb-5 flex items-center gap-3">
+                <div className={`rounded-xl p-2 ${SILVER_TILE}`}><MapPin className="h-4 w-4" /></div>
+                <div>
+                    <h2 className="text-lg font-semibold">AEPS shop address</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Corrects the address on outlet <span className="font-mono">{user.icchhamatiAeps.outletId}</span> at Icchhamati. Use it when activation fails validation. Only possible before AEPS is activated.
+                    </p>
+                </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+                <label className="flex flex-col gap-1.5 md:col-span-2">
+                    <span className={LABEL}>Shop address</span>
+                    <input className={INPUT} value={form.shop_address} onChange={set('shop_address')} placeholder="Shop number, street, area" />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                    <span className={LABEL}>City</span>
+                    <input className={INPUT} value={form.shop_city} onChange={set('shop_city')} />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                    <span className={LABEL}>District</span>
+                    <input className={INPUT} value={form.shop_district} onChange={set('shop_district')} />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                    <span className={LABEL}>Pincode</span>
+                    <input className={`${INPUT} font-mono`} inputMode="numeric" value={form.shop_pin_code} onChange={(e) => setForm({ ...form, shop_pin_code: e.target.value.replace(/\D/g, '').slice(0, 6) })} />
+                </label>
+                <div className="flex items-end">
+                    <button onClick={save} disabled={saving} className={`${PRIMARY_BUTTON} w-full`}>
+                        {saving ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
+                        {saving ? 'Saving…' : 'Update on Icchhamati'}
+                    </button>
+                </div>
+            </div>
+        </section>
+    );
+};

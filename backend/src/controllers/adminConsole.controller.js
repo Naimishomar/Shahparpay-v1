@@ -12,6 +12,7 @@ import { SERVICE_TYPES, ALLOWED_DAYS, windowFor } from './distributorAnalytics.c
 import { parseServicesUpdate, aepsKycDoneFilter, aepsKycPendingFilter } from '../utils/services.js';
 import { logActivity } from '../utils/activity.js';
 import { refreshAepsStep } from './icchhamatiAeps.controller.js';
+import { icchhamatiPost, isOk, providerMessage } from '../utils/icchhamati.util.js';
 
 const TZ = 'Asia/Kolkata';
 const MODELS = { retailer: Retailer, distributor: Distributor };
@@ -549,5 +550,92 @@ export const getRetailerAepsStatus = async (req, res) => {
   } catch (error) {
     console.error('Admin AEPS status error:', error.message);
     return res.status(502).json({ success: false, message: error.message || 'Could not load AEPS status' });
+  }
+};
+
+/**
+ * PUT /console/retailers/:id/aeps-address — corrects the shop address on a
+ * retailer's Icchhamati AEPS draft, which the retailer cannot reopen once the
+ * Shop & bank step is done. Icchhamati validates it when the merchant is
+ * activated ("error occured in validation"), so a one-word address or a
+ * pincode that does not match the district blocks activation.
+ *
+ * The draft endpoint creates or updates; every other field is sent back as the
+ * draft already holds it, so only the address changes. Allowed only before
+ * activation (aeps_status 0), the window Icchhamati itself allows edits in.
+ */
+export const updateRetailerAepsAddress = async (req, res) => {
+  try {
+    if (forbid(req, res)) return;
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid retailer id' });
+    const retailer = await Retailer.findById(req.params.id);
+    if (!retailer) return res.status(404).json({ success: false, message: 'Retailer not found' });
+    const outletId = retailer.icchhamatiAeps?.outletId;
+    if (!outletId) return res.status(409).json({ success: false, message: 'This retailer has not started AEPS registration.' });
+
+    const text = (key) => String(req.body?.[key] ?? '').trim();
+    const address = {
+      shop_address: text('shop_address'),
+      shop_city: text('shop_city'),
+      shop_district: text('shop_district'),
+      shop_pin_code: text('shop_pin_code'),
+    };
+    if (address.shop_address.length < 10) {
+      return res.status(400).json({ success: false, message: 'Enter the full shop address: shop number, street and area.' });
+    }
+    if (!address.shop_city || !address.shop_district) {
+      return res.status(400).json({ success: false, message: 'City and district are required.' });
+    }
+    if (!/^\d{6}$/.test(address.shop_pin_code)) {
+      return res.status(400).json({ success: false, message: 'Pincode must be 6 digits.' });
+    }
+
+    const current = await icchhamatiPost('/api/v2/aeps/draft-data', { outletId });
+    const d = current?.data;
+    if (!isOk(current) || !d) {
+      return res.status(502).json({ success: false, message: providerMessage(current, 'Could not load the AEPS draft.') });
+    }
+    if (Number(d.aeps_status) !== 0) {
+      return res.status(409).json({ success: false, message: 'AEPS is already activated for this retailer; the address can no longer be changed.' });
+    }
+
+    const keep = (key) => (d[key] == null ? '' : String(d[key]));
+    const saved = await icchhamatiPost('/api/v2/aeps/draft', {
+      latitude: keep('latitude'),
+      longitude: keep('longitude'),
+      shop_name: keep('shop_name'),
+      ...address,
+      state_id: keep('state_id'),
+      full_name: keep('full_name'),
+      phone: keep('phone'),
+      email: keep('email'),
+      pan_no: keep('pan_no'),
+      aadhaar_number: keep('aadhaar_number'),
+      account_number: keep('account_number'),
+      ifsc_code: keep('ifsc_code'),
+      bank_name: keep('bank_name'),
+      bank_branch: keep('bank_branch'),
+    });
+    if (!isOk(saved)) {
+      return res.status(400).json({ success: false, message: providerMessage(saved, 'Icchhamati refused the address.') });
+    }
+    // The same draft must come back: a different outlet would mean a second
+    // registration was opened instead of this one being corrected.
+    const returned = saved.data?.outletId || saved.data?.mid;
+    if (returned && String(returned) !== String(outletId)) {
+      console.error(`Admin AEPS address: draft for ${outletId} came back as outlet ${returned}`);
+      return res.status(502).json({ success: false, message: `Icchhamati returned a different outlet (${returned}). Contact Icchhamati before retrying.` });
+    }
+
+    logActivity({
+      req,
+      action: 'retailer.aeps_address',
+      target: { _id: retailer._id, role: 'retailer', name: retailer.name },
+      summary: `Corrected AEPS shop address for ${retailer.name} (${outletId})`,
+    });
+    return res.status(200).json({ success: true, message: 'Shop address updated on Icchhamati', data: await refreshAepsStep(retailer) });
+  } catch (error) {
+    console.error('Admin AEPS address error:', error.message);
+    return res.status(502).json({ success: false, message: 'Could not reach Icchhamati. Please try again.' });
   }
 };
