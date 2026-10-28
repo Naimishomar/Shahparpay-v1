@@ -13,6 +13,7 @@ import {
   uploadShopImage,
   onboard,
   ekycSendOtp,
+  updateShopAddress,
   ekycVerifyOtp,
   ekycBiometric,
   twoFactor,
@@ -82,6 +83,7 @@ router.post(
   uploadVideoKyc
 );
 router.post('/onboard', onboard);
+router.post('/shop-address', updateShopAddress);
 router.post('/ekyc/send-otp', ekycSendOtp);
 router.post('/ekyc/verify-otp', ekycVerifyOtp);
 router.post('/ekyc/biometric', ekycBiometric);

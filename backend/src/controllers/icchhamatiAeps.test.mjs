@@ -1,7 +1,7 @@
 // Run: node src/controllers/icchhamatiAeps.test.mjs
 // The two calls that decide what a retailer sees and whether money moves.
 import assert from 'node:assert';
-import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks, recordStep, fingpayFailed } from './icchhamatiAeps.controller.js';
+import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks, recordStep, fingpayFailed, failureReason } from './icchhamatiAeps.controller.js';
 import { parseServicesUpdate, usesAepsProvider } from '../utils/services.js';
 
 // --- Fingpay's answer inside Icchhamati's ---------------------------------
@@ -19,6 +19,25 @@ const verified = {
   aadhaar_verified_at: 1,
   bank_verified_at: 1,
 };
+// The retailer sees Fingpay's actual reason, not its generic "error occured in validation".
+const blocked = {
+  status: 0,
+  message: 'Blocked pan. Your not authorized to onboard.Given shop address is not valid.\n',
+  data: {
+    status: false,
+    message: 'error occured in validation',
+    data: { merchantStatus: false, remarks: 'Blocked pan. Your not authorized to onboard.Given shop address is not valid.\n', errorCodes: '5026,5036,' },
+    statusCode: 10022,
+  },
+};
+const reason = failureReason(blocked, 'AEPS onboarding failed.');
+assert.match(reason, /^Blocked pan\. Your not authorized to onboard\. Given shop address is not valid\./);
+assert.match(reason, /PAN is blocked/);
+assert.match(reason, /Edit shop address/);
+assert.doesNotMatch(reason, /error occured in validation/);
+assert.equal(failureReason({ status: 1, data: { status: false, message: 'Invalid OTP' } }, 'x'), 'Invalid OTP');
+assert.equal(failureReason({ status: 0, message: 'Outlet ID is required' }, 'x'), 'Outlet ID is required');
+
 assert.equal(onboardingStep(null), 'register');
 assert.equal(
   onboardingStep({ ...verified, pan_verified_at: 0, phone_verified_at: 0 }),

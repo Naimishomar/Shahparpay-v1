@@ -11,6 +11,7 @@ import {
   icchhamatiPostForm,
   isOk,
   providerMessage,
+  cleanProviderMessage,
   providerCrashed,
   makeReferenceId,
 } from '../utils/icchhamati.util.js';
@@ -64,6 +65,30 @@ const needOutlet = (retailer, res) => {
  */
 export const fingpayFailed = (data) => data?.data?.status === false;
 
+// Fingpay error codes a retailer can act on, seen in onboard's errorCodes.
+const FINGPAY_HINTS = {
+  5026: 'Your PAN is blocked for AEPS by the bank partner; contact support to have it reviewed.',
+  5036: 'Correct your shop address with "Edit shop address" below, then try again.',
+};
+
+/**
+ * Why a call failed, in words the retailer can act on. Fingpay's own
+ * `message` is often just "error occured in validation"; the reason is in its
+ * `remarks` ("Blocked pan. ... Given shop address is not valid.") and
+ * `errorCodes`, so those come first.
+ */
+export const failureReason = (data, fallback) => {
+  const inner = data?.data;
+  const remarks = cleanProviderMessage(inner?.data?.remarks ?? inner?.remarks).replace(/\.(?=[A-Z])/g, '. ');
+  const hints = String(inner?.data?.errorCodes ?? '')
+    .split(',')
+    .map((code) => FINGPAY_HINTS[code.trim()])
+    .filter(Boolean);
+  if (remarks || hints.length) return [remarks, ...hints].filter(Boolean).join(' ');
+  if (!isOk(data)) return providerMessage(data, fallback);
+  return cleanProviderMessage(inner?.message) || fallback;
+};
+
 const relay = (res, data, okMessage, failMessage) =>
   isOk(data) && !fingpayFailed(data)
     ? res.status(200).json({
@@ -74,7 +99,7 @@ const relay = (res, data, okMessage, failMessage) =>
       })
     : res.status(400).json({
         success: false,
-        message: fingpayFailed(data) ? data.data.message || failMessage : providerMessage(data, failMessage),
+        message: failureReason(data, failMessage),
         data: data?.data ?? null,
       });
 
@@ -1063,5 +1088,81 @@ export const doTransaction = async (req, res) => {
       success: false,
       message: 'Something went wrong. Check the transaction report before retrying.',
     });
+  }
+};
+
+/**
+ * Resends the merchant's Icchhamati draft with a corrected shop address. The
+ * Shop & bank step cannot be reopened once done, and activation fails
+ * validation (Fingpay 5036) on an address like the single word "Kolkata".
+ * Every other field goes back exactly as the draft holds it. Allowed only
+ * before activation (aeps_status 0), the window Icchhamati allows edits in.
+ * Returns { status, body } for the caller to send.
+ */
+export const correctShopAddress = async (retailer, input = {}) => {
+  const outletId = outletOf(retailer);
+  if (!outletId) return { status: 409, body: { success: false, message: 'AEPS registration has not been started.' } };
+  const text = (key) => String(input[key] ?? '').trim();
+  const address = {
+    shop_address: text('shop_address'),
+    shop_city: text('shop_city'),
+    shop_district: text('shop_district'),
+    shop_pin_code: text('shop_pin_code'),
+  };
+  const invalid =
+    address.shop_address.length < 10 ? 'Enter the full shop address: shop number, street and area.'
+      : !address.shop_city || !address.shop_district ? 'City and district are required.'
+        : !/^\d{6}$/.test(address.shop_pin_code) ? 'Pincode must be 6 digits.'
+          : null;
+  if (invalid) return { status: 400, body: { success: false, message: invalid } };
+
+  const current = await icchhamatiPost('/api/v2/aeps/draft-data', { outletId });
+  const d = current?.data;
+  if (!isOk(current) || !d) {
+    return { status: 502, body: { success: false, message: providerMessage(current, 'Could not load the AEPS registration.') } };
+  }
+  if (Number(d.aeps_status) !== 0) {
+    return { status: 409, body: { success: false, message: 'AEPS is already activated; the shop address can no longer be changed.' } };
+  }
+
+  const keep = (key) => (d[key] == null ? '' : String(d[key]));
+  const saved = await icchhamatiPost('/api/v2/aeps/draft', {
+    latitude: keep('latitude'),
+    longitude: keep('longitude'),
+    shop_name: keep('shop_name'),
+    ...address,
+    state_id: keep('state_id'),
+    full_name: keep('full_name'),
+    phone: keep('phone'),
+    email: keep('email'),
+    pan_no: keep('pan_no'),
+    aadhaar_number: keep('aadhaar_number'),
+    account_number: keep('account_number'),
+    ifsc_code: keep('ifsc_code'),
+    bank_name: keep('bank_name'),
+    bank_branch: keep('bank_branch'),
+  });
+  if (!isOk(saved)) {
+    return { status: 400, body: { success: false, message: failureReason(saved, 'The shop address was not accepted.') } };
+  }
+  // The same draft must come back: a different outlet would mean a second
+  // registration was opened instead of this one being corrected.
+  const returned = saved.data?.outletId || saved.data?.mid;
+  if (returned && String(returned) !== String(outletId)) {
+    console.error(`AEPS address: draft for ${outletId} came back as outlet ${returned}`);
+    return { status: 502, body: { success: false, message: 'The provider returned a different registration. Please contact support.' } };
+  }
+  return { status: 200, body: { success: true, message: 'Shop address updated', data: { step: await refreshAepsStep(retailer) } } };
+};
+
+/** POST /shop-address — the retailer corrects their own shop address before activation. */
+export const updateShopAddress = async (req, res) => {
+  try {
+    const retailer = await loadRetailer(req, res);
+    if (!retailer) return;
+    const { status, body } = await correctShopAddress(retailer, req.body);
+    return res.status(status).json(body);
+  } catch (error) {
+    return fail(res, 'shop address', error);
   }
 };

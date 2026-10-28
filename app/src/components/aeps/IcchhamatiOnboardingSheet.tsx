@@ -278,6 +278,8 @@ const StepBody: React.FC<{
           <Button icon="check-decagram-outline" onPress={() => action.run(stepCall('onboard'))} loading={action.pending} fullWidth>
             Activate
           </Button>
+          {/* Activation can fail on the address ("Given shop address is not valid"), and the Shop & bank step cannot be reopened. */}
+          <ShopAddressEditor profile={status.profile} pending={action.pending} onSave={(address) => action.run(stepCall('shop-address', address))} />
         </>
       );
 
@@ -493,6 +495,49 @@ const RegisterStep: React.FC<{ status: IcchStatus; onChanged: () => void }> = ({
       {!!save.error && <Banner tone="error" message={save.error} />}
       <Button icon="content-save-outline" onPress={save.run} loading={save.pending} disabled={!complete} fullWidth>
         Save and continue
+      </Button>
+    </>
+  );
+};
+
+/** Corrects the shop address on the provider's registration before activation. */
+const ShopAddressEditor: React.FC<{
+  profile: Record<string, string | undefined>;
+  pending: boolean;
+  onSave: (address: Record<string, string>) => Promise<unknown>;
+}> = ({ profile, pending, onSave }) => {
+  const [open, setOpen] = useState(false);
+  const [address, setAddress] = useState({
+    shop_address: profile.shopAddress || '',
+    shop_city: profile.city || '',
+    shop_district: profile.district || '',
+    shop_pin_code: '',
+  });
+  const set = (key: keyof typeof address) => (v: string) => setAddress((a) => ({ ...a, [key]: v }));
+  const valid = address.shop_address.trim().length >= 10 && !!address.shop_city.trim() && !!address.shop_district.trim() && /^\d{6}$/.test(address.shop_pin_code);
+
+  if (!open) {
+    return (
+      <Button variant="ghost" icon="map-marker-outline" disabled={pending} fullWidth onPress={() => setOpen(true)}>
+        Edit shop address
+      </Button>
+    );
+  }
+  return (
+    <>
+      <Text style={styles.body}>Enter the full address of your shop as the bank will check it: shop number, street and area, with the pincode of that area.</Text>
+      <Input label="Shop address" required value={address.shop_address} onChangeText={set('shop_address')} placeholder="Shop number, street, area" />
+      <Input label="City" required value={address.shop_city} onChangeText={set('shop_city')} />
+      <Input label="District" required value={address.shop_district} onChangeText={set('shop_district')} />
+      <Input label="Pincode" required value={address.shop_pin_code} onChangeText={(v) => set('shop_pin_code')(v.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" />
+      <Button
+        icon="content-save-outline"
+        loading={pending}
+        disabled={!valid}
+        fullWidth
+        onPress={async () => { if (await onSave(address)) setOpen(false); }}
+      >
+        Save address
       </Button>
     </>
   );

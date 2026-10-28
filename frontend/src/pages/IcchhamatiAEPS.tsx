@@ -314,6 +314,7 @@ const OnboardingStep = ({ status, busy, run, coords, device, ensureDevice, captu
     const [ekycOtpOk, setEkycOtpOk] = useState(!!resumeIds);
     const [video, setVideo] = useState<File | null>(null);
     const [shopPhotos, setShopPhotos] = useState<Record<string, boolean>>({});
+    const [editAddress, setEditAddress] = useState(false);
 
     useEffect(() => {
         if (status.step !== 'register') return;
@@ -454,7 +455,25 @@ const OnboardingStep = ({ status, busy, run, coords, device, ensureDevice, captu
             return (
                 <div>
                     <Title icon={BadgeCheck} title="Activate AEPS" hint="All checks passed. Create your AEPS merchant account." />
-                    <button disabled={busy} onClick={() => run('/onboard')} className={PRIMARY_BUTTON}>{busy && <Loader2 size={16} className="animate-spin" />} Activate</button>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <button disabled={busy} onClick={() => run('/onboard')} className={PRIMARY_BUTTON}>{busy && <Loader2 size={16} className="animate-spin" />} Activate</button>
+                        <button type="button" disabled={busy} onClick={() => setEditAddress(!editAddress)} className={SECONDARY_BUTTON}>Edit shop address</button>
+                    </div>
+                    {/* Activation can fail on the address ("Given shop address is not valid"), and the Shop & bank step cannot be reopened. */}
+                    {editAddress && (
+                        <form className="mt-6 grid gap-4 rounded-xl border bg-background p-4 sm:grid-cols-2" onSubmit={async (e) => {
+                            e.preventDefault();
+                            const res = await run('/shop-address', { shop_address: form.shop_address, shop_city: form.shop_city, shop_district: form.shop_district, shop_pin_code: form.shop_pin_code });
+                            if (res.success) setEditAddress(false);
+                        }}>
+                            <p className="text-sm text-muted-foreground sm:col-span-2">Enter the full address of your shop as the bank will check it: shop number, street and area, with the pincode of that area.</p>
+                            <div className="sm:col-span-2"><Field label="Shop address"><input required minLength={10} value={form.shop_address} onChange={set('shop_address')} placeholder="Shop number, street, area" className={INPUT} /></Field></div>
+                            <Field label="City"><input required value={form.shop_city} onChange={set('shop_city')} className={INPUT} /></Field>
+                            <Field label="District"><input required value={form.shop_district} onChange={set('shop_district')} className={INPUT} /></Field>
+                            <Field label="Pincode"><input required inputMode="numeric" pattern="\d{6}" value={form.shop_pin_code} onChange={(e) => setForm({ ...form, shop_pin_code: e.target.value.replace(/\D/g, '').slice(0, 6) })} className={INPUT} /></Field>
+                            <div className="flex items-end"><button disabled={busy} className={`${PRIMARY_BUTTON} w-full`}>{busy && <Loader2 size={16} className="animate-spin" />} Save address</button></div>
+                        </form>
+                    )}
                 </div>
             );
 
