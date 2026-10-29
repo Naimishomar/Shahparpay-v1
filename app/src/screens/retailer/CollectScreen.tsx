@@ -352,9 +352,14 @@ const CounterQr: React.FC<{ onMoved: () => void }> = ({ onMoved }) => {
           <SkeletonRows count={2} />
         ) : code ? (
           <View style={styles.counterQr}>
-            {!!code.qrImage && (
+            {code.qrImage ? (
               <View style={styles.qrFrame}>
                 <Image source={{ uri: code.qrImage }} style={styles.qrImage} accessibilityLabel="Your UPI QR code" />
+              </View>
+            ) : !!code.upiHandle && (
+              // QRs generated before the provider's image was kept: draw it from the UPI handle.
+              <View style={styles.qrFrame} accessibilityLabel="Your UPI QR code">
+                <QRCode value={`upi://pay?pa=${encodeURIComponent(code.upiHandle)}&cu=INR`} size={220} />
               </View>
             )}
             {!!code.upiHandle && <Text style={styles.payee} selectable>{code.upiHandle}</Text>}

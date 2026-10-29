@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Link2, Copy, Check, RefreshCw, Clock, CheckCircle2, XCircle, User, Phone, Mail, Loader2, ExternalLink, ShieldCheck, QrCode, Inbox, Download, Wallet, ArrowRight, Landmark, Lock } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -362,6 +362,18 @@ const saveFile = async (url: string, name: string) => {
 };
 
 /** The retailer's standing counter QR. */
+const upiUri = (qr: Qr) =>
+    `upi://pay?pa=${encodeURIComponent(qr.upiHandle!)}${qr.name ? `&pn=${encodeURIComponent(qr.name)}` : ''}&cu=INR`;
+
+const saveCanvas = (id: string, filename: string) => {
+    const canvas = document.getElementById(id) as HTMLCanvasElement | null;
+    if (!canvas) return;
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = filename;
+    a.click();
+};
+
 const CounterQr = ({ api, getHeaders }: { api: string; getHeaders: () => object }) => {
     const { user } = useAuth();
     const [qr, setQr] = useState<Qr | null>(null);
@@ -402,12 +414,17 @@ const CounterQr = ({ api, getHeaders }: { api: string; getHeaders: () => object 
                 <div className="flex min-h-[200px] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
             ) : qr ? (
                 <div className="flex flex-col items-center gap-3 text-center">
-                    {qr.qrImage && <img src={qr.qrImage} alt="Your UPI QR code" className="w-56 rounded-xl border bg-white p-2" />}
+                    {qr.qrImage ? (
+                        <img src={qr.qrImage} alt="Your UPI QR code" className="w-56 rounded-xl border bg-white p-2" />
+                    ) : qr.upiHandle && (
+                        // QRs generated before the provider's image was kept: draw it from the UPI handle.
+                        <QRCodeCanvas id="counter-qr" value={upiUri(qr)} size={208} marginSize={2} aria-label="Your UPI QR code" className="rounded-xl border bg-white" />
+                    )}
                     {qr.upiHandle && <p className="break-all font-mono text-sm font-medium">{qr.upiHandle}</p>}
                     <p className="text-xs text-muted-foreground">Virtual account {qr.virtualAccountId}</p>
                     <div className="flex flex-wrap justify-center gap-3">
-                        {qr.qrImage && (
-                            <button type="button" onClick={() => saveFile(qr.qrImage!, 'shahparpay-qr.png')} className="flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5">
+                        {(qr.qrImage || qr.upiHandle) && (
+                            <button type="button" onClick={() => qr.qrImage ? saveFile(qr.qrImage, 'shahparpay-qr.png') : saveCanvas('counter-qr', 'shahparpay-qr.png')} className="flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5">
                                 <Download className="h-4 w-4" /> Download QR
                             </button>
                         )}
