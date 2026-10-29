@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import html2canvas from 'html2canvas';
 import axios from 'axios';
 import { toast } from 'sonner';
 import {
     BadgeCheck, CheckCircle2, Clock, CreditCard, FileText, Fingerprint, IndianRupee, Landmark, Loader2, MapPin,
-    RefreshCcw, ShieldCheck, Store, Upload, Video, Wallet, XCircle,
+    Download, RefreshCcw, ShieldCheck, Store, Upload, Video, Wallet, X, XCircle,
 } from 'lucide-react';
 import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, inr } from '../components/distributor/shared';
 import { useLocationContext } from '../context/LocationContext';
@@ -542,7 +543,8 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
     const [otp, setOtp] = useState('');
     const [otpRef, setOtpRef] = useState('');
     const [busy, setBusy] = useState(false);
-    const [result, setResult] = useState<{ ok: boolean | 'pending'; message: string; data: any } | null>(null);
+    const [result, setResult] = useState<TxnResult | null>(null);
+    const [showReceipt, setShowReceipt] = useState(false);
 
     useEffect(() => { call('/banks', undefined, 'get').then((r) => r.success && setBanks(r.data || [])); }, []);
 
@@ -580,7 +582,8 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
         if (!xml) return setBusy(false);
         const res = await call('/transaction', { ...base(), xml, deviceType: BRAND_NAME[device.brand], otp: needsOtp ? otp : undefined, txnOtpRequestId: needsOtp ? otpRef : undefined });
         setBusy(false);
-        setResult({ ok: res.success ? true : res.data?.verification === 'PENDING' ? 'pending' : false, message: res.message, data: res.data || {} });
+        setResult({ ok: res.success ? true : res.data?.verification === 'PENDING' ? 'pending' : false, message: res.message, data: res.data || {}, at: new Date() });
+        setShowReceipt(true);
         resetOtp();
     };
 
@@ -595,7 +598,7 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
         );
     }
 
-    const statement: any[] | undefined = Object.values(result?.data || {}).find((v) => Array.isArray(v) && v.length) as any[] | undefined;
+    const statement = statementOf(result);
 
     return (
         <div className="flex flex-col gap-6">
@@ -648,18 +651,11 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
                                 <p className="font-semibold">{result.message}</p>
                             </div>
                             <dl className="space-y-2 text-sm">
-                                {[
-                                    ['Amount', result.data.transactionAmount !== undefined ? inr.format(Number(result.data.transactionAmount)) : null],
-                                    ['Account balance', result.data.balanceAmount !== undefined ? inr.format(Number(result.data.balanceAmount)) : null],
-                                    ['Bank RRN', result.data.bankRRN],
-                                    ['Transaction ID', result.data.fpTransactionId],
-                                    ['Reference', result.data.referenceNo],
-                                    ['Bank', result.data.bankName],
-                                    ['Aadhaar', result.data.aadhaar],
-                                ].filter(([, v]) => v).map(([k, v]) => (
+                                {receiptRows(result).map(([k, v]) => (
                                     <div key={k} className="flex justify-between gap-3"><dt className="text-muted-foreground">{k}</dt><dd className="font-medium tabular-nums">{v}</dd></div>
                                 ))}
                             </dl>
+                            <button onClick={() => setShowReceipt(true)} className={`${SECONDARY_BUTTON} w-full`}><FileText size={16} /> View receipt</button>
                             {statement && (
                                 <div className="max-h-72 overflow-auto rounded-xl border">
                                     <table className="w-full text-xs">
@@ -674,6 +670,89 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
                         </div>
                     )}
                 </section>
+            </div>
+            {result && showReceipt && <ReceiptModal result={result} onClose={() => setShowReceipt(false)} />}
+        </div>
+    );
+};
+
+type TxnResult = { ok: boolean | 'pending'; message: string; data: any; at: Date };
+
+const statementOf = (result: TxnResult | null) =>
+    Object.values(result?.data || {}).find((v) => Array.isArray(v) && v.length) as any[] | undefined;
+
+const receiptRows = (result: TxnResult) => {
+    const d = result.data;
+    return [
+        ['Amount', d.transactionAmount !== undefined ? inr.format(Number(d.transactionAmount)) : null],
+        ['Account balance', d.balanceAmount !== undefined ? inr.format(Number(d.balanceAmount)) : null],
+        ['Bank', d.bankName],
+        ['Aadhaar', d.aadhaar],
+        ['Customer mobile', d.customerMobile],
+        ['Bank RRN', d.bankRRN],
+        ['Transaction ID', d.fpTransactionId],
+        ['Reference', d.referenceNo],
+    ].filter(([, v]) => v) as [string, string][];
+};
+
+/** Opens after every transaction, whatever the outcome; the receipt to hand the customer. */
+const ReceiptModal = ({ result, onClose }: { result: TxnResult; onClose: () => void }) => {
+    const ref = useRef<HTMLDivElement>(null);
+    const statement = statementOf(result);
+    const type = TXN_TABS.find((t) => t.key === result.data.aepsType)?.label || 'AEPS';
+    const tone = result.ok === true ? 'text-emerald-600' : result.ok === 'pending' ? 'text-amber-600' : 'text-red-600';
+    const label = result.ok === true ? 'Transaction successful' : result.ok === 'pending' ? 'Awaiting bank confirmation' : 'Transaction failed';
+
+    const download = async () => {
+        if (!ref.current) return;
+        try {
+            const canvas = await html2canvas(ref.current, { scale: 2, backgroundColor: '#ffffff' });
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = `AEPS_Receipt_${result.data.referenceNo || result.data.fpTransactionId || Date.now()}.png`;
+            a.click();
+        } catch {
+            toast.error('Could not download the receipt.');
+        }
+    };
+
+    return (
+        <div role="dialog" aria-modal="true" aria-label="Transaction receipt" onClick={onClose} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <div onClick={(e) => e.stopPropagation()} className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white shadow-2xl">
+                <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 rounded-full p-1.5 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+                <div ref={ref} className="space-y-4 bg-white p-6 text-slate-800">
+                    <div className="border-b border-dashed border-slate-300 pb-4 text-center">
+                        <p className="font-semibold">{result.data.shopName || 'Shahparpay'}</p>
+                        <p className="text-xs uppercase tracking-widest text-slate-500">{type} receipt</p>
+                    </div>
+                    <div className="flex flex-col items-center gap-1 text-center">
+                        {result.ok === true ? <CheckCircle2 className="h-12 w-12 text-emerald-500" /> : result.ok === 'pending' ? <Clock className="h-12 w-12 text-amber-500" /> : <XCircle className="h-12 w-12 text-red-500" />}
+                        <p className={`text-lg font-bold ${tone}`}>{label}</p>
+                        {result.message && result.message !== label && <p className="text-sm text-slate-500">{result.message}</p>}
+                        <p className="text-xs text-slate-500">{result.at.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                    </div>
+                    <dl className="space-y-2 text-sm">
+                        {[['Type', type] as [string, string], ...receiptRows(result)].map(([k, v]) => (
+                            <div key={k} className="flex justify-between gap-3 border-b border-dashed border-slate-200 pb-2 last:border-0">
+                                <dt className="text-slate-500">{k}</dt><dd className="break-all text-right font-medium tabular-nums">{v}</dd>
+                            </div>
+                        ))}
+                    </dl>
+                    {statement && (
+                        <table className="w-full text-xs">
+                            <tbody className="divide-y">
+                                {statement.map((row, i) => (
+                                    <tr key={i}>{Object.values(row).map((v, j) => <td key={j} className="px-1.5 py-1">{String(v ?? '')}</td>)}</tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                    <p className="text-center text-[11px] text-slate-400">System generated receipt; no signature required.</p>
+                </div>
+                <div className="flex gap-3 border-t p-4">
+                    <button onClick={download} className={`${SECONDARY_BUTTON} flex-1`}><Download size={16} /> Download</button>
+                    <button onClick={onClose} className={`${PRIMARY_BUTTON} flex-1`}>Next transaction</button>
+                </div>
             </div>
         </div>
     );
