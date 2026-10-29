@@ -158,7 +158,8 @@ export const SERVICE_ITEMS: MenuEntry[] = [
   { name: 'Recharge', route: 'Recharge', icon: 'cellphone', hint: 'Mobile & DTH', group: 'Payments' },
   { name: 'BBPS', route: 'BBPS', icon: 'receipt', hint: 'Utility bills', group: 'Payments' },
   { name: 'Collect Payments', route: 'Collect', icon: 'link-variant', hint: 'Payment links', group: 'Payments' },
-  { name: 'Add Money', route: 'AddMoney', icon: 'qrcode-plus', hint: 'Top up instantly by UPI', group: 'Payments' },
+  // Add Money (Razorpay) hidden for now; uncomment to bring it back.
+  // { name: 'Add Money', route: 'AddMoney', icon: 'qrcode-plus', hint: 'Top up instantly by UPI', group: 'Payments' },
   { name: 'Fund Request', route: 'FundRequest', icon: 'hand-coin-outline', hint: 'Top up by bank transfer or cash', group: 'Payments' },
 
   { name: 'PAN Card', route: 'PAN', icon: 'card-account-details-outline', hint: 'PSA & applications', group: 'Government' },

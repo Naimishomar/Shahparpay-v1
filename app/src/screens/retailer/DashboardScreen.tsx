@@ -141,7 +141,7 @@ export const DashboardScreen: React.FC = () => {
   const go = (route: string, params?: object) => () => navigation.navigate(route, params);
 
   const wallets = [
-    { key: 'main', icon: 'wallet-outline', label: 'Main wallet', amount: balances.data?.mainBalance, action: 'Add money', onPress: go('AddMoney') },
+    { key: 'main', icon: 'wallet-outline', label: 'Main wallet', amount: balances.data?.mainBalance, action: 'Fund request', onPress: go('FundRequest') }, // Add money (Razorpay) hidden for now: go('AddMoney')
     { key: 'aeps', icon: 'fingerprint', label: 'AEPS wallet', amount: balances.data?.aepsBalance, action: 'Withdraw', onPress: go('AepsSettlement') },
   ];
 
@@ -264,7 +264,8 @@ export const DashboardScreen: React.FC = () => {
             { icon: 'cellphone', label: 'Mobile recharge', route: 'Recharge' },
             { icon: 'receipt', label: 'Bills & payments', route: 'BBPS' },
             { icon: 'qrcode', label: 'Collect by UPI', route: 'Collect' },
-            { icon: 'wallet-plus-outline', label: 'Add money', route: 'AddMoney' },
+            // Add Money (Razorpay) hidden for now; uncomment to bring it back.
+            // { icon: 'wallet-plus-outline', label: 'Add money', route: 'AddMoney' },
             { icon: 'hand-coin-outline', label: 'Fund request', route: 'FundRequest' },
           ]}
         />

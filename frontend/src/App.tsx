@@ -24,7 +24,8 @@ const Recharge = lazy(() => import("./pages/Recharge"))
 const BBPS = lazy(() => import("./pages/BBPS"))
 const Collect = lazy(() => import("./pages/Collect"))
 const FundRequest = lazy(() => import("./pages/FundRequest"))
-const AddMoney = lazy(() => import("./pages/AddMoney"))
+// Add Money (Razorpay) hidden for now; uncomment to bring it back.
+// const AddMoney = lazy(() => import("./pages/AddMoney"))
 const BiometricSupport = lazy(() => import("./pages/BiometricSupport"))
 const LedgerReport = lazy(() => import("./pages/LedgerReport"))
 const DmtReport = lazy(() => import("./pages/DmtReport"))
@@ -139,7 +140,7 @@ function App() {
         <Route path="/reports/wallet-ledger" element={<WalletLedger/>}/>
 
         <Route path="/fund-request" element={<FundRequest/>}/>
-        <Route path="/add-money" element={<AddMoney/>}/>
+        {/* <Route path="/add-money" element={<AddMoney/>}/> */}
         <Route path="/biometric-support" element={<BiometricSupport/>}/>
         <Route path="/profile" element={<Profile/>}/>
         <Route path="/support" element={<Support/>}/>

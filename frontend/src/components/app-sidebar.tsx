@@ -42,7 +42,8 @@ const retailerProjects = [
       { name: "BBPS Reports", url: "/reports/bbps" },
     ]
   },
-  { name: "Add Money", url: "/add-money", icon: QrCode },
+  // Add Money (Razorpay) hidden for now; uncomment to bring it back.
+  // { name: "Add Money", url: "/add-money", icon: QrCode },
   { name: "Fund Request", url: "/fund-request", icon: Send },
   { name: "Support Center", url: "/support", icon: Headset },
 ]

@@ -257,7 +257,7 @@ const FAQ_DATA = {
         },
         {
             q: "How do I put money into my wallet?",
-            a: "Top up by UPI or netbanking from the Add Money page, or raise a fund request to your distributor and upload the payment receipt. Approved top-ups reflect in your wallet immediately."
+            a: "Raise a fund request to your distributor and upload the payment receipt. Approved top-ups reflect in your wallet immediately."
         }
     ],
     integration: [
