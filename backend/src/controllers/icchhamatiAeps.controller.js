@@ -243,7 +243,10 @@ export const getStatus = async (req, res) => {
         encodeFPTxnId: draft.encodeFPTxnId ?? null,
         deviceIMEI: draft.deviceIMEI || retailer.icchhamatiAeps?.deviceIMEI || '',
         deviceName: draft.deviceName || retailer.icchhamatiAeps?.deviceName || '',
-        profile,
+        // OTPs go to the registered mobile and email, which may differ from the profile.
+        profile: { ...profile, phone: draft.phone || profile.phone, email: draft.email || profile.email },
+        details: draftDetails(draft),
+        detailsEditable: Number(draft.aeps_status) < 3,
       },
     });
   } catch (error) {
@@ -1091,78 +1094,96 @@ export const doTransaction = async (req, res) => {
   }
 };
 
+// What a retailer may correct on their draft. Name, PAN and Aadhaar are their
+// KYC'd identity, and the draft is found by PAN, so those stay as they are.
+const EDITABLE = {
+  shop_address: (v) => (v.length < 10 ? 'Enter the full shop address: shop number, street and area.' : null),
+  shop_city: (v) => (!v ? 'City is required.' : null),
+  shop_district: (v) => (!v ? 'District is required.' : null),
+  state_id: (v) => (!/^\d+$/.test(v) ? 'Select the state.' : null),
+  shop_pin_code: (v) => (!/^\d{6}$/.test(v) ? 'Pincode must be 6 digits.' : null),
+  phone: (v) => (!/^[6-9]\d{9}$/.test(v) ? 'Enter a valid 10-digit mobile number.' : null),
+  email: (v) => (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? 'Enter a valid email address.' : null),
+  account_number: (v) => (!/^\d{9,18}$/.test(v) ? 'Account number must be 9 to 18 digits.' : null),
+  ifsc_code: (v) => (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(v) ? 'Enter a valid IFSC code.' : null),
+  bank_name: (v) => (!v ? 'Bank name is required.' : null),
+  bank_branch: (v) => (!v ? 'Branch is required.' : null),
+};
+const DRAFT_FIELDS = [
+  'latitude', 'longitude', 'shop_name', 'shop_address', 'shop_city', 'shop_district', 'state_id',
+  'shop_pin_code', 'full_name', 'phone', 'email', 'pan_no', 'aadhaar_number', 'account_number',
+  'ifsc_code', 'bank_name', 'bank_branch',
+];
+
+/** The editable fields as the draft holds them, to prefill the edit form. */
+export const draftDetails = (draft = {}) =>
+  Object.fromEntries(Object.keys(EDITABLE).map((k) => [k, draft[k] == null ? '' : String(draft[k])]));
+
 /**
- * Resends the merchant's Icchhamati draft with a corrected shop address. The
- * Shop & bank step cannot be reopened once done, and activation fails
- * validation (Fingpay 5036) on an address like the single word "Kolkata".
- * Every other field goes back exactly as the draft holds it. Allowed only
- * before activation (aeps_status 0), the window Icchhamati allows edits in.
- * Returns { status, body } for the caller to send.
+ * The /aeps/draft body that corrects `draft` with `input`: every field goes
+ * back as the draft holds it, except the editable ones the input names.
+ * Returns { body } or { error }.
  */
-export const correctShopAddress = async (retailer, input = {}) => {
+export const correctedDraft = (draft, input = {}) => {
+  const changes = {};
+  for (const [key, check] of Object.entries(EDITABLE)) {
+    if (input[key] === undefined) continue;
+    const value = key === 'ifsc_code' ? String(input[key]).trim().toUpperCase() : String(input[key]).trim();
+    const error = check(value);
+    if (error) return { error };
+    changes[key] = value;
+  }
+  if (!Object.keys(changes).length) return { error: 'Nothing to update.' };
+  const body = Object.fromEntries(DRAFT_FIELDS.map((k) => [k, draft[k] == null ? '' : String(draft[k])]));
+  return { body: { ...body, ...changes } };
+};
+
+/**
+ * Resends the merchant's Icchhamati draft with corrected details, from any
+ * onboarding step until eKYC is done. Icchhamati updates the same draft and
+ * outlet in place, so a retailer who typed a wrong mobile or address goes back
+ * and fixes it instead of starting a new registration (which would get a new
+ * outlet id). Activation, for one, fails validation (Fingpay 5036) on an
+ * address like the single word "Kolkata". Returns { status, body } to send.
+ */
+export const correctDraftDetails = async (retailer, input = {}) => {
   const outletId = outletOf(retailer);
   if (!outletId) return { status: 409, body: { success: false, message: 'AEPS registration has not been started.' } };
-  const text = (key) => String(input[key] ?? '').trim();
-  const address = {
-    shop_address: text('shop_address'),
-    shop_city: text('shop_city'),
-    shop_district: text('shop_district'),
-    shop_pin_code: text('shop_pin_code'),
-  };
-  const invalid =
-    address.shop_address.length < 10 ? 'Enter the full shop address: shop number, street and area.'
-      : !address.shop_city || !address.shop_district ? 'City and district are required.'
-        : !/^\d{6}$/.test(address.shop_pin_code) ? 'Pincode must be 6 digits.'
-          : null;
-  if (invalid) return { status: 400, body: { success: false, message: invalid } };
 
   const current = await icchhamatiPost('/api/v2/aeps/draft-data', { outletId });
   const d = current?.data;
   if (!isOk(current) || !d) {
     return { status: 502, body: { success: false, message: providerMessage(current, 'Could not load the AEPS registration.') } };
   }
-  if (Number(d.aeps_status) !== 0) {
-    return { status: 409, body: { success: false, message: 'AEPS is already activated; the shop address can no longer be changed.' } };
+  // aeps_status 3 and 4: eKYC is done and the merchant is live on Fingpay.
+  if (Number(d.aeps_status) >= 3) {
+    return { status: 409, body: { success: false, message: 'AEPS eKYC is complete; registration details can no longer be changed. Contact support.' } };
   }
+  const { body, error } = correctedDraft(d, input);
+  if (error) return { status: 400, body: { success: false, message: error } };
 
-  const keep = (key) => (d[key] == null ? '' : String(d[key]));
-  const saved = await icchhamatiPost('/api/v2/aeps/draft', {
-    latitude: keep('latitude'),
-    longitude: keep('longitude'),
-    shop_name: keep('shop_name'),
-    ...address,
-    state_id: keep('state_id'),
-    full_name: keep('full_name'),
-    phone: keep('phone'),
-    email: keep('email'),
-    pan_no: keep('pan_no'),
-    aadhaar_number: keep('aadhaar_number'),
-    account_number: keep('account_number'),
-    ifsc_code: keep('ifsc_code'),
-    bank_name: keep('bank_name'),
-    bank_branch: keep('bank_branch'),
-  });
+  const saved = await icchhamatiPost('/api/v2/aeps/draft', body);
   if (!isOk(saved)) {
-    return { status: 400, body: { success: false, message: failureReason(saved, 'The shop address was not accepted.') } };
+    return { status: 400, body: { success: false, message: failureReason(saved, 'The details were not accepted.') } };
   }
   // The same draft must come back: a different outlet would mean a second
   // registration was opened instead of this one being corrected.
   const returned = saved.data?.outletId || saved.data?.mid;
   if (returned && String(returned) !== String(outletId)) {
-    console.error(`AEPS address: draft for ${outletId} came back as outlet ${returned}`);
+    console.error(`AEPS details: draft for ${outletId} came back as outlet ${returned}`);
     return { status: 502, body: { success: false, message: 'The provider returned a different registration. Please contact support.' } };
   }
-  return { status: 200, body: { success: true, message: 'Shop address updated', data: { step: await refreshAepsStep(retailer) } } };
+  return { status: 200, body: { success: true, message: 'Details updated', data: { step: await refreshAepsStep(retailer) } } };
 };
 
-/** POST /shop-address — the retailer corrects their own shop address before activation. */
-export const updateShopAddress = async (req, res) => {
+/** POST /details — the retailer corrects their own registration details. */
+export const updateDetails = async (req, res) => {
   try {
     const retailer = await loadRetailer(req, res);
     if (!retailer) return;
-    const { status, body } = await correctShopAddress(retailer, req.body);
+    const { status, body } = await correctDraftDetails(retailer, req.body);
     return res.status(status).json(body);
   } catch (error) {
-    return fail(res, 'shop address', error);
+    return fail(res, 'details', error);
   }
 };

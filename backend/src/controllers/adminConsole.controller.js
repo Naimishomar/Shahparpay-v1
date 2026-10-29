@@ -11,7 +11,7 @@ import ActivityLog from '../models/activityLog.model.js';
 import { SERVICE_TYPES, ALLOWED_DAYS, windowFor } from './distributorAnalytics.controller.js';
 import { parseServicesUpdate, aepsKycDoneFilter, aepsKycPendingFilter } from '../utils/services.js';
 import { logActivity } from '../utils/activity.js';
-import { refreshAepsStep, correctShopAddress } from './icchhamatiAeps.controller.js';
+import { refreshAepsStep, correctDraftDetails } from './icchhamatiAeps.controller.js';
 
 const TZ = 'Asia/Kolkata';
 const MODELS = { retailer: Retailer, distributor: Distributor };
@@ -559,7 +559,7 @@ export const getRetailerAepsStatus = async (req, res) => {
  * activated ("error occured in validation"), so a one-word address or a
  * pincode that does not match the district blocks activation.
  *
- * The work is correctShopAddress, which the retailer's own route shares.
+ * The work is correctDraftDetails, which the retailer's own route shares.
  */
 export const updateRetailerAepsAddress = async (req, res) => {
   try {
@@ -567,7 +567,8 @@ export const updateRetailerAepsAddress = async (req, res) => {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid retailer id' });
     const retailer = await Retailer.findById(req.params.id);
     if (!retailer) return res.status(404).json({ success: false, message: 'Retailer not found' });
-    const { status, body } = await correctShopAddress(retailer, req.body);
+    const { shop_address, shop_city, shop_district, shop_pin_code } = req.body || {};
+    const { status, body } = await correctDraftDetails(retailer, { shop_address, shop_city, shop_district, shop_pin_code });
     if (!body.success) return res.status(status).json(body);
     logActivity({
       req,

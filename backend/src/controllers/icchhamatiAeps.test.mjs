@@ -1,8 +1,33 @@
 // Run: node src/controllers/icchhamatiAeps.test.mjs
 // The two calls that decide what a retailer sees and whether money moves.
 import assert from 'node:assert';
-import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks, recordStep, fingpayFailed, failureReason } from './icchhamatiAeps.controller.js';
+import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks, recordStep, fingpayFailed, failureReason, correctedDraft, draftDetails } from './icchhamatiAeps.controller.js';
 import { parseServicesUpdate, usesAepsProvider } from '../utils/services.js';
+
+// --- Correcting a draft ----------------------------------------------------
+
+{
+  const draft = {
+    latitude: '22.6552', longitude: '88.3429', shop_name: 'A2Z', shop_address: '4/1 Victoria Lane Telinipara',
+    shop_city: 'Hooghly', shop_district: 'Hooghly', state_id: 28, shop_pin_code: '712125', full_name: 'W H',
+    phone: '9000002742', email: 'a@b.co', pan_no: 'ABCDE1234F', aadhaar_number: '123412349518',
+    account_number: '123456789', ifsc_code: 'BKID0004268', bank_name: 'Bank of India', bank_branch: 'X',
+    aeps_status: 1,
+  };
+  // Only the named field changes; the rest goes back as the draft holds it, identity included.
+  const { body } = correctedDraft(draft, { phone: ' 8240039776 ', ifsc_code: 'bkid0004268' });
+  assert.equal(body.phone, '8240039776');
+  assert.equal(body.ifsc_code, 'BKID0004268');
+  assert.equal(body.pan_no, 'ABCDE1234F');
+  assert.equal(body.state_id, '28');
+  assert.equal(body.aeps_status, undefined);
+  // Identity is not editable even when sent.
+  assert.equal(correctedDraft(draft, { pan_no: 'ZZZZZ9999Z', phone: '8240039776' }).body.pan_no, 'ABCDE1234F');
+  assert.match(correctedDraft(draft, { phone: '12345' }).error, /mobile/);
+  assert.match(correctedDraft(draft, { shop_address: 'Kolkata' }).error, /full shop address/);
+  assert.equal(correctedDraft(draft, {}).error, 'Nothing to update.');
+  assert.deepEqual(Object.keys(draftDetails(draft)).sort(), ['account_number', 'bank_branch', 'bank_name', 'email', 'ifsc_code', 'phone', 'shop_address', 'shop_city', 'shop_district', 'shop_pin_code', 'state_id']);
+}
 
 // --- Fingpay's answer inside Icchhamati's ---------------------------------
 

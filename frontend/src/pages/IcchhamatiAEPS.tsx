@@ -30,6 +30,8 @@ type Status = {
     deviceIMEI?: string;
     deviceName?: string;
     profile: Record<string, string | undefined>;
+    details?: Record<string, string>;
+    detailsEditable?: boolean;
 };
 
 const STEPS: { key: Step; label: string }[] = [
@@ -143,6 +145,7 @@ const IcchhamatiAEPS = () => {
     const [status, setStatus] = useState<Status | null>(null);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
+    const [editing, setEditing] = useState(false);
     const [brand, setBrand] = useState<DeviceBrand>('mantra');
     const [serial, setSerial] = useState('');
 
@@ -250,6 +253,15 @@ const IcchhamatiAEPS = () => {
                         </ol>
                     </aside>
                     <section className={CARD}>
+                        {editing ? (
+                            <EditDetails status={status} busy={busy} run={run} onDone={() => setEditing(false)} />
+                        ) : (<>
+                        {status.step !== 'register' && status.detailsEditable && (
+                            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background px-4 py-3 text-sm">
+                                <span className="text-muted-foreground">Entered a wrong mobile, email, address or bank detail?</span>
+                                <button type="button" disabled={busy} onClick={() => setEditing(true)} className={`${SECONDARY_BUTTON} py-2`}>Edit details</button>
+                            </div>
+                        )}
                         <OnboardingStep
                             key={status.step /* each step starts with a clean form */}
                             status={status}
@@ -262,6 +274,7 @@ const IcchhamatiAEPS = () => {
                             reload={load}
                             setBusy={setBusy}
                         />
+                        </>)}
                     </section>
                 </div>
             )}
@@ -315,7 +328,6 @@ const OnboardingStep = ({ status, busy, run, coords, device, ensureDevice, captu
     const [ekycOtpOk, setEkycOtpOk] = useState(!!resumeIds);
     const [video, setVideo] = useState<File | null>(null);
     const [shopPhotos, setShopPhotos] = useState<Record<string, boolean>>({});
-    const [editAddress, setEditAddress] = useState(false);
 
     useEffect(() => {
         if (status.step !== 'register') return;
@@ -456,25 +468,7 @@ const OnboardingStep = ({ status, busy, run, coords, device, ensureDevice, captu
             return (
                 <div>
                     <Title icon={BadgeCheck} title="Activate AEPS" hint="All checks passed. Create your AEPS merchant account." />
-                    <div className="flex flex-wrap items-center gap-3">
-                        <button disabled={busy} onClick={() => run('/onboard')} className={PRIMARY_BUTTON}>{busy && <Loader2 size={16} className="animate-spin" />} Activate</button>
-                        <button type="button" disabled={busy} onClick={() => setEditAddress(!editAddress)} className={SECONDARY_BUTTON}>Edit shop address</button>
-                    </div>
-                    {/* Activation can fail on the address ("Given shop address is not valid"), and the Shop & bank step cannot be reopened. */}
-                    {editAddress && (
-                        <form className="mt-6 grid gap-4 rounded-xl border bg-background p-4 sm:grid-cols-2" onSubmit={async (e) => {
-                            e.preventDefault();
-                            const res = await run('/shop-address', { shop_address: form.shop_address, shop_city: form.shop_city, shop_district: form.shop_district, shop_pin_code: form.shop_pin_code });
-                            if (res.success) setEditAddress(false);
-                        }}>
-                            <p className="text-sm text-muted-foreground sm:col-span-2">Enter the full address of your shop as the bank will check it: shop number, street and area, with the pincode of that area.</p>
-                            <div className="sm:col-span-2"><Field label="Shop address"><input required minLength={10} value={form.shop_address} onChange={set('shop_address')} placeholder="Shop number, street, area" className={INPUT} /></Field></div>
-                            <Field label="City"><input required value={form.shop_city} onChange={set('shop_city')} className={INPUT} /></Field>
-                            <Field label="District"><input required value={form.shop_district} onChange={set('shop_district')} className={INPUT} /></Field>
-                            <Field label="Pincode"><input required inputMode="numeric" pattern="\d{6}" value={form.shop_pin_code} onChange={(e) => setForm({ ...form, shop_pin_code: e.target.value.replace(/\D/g, '').slice(0, 6) })} className={INPUT} /></Field>
-                            <div className="flex items-end"><button disabled={busy} className={`${PRIMARY_BUTTON} w-full`}>{busy && <Loader2 size={16} className="animate-spin" />} Save address</button></div>
-                        </form>
-                    )}
+                    <button disabled={busy} onClick={() => run('/onboard')} className={PRIMARY_BUTTON}>{busy && <Loader2 size={16} className="animate-spin" />} Activate</button>
                 </div>
             );
 
@@ -516,6 +510,62 @@ const OnboardingStep = ({ status, busy, run, coords, device, ensureDevice, captu
         default:
             return null;
     }
+};
+
+/**
+ * Back to the data entry: corrects the registration on the same outlet, so a
+ * wrong mobile, email, address or bank detail is fixed without starting over.
+ * Name, PAN and Aadhaar come from the KYC profile and stay as they are.
+ */
+const EditDetails = ({ status, busy, run, onDone }: Pick<StepProps, 'status' | 'busy' | 'run'> & { onDone: () => void }) => {
+    const [form, setForm] = useState<Record<string, string>>({ ...(status.details || {}) });
+    const [states, setStates] = useState<{ stateId: string; stateName: string }[]>([]);
+    const [bankNames, setBankNames] = useState<string[]>([]);
+    useEffect(() => {
+        call('/states', undefined, 'get').then((r) => r.success && setStates(r.data || []));
+        call('/settlement-banks', undefined, 'get').then((r) => r.success && setBankNames(r.data || []));
+    }, []);
+    const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm({ ...form, [k]: e.target.value });
+
+    const save = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const original = status.details || {};
+        const changed = Object.fromEntries(Object.entries(form).filter(([k, v]) => v !== (original[k] ?? '')));
+        if (!Object.keys(changed).length) return onDone();
+        const res = await run('/details', changed);
+        if (res.success) onDone();
+    };
+
+    return (
+        <form onSubmit={save}>
+            <Title icon={Landmark} title="Edit registration details" hint={`Changes go to your existing registration${status.outletId ? ` (outlet ${status.outletId})` : ''}; no new registration is created. Name, PAN and Aadhaar come from your KYC profile.`} />
+            <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Mobile"><input required inputMode="numeric" pattern="[6-9]\d{9}" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} className={INPUT} /></Field>
+                <Field label="Email"><input required type="email" value={form.email || ''} onChange={set('email')} className={INPUT} /></Field>
+                <div className="sm:col-span-2"><Field label="Shop address"><input required minLength={10} value={form.shop_address || ''} onChange={set('shop_address')} placeholder="Shop number, street, area" className={INPUT} /></Field></div>
+                <Field label="City"><input required value={form.shop_city || ''} onChange={set('shop_city')} className={INPUT} /></Field>
+                <Field label="District"><input required value={form.shop_district || ''} onChange={set('shop_district')} className={INPUT} /></Field>
+                <Field label="State">
+                    <select required value={form.state_id || ''} onChange={set('state_id')} className={INPUT}>
+                        <option value="" disabled>{states.length ? 'Select state' : 'Loading states…'}</option>
+                        {states.map((st) => <option key={st.stateId} value={st.stateId}>{st.stateName}</option>)}
+                    </select>
+                </Field>
+                <Field label="Pincode"><input required inputMode="numeric" pattern="\d{6}" value={form.shop_pin_code || ''} onChange={(e) => setForm({ ...form, shop_pin_code: e.target.value.replace(/\D/g, '').slice(0, 6) })} className={INPUT} /></Field>
+                <Field label="Bank name">
+                    <input required list="icch-edit-banks" value={form.bank_name || ''} onChange={set('bank_name')} className={INPUT} />
+                    <datalist id="icch-edit-banks">{bankNames.map((n) => <option key={n} value={n} />)}</datalist>
+                </Field>
+                <Field label="Account number"><input required inputMode="numeric" pattern="\d{9,18}" value={form.account_number || ''} onChange={set('account_number')} className={`${INPUT} font-mono`} /></Field>
+                <Field label="IFSC"><input required pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" value={form.ifsc_code || ''} onChange={(e) => setForm({ ...form, ifsc_code: e.target.value.toUpperCase() })} className={`${INPUT} font-mono uppercase`} /></Field>
+                <Field label="Branch"><input required value={form.bank_branch || ''} onChange={set('bank_branch')} className={INPUT} /></Field>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-3">
+                <button disabled={busy} className={PRIMARY_BUTTON}>{busy && <Loader2 size={16} className="animate-spin" />} Save details</button>
+                <button type="button" disabled={busy} onClick={onDone} className={SECONDARY_BUTTON}>Cancel</button>
+            </div>
+        </form>
+    );
 };
 
 /** Daily merchant fingerprint login, for AEPS or separately for Aadhaar Pay. */

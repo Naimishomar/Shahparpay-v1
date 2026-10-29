@@ -35,6 +35,8 @@ export interface IcchStatus {
   deviceIMEI?: string;
   deviceName?: string;
   profile: Record<string, string | undefined>;
+  details?: Record<string, string>;
+  detailsEditable?: boolean;
 }
 
 // Fingpay's eKYC capture must carry this WADH; 2FA and transactions must not.
@@ -82,14 +84,26 @@ export const IcchhamatiOnboardingSheet: React.FC<{
     serviceType === 'AP'
       ? status?.aadhaarPayReady === false ? 'twofa' : 'ready'
       : status?.step ?? 'register';
-  const title = serviceType === 'AP' ? 'Aadhaar Pay login' : TITLES[step];
+  const [editing, setEditing] = useState(false);
+  // Back to the data entry from any step until eKYC is done, on the same outlet.
+  const canEdit = serviceType === 'AEPS' && !!status?.detailsEditable && step !== 'register';
+  const title = editing && canEdit ? 'Edit registration details' : serviceType === 'AP' ? 'Aadhaar Pay login' : TITLES[step];
 
   return (
     <Sheet visible={visible} onClose={onClose} title={title} subtitle={status?.outletId ? `Outlet ${status.outletId}` : 'AEPS onboarding'} icon="shield-account-outline">
-      {status && (
-        // Keyed so each step starts with an empty form.
-        <StepBody key={`${step}-${serviceType}`} step={step} status={status} onChanged={onChanged} onClose={onClose} serviceType={serviceType} />
-      )}
+      {status && (editing && canEdit ? (
+        <DetailsEditor status={status} onDone={(saved) => { setEditing(false); if (saved) onChanged(); }} />
+      ) : (
+        <>
+          {canEdit && (
+            <Button variant="ghost" icon="pencil-outline" fullWidth onPress={() => setEditing(true)}>
+              Wrong mobile, address or bank? Edit details
+            </Button>
+          )}
+          {/* Keyed so each step starts with an empty form. */}
+          <StepBody key={`${step}-${serviceType}`} step={step} status={status} onChanged={onChanged} onClose={onClose} serviceType={serviceType} />
+        </>
+      ))}
     </Sheet>
   );
 };
@@ -278,8 +292,6 @@ const StepBody: React.FC<{
           <Button icon="check-decagram-outline" onPress={() => action.run(stepCall('onboard'))} loading={action.pending} fullWidth>
             Activate
           </Button>
-          {/* Activation can fail on the address ("Given shop address is not valid"), and the Shop & bank step cannot be reopened. */}
-          <ShopAddressEditor profile={status.profile} pending={action.pending} onSave={(address) => action.run(stepCall('shop-address', address))} />
         </>
       );
 
@@ -500,44 +512,73 @@ const RegisterStep: React.FC<{ status: IcchStatus; onChanged: () => void }> = ({
   );
 };
 
-/** Corrects the shop address on the provider's registration before activation. */
-const ShopAddressEditor: React.FC<{
-  profile: Record<string, string | undefined>;
-  pending: boolean;
-  onSave: (address: Record<string, string>) => Promise<unknown>;
-}> = ({ profile, pending, onSave }) => {
-  const [open, setOpen] = useState(false);
-  const [address, setAddress] = useState({
-    shop_address: profile.shopAddress || '',
-    shop_city: profile.city || '',
-    shop_district: profile.district || '',
-    shop_pin_code: '',
-  });
-  const set = (key: keyof typeof address) => (v: string) => setAddress((a) => ({ ...a, [key]: v }));
-  const valid = address.shop_address.trim().length >= 10 && !!address.shop_city.trim() && !!address.shop_district.trim() && /^\d{6}$/.test(address.shop_pin_code);
+/**
+ * Corrects the registration on the same outlet: a wrong mobile, email,
+ * address or bank detail is fixed without starting over. Name, PAN and
+ * Aadhaar come from the KYC profile and stay as they are.
+ */
+const DetailsEditor: React.FC<{ status: IcchStatus; onDone: (saved: boolean) => void }> = ({ status, onDone }) => {
+  const original = status.details || {};
+  const [form, setForm] = useState<Record<string, string>>({ ...original });
+  const [states, setStates] = useState<{ stateId: string; stateName: string }[]>([]);
+  const [showStates, setShowStates] = useState(false);
+  useEffect(() => {
+    api.icchAepsStates().then((res) => res?.success && setStates(res.data || [])).catch(() => {});
+  }, []);
 
-  if (!open) {
-    return (
-      <Button variant="ghost" icon="map-marker-outline" disabled={pending} fullWidth onPress={() => setOpen(true)}>
-        Edit shop address
-      </Button>
-    );
-  }
+  const changed = Object.fromEntries(Object.entries(form).filter(([k, v]) => v !== (original[k] ?? '')));
+  const save = useAction(async () => {
+    const res = ok(await api.icchAepsStep('details', changed), 'The details were not saved.');
+    onDone(true);
+    return res;
+  });
+  const set = (key: string, clean?: (v: string) => string) => (v: string) => setForm((f) => ({ ...f, [key]: clean ? clean(v) : v }));
+  const digits = (max: number) => (v: string) => v.replace(/\D/g, '').slice(0, max);
+  const valid =
+    /^[6-9]\d{9}$/.test(form.phone || '') &&
+    /^\S+@\S+\.\S+$/.test(form.email || '') &&
+    (form.shop_address || '').trim().length >= 10 &&
+    /^\d{6}$/.test(form.shop_pin_code || '') &&
+    /^\d{9,18}$/.test(form.account_number || '') &&
+    /^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.ifsc_code || '') &&
+    ['shop_city', 'shop_district', 'state_id', 'bank_name', 'bank_branch'].every((k) => (form[k] || '').trim());
+  const stateName = states.find((st) => String(st.stateId) === form.state_id)?.stateName;
+
   return (
     <>
-      <Text style={styles.body}>Enter the full address of your shop as the bank will check it: shop number, street and area, with the pincode of that area.</Text>
-      <Input label="Shop address" required value={address.shop_address} onChangeText={set('shop_address')} placeholder="Shop number, street, area" />
-      <Input label="City" required value={address.shop_city} onChangeText={set('shop_city')} />
-      <Input label="District" required value={address.shop_district} onChangeText={set('shop_district')} />
-      <Input label="Pincode" required value={address.shop_pin_code} onChangeText={(v) => set('shop_pin_code')(v.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" />
-      <Button
-        icon="content-save-outline"
-        loading={pending}
-        disabled={!valid}
-        fullWidth
-        onPress={async () => { if (await onSave(address)) setOpen(false); }}
-      >
-        Save address
+      <Text style={styles.body}>Changes go to your existing registration; no new registration is created.</Text>
+      <Input label="Mobile" required value={form.phone} onChangeText={set('phone', digits(10))} keyboardType="number-pad" />
+      <Input label="Email" required value={form.email} onChangeText={set('email', (v) => v.trim())} keyboardType="email-address" autoCapitalize="none" />
+      <Input label="Shop address" required value={form.shop_address} onChangeText={set('shop_address')} placeholder="Shop number, street, area" />
+      <Input label="City" required value={form.shop_city} onChangeText={set('shop_city')} />
+      <Input label="District" required value={form.shop_district} onChangeText={set('shop_district')} />
+      <SelectField label="State" required value={stateName} placeholder={states.length ? 'Select state' : 'Loading states…'} open={showStates} onPress={() => setShowStates(!showStates)} />
+      {showStates && (
+        <ScrollView style={styles.list} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+          {states.map((st) => (
+            <Pressable
+              key={st.stateId}
+              onPress={() => { setForm((f) => ({ ...f, state_id: String(st.stateId) })); setShowStates(false); }}
+              style={({ pressed }) => [styles.listItem, pressed && { opacity: 0.7 }]}
+              accessibilityRole="button"
+            >
+              <Text style={styles.listText}>{st.stateName}</Text>
+              {String(st.stateId) === form.state_id && <Ionicons name="checkmark" size={18} color={colors.highlight} />}
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
+      <Input label="Pincode" required value={form.shop_pin_code} onChangeText={set('shop_pin_code', digits(6))} keyboardType="number-pad" />
+      <Input label="Bank name" required value={form.bank_name} onChangeText={set('bank_name')} />
+      <Input label="Account number" required value={form.account_number} onChangeText={set('account_number', digits(18))} keyboardType="number-pad" />
+      <Input label="IFSC" required value={form.ifsc_code} onChangeText={set('ifsc_code', (v) => v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11))} autoCapitalize="characters" />
+      <Input label="Branch" required value={form.bank_branch} onChangeText={set('bank_branch')} />
+      {!!save.error && <Banner tone="error" message={save.error} />}
+      <Button icon="content-save-outline" onPress={save.run} loading={save.pending} disabled={!valid || !Object.keys(changed).length} fullWidth>
+        Save details
+      </Button>
+      <Button variant="ghost" disabled={save.pending} fullWidth onPress={() => onDone(false)}>
+        Cancel
       </Button>
     </>
   );
