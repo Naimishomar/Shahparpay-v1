@@ -769,7 +769,7 @@ const ReceiptModal = ({ result, onClose }: { result: TxnResult; onClose: () => v
 
     return (
         <div role="dialog" aria-modal="true" aria-label="Transaction receipt" onClick={onClose} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <div onClick={(e) => e.stopPropagation()} className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div onClick={(e) => e.stopPropagation()} className="relative max-h-[90vh] w-full max-w-md overflow-y-auto no-scrollbar rounded-2xl bg-white shadow-2xl">
                 <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 rounded-full p-1.5 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
                 <div ref={ref} className="space-y-4 bg-white p-6 text-slate-800">
                     <div className="border-b border-dashed border-slate-300 pb-4 text-center">
