@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 import axios from 'axios';
 import { toast } from 'sonner';
 import {
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, inr } from '../components/distributor/shared';
 import { useLocationContext } from '../context/LocationContext';
+import logo from '../assets/logo.png';
 import { captureBiometric, DEVICE_BRANDS, DEVICE_LABELS, type DeviceBrand } from '../utils/rdService';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -772,7 +773,7 @@ const ReceiptModal = ({ result, onClose }: { result: TxnResult; onClose: () => v
                 <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 rounded-full p-1.5 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
                 <div ref={ref} className="space-y-4 bg-white p-6 text-slate-800">
                     <div className="border-b border-dashed border-slate-300 pb-4 text-center">
-                        <p className="font-semibold">{result.data.shopName || 'Shahparpay'}</p>
+                        <img src={logo} alt="Shahparpay" className="mx-auto mb-1 h-10 w-auto object-contain" />
                         <p className="text-xs uppercase tracking-widest text-slate-500">{type} receipt</p>
                     </div>
                     <div className="flex flex-col items-center gap-1 text-center">

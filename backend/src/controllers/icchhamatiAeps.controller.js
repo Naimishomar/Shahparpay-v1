@@ -163,6 +163,19 @@ export const transactionOutcome = (data) => {
 };
 
 /**
+ * The bank's fields from a /doAeps answer. Live, Fingpay's result sits one
+ * level deeper than the docs show (data.data.data: transactionAmount,
+ * balanceAmount, bankRRN, fpTransactionId, the mini statement), as it does for
+ * get-otp; both levels are read so either shape fills the receipt.
+ */
+export const txnFields = (data) => {
+  const outer = data?.data && typeof data.data === 'object' ? data.data : {};
+  const inner = outer.data && typeof outer.data === 'object' && !Array.isArray(outer.data) ? outer.data : {};
+  const { data: _nested, ...rest } = outer;
+  return { ...rest, ...inner };
+};
+
+/**
  * Saves where the merchant is, so distributors and admins see it, and keeps
  * isMerchantKycComplete (which locks the identity documents) in step with it.
  */
@@ -1006,7 +1019,7 @@ export const doTransaction = async (req, res) => {
     }
 
     const outcome = transactionOutcome(data);
-    const result = data?.data || {};
+    const result = txnFields(data);
     const message = providerMessage(
       data,
       outcome === 'SUCCESS' ? 'Transaction successful' : 'Transaction failed'

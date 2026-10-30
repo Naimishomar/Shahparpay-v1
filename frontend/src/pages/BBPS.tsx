@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Zap, Flame, Shield, CreditCard, Droplet, Smartphone, XCircle, ReceiptText, Car, Wifi, Tv, Building2 } from "lucide-react";
 import axios from "axios";
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
 import { billerField, billerInputValid, cleanBillerInput } from '../lib/billerField';

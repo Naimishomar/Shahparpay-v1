@@ -1,8 +1,22 @@
 // Run: node src/controllers/icchhamatiAeps.test.mjs
 // The two calls that decide what a retailer sees and whether money moves.
 import assert from 'node:assert';
-import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks, recordStep, fingpayFailed, failureReason, correctedDraft, draftDetails } from './icchhamatiAeps.controller.js';
+import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks, recordStep, fingpayFailed, failureReason, correctedDraft, draftDetails, txnFields } from './icchhamatiAeps.controller.js';
 import { parseServicesUpdate, usesAepsProvider } from '../utils/services.js';
+
+// --- Receipt fields from /doAeps ------------------------------------------
+
+{
+  // Live shape: Fingpay's result one level under the docs' data.
+  const live = txnFields({ status: 1, data: { status: true, message: 'Request Completed', statusCode: 10000, data: { transactionAmount: 1100, balanceAmount: '5420.50', bankRRN: '4291', fpTransactionId: 'FP1' } } });
+  assert.equal(live.transactionAmount, 1100);
+  assert.equal(live.balanceAmount, '5420.50');
+  assert.equal(live.bankRRN, '4291');
+  assert.equal(live.data, undefined);
+  // Docs shape still reads.
+  assert.equal(txnFields({ status: 1, data: { status: true, balanceAmount: '10', fpTransactionId: 'FP2' } }).fpTransactionId, 'FP2');
+  assert.deepEqual(txnFields(null), {});
+}
 
 // --- Correcting a draft ----------------------------------------------------
 

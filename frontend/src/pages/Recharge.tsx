@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { XCircle, Clock, Smartphone, Tv, Search, Lock, Loader2, Zap, ListFilter, Radio, MapPin, Hash, ReceiptText } from "lucide-react";
 import axios from "axios";
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
 import { toast } from 'sonner';
