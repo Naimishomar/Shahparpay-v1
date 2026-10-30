@@ -3,7 +3,7 @@ import express from 'express';
 // matm.controller.js; restore these imports and routes to switch back.
 // import { getMatmConfig, processMatm, checkMatmStatus } from '../controllers/matm.controller.js';
 import { getMatmHistory } from '../controllers/matm.controller.js';
-import { getMatmConfig, submitMatmResult } from '../controllers/icchhamatiMatm.controller.js';
+import { getMatmConfig, getMatmSdkConfig, submitMatmResult } from '../controllers/icchhamatiMatm.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 import { requireService } from '../middlewares/service.middleware.js';
 
@@ -18,6 +18,7 @@ router.use(requireService('matm'));
 // Icchhamati (Fingpay) Micro ATM.
 router.post('/config', getMatmConfig);
 router.post('/request', submitMatmResult);
+router.get('/sdk', getMatmSdkConfig);
 router.get('/history', getMatmHistory);
 
 export default router;

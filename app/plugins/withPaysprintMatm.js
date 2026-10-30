@@ -92,7 +92,10 @@ ${m}
     const manifest = cfg.modResults.manifest;
     manifest.$['xmlns:tools'] = 'http://schemas.android.com/tools';
     const app = manifest.application[0];
-    app.$['tools:replace'] = 'android:theme,android:allowBackup';
+    // Merged, not overwritten: withFingpayMatm adds its own attributes here too.
+    const replace = new Set(String(app.$['tools:replace'] || '').split(',').filter(Boolean));
+    ['android:theme', 'android:allowBackup'].forEach((a) => replace.add(a));
+    app.$['tools:replace'] = [...replace].join(',');
     const service = 'com.anfu.pos.library.bluetooth4.BluetoothLeService';
     app.service = (app.service ?? []).filter((s) => s.$['android:name'] !== service);
     app.service.push({ $: { 'android:name': service, 'android:enabled': 'true' } });

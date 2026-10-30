@@ -1,7 +1,7 @@
 // Run: node src/controllers/icchhamatiMatm.test.mjs
 // Reading the MATM driver's result decides whether a wallet is credited.
 import assert from 'node:assert';
-import { readMatmResult } from './icchhamatiMatm.controller.js';
+import { readMatmResult, sdkCredentials } from './icchhamatiMatm.controller.js';
 
 // The documented withdrawal result.
 const withdrawal = readMatmResult({
@@ -29,5 +29,20 @@ assert.ok(!readMatmResult({ transactionAmount: 0, transactionType: 'BAL', errorC
 assert.ok(!readMatmResult({ transactionAmount: 613.07, transactionType: 'BALANCE ENQUIRY', errorCode: '00', transactionStatus: 'successful' }).withdrawal);
 
 assert.equal(readMatmResult({}).reference, '', 'no id, nothing to record');
+
+// The SDK gets the merchant's own login and never Icchhamati's super-merchant one.
+{
+  const draft = {
+    request_data: { username: 'SUPERUSER', password: 'f'.repeat(32), supermerchantId: 1262, merchant: { merchantLoginId: 'AGENT1647', merchantLoginPin: '9000002742' } },
+    response_data: { status: true, data: { merchantLoginId: 'AGENT1647', superMerchantId: 1262 } },
+  };
+  const creds = sdkCredentials(draft);
+  assert.deepEqual(creds, { merchantUserId: 'AGENT1647', merchantPassword: '9000002742', superMerchantId: '1262' });
+  assert.ok(!JSON.stringify(creds).includes('SUPERUSER'));
+  // Stored as JSON strings too.
+  assert.equal(sdkCredentials({ request_data: JSON.stringify(draft.request_data), response_data: JSON.stringify(draft.response_data) }).superMerchantId, '1262');
+  // Not on Fingpay yet: no login to hand out.
+  assert.equal(sdkCredentials({ request_data: null, response_data: null }), null);
+}
 
 console.log('icchhamatiMatm tests passed');

@@ -88,6 +88,49 @@ export const getMatmConfig = async (req, res) => {
   }
 };
 
+/**
+ * The draft's Fingpay merchant login, as Icchhamati registered it, for the
+ * Android Micro ATM SDK. Only the merchant's own login leaves the server: the
+ * draft's request_data also carries Icchhamati's super-merchant username and
+ * password, which must not. Returns null when the outlet is not on Fingpay yet.
+ */
+export const sdkCredentials = (draft = {}) => {
+  const parse = (v) => {
+    if (typeof v !== 'string') return v || {};
+    try { return JSON.parse(v); } catch { return {}; }
+  };
+  const merchant = parse(draft.request_data).merchant || {};
+  const created = parse(draft.response_data).data || {};
+  const merchantUserId = created.merchantLoginId || merchant.merchantLoginId;
+  const superMerchantId = created.superMerchantId ?? parse(draft.request_data).supermerchantId;
+  if (!merchantUserId || !merchant.merchantLoginPin || !superMerchantId) return null;
+  return { merchantUserId: String(merchantUserId), merchantPassword: String(merchant.merchantLoginPin), superMerchantId: String(superMerchantId) };
+};
+
+/**
+ * GET /sdk — what the app's Fingpay Micro ATM SDK needs to start: the
+ * merchant login and a fresh transaction id. The card result comes back
+ * through POST /request like the web driver's.
+ */
+export const getMatmSdkConfig = async (req, res) => {
+  try {
+    const retailer = await loadOutlet(req, res);
+    if (!retailer) return;
+    const data = await icchhamatiPost('/api/v2/aeps/draft-data', { outletId: outletOf(retailer) });
+    const credentials = isOk(data) ? sdkCredentials(data.data) : null;
+    if (!credentials) {
+      return res.status(409).json({ success: false, message: providerMessage(data, 'Your Micro ATM merchant is not active yet. Complete AEPS activation first.') });
+    }
+    return res.status(200).json({
+      success: true,
+      data: { ...credentials, txnId: `MATM${Date.now()}${Math.floor(Math.random() * 1000)}` },
+    });
+  } catch (error) {
+    console.error('Icchhamati MATM SDK config error:', error.message);
+    return res.status(502).json({ success: false, message: 'Could not reach the Micro ATM provider. Please try again.' });
+  }
+};
+
 /** What the driver's result says happened. Withdrawals are the only money movement. */
 export const readMatmResult = (data = {}) => {
   const amount = Number(data.transactionAmount) || 0;

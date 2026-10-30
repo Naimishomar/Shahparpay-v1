@@ -936,6 +936,11 @@ class ApiService {
     return this.post(API_ENDPOINTS.matm.status, { transactionId });
   }
 
+  /** Icchhamati (Fingpay) Micro ATM: the merchant login and a fresh txn id for the Android SDK. */
+  async getMatmSdk() {
+    return this.get(API_ENDPOINTS.matm.sdk);
+  }
+
   async getMatmHistory() {
     return this.get(API_ENDPOINTS.matm.history);
   }
