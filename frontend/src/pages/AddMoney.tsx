@@ -122,7 +122,7 @@ const AddMoney = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
             <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
                 <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-5">
                     <div className="flex items-center gap-4">

@@ -131,7 +131,7 @@ const IcchhamatiMATM = () => {
     };
 
     return (
-        <div className="flex w-full flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="flex w-full flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-200">
             <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
                 <div className="relative flex items-center gap-4">
                     <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><CreditCard className="h-7 w-7" /></div>

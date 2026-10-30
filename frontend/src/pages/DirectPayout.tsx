@@ -86,7 +86,7 @@ const DirectPayout = () => {
     };
 
     return (
-        <div className="flex flex-col gap-6 w-full p-2 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+        <div className="flex flex-col gap-6 w-full p-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
             {/* Top Header Section */}
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex items-center gap-8">

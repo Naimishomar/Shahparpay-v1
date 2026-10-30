@@ -274,7 +274,7 @@ const BBPS = () => {
     const receiptBill = receiptData?.billDetails || {};
 
     return (
-        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
             {/* Hero */}
             <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
                 <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">

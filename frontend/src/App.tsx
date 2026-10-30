@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, type ComponentType } from 'react'
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } from "react-router-dom"
 import Landing from "./pages/Landing"
 import ServiceGate from "./components/ServiceGate"
@@ -9,54 +9,67 @@ import { PAYSPRINT_ENABLED, usesAepsProvider } from './lib/services'
 import { Navigate, useLocation, Outlet } from 'react-router-dom'
 
 // Route-level code splitting: only the landing page ships in the initial bundle.
-const Login = lazy(() => import("./pages/Login"))
-const Layout = lazy(() => import("./pages/Layout"))
-const Dashboard = lazy(() => import("./pages/Dashboard"))
-const AepsSettlement = lazy(() => import("./pages/AepsSettlement"))
-const PipeStatus = lazy(() => import("./pages/PipeStatus"))
-const AepsPage = lazy(() => import("./pages/AepsPage"))
+// Each page's loader is kept so they can all be fetched in the background once
+// the app is idle; otherwise every first click on a sidebar link waits for a
+// download behind a blank screen.
+const loaders: (() => Promise<unknown>)[] = []
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function page<T extends ComponentType<any>>(load: () => Promise<{ default: T }>) {
+  loaders.push(load)
+  return lazy(load)
+}
+const prefetchPages = () => {
+  // One after another, so the background downloads never crowd out the page in use.
+  loaders.reduce((chain, load) => chain.then(() => load()).catch(() => {}), Promise.resolve() as Promise<unknown>)
+}
+const Login = page(() => import("./pages/Login"))
+const Layout = page(() => import("./pages/Layout"))
+const Dashboard = page(() => import("./pages/Dashboard"))
+const AepsSettlement = page(() => import("./pages/AepsSettlement"))
+const PipeStatus = page(() => import("./pages/PipeStatus"))
+const AepsPage = page(() => import("./pages/AepsPage"))
 
 const PaysprintOnly = ({ children }: { children: React.ReactNode }) =>
   usesAepsProvider(useAuth().user, 'paysprint') ? <>{children}</> : <Navigate to="/aeps" replace />
-const DirectPayout = lazy(() => import("./pages/DirectPayout"))
-const DMT = lazy(() => import("./pages/DMT"))
-const Recharge = lazy(() => import("./pages/Recharge"))
-const BBPS = lazy(() => import("./pages/BBPS"))
-const Collect = lazy(() => import("./pages/Collect"))
-const FundRequest = lazy(() => import("./pages/FundRequest"))
+const DirectPayout = page(() => import("./pages/DirectPayout"))
+const DMT = page(() => import("./pages/DMT"))
+const Recharge = page(() => import("./pages/Recharge"))
+const BBPS = page(() => import("./pages/BBPS"))
+const Collect = page(() => import("./pages/Collect"))
+const FundRequest = page(() => import("./pages/FundRequest"))
 // Add Money (Razorpay) hidden for now; uncomment to bring it back.
-// const AddMoney = lazy(() => import("./pages/AddMoney"))
-const BiometricSupport = lazy(() => import("./pages/BiometricSupport"))
-const LedgerReport = lazy(() => import("./pages/LedgerReport"))
-const DmtReport = lazy(() => import("./pages/DmtReport"))
-const AepsReport = lazy(() => import("./pages/AepsReport"))
-const PayoutReport = lazy(() => import("./pages/PayoutReport"))
-const UpiReport = lazy(() => import("./pages/UpiReport"))
-const PanReport = lazy(() => import("./pages/PanReport"))
-const ItrReport = lazy(() => import("./pages/ItrReport"))
-const LeadGenerationReport = lazy(() => import("./pages/LeadGenerationReport"))
-const ServiceReport = lazy(() => import("./pages/ServiceReport"))
-const WalletLedger = lazy(() => import("./pages/WalletLedger"))
-const LeadGeneration = lazy(() => import("./pages/LeadGeneration"))
-const PanCard = lazy(() => import("./pages/PanCard"))
-const ITR = lazy(() => import("./pages/ITR"))
-const AdminPortal = lazy(() => import("./pages/AdminPortal"))
-const DistributorPortal = lazy(() => import("./pages/DistributorPortal"))
-const KycStatus = lazy(() => import("./pages/KycStatus"))
-const Contact = lazy(() => import("./pages/Contact"))
-const Commission = lazy(() => import("./pages/Commission"))
-const About = lazy(() => import("./pages/About"))
-const Terms = lazy(() => import("./pages/Terms"))
-const AepsPermission = lazy(() => import("./pages/AepsPermission"))
-const AepsTerms = lazy(() => import("./pages/AepsTerms"))
-const RefundPolicy = lazy(() => import("./pages/RefundPolicy"))
-const RetailerTerms = lazy(() => import("./pages/RetailerTerms"))
-const Profile = lazy(() => import("./pages/Profile"))
+// const AddMoney = page(() => import("./pages/AddMoney"))
+const BiometricSupport = page(() => import("./pages/BiometricSupport"))
+const LedgerReport = page(() => import("./pages/LedgerReport"))
+const DmtReport = page(() => import("./pages/DmtReport"))
+const AepsReport = page(() => import("./pages/AepsReport"))
+const PayoutReport = page(() => import("./pages/PayoutReport"))
+const UpiReport = page(() => import("./pages/UpiReport"))
+const PanReport = page(() => import("./pages/PanReport"))
+const ItrReport = page(() => import("./pages/ItrReport"))
+const LeadGenerationReport = page(() => import("./pages/LeadGenerationReport"))
+const ServiceReport = page(() => import("./pages/ServiceReport"))
+const WalletLedger = page(() => import("./pages/WalletLedger"))
+const LeadGeneration = page(() => import("./pages/LeadGeneration"))
+const PanCard = page(() => import("./pages/PanCard"))
+const ITR = page(() => import("./pages/ITR"))
+const AdminPortal = page(() => import("./pages/AdminPortal"))
+const DistributorPortal = page(() => import("./pages/DistributorPortal"))
+const KycStatus = page(() => import("./pages/KycStatus"))
+const Contact = page(() => import("./pages/Contact"))
+const Commission = page(() => import("./pages/Commission"))
+const About = page(() => import("./pages/About"))
+const Terms = page(() => import("./pages/Terms"))
+const AepsPermission = page(() => import("./pages/AepsPermission"))
+const AepsTerms = page(() => import("./pages/AepsTerms"))
+const RefundPolicy = page(() => import("./pages/RefundPolicy"))
+const RetailerTerms = page(() => import("./pages/RetailerTerms"))
+const Profile = page(() => import("./pages/Profile"))
 // PAYSPRINT-DISABLED: PaySprint MATM page; route below uses Icchhamati while PAYSPRINT_ENABLED is false.
-const MATM = lazy(() => import("./pages/MATM"))
-const IcchhamatiMATM = lazy(() => import("./pages/IcchhamatiMATM"))
-const Support = lazy(() => import("./pages/Support"))
-const NotFound = lazy(() => import("./pages/NotFound"))
+const MATM = page(() => import("./pages/MATM"))
+const IcchhamatiMATM = page(() => import("./pages/IcchhamatiMATM"))
+const Support = page(() => import("./pages/Support"))
+const NotFound = page(() => import("./pages/NotFound"))
 
 function ScrollToTopWrapper() {
   const { pathname } = useLocation()
@@ -82,6 +95,20 @@ function LoginRoute() {
   const { token } = useAuth()
   if (token) return <Navigate to="/dashboard" replace />
   return <Login />
+}
+
+/**
+ * Signed in: fetches every page in the background shortly after load. Its own
+ * component so auth changes re-render only this, not App and its router.
+ */
+function PrefetchPages() {
+  const { token } = useAuth()
+  useEffect(() => {
+    if (!token) return
+    const id = window.setTimeout(prefetchPages, 2000)
+    return () => window.clearTimeout(id)
+  }, [token])
+  return null
 }
 
 function App() {
@@ -152,6 +179,7 @@ function App() {
   return (
     <>
     <Toaster theme="dark" position="top-right" />
+    <PrefetchPages />
     <RouterProvider router={router} />
     </>
   )

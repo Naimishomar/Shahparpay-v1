@@ -217,7 +217,7 @@ const IcchhamatiAEPS = () => {
     const current = stepIndex(status.step);
 
     return (
-        <div className="flex w-full flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="flex w-full flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-200">
             <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
                 <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-4">

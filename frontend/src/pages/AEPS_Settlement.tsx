@@ -68,7 +68,7 @@ const AEPS_Settlement = () => {
     };
 
     return (
-        <div className="flex flex-col gap-6 w-full p-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+        <div className="flex flex-col gap-6 w-full p-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
             <h1 className="text-2xl font-bold text-foreground">Aeps Reports</h1>
 
             {/* Filters Section */}

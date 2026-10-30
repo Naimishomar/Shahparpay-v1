@@ -502,7 +502,7 @@ const DistributorPortal = () => {
 
                 {/* Fund Requests Tab */}
                 {activeTab === 'fund_requests' && (
-                    <div className="animate-in fade-in duration-500">
+                    <div className="animate-in fade-in duration-200">
                         <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
                             <div>
                                 <h2 className="text-3xl font-bold mb-2">Fund Requests</h2>

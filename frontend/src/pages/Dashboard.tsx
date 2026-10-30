@@ -276,7 +276,7 @@ const Dashboard = () => {
     const firstName = String(user?.name || '').trim().split(/\s+/)[0];
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-200">
             {user && user.isMerchantKycComplete === false && usesAepsProvider(user, 'paysprint') && (
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between rounded-2xl border border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-4 text-amber-900 dark:text-amber-100">
                     <div className="flex items-start gap-3">

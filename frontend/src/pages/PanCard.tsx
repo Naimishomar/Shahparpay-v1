@@ -193,7 +193,7 @@ const PanCard: React.FC = () => {
     };
 
     return (
-        <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
             <div className="space-y-6">
                 {/* The page tab bar (Biometric PSA / Standard Web PSA / eSevaTech) is hidden
                     while only eSevaTech is enabled; the hero title stands in for it. The

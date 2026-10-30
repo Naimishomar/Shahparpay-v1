@@ -190,7 +190,7 @@ const WalletLedger = () => {
     };
 
     return (
-        <div className="flex-1 w-full flex flex-col p-4 md:p-6 animate-in fade-in duration-500 max-w-[1600px] mx-auto h-[calc(100vh-64px)] overflow-hidden">
+        <div className="flex-1 w-full flex flex-col p-4 md:p-6 animate-in fade-in duration-200 max-w-[1600px] mx-auto h-[calc(100vh-64px)] overflow-hidden">
             <div className="flex flex-col gap-6 h-full">
                 {/* Header */}
                 <div className="relative isolate overflow-hidden top-glow flex flex-col gap-4 w-full shrink-0 rounded-3xl border bg-card p-4 md:p-5 shadow-sm">

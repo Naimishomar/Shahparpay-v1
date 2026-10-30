@@ -181,7 +181,7 @@ const DMT = () => {
     const DIALOG = 'relative w-full rounded-2xl border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200';
 
     return (
-        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
             {/* Hero with sender search */}
             <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
 

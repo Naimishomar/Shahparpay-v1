@@ -24,7 +24,7 @@ const AepsPage = () => {
 
     if (!active) {
         return (
-            <div className="flex w-full flex-col gap-6 animate-in fade-in duration-500">
+            <div className="flex w-full flex-col gap-6 animate-in fade-in duration-200">
                 <section className="rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
                     <div className="flex items-center gap-4">
                         <div className="rounded-2xl p-3 icon-chip"><Fingerprint className="h-7 w-7" /></div>

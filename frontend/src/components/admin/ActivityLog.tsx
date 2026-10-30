@@ -98,7 +98,7 @@ const ActivityLog = ({ token, onOpenUser }: { token: string | null; onOpenUser: 
     const pages = data ? Math.max(1, Math.ceil(data.total / limit)) : 1;
 
     return (
-        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
             <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
                 <div className="relative flex items-center gap-4">
                     <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><History className="h-7 w-7" /></div>

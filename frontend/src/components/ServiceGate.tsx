@@ -11,7 +11,7 @@ const ServiceGate = ({ service, children }: { service: ServiceKey; children: Rea
     const { user } = useAuth();
     if (isServiceEnabled(user, service)) return <>{children}</>;
     return (
-        <div className="flex w-full items-center justify-center py-16 animate-in fade-in duration-500">
+        <div className="flex w-full items-center justify-center py-16 animate-in fade-in duration-200">
             <div className="max-w-md rounded-3xl border bg-card p-8 text-center shadow-sm">
                 <div className="mx-auto mb-4 w-fit rounded-2xl icon-chip p-3">
                     <Lock className="h-6 w-6" />

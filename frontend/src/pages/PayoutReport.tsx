@@ -125,7 +125,7 @@ const PayoutReport = () => {
     };
 
     return (
-        <div className="flex-1 w-full flex flex-col p-4 md:p-6 animate-in fade-in duration-500 max-w-[1600px] mx-auto h-[calc(100vh-64px)] overflow-hidden">
+        <div className="flex-1 w-full flex flex-col p-4 md:p-6 animate-in fade-in duration-200 max-w-[1600px] mx-auto h-[calc(100vh-64px)] overflow-hidden">
             <TransactionDetailModal tx={selectedTransaction} onClose={() => setSelectedTransaction(null)} />
             <div className="flex flex-col gap-6 h-full">
                 {/* Header */}
