@@ -58,9 +58,9 @@
     --bhim-orange: #F47920;
     --bhim-orange-deep: #E55C11;
     --bhim-green: #12A65A;
-    --glow-strength: 0.14;
+    --glow-strength: 0.22;
 
-    --background: #FAFAFA;
+    --background: #FFF8F2;
     --foreground: #171717;
     --card: #FFFFFF;
     --card-foreground: #171717;
@@ -68,33 +68,33 @@
     --popover-foreground: #171717;
     --primary: #E55C11;
     --primary-foreground: #FFFFFF;
-    --secondary: #F4F4F4;
+    --secondary: #FFF1E6;
     --secondary-foreground: #171717;
-    --muted: #F4F4F4;
+    --muted: #FFF3EA;
     --muted-foreground: #626262;
-    --accent: #EFEFEF;
+    --accent: #FFEBDC;
     --accent-foreground: #171717;
     --destructive: #C11414;
-    --border: #E9E9E9;
-    --input: #E9E9E9;
+    --border: #F2E2D4;
+    --input: #EEDCCC;
     --ring: #171717;
-    --chip: #F1F1F1;
+    --chip: #FFE9D9;
     /* Orange as text: the deeper shade on white, the softer one on black. */
     --brand: #BE4510;
-    --chip-foreground: #171717;
+    --chip-foreground: #E55C11;
     --chart-1: #F47920;
     --chart-2: #12A65A;
     --chart-3: #626262;
     --chart-4: #171717;
     --chart-5: #DEA511;
     --radius: 0.875rem;
-    --sidebar: #FFFFFF;
+    --sidebar: #FFFBF7;
     --sidebar-foreground: #171717;
     --sidebar-primary: #E55C11;
     --sidebar-primary-foreground: #FFFFFF;
-    --sidebar-accent: #F4F4F4;
+    --sidebar-accent: #FFEBDC;
     --sidebar-accent-foreground: #171717;
-    --sidebar-border: #E9E9E9;
+    --sidebar-border: #F2E2D4;
     --sidebar-ring: #171717;
 }
 
@@ -119,7 +119,7 @@
     --ring: #E9E9E9;
     --chip: #262626;
     --brand: #F79440;
-    --chip-foreground: #FFFFFF;
+    --chip-foreground: #F79440;
     --chart-1: #F47920;
     --chart-2: #28BF72;
     --chart-3: #9C9C9C;
@@ -143,7 +143,7 @@
     &:hover { filter: brightness(1.05); }
 }
 
-/* BHIM's monochrome icon system: one neutral circle for every icon. */
+/* Icon chips: a soft orange tint, so icons carry the brand colour. */
 @utility icon-chip {
     background-color: var(--chip);
     color: var(--chip-foreground);
