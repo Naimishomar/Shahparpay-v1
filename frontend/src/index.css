@@ -51,9 +51,10 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Deep-navy glass theme: a royal-blue glossy hero, translucent navy panels
-   with a lit top edge, glossy blue pills and round glossy icon chips. Dark is
-   the default and the reference look; light is the same palette on white. */
+/* Black-and-blue glass theme: a near-black canvas and charcoal glass panels
+   lit along the top edge, with blue kept for the background glow, the glossy
+   hero, the primary pills, the icon chips' sheen and the active item. Dark is
+   the default; light is the same blue palette on white. */
 :root {
     --brand-from: #5B8CFF;
     --brand-to: #2449E0;
@@ -102,52 +103,52 @@
 }
 
 .dark {
-    --glow-strength: 0.38;
+    --glow-strength: 0.2;
     --panel-highlight: rgb(255 255 255 / 0.10);
     --panel-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.7);
 
-    --background: #050A1E;
+    --background: #06070B;
     --foreground: #FFFFFF;
     /* Translucent so the blue glow behind shows through the glass. */
-    --card: rgb(28 38 92 / 0.55);
+    --card: rgb(22 25 36 / 0.7);
     --card-foreground: #FFFFFF;
-    --popover: #141C45;
+    --popover: #13151D;
     --popover-foreground: #FFFFFF;
     --primary: #3D6BFF;
     --primary-foreground: #FFFFFF;
-    --secondary: #1A2456;
+    --secondary: #1A1D29;
     --secondary-foreground: #FFFFFF;
-    --muted: #161F4C;
-    --muted-foreground: #A3AED6;
-    --accent: #212C66;
+    --muted: #171A24;
+    --muted-foreground: #9DA3B8;
+    --accent: #20242F;
     --accent-foreground: #FFFFFF;
     --destructive: #FF6565;
     --border: rgb(255 255 255 / 0.09);
     --input: rgb(255 255 255 / 0.14);
     --ring: #7FA2FF;
-    --chip: #222D68;
+    --chip: #1E2233;
     --brand: #8FB0FF;
     --chip-foreground: #FFFFFF;
     --chart-1: #5B8CFF;
     --chart-2: #28BF72;
-    --chart-3: #A3AED6;
+    --chart-3: #9DA3B8;
     --chart-4: #E6EAF8;
     --chart-5: #F1BF1E;
-    --sidebar: #070D28;
+    --sidebar: #08090D;
     --sidebar-foreground: #FFFFFF;
     --sidebar-primary: #3D6BFF;
     --sidebar-primary-foreground: #FFFFFF;
-    --sidebar-accent: #18214F;
+    --sidebar-accent: #1A1D29;
     --sidebar-accent-foreground: #FFFFFF;
     --sidebar-border: rgb(255 255 255 / 0.08);
     --sidebar-ring: #7FA2FF;
 
     /* Pages hard-code zinc for table heads and focus rings; in dark mode
-       those greys become navy so nothing reads as neutral grey. */
-    --color-zinc-700: #2A3570;
-    --color-zinc-800: #1A2456;
-    --color-zinc-900: #111940;
-    --color-zinc-950: #0A1030;
+       those greys take the same faint navy tint as the panels. */
+    --color-zinc-700: #2A2E3D;
+    --color-zinc-800: #1C1F2B;
+    --color-zinc-900: #12141C;
+    --color-zinc-950: #0A0B10;
 }
 
 /* The primary action: a glossy blue pill, lit along its top edge. */
