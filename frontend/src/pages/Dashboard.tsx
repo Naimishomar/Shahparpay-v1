@@ -18,18 +18,23 @@ const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR',
 const ymd = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-// BHIM's icon system: every service gets the same neutral circle; colour is
-// kept for meaning (status, money in), never for telling services apart.
-const NEUTRAL = { tile: 'icon-chip', bar: 'bg-primary', glow: '' };
+// Every service has its own gradient: the whole stat card, and the icon
+// tile wherever that service appears (quick actions, recent activity).
+const accent = (from: string, to: string) => ({ card: `bg-gradient-to-br ${from} ${to}`, tile: `bg-gradient-to-br ${from} ${to} text-white shadow-sm` });
 const ACCENTS = {
-    silver: NEUTRAL, sky: NEUTRAL, emerald: NEUTRAL, amber: NEUTRAL, rose: NEUTRAL, cyan: NEUTRAL,
+    blue: accent('from-blue-600', 'to-indigo-600'),
+    violet: accent('from-violet-600', 'to-fuchsia-600'),
+    emerald: accent('from-emerald-600', 'to-teal-600'),
+    orange: accent('from-orange-500', 'to-rose-600'),
+    pink: accent('from-pink-600', 'to-rose-500'),
+    cyan: accent('from-cyan-500', 'to-sky-600'),
 } as const;
 
 const QUICK_ACTIONS = [
     { title: 'AEPS Services', hint: 'Cash withdrawal & inquiry', url: '/aeps', service: 'aeps' as const, icon: Fingerprint, accent: 'emerald' },
-    { title: 'Lead Generation', hint: 'Credit cards & loans', url: '/lead-generation', service: 'lead' as const, icon: Users, accent: 'sky' },
-    { title: 'PAN Card', hint: 'Apply NSDL PAN', url: '/pan', service: 'pan' as const, icon: CreditCard, accent: 'rose' },
-    { title: 'ITR Filing', hint: 'Income tax return', url: '/itr', service: 'itr' as const, icon: FileText, accent: 'silver' },
+    { title: 'Lead Generation', hint: 'Credit cards & loans', url: '/lead-generation', service: 'lead' as const, icon: Users, accent: 'violet' },
+    { title: 'PAN Card', hint: 'Apply NSDL PAN', url: '/pan', service: 'pan' as const, icon: CreditCard, accent: 'orange' },
+    { title: 'ITR Filing', hint: 'Income tax return', url: '/itr', service: 'itr' as const, icon: FileText, accent: 'blue' },
 ] as const;
 
 const STATUS_PILL: Record<string, string> = {
@@ -49,12 +54,12 @@ const SALE_ICON: Record<string, typeof Banknote> = {
 
 // Same accents as the stat cards, so a sale's icon matches its service's card.
 const SALE_ACCENT: Record<string, keyof typeof ACCENTS> = {
-    'DMT': 'silver',
+    'DMT': 'blue',
     'AEPS': 'emerald',
-    'AEPS Settlement': 'amber',
-    'Direct Payout': 'amber',
+    'AEPS Settlement': 'orange',
+    'Direct Payout': 'orange',
     'Wallet Topup': 'cyan',
-    'Recharge / BBPS': 'sky',
+    'Recharge / BBPS': 'violet',
 };
 
 const greeting = () => {
@@ -100,28 +105,28 @@ const VolumeChart = ({ points, start, end }: { points: number[]; start: Date; en
             <div className="relative h-32 cursor-crosshair" onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
                 <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full" aria-hidden>
                     <defs>
-                        {/* Silver: bright centre, darker edges, like brushed metal. */}
-                        <linearGradient id="dash-silver-stroke" x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="0%" stopColor="#F47920" />
-                            <stop offset="100%" stopColor="#E55C11" />
+                        {/* White on the hero banner. */}
+                        <linearGradient id="dash-line-stroke" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.75" />
+                            <stop offset="100%" stopColor="#FFFFFF" />
                         </linearGradient>
-                        <linearGradient id="dash-silver-fill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#F47920" stopOpacity="0.22" />
-                            <stop offset="100%" stopColor="#F47920" stopOpacity="0" />
+                        <linearGradient id="dash-line-fill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.3" />
+                            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
                         </linearGradient>
                     </defs>
-                    <path d={`${line} L${W},${H} L0,${H} Z`} fill="url(#dash-silver-fill)" style={morph} />
-                    <path d={line} fill="none" stroke="url(#dash-silver-stroke)" strokeWidth="2.5" strokeLinejoin="miter" strokeMiterlimit="20" vectorEffect="non-scaling-stroke" style={morph} />
+                    <path d={`${line} L${W},${H} L0,${H} Z`} fill="url(#dash-line-fill)" style={morph} />
+                    <path d={line} fill="none" stroke="url(#dash-line-stroke)" strokeWidth="2.5" strokeLinejoin="miter" strokeMiterlimit="20" vectorEffect="non-scaling-stroke" style={morph} />
                 </svg>
                 {hover !== null && tip && (
                     <>
-                        <div className="pointer-events-none absolute inset-y-0 w-px bg-zinc-400/50" style={{ left: pct(hover) }} />
+                        <div className="pointer-events-none absolute inset-y-0 w-px bg-white/50" style={{ left: pct(hover) }} />
                         <div
-                            className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card bg-primary shadow"
+                            className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-fuchsia-500 shadow"
                             style={{ left: pct(hover), top: `${(py(points[hover]) / H) * 100}%` }}
                         />
                         <div
-                            className={`pointer-events-none absolute top-0 z-10 whitespace-nowrap rounded-lg border bg-popover/95 backdrop-blur px-3 py-1.5 text-xs shadow-lg ${hover > n / 2 ? '-translate-x-full -ml-3' : 'ml-3'}`}
+                            className={`pointer-events-none absolute top-0 z-10 whitespace-nowrap rounded-lg border bg-popover/95 text-popover-foreground backdrop-blur px-3 py-1.5 text-xs shadow-lg ${hover > n / 2 ? '-translate-x-full -ml-3' : 'ml-3'}`}
                             style={{ left: pct(hover) }}
                         >
                             <p className="text-muted-foreground">{tip.from} – {tip.to}</p>
@@ -130,7 +135,7 @@ const VolumeChart = ({ points, start, end }: { points: number[]; start: Date; en
                     </>
                 )}
             </div>
-            <div className="mt-1 flex justify-between px-1 text-[11px] text-muted-foreground tabular-nums">
+            <div className="mt-1 flex justify-between px-1 text-[11px] text-white/70 tabular-nums">
                 {[0, Math.floor(n / 2), n].map((k) => (
                     <span key={k}>{bucketLabel(start, end, k, n).edge}</span>
                 ))}
@@ -299,37 +304,37 @@ const Dashboard = () => {
             )}
 
             {/* Hero */}
-            <section className="relative overflow-hidden rounded-3xl border bg-card top-glow p-6 md:p-8 shadow-sm">
+            <section className="relative overflow-hidden rounded-3xl hero-panel p-6 md:p-8">
 
                 <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                        <p className="text-sm font-medium text-muted-foreground">
+                        <p className="text-sm font-medium text-white/80">
                             {greeting()}{firstName ? `, ${firstName}` : ''} 👋
                         </p>
-                        <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-white/75">
                             Transaction volume · {rangeLabel}
                         </p>
                         {loading ? (
-                            <Skeleton className="mt-2 h-11 w-56" />
+                            <Skeleton className="mt-2 h-11 w-56 bg-white/25" />
                         ) : (
-                            <h1 className="mt-1 text-4xl md:text-5xl font-bold tracking-tight tabular-nums text-foreground">
+                            <h1 className="mt-1 text-4xl md:text-5xl font-bold tracking-tight tabular-nums text-white">
                                 {inr.format(volume)}
                             </h1>
                         )}
-                        {loading ? <Skeleton className="mt-2 h-4 w-28" /> : (
-                            <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+                        {loading ? <Skeleton className="mt-2 h-4 w-28 bg-white/25" /> : (
+                            <p className="mt-1.5 flex items-center gap-1.5 text-sm text-white/80">
                                 <Users className="h-3.5 w-3.5" />
-                                <span className="font-semibold tabular-nums text-foreground">{stats?.TotalCustomers || 0}</span> customers served
+                                <span className="font-semibold tabular-nums text-white">{stats?.TotalCustomers || 0}</span> customers served
                             </p>
                         )}
                     </div>
 
                     <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                         <PopoverTrigger asChild>
-                            <button className="self-start flex items-center gap-2 rounded-xl border bg-background/70 backdrop-blur px-4 py-2 text-sm font-medium shadow-sm hover:bg-background">
-                                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                            <button className="self-start flex items-center gap-2 rounded-xl border border-white/25 bg-white/15 backdrop-blur px-4 py-2 text-sm font-medium text-white hover:bg-white/25">
+                                <CalendarDays className="h-4 w-4 text-white/80" />
                                 {rangeLabel}
-                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                <ChevronDown className="h-4 w-4 text-white/80" />
                             </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-60 p-2 rounded-2xl bg-popover border-border shadow-xl" align="end">
@@ -367,7 +372,7 @@ const Dashboard = () => {
                 </div>
 
                 <div className="relative mt-6">
-                    {loading && !stats ? <Skeleton className="h-32 w-full" /> : (
+                    {loading && !stats ? <Skeleton className="h-32 w-full bg-white/20" /> : (
                         <VolumeChart
                             points={stats?.graphData?.length ? stats.graphData : new Array(12).fill(0)}
                             start={new Date(stats?.graphRange?.start || `${range.start}T00:00:00+05:30`)}
@@ -387,16 +392,16 @@ const Dashboard = () => {
                     ({ title, icon, accent, value, hint });
                 const rows = [
                     [
-                        service('Total Success DMT', 'DMT', Banknote, 'silver'),
-                        service('Total Success Recharge', 'RECHARGE', Smartphone, 'sky'),
+                        service('Total Success DMT', 'DMT', Banknote, 'blue'),
+                        service('Total Success Recharge', 'RECHARGE', Smartphone, 'violet'),
                         service('Total Success AEPS', 'AEPS_WITHDRAWAL', Fingerprint, 'emerald'),
-                        service('Total Success Payout', 'AEPS_SETTLEMENT', Building2, 'amber'),
+                        service('Total Success Payout', 'AEPS_SETTLEMENT', Building2, 'orange'),
                     ],
                     [
-                        service('Total Success BBPS', 'BILL_PAYMENT', Receipt, 'rose'),
+                        service('Total Success BBPS', 'BILL_PAYMENT', Receipt, 'pink'),
                         service('Total Success UPI', 'WALLET_TOPUP', Wallet, 'cyan'),
-                        plain('Total Earnings', inr.format(Number(stats?.TotalCommission) || 0), 'Credited to wallet, after TDS', IndianRupee, 'emerald'),
-                        plain('Total Commission', inr.format(Number(stats?.TotalGrossCommission) || 0), 'Gross, before TDS', IndianRupee, 'amber'),
+                        plain('Total Earnings', inr.format(Number(stats?.TotalCommission) || 0), 'Credited to wallet, after TDS', IndianRupee, 'violet'),
+                        plain('Total Commission', inr.format(Number(stats?.TotalGrossCommission) || 0), 'Gross, before TDS', IndianRupee, 'blue'),
                     ],
                 ];
                 return rows.map((row, r) => (
@@ -405,26 +410,26 @@ const Dashboard = () => {
                             const a = ACCENTS[card.accent];
                             const Icon = card.icon;
                             return (
-                                <div key={card.title} className="group relative overflow-hidden rounded-2xl border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
-                                    <div aria-hidden className={`pointer-events-none absolute inset-0 opacity-60 transition-opacity duration-500 group-hover:opacity-100 ${a.glow}`} />
+                                <div key={card.title} className={`relative overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-transform duration-300 hover:-translate-y-0.5 ${a.card}`}>
+                                    <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/10" />
                                     <div className="relative flex items-center justify-between gap-3">
-                                        <span className="text-sm font-medium text-muted-foreground">{card.title}</span>
-                                        <div className={`rounded-full p-2.5 ${a.tile}`}>
+                                        <span className="text-sm font-medium text-white/85">{card.title}</span>
+                                        <div className="rounded-full bg-white/20 p-2.5">
                                             <Icon className="h-5 w-5" />
                                         </div>
                                     </div>
-                                    {loading ? <Skeleton className="relative mt-3 h-8 w-36" /> : (
+                                    {loading ? <Skeleton className="relative mt-3 h-8 w-36 bg-white/25" /> : (
                                         <p className="relative mt-3 text-2xl font-bold tracking-tight tabular-nums">{card.value}</p>
                                     )}
                                     {'share' in card ? (
                                         <div className="relative mt-4">
-                                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/5 dark:bg-white/10">
-                                                <div className={`h-full rounded-full transition-[width] duration-700 ${a.bar}`} style={{ width: `${loading ? 0 : card.share}%` }} />
+                                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/25">
+                                                <div className="h-full rounded-full bg-white transition-[width] duration-700" style={{ width: `${loading ? 0 : card.share}%` }} />
                                             </div>
-                                            <p className="mt-1.5 text-xs text-muted-foreground">{loading ? '\u00a0' : `${card.share}% of total volume`}</p>
+                                            <p className="mt-1.5 text-xs text-white/80">{loading ? '\u00a0' : `${card.share}% of total volume`}</p>
                                         </div>
                                     ) : (
-                                        <p className="relative mt-4 text-xs text-muted-foreground">{card.hint}</p>
+                                        <p className="relative mt-4 text-xs text-white/80">{card.hint}</p>
                                     )}
                                 </div>
                             );
@@ -442,7 +447,7 @@ const Dashboard = () => {
                             <button
                                 key={url}
                                 onClick={() => navigate(url)}
-                                className={`group relative flex flex-col items-start gap-3 rounded-xl border p-4 text-left hover:border-foreground/20 active:scale-[0.98] ${ACCENTS[accent].glow}`}
+                                className="group relative flex flex-col items-start gap-3 rounded-xl border bg-muted/40 p-4 text-left hover:border-foreground/20 active:scale-[0.98]"
                             >
                                 <ArrowUpRight className="absolute right-3 top-3 h-4 w-4 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                                 <div className={`rounded-full p-2.5 ${ACCENTS[accent].tile}`}>
@@ -468,7 +473,7 @@ const Dashboard = () => {
                         <ul className="divide-y divide-border">
                             {recentSales.map((sale, i) => {
                                 const Icon = SALE_ICON[sale.service] || Receipt;
-                                const tile = ACCENTS[SALE_ACCENT[sale.service] || 'rose'].tile;
+                                const tile = ACCENTS[SALE_ACCENT[sale.service] || 'pink'].tile;
                                 return (
                                     <li key={i} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                                         <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${tile}`}>
