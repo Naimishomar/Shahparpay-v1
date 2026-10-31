@@ -14,6 +14,8 @@ import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 
 const getCrDr = (tx: any) => {
+    // Balance enquiry and mini statement are ₹0 rows; they move no money.
+    if (!Number(tx.amount)) return 'NONE';
     if (tx.type === 'AEPS_WITHDRAWAL' && tx.status !== 'SUCCESS') return 'NONE';
     const type = tx.type;
     const credits = ['AEPS_WITHDRAWAL', 'WALLET_TOPUP'];
@@ -97,7 +99,7 @@ const AepsReport = () => {
     }, [filteredTransactions, currentPage]);
 
     const handleDownloadCSV = () => {
-        const headers = ["S.No.", "Transaction ID", "Date", "Customer", "Aadhaar", "Mobile", "Credit", "Debit", "Bank Balance", "Status", "Reason"];
+        const headers = ["S.No.", "Transaction ID", "Type", "Date", "Customer", "Aadhaar", "Mobile", "Credit", "Debit", "Bank Balance", "Status", "Reason"];
         const csvRows = [headers.join(",")];
         
         filteredTransactions.forEach((tx, idx) => {
@@ -107,6 +109,7 @@ const AepsReport = () => {
             const row = [
                 idx + 1,
                 tx.transactionId || tx._id || "N/A",
+                tx.type?.replace(/_/g, " ") || "N/A",
                 new Date(tx.createdAt).toLocaleString(),
                 tx.metadata?.name || tx.metadata?.customerName || "N/A",
                 maskAadhaar(tx.metadata?.aadhaar || tx.metadata?.aadhar) || "N/A",
@@ -261,6 +264,7 @@ const AepsReport = () => {
                                                 <TableCell className="px-4 py-2">
                                                     <div className="flex flex-col">
                                                         <span className="font-medium text-xs text-foreground/80 truncate max-w-[160px]">{tx.transactionId || tx._id || "N/A"}</span>
+                                                        <span className="text-[11px] font-semibold text-brand">{tx.type?.replace(/_/g, " ")}</span>
                                                         <span className="text-[11px] text-muted-foreground">{new Date(tx.createdAt).toLocaleString()}</span>
                                                     </div>
                                                 </TableCell>

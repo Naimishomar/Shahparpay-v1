@@ -15,6 +15,8 @@ import { useAuth } from "../context/AuthContext"
 import TransactionDetailModal, { reasonOf } from "../components/TransactionDetailModal"
 
 const getCrDr = (tx: any) => {
+    // Balance enquiry and mini statement are ₹0 rows; they move no money.
+    if (!Number(tx.amount)) return 'NONE';
     // AEPS withdrawal money is credited only after bank success. A declined or
     // still-reconciling request must not look like a wallet credit in reports.
     if (tx.type === 'AEPS_WITHDRAWAL' && tx.status !== 'SUCCESS') return 'NONE';

@@ -16,6 +16,7 @@ import {
   makeReferenceId,
 } from '../utils/icchhamati.util.js';
 import { applyAepsWithdrawalSuccess } from '../utils/wallet.util.js';
+import { recordAepsEnquiry } from '../utils/aepsEnquiry.js';
 import { aepsKycDone } from '../utils/services.js';
 import { uploadOnR2 } from '../utils/r2.js';
 import { loggableResponse } from '../utils/integrationLogger.js';
@@ -1035,7 +1036,24 @@ export const doTransaction = async (req, res) => {
     };
 
     if (!record) {
-      // Balance enquiry and mini statement move no money; just relay.
+      // Balance enquiry and mini statement move no money; recorded for the report.
+      await recordAepsEnquiry({
+        userId: retailer._id,
+        kind: txn.aepsType,
+        ok: outcome === 'SUCCESS',
+        message,
+        metadata: {
+          provider: 'icchhamati',
+          aadhaar: receipt.aadhaar,
+          bankIIN: txn.bankID,
+          bankName,
+          mobile: txn.customerMobile,
+          bankBalance: result.balanceAmount,
+          bankRRN: result.bankRRN,
+          fpTransactionId: result.fpTransactionId,
+          ministatement: Object.values(result).find((v) => Array.isArray(v) && v.length),
+        },
+      });
       return outcome === 'SUCCESS'
         ? res.status(200).json({ success: true, message, data: receipt })
         : res.status(400).json({ success: false, message, data: receipt });

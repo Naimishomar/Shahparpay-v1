@@ -19,6 +19,7 @@ import {
   applyAepsDepositSuccess,
   queryAepsTransactionStatus,
 } from '../utils/wallet.util.js';
+import { recordAepsEnquiry } from '../utils/aepsEnquiry.js';
 
 // Only the full Aadhaar's last four digits are ever shown, and UIDAI rules forbid
 // storing the full number, so it is masked before it reaches the database.
@@ -134,6 +135,18 @@ const saveBankBalance = async (txn, responseData) => {
   await txn.save();
 };
 
+/** What an enquiry's report row keeps: never the full Aadhaar or the biometric. */
+const enquiryMetadata = (body, responseData) => ({
+  provider: 'paysprint',
+  aadhaar: maskAadhaar(body.aadhaarNumber),
+  bankIIN: body.bankIIN,
+  bankName: body.bankName,
+  mobile: body.mobileNumber,
+  bankBalance: readBankBalance(responseData),
+  rrn: responseData?.bankrrn || responseData?.data?.bankrrn || responseData?.data?.rrn,
+  ackno: responseData?.ackno || responseData?.data?.ackno,
+});
+
 export const balanceEnquiry = async (req, res) => {
   try {
     const { mobileNumber, aadhaarNumber, bankIIN, pidData, latitude, longitude, pipe } = req.body;
@@ -185,6 +198,14 @@ export const balanceEnquiry = async (req, res) => {
       logLabel: 'Balance Enquiry',
       hideData: true,
       timeout: 60000,
+    });
+
+    await recordAepsEnquiry({
+      userId: retailer._id,
+      kind: 'BE',
+      ok: Boolean(responseData?.status),
+      message: responseData?.message || (responseData?.status ? 'Balance fetched successfully' : 'Failed to fetch balance'),
+      metadata: enquiryMetadata(req.body, responseData),
     });
 
     if (responseData && responseData.status) {
@@ -929,6 +950,13 @@ export const miniStatement = async (req, res) => {
         });
       }
       responseData.ministatement = ministatement;
+      await recordAepsEnquiry({
+        userId: retailer._id,
+        kind: 'MS',
+        ok: true,
+        message: responseData.message || 'Mini Statement fetched',
+        metadata: { ...enquiryMetadata(req.body, responseData), ministatement },
+      });
 
       return res.status(200).json({
         success: true,
@@ -936,6 +964,13 @@ export const miniStatement = async (req, res) => {
         data: responseData,
       });
     } else {
+      await recordAepsEnquiry({
+        userId: retailer._id,
+        kind: 'MS',
+        ok: false,
+        message: responseData?.message || 'Failed to fetch mini statement',
+        metadata: enquiryMetadata(req.body, responseData),
+      });
       return res.status(400).json({
         success: false,
         message: responseData?.message || 'Failed to fetch mini statement',

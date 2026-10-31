@@ -1,6 +1,7 @@
 import MainWallet from '../models/mainWallet.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
 import Transaction from '../models/transaction.model.js';
+import { ENQUIRY_TYPES } from '../utils/aepsEnquiry.js';
 
 // Credit types where the wallet receives the transaction amount PLUS the
 // retailer's commission (verified against applyAepsWithdrawalSuccess).
@@ -171,6 +172,7 @@ const getCommissionSplit = (tx) => {
  * Commission is credited NET of 2% TDS.
  */
 export const getWalletDeltas = (tx) => {
+  if (ENQUIRY_TYPES.includes(tx.type)) return { main: 0, aeps: 0 };
   const amount = toNumber(tx.amount);
   const { net } = getCommissionSplit(tx);
   const isRefund = isRefundTxnId(tx.transactionId);
@@ -247,6 +249,7 @@ export const getWalletLedger = async (req, res) => {
     const query = {
       userId,
       status: { $in: MONEY_MOVING_STATUSES },
+      type: { $nin: ENQUIRY_TYPES },
     };
 
     const transactions = await Transaction.find(query).sort({ createdAt: 1 }).lean();

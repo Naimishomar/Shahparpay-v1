@@ -92,8 +92,14 @@ const qrToMain = getWalletDeltas(tx('QRTO_MAIN'));
 assert.strictEqual(qrToMain.main, 100);
 assert.strictEqual(qrToMain.qr, -100);
 
+// Balance enquiry and mini statement are report rows; they move nothing.
+for (const type of ['AEPS_BALANCE_ENQUIRY', 'AEPS_MINI_STATEMENT']) {
+  const delta = getWalletDeltas(tx(type));
+  assert.deepStrictEqual([delta.main, delta.aeps], [0, 0], `${type} must not move money`);
+}
+
 for (const type of TYPES) {
-  if (type === 'AEPSTOMAIN' || type === 'QRTO_MAIN' || type === 'LEAD') continue;
+  if (['AEPSTOMAIN', 'QRTO_MAIN', 'LEAD', 'AEPS_BALANCE_ENQUIRY', 'AEPS_MINI_STATEMENT'].includes(type)) continue;
   const expected = EXPECTED[type];
   assert.ok(expected, `${type} is in the schema enum but has no pinned ledger effect here`);
   const [wallet, sign] = expected;

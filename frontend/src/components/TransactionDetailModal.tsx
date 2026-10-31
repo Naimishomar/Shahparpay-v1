@@ -1,125 +1,126 @@
-import { XCircle } from "lucide-react"
+import { useRef } from "react"
+import html2canvas from "html2canvas-pro"
+import { jsPDF } from "jspdf"
+import { Download, Printer, X } from "lucide-react"
+import { toast } from "sonner"
+import logo from "../assets/logo.png"
 
 /** Why the gateway ended the transaction the way it did. */
 export const reasonOf = (tx: any) =>
     tx?.metadata?.gatewayMessage || tx?.metadata?.apiMessage || tx?.metadata?.message || tx?.metadata?.note || "";
 
+/** Only the last four digits may be displayed back at an outlet. */
+const maskAadhaar = (v: any) => {
+    const digits = String(v ?? "").replace(/\D/g, "");
+    return digits.length >= 4 ? `XXXX-XXXX-${digits.slice(-4)}` : "";
+};
+
+/** camelCase / snake_case key to a readable label. */
+const labelOf = (key: string) =>
+    key.replace(/_/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (c) => c.toUpperCase());
+
+/** Metadata already shown above, or never shown to the outlet. */
+const HIDDEN = new Set([
+    "name", "customerName", "mobile", "bankName", "rrn", "bankRRN", "utr", "orderId", "apiProvider",
+    "aadhaar", "aadhar", "aadhaarLast4", "bankBalance", "charges",
+    "gatewayMessage", "apiMessage", "message", "note",
+    "latitude", "longitude", "qrImageUrl", "paymentUrl",
+]);
+
+const statusTone = (s: string) =>
+    s === "SUCCESS" ? "text-emerald-600" : /FAIL|REJECT/i.test(s) ? "text-rose-600" : "text-amber-600";
+
 /** Full detail of one wallet transaction, shared by every report that lists them. */
 const TransactionDetailModal = ({ tx, onClose }: { tx: any; onClose: () => void }) => {
+    const ref = useRef<HTMLDivElement>(null);
     if (!tx) return null;
+
+    const m = tx.metadata || {};
+    const id = tx.transactionId || tx._id;
+    const status = tx.status || "UNKNOWN";
+    const aadhaar = maskAadhaar(m.aadhaar || m.aadhar) || (m.aadhaarLast4 ? `XXXX-XXXX-${m.aadhaarLast4}` : "");
+    const rows: [string, any][] = [
+        ["Txn ID", id],
+        ["Order ID", m.orderId],
+        ["RRN", m.rrn || m.bankRRN || m.utr],
+        ["Provider", m.apiProvider],
+        ["Type", tx.type?.replace(/_/g, " ")],
+        ["Date & Time", new Date(tx.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })],
+        ["Customer", m.name || m.customerName],
+        ["Mobile", m.mobile],
+        ["Aadhaar", aadhaar],
+        ["Bank", m.bankName],
+        ["Amount", `₹ ${tx.amount || 0}`],
+        ["Charges", m.charges != null ? `₹ ${m.charges}` : null],
+        ["Bank Balance", m.bankBalance != null ? `₹ ${m.bankBalance}` : null],
+        ["Transaction Status", status],
+        ...Object.entries(m)
+            .filter(([k, v]) => !HIDDEN.has(k) && v !== "" && v != null && typeof v !== "object")
+            .map(([k, v]) => [labelOf(k), String(v)] as [string, any]),
+    ];
+    const shown = rows.filter(([, v]) => v != null && v !== "");
+
+    const pdf = async () => {
+        const canvas = await html2canvas(ref.current!, { scale: 2, backgroundColor: "#ffffff" });
+        const doc = new jsPDF({ unit: "mm", format: "a4" });
+        const w = doc.internal.pageSize.getWidth() - 20;
+        doc.addImage(canvas.toDataURL("image/png"), "PNG", 10, 10, w, (canvas.height * w) / canvas.width);
+        return doc;
+    };
+    const download = async () => {
+        try { (await pdf()).save(`Receipt_${id}.pdf`); } catch { toast.error("Could not download the receipt."); }
+    };
+    const print = async () => {
+        try {
+            const doc = await pdf();
+            doc.autoPrint();
+            window.open(doc.output("bloburl"), "_blank");
+        } catch { toast.error("Could not print the receipt."); }
+    };
+
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => onClose()}>
-            <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-                {/* Header */}
-                <div className="flex justify-between items-start p-4 bg-muted/30 border-b border-border">
-                    <div className="flex flex-col gap-1">
-                        <h3 className="text-lg font-black text-foreground">Transaction Details</h3>
-                        <p className="text-xs text-muted-foreground font-medium">Ref: {tx.transactionId || tx._id}</p>
-                    </div>
-                    <button onClick={() => onClose()} className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors">
-                        <XCircle className="w-5 h-5" />
-                    </button>
+        <div role="dialog" aria-modal="true" aria-label="Transaction details" onClick={onClose} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div onClick={(e) => e.stopPropagation()} className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl animate-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between btn-primary px-5 py-3">
+                    <h3 className="text-lg font-bold">Transaction Details</h3>
+                    <button onClick={onClose} aria-label="Close" className="rounded-full p-1.5 hover:bg-white/15 transition-colors"><X className="h-5 w-5" /></button>
                 </div>
 
-                {/* Body */}
-                <div className="p-6 space-y-5">
-                    {/* Amount & Status */}
-                    <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border/50">
-                        <div>
-                            <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Amount</p>
-                            <p className="text-2xl font-black text-foreground">₹ {tx.amount || 0}</p>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Status</p>
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                                tx.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20 border border-emerald-500/20' : 
-                                tx.status === 'FAILED' ? 'bg-rose-500/10 text-rose-700 dark:text-rose-400 ring-rose-500/20 border border-rose-500/20' : 
-                                'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-amber-500/20 border border-yellow-500/20'
-                            }`}>
-                                {tx.status || "UNKNOWN"}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Details Grid */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <p className="text-[10px] text-muted-foreground font-semibold uppercase">Date & Time</p>
-                            <p className="text-sm font-medium text-foreground">{new Date(tx.createdAt).toLocaleString()}</p>
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-[10px] text-muted-foreground font-semibold uppercase">Type</p>
-                            <p className="text-sm font-medium text-foreground">{tx.type?.replace(/_/g, ' ')}</p>
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-[10px] text-muted-foreground font-semibold uppercase">Customer Name</p>
-                            <p className="text-sm font-medium text-foreground">{tx.metadata?.name || tx.metadata?.customerName || "N/A"}</p>
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-[10px] text-muted-foreground font-semibold uppercase">Mobile Number</p>
-                            <p className="text-sm font-medium text-foreground">{tx.metadata?.mobile || "N/A"}</p>
-                        </div>
-                        {tx.metadata?.bankName && (
-                            <div className="space-y-1 col-span-2">
-                                <p className="text-[10px] text-muted-foreground font-semibold uppercase">Bank Name</p>
-                                <p className="text-sm font-medium text-foreground">{tx.metadata.bankName}</p>
+                <div className="flex-1 overflow-y-auto no-scrollbar">
+                    <div ref={ref} className="bg-white p-6 text-slate-800">
+                        <img src={logo} alt="Shahparpay" className="mx-auto mb-5 h-12 w-auto object-contain" />
+                        <dl className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
+                            {shown.map(([k, v]) => (
+                                <div key={k}>
+                                    <dt className="text-sm font-semibold text-slate-900">{k}</dt>
+                                    <dd className={`break-all text-sm ${k === "Transaction Status" ? `font-bold ${statusTone(status)}` : "text-slate-600"}`}>{v}</dd>
+                                </div>
+                            ))}
+                        </dl>
+                        {Array.isArray(m.ministatement) && m.ministatement.length > 0 && (
+                            <div className="mt-5">
+                                <p className="mb-2 text-sm font-semibold text-slate-900">Mini Statement</p>
+                                <table className="w-full text-left text-xs">
+                                    <tbody className="divide-y divide-slate-100">
+                                        {m.ministatement.map((row: any, i: number) => (
+                                            <tr key={i}>{Object.values(row).map((v, j) => <td key={j} className="p-1.5">{String(v ?? "")}</td>)}</tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         )}
-                        {tx.metadata?.rrn && (
-                            <div className="space-y-1">
-                                <p className="text-[10px] text-muted-foreground font-semibold uppercase">Bank RRN</p>
-                                <p className="text-sm font-medium text-foreground">{tx.metadata.rrn}</p>
-                            </div>
-                        )}
-                        {(tx.metadata?.aadhaar || tx.metadata?.aadhar) && (
-                            <div className="space-y-1">
-                                <p className="text-[10px] text-muted-foreground font-semibold uppercase">Aadhaar (Last 4)</p>
-                                <p className="text-sm font-medium text-foreground">**** {String(tx.metadata.aadhaar || tx.metadata.aadhar).slice(-4)}</p>
-                            </div>
-                        )}
-                        {tx.metadata?.bankBalance != null && (
-                            <div className="space-y-1">
-                                <p className="text-[10px] text-muted-foreground font-semibold uppercase">Bank Balance After</p>
-                                <p className="text-sm font-medium text-foreground">₹ {tx.metadata.bankBalance}</p>
+                        {reasonOf(tx) && (
+                            <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                <p className="text-sm font-semibold text-slate-900">Message</p>
+                                <p className="text-sm text-slate-600">{reasonOf(tx)}</p>
                             </div>
                         )}
                     </div>
-
-                    {/* PaySprint / Gateway Message */}
-                    {reasonOf(tx) && (
-                        <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
-                            <p className="text-[10px] text-muted-foreground font-semibold uppercase mb-1">Message</p>
-                            <p className="text-sm font-medium text-foreground">
-                                {reasonOf(tx)}
-                            </p>
-                        </div>
-                    )}
-                    
-                    {/* Metadata Dump (for debugging/extra details) */}
-                    {tx.metadata && Object.keys(tx.metadata).length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-border">
-                            <p className="text-[10px] text-muted-foreground font-semibold uppercase mb-2">Additional Metadata</p>
-                            <div className="bg-muted/50 p-3 rounded-lg overflow-x-auto">
-                                <pre className="text-[10px] text-foreground/80 font-mono whitespace-pre-wrap">
-                                    {JSON.stringify(
-                                        Object.fromEntries(
-                                            Object.entries(tx.metadata).filter(
-                                                ([k]) => !['name', 'customerName', 'mobile', 'bankName', 'rrn', 'aadhar', 'latitude', 'longitude'].includes(k)
-                                            )
-                                        ), 
-                                        null, 2
-                                    )}
-                                </pre>
-                            </div>
-                        </div>
-                    )}
                 </div>
 
-                {/* Footer */}
-                <div className="p-4 bg-muted/30 border-t border-border flex justify-end">
-                    <button onClick={() => onClose()} className="px-5 py-2 btn-primary rounded-xl text-sm font-semibold transition-colors">
-                        Close
-                    </button>
+                <div className="flex justify-end gap-3 border-t border-slate-200 bg-white px-5 py-3">
+                    <button onClick={print} className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"><Printer className="h-4 w-4" /> Print</button>
+                    <button onClick={download} className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"><Download className="h-4 w-4" /> Download PDF</button>
                 </div>
             </div>
         </div>

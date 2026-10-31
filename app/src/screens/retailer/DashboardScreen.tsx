@@ -462,7 +462,7 @@ const TransactionRow: React.FC<{ tx: any; last: boolean }> = ({ tx, last }) => {
           style={[styles.saleAmount, credit && !failed && styles.credit, failed && styles.failed]}
           numberOfLines={1}
         >
-          {failed ? '' : credit ? '+ ' : '− '}
+          {failed || !Number(tx.amount) ? '' : credit ? '+ ' : '− '}
           {money(tx.amount)}
         </Text>
         <Text style={[styles.tag, { color: colors[tag.tone] }]}>{tag.label}</Text>

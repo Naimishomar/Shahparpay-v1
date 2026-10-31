@@ -42,6 +42,8 @@ const transactionSchema = new mongoose.Schema(
         'PG_COLLECTION',
         'MATM',
         'LEAD',
+        'AEPS_BALANCE_ENQUIRY',
+        'AEPS_MINI_STATEMENT',
       ],
       required: true,
     },
