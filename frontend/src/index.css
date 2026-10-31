@@ -165,22 +165,17 @@
     background-repeat: no-repeat;
 }
 
-/* Every panel: faint rings out of the top-right corner and two soft brand
-   lights, all under ~9% so the content stays the focus. Panels that already
-   carry the top glow keep it. */
+/* Every panel: a line-art mandala out of the top-right corner, a small one
+   in the bottom-left, and two soft brand lights. The SVGs carry their own
+   20% opacity. Panels that already carry the top glow keep it. */
 .bg-card.border:is(.rounded-xl, .rounded-2xl, .rounded-3xl):not(.top-glow) {
-    --ring-line: color-mix(in oklab, var(--foreground) 6%, transparent);
     background-image:
-        radial-gradient(circle at 100% 0%,
-            transparent 39px, var(--ring-line) 40px 41px,
-            transparent 42px 79px, var(--ring-line) 80px 81px,
-            transparent 82px 119px, var(--ring-line) 120px 121px,
-            transparent 122px 159px, var(--ring-line) 160px 161px,
-            transparent 162px),
+        url("./assets/patterns/flower-corner.svg"),
+        url("./assets/patterns/flower-small.svg"),
         radial-gradient(circle at 100% 0%, color-mix(in oklab, var(--bhim-orange) 9%, transparent), transparent 55%),
         radial-gradient(circle at 0% 100%, color-mix(in oklab, var(--bhim-green) 6%, transparent), transparent 50%);
-    background-size: 170px 170px, 100% 100%, 100% 100%;
-    background-position: top right, center, center;
+    background-size: min(270px, 60%) auto, min(140px, 32%) auto, 100% 100%, 100% 100%;
+    background-position: top right, bottom left, center, center;
     background-repeat: no-repeat;
 }
 
