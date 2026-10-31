@@ -98,7 +98,7 @@ export function AppSidebar() {
     <Sidebar className="border-r border-border">
       <SidebarContent className="bg-transparent text-foreground">
         <div className="p-6 pb-2 flex flex-col items-center justify-center relative">
-                        <img src={logo} alt="logo" className="w-[80%] object-contain" />
+                        <img src={logo} alt="logo" className="w-[80%] object-contain dark:brightness-0 dark:invert dark:opacity-90" />
         </div>
         <SidebarMenu className="px-4 py-6 gap-3 mt-2">
           {projects.map((project: any, i: number) => {

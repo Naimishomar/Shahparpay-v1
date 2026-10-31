@@ -1033,7 +1033,7 @@ const AEPS = () => {
                         {/* Header */}
                         <div className="flex justify-between items-start p-4 bg-white border-b border-gray-100">
                             <div>
-                                <img src={logo} alt="Logo" className="h-10 object-contain" />
+                                <img src={logo} alt="Logo" className="h-10 object-contain dark:brightness-0 dark:invert" />
                             </div>
                             <div className="flex flex-col items-end text-xs text-slate-600 gap-1 relative pr-8">
                                 <button 
@@ -1148,7 +1148,7 @@ const AEPS = () => {
                         {/* Header */}
                         <div className="flex justify-between items-start p-4 bg-white border-b border-gray-100">
                             <div>
-                                <img src={logo} alt="Logo" className="h-10 object-contain" />
+                                <img src={logo} alt="Logo" className="h-10 object-contain dark:brightness-0 dark:invert" />
                             </div>
                             <div className="flex flex-col items-end text-xs text-slate-600 gap-1 relative pr-8">
                                 <button 
