@@ -70,18 +70,6 @@ const distributorProjects = [
   { name: "Support Center", url: "/support", icon: Headset },
 ]
 
-// One tint per menu row, cycled, so the sidebar is not a column of grey icons.
-const ICON_TINTS = [
-  "bg-orange-500/10 text-orange-600",
-  "bg-emerald-500/10 text-emerald-600",
-  "bg-sky-500/10 text-sky-600",
-  "bg-violet-500/10 text-violet-600",
-  "bg-rose-500/10 text-rose-600",
-  "bg-amber-500/10 text-amber-600",
-  "bg-teal-500/10 text-teal-600",
-  "bg-indigo-500/10 text-indigo-600",
-]
-
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
 import { ChevronRight } from "lucide-react"
 import { SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton } from "@/components/ui/sidebar"
@@ -101,9 +89,8 @@ export function AppSidebar() {
                         <img src={logo} alt="logo" className="w-[80%] object-contain dark:brightness-0 dark:invert dark:opacity-90" />
         </div>
         <SidebarMenu className="px-4 py-6 gap-3 mt-2">
-          {projects.map((project: any, i: number) => {
+          {projects.map((project: any) => {
             const Icon = project.icon
-            const tint = ICON_TINTS[i % ICON_TINTS.length]
             
             if (project.subItems) {
               const isSubActive = project.subItems.some((item: any) => location.pathname.startsWith(item.url));
@@ -114,7 +101,7 @@ export function AppSidebar() {
                               <SidebarMenuButton className={`p-0 h-auto hover:bg-transparent ${isSubActive ? 'text-foreground border border-transparent rounded-xl' : 'text-muted-foreground hover:bg-accent hover:text-foreground border border-transparent rounded-xl'}`}>
                                   <div className="flex items-center justify-between w-full py-2.5 px-3 transition-all duration-300">
                                       <div className="flex items-center gap-3">
-                                          <span className={`p-1.5 rounded-lg ${tint}`}><Icon className="w-4 h-4" /></span>
+                                          <span className="p-2 rounded-full icon-chip"><Icon className="w-4 h-4" /></span>
                                           <span className="font-semibold text-sm">{project.name}</span>
                                       </div>
                                       <ChevronRight className="w-4 h-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
@@ -158,7 +145,7 @@ export function AppSidebar() {
                         : 'text-muted-foreground hover:bg-accent hover:text-foreground border border-transparent'
                     }`}
                   >
-                    <span className={`p-1.5 rounded-lg ${tint}`}><Icon className="w-4 h-4" /></span>
+                    <span className="p-2 rounded-full icon-chip"><Icon className="w-4 h-4" /></span>
                     <span className="font-semibold text-sm">{project.name}</span>
                   </Link>
                 </SidebarMenuButton>

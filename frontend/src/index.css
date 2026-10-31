@@ -51,132 +51,145 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Deep-navy glass theme: a royal-blue glossy hero, translucent navy panels
+   with a lit top edge, glossy blue pills and round glossy icon chips. Dark is
+   the default and the reference look; light is the same palette on white. */
 :root {
-    /* BHIM 4, mirrored from the app's theme (app/src/theme/colors.ts) so the
-       portal and the app read as one product. Orange is reserved for the one
-       primary action and the active item; green for money in and success. */
-    --bhim-orange: #F47920;
-    --bhim-orange-deep: #E55C11;
-    --bhim-green: #12A65A;
-    --glow-strength: 0.22;
+    --brand-from: #5B8CFF;
+    --brand-to: #2449E0;
+    --brand-glow: #3D6BFF;
+    --brand-glow-2: #6A4CFF;
+    --success: #12A65A;
+    --glow-strength: 0.16;
+    --panel-highlight: rgb(255 255 255 / 0.9);
+    --panel-shadow: 0 10px 30px -14px rgb(36 73 224 / 0.25);
 
-    --background: #FFF8F2;
-    --foreground: #171717;
+    --background: #EEF2FC;
+    --foreground: #0E1533;
     --card: #FFFFFF;
-    --card-foreground: #171717;
+    --card-foreground: #0E1533;
     --popover: #FFFFFF;
-    --popover-foreground: #171717;
-    --primary: #E55C11;
+    --popover-foreground: #0E1533;
+    --primary: #2F5BEA;
     --primary-foreground: #FFFFFF;
-    --secondary: #FFF1E6;
-    --secondary-foreground: #171717;
-    --muted: #FFF3EA;
-    --muted-foreground: #626262;
-    --accent: #FFEBDC;
-    --accent-foreground: #171717;
+    --secondary: #E7ECFA;
+    --secondary-foreground: #0E1533;
+    --muted: #EDF1FB;
+    --muted-foreground: #58627F;
+    --accent: #E2E8FA;
+    --accent-foreground: #0E1533;
     --destructive: #C11414;
-    --border: #F2E2D4;
-    --input: #EEDCCC;
-    --ring: #171717;
-    --chip: #FFE9D9;
-    /* Orange as text: the deeper shade on white, the softer one on black. */
-    --brand: #BE4510;
-    --chip-foreground: #E55C11;
-    --chart-1: #F47920;
+    --border: #DCE3F4;
+    --input: #D3DBF0;
+    --ring: #2F5BEA;
+    --chip: #E3EAFF;
+    --brand: #2447C9;
+    --chip-foreground: #2447C9;
+    --chart-1: #3D6BFF;
     --chart-2: #12A65A;
-    --chart-3: #626262;
-    --chart-4: #171717;
+    --chart-3: #8A94B3;
+    --chart-4: #0E1533;
     --chart-5: #DEA511;
     --radius: 0.875rem;
-    --sidebar: #FFFBF7;
-    --sidebar-foreground: #171717;
-    --sidebar-primary: #E55C11;
+    --sidebar: #F7F9FF;
+    --sidebar-foreground: #0E1533;
+    --sidebar-primary: #2F5BEA;
     --sidebar-primary-foreground: #FFFFFF;
-    --sidebar-accent: #FFEBDC;
-    --sidebar-accent-foreground: #171717;
-    --sidebar-border: #F2E2D4;
-    --sidebar-ring: #171717;
+    --sidebar-accent: #E2E8FA;
+    --sidebar-accent-foreground: #0E1533;
+    --sidebar-border: #DCE3F4;
+    --sidebar-ring: #2F5BEA;
 }
 
 .dark {
-    --background: #0B0B0B;
+    --glow-strength: 0.38;
+    --panel-highlight: rgb(255 255 255 / 0.10);
+    --panel-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.7);
+
+    --background: #050A1E;
     --foreground: #FFFFFF;
-    --card: #171717;
+    /* Translucent so the blue glow behind shows through the glass. */
+    --card: rgb(28 38 92 / 0.55);
     --card-foreground: #FFFFFF;
-    --popover: #171717;
+    --popover: #141C45;
     --popover-foreground: #FFFFFF;
-    --primary: #EB6A16;
+    --primary: #3D6BFF;
     --primary-foreground: #FFFFFF;
-    --secondary: #1D1D1F;
+    --secondary: #1A2456;
     --secondary-foreground: #FFFFFF;
-    --muted: #1D1D1F;
-    --muted-foreground: #9C9C9C;
-    --accent: #262626;
+    --muted: #161F4C;
+    --muted-foreground: #A3AED6;
+    --accent: #212C66;
     --accent-foreground: #FFFFFF;
     --destructive: #FF6565;
-    --border: #2A2A2A;
-    --input: #2A2A2A;
-    --ring: #E9E9E9;
-    --chip: #262626;
-    --brand: #F79440;
-    --chip-foreground: #F79440;
-    --chart-1: #F47920;
+    --border: rgb(255 255 255 / 0.09);
+    --input: rgb(255 255 255 / 0.14);
+    --ring: #7FA2FF;
+    --chip: #222D68;
+    --brand: #8FB0FF;
+    --chip-foreground: #FFFFFF;
+    --chart-1: #5B8CFF;
     --chart-2: #28BF72;
-    --chart-3: #9C9C9C;
-    --chart-4: #E9E9E9;
+    --chart-3: #A3AED6;
+    --chart-4: #E6EAF8;
     --chart-5: #F1BF1E;
-    --sidebar: #0B0B0B;
+    --sidebar: #070D28;
     --sidebar-foreground: #FFFFFF;
-    --sidebar-primary: #EB6A16;
+    --sidebar-primary: #3D6BFF;
     --sidebar-primary-foreground: #FFFFFF;
-    --sidebar-accent: #1D1D1F;
+    --sidebar-accent: #18214F;
     --sidebar-accent-foreground: #FFFFFF;
-    --sidebar-border: #2A2A2A;
-    --sidebar-ring: #E9E9E9;
+    --sidebar-border: rgb(255 255 255 / 0.08);
+    --sidebar-ring: #7FA2FF;
+
+    /* Pages hard-code zinc for table heads and focus rings; in dark mode
+       those greys become navy so nothing reads as neutral grey. */
+    --color-zinc-700: #2A3570;
+    --color-zinc-800: #1A2456;
+    --color-zinc-900: #111940;
+    --color-zinc-950: #0A1030;
 }
 
-/* BHIM's primary action: an orange gradient pill, flat, same in both themes. */
+/* The primary action: a glossy blue pill, lit along its top edge. */
 @utility btn-primary {
-    background-image: linear-gradient(135deg, var(--bhim-orange), var(--bhim-orange-deep));
+    background-image: linear-gradient(180deg, var(--brand-from), var(--brand-to));
     color: #FFFFFF;
     border-color: transparent;
-    &:hover { filter: brightness(1.05); }
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 10px 24px -10px var(--brand-glow);
+    &:hover { filter: brightness(1.08); }
 }
 
-/* Icon chips: a soft orange tint, so icons carry the brand colour. */
+/* Icon chips: a glossy navy (light: soft blue) bubble. */
 @utility icon-chip {
     background-color: var(--chip);
+    background-image: radial-gradient(circle at 30% 25%, rgb(255 255 255 / 0.18), transparent 60%);
     color: var(--chip-foreground);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
 }
 
-/* BHIM's dark panel: near-black in both themes, lit along the top edge. */
+/* The balance card: a royal-blue gradient, brightest at the top. */
 @utility hero-panel {
-    background-color: #171717;
+    background-color: #2449E0;
+    background-image: radial-gradient(120% 90% at 50% 0%, #5B8CFF 0%, #2E57EC 45%, #1B34B0 100%);
     color: #FFFFFF;
-    border: 1px solid #2A2A2A;
-    box-shadow: inset 0 1.5px 0 0 color-mix(in oklab, var(--bhim-orange) 70%, var(--bhim-green));
+    border: 1px solid rgb(255 255 255 / 0.16);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3), 0 20px 40px -20px rgb(36 73 224 / 0.7);
 }
 
-/* The two soft lights behind the top of every screen (the app's TopGlow). */
+/* The blue lights behind every screen, as in the reference: one up top, one
+   low on the left. */
 @utility top-glow {
     background-image:
-        radial-gradient(ellipse 60% 420px at 0% 0%, color-mix(in oklab, var(--bhim-orange) calc(var(--glow-strength) * 100%), transparent), transparent),
-        radial-gradient(ellipse 60% 420px at 100% 0%, color-mix(in oklab, var(--bhim-green) calc(var(--glow-strength) * 100%), transparent), transparent);
+        radial-gradient(ellipse 55% 480px at 10% 0%, color-mix(in oklab, var(--brand-glow) calc(var(--glow-strength) * 100%), transparent), transparent),
+        radial-gradient(ellipse 45% 420px at 100% 0%, color-mix(in oklab, var(--brand-glow-2) calc(var(--glow-strength) * 70%), transparent), transparent),
+        radial-gradient(ellipse 40% 520px at 0% 100%, color-mix(in oklab, var(--brand-glow) calc(var(--glow-strength) * 80%), transparent), transparent);
     background-repeat: no-repeat;
 }
 
-/* Every panel: a line-art mandala out of the top-right corner, a small one
-   in the bottom-left, and two soft brand lights. The SVGs carry their own
-   20% opacity. Panels that already carry the top glow keep it. */
-.bg-card.border:is(.rounded-xl, .rounded-2xl, .rounded-3xl):not(.top-glow) {
-    background-image:
-        url("./assets/patterns/flower-corner.svg"),
-        url("./assets/patterns/flower-small.svg"),
-        radial-gradient(circle at 100% 0%, color-mix(in oklab, var(--bhim-orange) 9%, transparent), transparent 55%),
-        radial-gradient(circle at 0% 100%, color-mix(in oklab, var(--bhim-green) 6%, transparent), transparent 50%);
-    background-size: min(270px, 60%) auto, min(140px, 32%) auto, 100% 100%, 100% 100%;
-    background-position: top right, bottom left, center, center;
-    background-repeat: no-repeat;
+/* Every panel is glass: blurred, lit along the top edge, softly lifted. */
+.bg-card.border:is(.rounded-xl, .rounded-2xl, .rounded-3xl) {
+    backdrop-filter: blur(18px);
+    box-shadow: inset 0 1px 0 var(--panel-highlight), var(--panel-shadow);
 }
 
 @utility glass {
