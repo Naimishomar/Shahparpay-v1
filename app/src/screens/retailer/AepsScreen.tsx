@@ -242,6 +242,7 @@ export const AepsScreen: React.FC = () => {
   const [service, setService] = useState<ServiceKey>('withdrawal');
   const [pipe, setPipe] = useState<string | null>(null);
 
+  const [customerName, setCustomerName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [aadhaarNumber, setAadhaarNumber] = useState('');
   const [showAadhaar, setShowAadhaar] = useState(false);
@@ -304,6 +305,8 @@ export const AepsScreen: React.FC = () => {
   }, [activePipes.join(','), pipe]);
 
   const spec = SERVICES.find((s) => s.key === service)!;
+  // Icchhamati rejects every call, balance enquiry included, without the customer's mobile.
+  const needsMobile = spec.mobile || icch;
   const amountValue = Number(amount) || 0;
   // Icchhamati asks the customer's OTP for Aadhaar Pay above the threshold too.
   const needsOtp =
@@ -330,6 +333,7 @@ export const AepsScreen: React.FC = () => {
   };
 
   const resetForm = () => {
+    setCustomerName('');
     setMobileNumber('');
     setAadhaarNumber('');
     setBank(null);
@@ -397,7 +401,7 @@ export const AepsScreen: React.FC = () => {
       ? 'Enter the customer\'s 12-digit Aadhaar number.'
       : !bank
         ? 'Select the customer\'s bank.'
-        : spec.mobile && mobileNumber.length !== 10
+        : needsMobile && mobileNumber.length !== 10
           ? 'Enter the customer\'s 10-digit mobile number.'
           : spec.amount && amountValue <= 0
             ? 'Enter the transaction amount.'
@@ -476,14 +480,12 @@ export const AepsScreen: React.FC = () => {
       aadhaarNumber,
       bankIIN: bankIin(bank!),
       bankName: bankName(bank!),
-      // The form no longer asks for a name (mockup 06); the field stays in
-      // the payload so the request shape is unchanged.
-      customerName: '',
+      customerName: customerName.trim(),
       pidData,
       pipe,
       ...(await coordsPayload()),
     };
-    if (spec.mobile) payload.mobileNumber = mobileNumber;
+    if (needsMobile) payload.mobileNumber = mobileNumber;
     if (spec.amount) payload.amount = amountValue;
     if (needsOtp) {
       payload.referenceNo = otpReference;
@@ -492,7 +494,8 @@ export const AepsScreen: React.FC = () => {
 
     const base = {
       service: spec.label,
-      customerMobile: spec.mobile ? mobileNumber : undefined,
+      customerName: customerName.trim() || undefined,
+      customerMobile: needsMobile ? mobileNumber : undefined,
       aadhaarNumber,
       bankName: bankName(bank!),
       agentName: user?.name,
@@ -702,7 +705,17 @@ export const AepsScreen: React.FC = () => {
           </Note>
         )}
 
-        {spec.mobile && (
+        <Input
+          label="Customer name"
+          value={customerName}
+          onChangeText={setCustomerName}
+          autoCapitalize="words"
+          autoComplete="name"
+          placeholder="As on the customer's Aadhaar"
+          containerStyle={styles.field}
+        />
+
+        {needsMobile && (
           <Input
             label="Customer mobile"
             value={group(mobileNumber, 5)}
