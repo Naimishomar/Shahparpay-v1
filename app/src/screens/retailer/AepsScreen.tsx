@@ -31,9 +31,7 @@ import { TransactionReceipt, StatusText, type ReceiptData } from '@/components/a
 import { useAsync, useAction } from '@/hooks/useAsync';
 import { useAuth } from '@/context/AuthContext';
 import { AEPS_OTP_THRESHOLD, AEPS_MAX_WITHDRAWAL } from '@/constants';
-import { coordsPayload } from '@/services/location';
-import { LocationGate } from '@/components/aeps/LocationGate';
-import { useLocationReady } from '@/hooks/useLocationReady';
+import { checkLocationReady, coordsPayload } from '@/services/location';
 import api from '@/services/api';
 import { aepsProviderOf, usesAepsProvider } from '@/constants/services';
 import {
@@ -111,6 +109,32 @@ const SERVICES: ServiceSpec[] = [
     call: (payload) => api.aepsCashDeposit(payload),
   },
 ];
+
+/**
+ * AEPS transactions no longer need the retailer's location (the web portal
+ * sends it only when the browser has it). Send it when location is already
+ * on and permitted; never prompt, never block.
+ */
+const optionalCoords = async () => {
+  if (await checkLocationReady()) return {};
+  return coordsPayload().catch(() => ({}));
+};
+
+/** Labels and placeholders as each provider's web page words them. */
+const FIELD_COPY = {
+  paysprint: {
+    aadhaar: ['Aadhaar number', 'Enter customer aadhaar number'],
+    mobile: ['Mobile number', 'Enter customer mobile number'],
+    bank: ['Customer bank name', 'Choose your bank'],
+    amount: 'Enter amount',
+  },
+  icchhamati: {
+    aadhaar: ['Customer Aadhaar', '12-digit Aadhaar'],
+    mobile: ['Customer mobile', '10-digit mobile'],
+    bank: ['Bank', 'Select bank'],
+    amount: 'Up to ₹10,000',
+  },
+} as const;
 
 const QUICK_AMOUNTS = [500, 1000, 2000, 3000];
 
@@ -307,6 +331,19 @@ export const AepsScreen: React.FC = () => {
   const spec = SERVICES.find((s) => s.key === service)!;
   // Icchhamati rejects every call, balance enquiry included, without the customer's mobile.
   const needsMobile = spec.mobile || icch;
+  const copy = FIELD_COPY[icch ? 'icchhamati' : 'paysprint'];
+  // Web order: PaySprint asks the mobile after the bank, Icchhamati after the Aadhaar.
+  const mobileField = needsMobile && (
+    <Input
+      label={copy.mobile[0]}
+      value={group(mobileNumber, 5)}
+      onChangeText={(v) => setMobileNumber(v.replace(/\D/g, '').slice(0, 10))}
+      keyboardType="number-pad"
+      autoComplete="tel"
+      placeholder={copy.mobile[1]}
+      containerStyle={styles.field}
+    />
+  );
   const amountValue = Number(amount) || 0;
   // Icchhamati asks the customer's OTP for Aadhaar Pay above the threshold too.
   const needsOtp =
@@ -413,16 +450,9 @@ export const AepsScreen: React.FC = () => {
                   ? 'Take the customer\'s consent before capturing their fingerprint.'
                   : null;
 
-  // Location is checked BEFORE the fingerprint, not after. AEPS is geo-fenced,
-  // so a capture taken without a fix can only be thrown away — and asking a
-  // customer for their finger a second time is the part that costs the
-  // retailer their credibility.
-  const { problem: locationProblem } = useLocationReady();
-
   const captureBlocker =
     guardBlocker ||
     missingField ||
-    (locationProblem ? 'Turn on location to continue' : null) ||
     (isCaptureSupported ? null : 'Fingerprint capture needs the Android app or the web portal with a scanner.');
 
   // AEPS withdrawals can settle after the response comes back, so a PENDING
@@ -451,7 +481,7 @@ export const AepsScreen: React.FC = () => {
       pipe,
       // Reusing the reference on resend avoids orphaning a PENDING transaction.
       ...(otpReference ? { referenceNo: otpReference } : {}),
-      ...(await coordsPayload()),
+      ...(await optionalCoords()),
     });
     if (!response.success || !response.data?.otpRefId) {
       throw new Error(paysprintError(response));
@@ -483,7 +513,7 @@ export const AepsScreen: React.FC = () => {
       customerName: customerName.trim(),
       pidData,
       pipe,
-      ...(await coordsPayload()),
+      ...(await optionalCoords()),
     };
     if (needsMobile) payload.mobileNumber = mobileNumber;
     if (spec.amount) payload.amount = amountValue;
@@ -494,7 +524,7 @@ export const AepsScreen: React.FC = () => {
 
     const base = {
       service: spec.label,
-      customerName: customerName.trim() || undefined,
+      customerName: (!icch && customerName.trim()) || undefined,
       customerMobile: needsMobile ? mobileNumber : undefined,
       aadhaarNumber,
       bankName: bankName(bank!),
@@ -633,10 +663,6 @@ export const AepsScreen: React.FC = () => {
         </View>
       }
     >
-      {/* Ahead of the form: a geo-fence refusal arrives as an opaque provider
-          error, so the cause is surfaced while it can still be fixed. */}
-      <LocationGate />
-
       {onBoth && (
         <View style={styles.gap}>
           <Segmented
@@ -705,49 +731,41 @@ export const AepsScreen: React.FC = () => {
           </Note>
         )}
 
-        <Input
-          label="Customer name"
-          value={customerName}
-          onChangeText={setCustomerName}
-          autoCapitalize="words"
-          autoComplete="name"
-          placeholder="As on the customer's Aadhaar"
-          containerStyle={styles.field}
-        />
-
-        {needsMobile && (
+        {!icch && (
           <Input
-            label="Customer mobile"
-            value={group(mobileNumber, 5)}
-            onChangeText={(v) => setMobileNumber(v.replace(/\D/g, '').slice(0, 10))}
-            keyboardType="number-pad"
-            autoComplete="tel"
-            placeholder="10-digit mobile number"
+            label="Customer name (optional)"
+            value={customerName}
+            onChangeText={setCustomerName}
+            autoCapitalize="words"
+            autoComplete="name"
+            placeholder="Enter customer name"
             containerStyle={styles.field}
           />
         )}
 
         <Input
-          label="Aadhaar number"
+          label={copy.aadhaar[0]}
           value={aadhaarDisplay(aadhaarNumber, showAadhaar)}
           onChangeText={(v) => {
             setAadhaarNumber(aadhaarFromDisplay(v, aadhaarNumber));
             setPidData(null);
           }}
           keyboardType="number-pad"
-          placeholder="12-digit Aadhaar number"
+          placeholder={copy.aadhaar[1]}
           rightIcon={showAadhaar ? 'eye-outline' : 'eye-off-outline'}
           onRightIconPress={() => setShowAadhaar(!showAadhaar)}
           rightIconLabel={showAadhaar ? 'Hide Aadhaar number' : 'Show Aadhaar number'}
           containerStyle={styles.field}
         />
 
-        <Text style={styles.fieldLabel}>Bank</Text>
+        {icch && mobileField}
+
+        <Text style={styles.fieldLabel}>{copy.bank[0]}</Text>
         <Pressable
           onPress={() => setShowBanks(!showBanks)}
           style={({ pressed }) => [styles.select, showBanks && styles.selectOpen, pressed && { opacity: 0.8 }]}
           accessibilityRole="button"
-          accessibilityLabel="Bank"
+          accessibilityLabel={copy.bank[0]}
           accessibilityValue={{ text: bank ? bankName(bank) : 'Not selected' }}
           accessibilityState={{ expanded: showBanks }}
         >
@@ -759,7 +777,7 @@ export const AepsScreen: React.FC = () => {
             <Ionicons name="business-outline" size={20} color={colors.mutedForeground} />
           )}
           <Text style={[styles.selectValue, !bank && styles.selectPlaceholder]} numberOfLines={1}>
-            {bank ? bankName(bank) : banks.loading ? 'Loading banks…' : 'Select bank'}
+            {bank ? bankName(bank) : banks.loading ? 'Loading banks…' : copy.bank[1]}
           </Text>
           <Ionicons name={showBanks ? 'chevron-up' : 'chevron-down'} size={20} color={colors.mutedForeground} />
         </Pressable>
@@ -815,6 +833,8 @@ export const AepsScreen: React.FC = () => {
           </View>
         )}
 
+        {!icch && mobileField}
+
         {spec.amount && (
           <>
             <Input
@@ -822,7 +842,7 @@ export const AepsScreen: React.FC = () => {
               value={amountDisplay(amount)}
               onChangeText={(v) => changeAmount(v.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
               keyboardType="decimal-pad"
-              placeholder="₹ 0"
+              placeholder={copy.amount}
               // BHIM prints the amount in words under the figure.
               helperText={amountInWords(amount) || undefined}
               containerStyle={styles.field}
