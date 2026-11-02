@@ -299,6 +299,9 @@ export const AepsScreen: React.FC = () => {
   const [active, setActive] = useState<'paysprint' | 'icchhamati'>('paysprint');
   const icch = onBoth ? active === 'icchhamati' : usesAepsProvider(user, 'icchhamati');
   const [onboarding, setOnboarding] = useState<null | 'AEPS' | 'AP'>(null);
+  // Fingpay refused with "Device Changed Please do 2fa" (FP069) while
+  // Icchhamati's status still reads ready; only a fresh 2FA clears it.
+  const [redo2fa, setRedo2fa] = useState(false);
 
   const status = useAsync<any>(async () => {
     if (!icch) return (await api.getAepsMerchantStatus({ merchantcode })).data;
@@ -414,7 +417,9 @@ export const AepsScreen: React.FC = () => {
   // Icchhamati refuses every service, enquiries included, until onboarded and logged in today.
   const icchBlocker = !icchStatus
     ? 'AEPS status could not be loaded. Pull down to retry.'
-    : icchStatus.step === 'twofa'
+    : redo2fa
+      ? 'Scanner changed. Do the daily login again with this scanner to continue.'
+      : icchStatus.step === 'twofa'
       ? 'Daily login is pending. Authenticate once to unlock transactions for today.'
       : icchStatus.step !== 'ready'
         ? 'Complete AEPS onboarding before serving customers.'
@@ -581,6 +586,7 @@ export const AepsScreen: React.FC = () => {
     }
 
     if (!response?.success) {
+      if (icch && /\b2fa\b/i.test(String(response?.message ?? ''))) setRedo2fa(true);
       setReceipt({
         ...base,
         status: 'FAILED',
@@ -630,8 +636,11 @@ export const AepsScreen: React.FC = () => {
       ? { text: icchBlocker }
       : icchBlocker && {
         text: icchBlocker,
-        action: icchStatus?.step === 'twofa' || icchBlocker.startsWith('Aadhaar Pay') ? 'Authenticate' : 'Continue',
-        onPress: () => setOnboarding(icchStatus?.step === 'ready' ? 'AP' : 'AEPS'),
+        action: redo2fa || icchStatus?.step === 'twofa' || icchBlocker.startsWith('Aadhaar Pay') ? 'Authenticate' : 'Continue',
+        onPress: () =>
+          setOnboarding(
+            redo2fa ? (service === 'aadhaarpay' ? 'AP' : 'AEPS') : icchStatus?.step === 'ready' ? 'AP' : 'AEPS'
+          ),
       }
     : !kycDone
     ? { text: 'Merchant eKYC is pending. Withdrawals and Aadhaar pay unlock once it is done.', action: 'Complete eKYC', onPress: () => { setKycPipe(undefined); setShowKyc(true); } }
@@ -1035,8 +1044,12 @@ export const AepsScreen: React.FC = () => {
         visible={!!onboarding}
         status={icchStatus}
         serviceType={onboarding ?? 'AEPS'}
+        force2fa={redo2fa}
         onClose={() => setOnboarding(null)}
-        onChanged={status.refresh}
+        onChanged={() => {
+          setRedo2fa(false);
+          status.refresh();
+        }}
       />
       <TransactionReceipt data={receipt} onClose={() => setReceipt(null)} />
     </Screen>

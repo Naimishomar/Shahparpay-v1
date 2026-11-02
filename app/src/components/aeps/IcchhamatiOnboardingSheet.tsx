@@ -79,9 +79,12 @@ export const IcchhamatiOnboardingSheet: React.FC<{
   onChanged: () => void;
   /** Aadhaar Pay has its own daily login, separate from AEPS. */
   serviceType?: 'AEPS' | 'AP';
-}> = ({ visible, onClose, status, onChanged, serviceType = 'AEPS' }) => {
-  const step: IcchStep =
-    serviceType === 'AP'
+  /** Fingpay asked for a fresh 2FA (scanner changed) though the status still says ready. */
+  force2fa?: boolean;
+}> = ({ visible, onClose, status, onChanged, serviceType = 'AEPS', force2fa = false }) => {
+  const step: IcchStep = force2fa
+    ? 'twofa'
+    : serviceType === 'AP'
       ? status?.aadhaarPayReady === false ? 'twofa' : 'ready'
       : status?.step ?? 'register';
   const [editing, setEditing] = useState(false);
