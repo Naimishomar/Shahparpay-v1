@@ -4,6 +4,7 @@ import {
   icchhamatiDelete,
   isOk,
   normaliseStatus,
+  providerCrashed,
   providerMessage,
   makeReferenceId,
 } from '../utils/icchhamati.util.js';
@@ -431,7 +432,7 @@ export const initiateTransfer = async (req, res) => {
     let data;
     try {
       data = await icchhamatiPost('/api/v2/beneficiaries/beneficiary-payout', {
-        beneficiary_id: String(beneficiaryId),
+        beneficiary_id: Number(beneficiaryId),
         amount: Math.round(totalAmount),
         transfer_mode: mode,
         transaction_id: transactionId,
@@ -450,7 +451,13 @@ export const initiateTransfer = async (req, res) => {
     // The envelope says whether the payout was accepted; the transaction's own
     // status says whether it has settled. A payout accepted but not yet settled
     // is PENDING, not SUCCESS.
-    const status = isOk(data) ? normaliseStatus(data?.data?.status ?? '2') : 'FAILED';
+    // A gateway crash (5xx / Laravel exception) is an unknown outcome, not a
+    // refusal: the payout may already be on its way, so hold the funds.
+    const status = isOk(data)
+      ? normaliseStatus(data?.data?.status ?? '2')
+      : providerCrashed(data)
+        ? 'PENDING'
+        : 'FAILED';
     const message = providerMessage(
       data,
       status === 'FAILED' ? 'The transfer was not accepted.' : ''
