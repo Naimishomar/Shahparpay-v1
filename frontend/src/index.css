@@ -51,7 +51,7 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Vibrant gradients: a near-black canvas with a violet tint, flat panels,
+/* Vibrant gradients: a soft charcoal canvas with a violet tint, flat panels,
    and colour carried by gradients: the indigo-violet-pink hero, the violet
    primary pill, and each service's own gradient card on the dashboard.
    Dark is the default; light is the same palette on white. */
@@ -103,22 +103,22 @@
 .dark {
     --glow-strength: 0.12;
 
-    --background: #0B0B12;
+    --background: #1A1A26;
     --foreground: #FFFFFF;
-    --card: #15151F;
+    --card: #252536;
     --card-foreground: #FFFFFF;
-    --popover: #17172A;
+    --popover: #2A2A3D;
     --popover-foreground: #FFFFFF;
     --primary: #8B5CF6;
     --primary-foreground: #FFFFFF;
-    --secondary: #1B1B27;
+    --secondary: #2D2D40;
     --secondary-foreground: #FFFFFF;
-    --muted: #1B1B27;
-    --muted-foreground: #A1A3B8;
-    --accent: #23233A;
+    --muted: #2D2D40;
+    --muted-foreground: #B8BACD;
+    --accent: #383852;
     --accent-foreground: #FFFFFF;
     --destructive: #FF6565;
-    --border: rgb(255 255 255 / 0.07);
+    --border: rgb(255 255 255 / 0.10);
     --input: rgb(255 255 255 / 0.12);
     --ring: #A78BFA;
     --chip: rgb(255 255 255 / 0.10);
@@ -129,21 +129,21 @@
     --chart-3: #A1A3B8;
     --chart-4: #E8E6F5;
     --chart-5: #F1BF1E;
-    --sidebar: #0E0E17;
+    --sidebar: #1E1E2C;
     --sidebar-foreground: #FFFFFF;
     --sidebar-primary: #8B5CF6;
     --sidebar-primary-foreground: #FFFFFF;
-    --sidebar-accent: #1B1B27;
+    --sidebar-accent: #2D2D40;
     --sidebar-accent-foreground: #FFFFFF;
     --sidebar-border: rgb(255 255 255 / 0.06);
     --sidebar-ring: #A78BFA;
 
     /* Pages hard-code zinc for table heads and focus rings; in dark mode
        those greys take the canvas's violet-black tint. */
-    --color-zinc-700: #2C2C40;
-    --color-zinc-800: #1F1F2E;
-    --color-zinc-900: #14141E;
-    --color-zinc-950: #0B0B12;
+    --color-zinc-700: #3E3E56;
+    --color-zinc-800: #2D2D40;
+    --color-zinc-900: #252536;
+    --color-zinc-950: #1A1A26;
 }
 
 /* The primary action: a violet-to-indigo pill. */
@@ -160,10 +160,10 @@
     color: var(--chip-foreground);
 }
 
-/* The banner: indigo through violet into pink, white text. */
+/* The banner: bright indigo through violet into pink, white text. */
 @utility hero-panel {
-    background-color: #312E81;
-    background-image: linear-gradient(120deg, #1E1B4B, #312E81 40%, #6D28D9 75%, #DB2777);
+    background-color: #6366F1;
+    background-image: linear-gradient(120deg, #4F46E5, #6366F1 40%, #8B5CF6 75%, #EC4899);
     color: #FFFFFF;
     box-shadow: 0 24px 50px -24px rgb(109 40 217 / 0.8);
 }
