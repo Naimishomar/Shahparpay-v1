@@ -169,7 +169,7 @@ export const BbpsScreen: React.FC = () => {
           <Ionicons name="wallet-outline" size={22} color={colors.highlight} />
         </View>
         <View style={styles.flex}>
-          <Text style={styles.walletLabel}>Paid from main wallet</Text>
+          <Text style={styles.walletLabel}>Paid from Utility Wallet</Text>
           <Text style={styles.walletValue} numberOfLines={1}>
             {money(balances.data?.mainBalance)}
           </Text>

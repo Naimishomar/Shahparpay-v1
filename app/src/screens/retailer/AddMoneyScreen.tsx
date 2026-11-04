@@ -71,7 +71,7 @@ export const AddMoneyScreen: React.FC = () => {
           setStatus(next);
           setNotice(
             next === 'SUCCESS'
-              ? `${money(res.data.amount)} added to your main wallet.`
+              ? `${money(res.data.amount)} added to your Trade Wallet.`
               : ''
           );
           // The balance in the header is cached; a credit has to invalidate it.
@@ -118,7 +118,7 @@ export const AddMoneyScreen: React.FC = () => {
       {!topup ? (
         <View style={styles.entry}>
           <IconTile icon="wallet-outline" size={64} iconSize={28} />
-          <Text style={styles.entryTitle}>Add money to main wallet</Text>
+          <Text style={styles.entryTitle}>Add money to Trade Wallet</Text>
           <View style={styles.entryChip}>
             <Ionicons name="qr-code-outline" size={14} color={colors.mutedForeground} />
             <Text style={styles.entryChipText}>Pay by any UPI app</Text>

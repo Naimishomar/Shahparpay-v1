@@ -58,7 +58,7 @@ export const ItrScreen: React.FC = () => {
       <Card>
         <CardContent style={styles.wallet}>
           <IconTile icon="wallet-outline" size={48} iconSize={22} />
-          <Text style={styles.walletLabel}>Main wallet balance</Text>
+          <Text style={styles.walletLabel}>Utility Wallet balance</Text>
           <Text style={styles.walletValue} numberOfLines={1} adjustsFontSizeToFit>
             {money(balances.data?.mainBalance)}
           </Text>

@@ -143,7 +143,7 @@ export const RetailersScreen: React.FC = () => {
                       {ret.retailerId} · {ret.contactNumber}
                     </Text>
                     <Text style={styles.listMeta} numberOfLines={1}>
-                      {`AEPS ${money(ret.aepsWalletBalance)} · Main ${money(ret.mainWalletBalance)}`}
+                      {`Trade ${money(ret.aepsWalletBalance)} · Utility ${money(ret.mainWalletBalance)}`}
                     </Text>
                     {/* Where they are stuck, so the distributor knows what to follow up on. */}
                     {!aepsKycDone(ret) && (

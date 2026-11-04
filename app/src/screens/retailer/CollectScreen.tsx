@@ -336,7 +336,7 @@ const CounterQr: React.FC<{ onMoved: () => void }> = ({ onMoved }) => {
     if (!res.success) throw new Error(res.message);
     setAmount('');
     setPin('');
-    setNotice(res.message || 'Moved to your main wallet');
+    setNotice(res.message || 'Moved to your Utility Wallet');
     balance.reload();
     onMoved();
   });
@@ -364,11 +364,11 @@ const CounterQr: React.FC<{ onMoved: () => void }> = ({ onMoved }) => {
             )}
             {!!code.upiHandle && <Text style={styles.payee} selectable>{code.upiHandle}</Text>}
             <Text style={styles.payeeMeta}>Virtual account {code.virtualAccountId}</Text>
-            <Text style={styles.footnote}>Print this for your counter. Every payment is credited to your QR wallet automatically.</Text>
+            <Text style={styles.footnote}>Print this for your counter. Every payment is credited to your Utility Wallet automatically.</Text>
           </View>
         ) : (
           <>
-            <Text style={styles.payeeMeta}>A standing UPI QR for your counter. Payments are credited to your QR wallet automatically.</Text>
+            <Text style={styles.payeeMeta}>A standing UPI QR for your counter. Payments are credited to your Utility Wallet automatically.</Text>
             <Input label="Account holder name" required value={holder} onChangeText={setHolder} leftIcon="account-outline" />
             <Input
               label="Account number"
@@ -400,40 +400,45 @@ const CounterQr: React.FC<{ onMoved: () => void }> = ({ onMoved }) => {
         )}
       </View>
 
-      <SectionTitle>QR wallet</SectionTitle>
-      <View style={[styles.card, styles.form]}>
-        <View>
-          <Text style={styles.payeeAmount}>{money(qrBalance)}</Text>
-          <Text style={styles.payeeMeta}>Counter QR payments land here, less the provider's charge.</Text>
-        </View>
-        <Input
-          label="Amount"
-          value={amount}
-          onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))}
-          keyboardType="decimal-pad"
-          leftIcon="currency-inr"
-          error={Number(amount) > qrBalance ? 'More than your QR wallet balance' : undefined}
-        />
-        <Input
-          label="Wallet PIN"
-          value={pin}
-          onChangeText={(v) => setPin(v.replace(/\D/g, '').slice(0, 4))}
-          keyboardType="number-pad"
-          secureTextEntry
-          leftIcon="lock-outline"
-        />
-        {!!move.error && <ErrorBanner message={move.error} />}
-        {!!notice && <SuccessBanner message={notice} />}
-        <Button
-          icon="bank-transfer-in"
-          onPress={() => { setNotice(''); move.run(); }}
-          loading={move.pending}
-          disabled={!(Number(amount) > 0) || Number(amount) > qrBalance || pin.length !== 4}
-          fullWidth
-        >
-          Move to main wallet
-        </Button>
-      </View>
+      {/* QR payments now credit Utility directly; this only empties an old QR balance. */}
+      {qrBalance > 0 && (
+        <>
+          <SectionTitle>QR wallet</SectionTitle>
+          <View style={[styles.card, styles.form]}>
+            <View>
+              <Text style={styles.payeeAmount}>{money(qrBalance)}</Text>
+              <Text style={styles.payeeMeta}>Counter QR money from before payments went straight to your Utility Wallet.</Text>
+            </View>
+            <Input
+              label="Amount"
+              value={amount}
+              onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))}
+              keyboardType="decimal-pad"
+              leftIcon="currency-inr"
+              error={Number(amount) > qrBalance ? 'More than your QR wallet balance' : undefined}
+            />
+            <Input
+              label="Wallet PIN"
+              value={pin}
+              onChangeText={(v) => setPin(v.replace(/\D/g, '').slice(0, 4))}
+              keyboardType="number-pad"
+              secureTextEntry
+              leftIcon="lock-outline"
+            />
+            {!!move.error && <ErrorBanner message={move.error} />}
+            {!!notice && <SuccessBanner message={notice} />}
+            <Button
+              icon="bank-transfer-in"
+              onPress={() => { setNotice(''); move.run(); }}
+              loading={move.pending}
+              disabled={!(Number(amount) > 0) || Number(amount) > qrBalance || pin.length !== 4}
+              fullWidth
+            >
+              Move to Utility Wallet
+            </Button>
+          </View>
+        </>
+      )}
     </>
   );
 };

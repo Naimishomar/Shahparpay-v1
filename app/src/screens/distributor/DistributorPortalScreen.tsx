@@ -177,13 +177,13 @@ export const DistributorPortalScreen: React.FC = () => {
       <Card padding={space.lg}>
         <View style={styles.balRow}>
           <View style={styles.balMain}>
-            <Text style={styles.balLabel}>Main wallet</Text>
+            <Text style={styles.balLabel}>Utility Wallet</Text>
             <Text style={styles.balValue} numberOfLines={1} adjustsFontSizeToFit>
               {money(balances.data?.mainBalance)}
             </Text>
           </View>
           <View style={styles.balAside}>
-            <Text style={styles.balLabel}>AEPS</Text>
+            <Text style={styles.balLabel}>Trade</Text>
             <Text style={styles.balAsideValue} numberOfLines={1}>
               {money(balances.data?.aepsBalance)}
             </Text>

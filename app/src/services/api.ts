@@ -711,8 +711,8 @@ class ApiService {
     return this.post(API_ENDPOINTS.collect.qr, data);
   }
 
-  /** QR wallet -> Main wallet, behind the wallet PIN. */
-  async transferQrToMain(data: { amount: number; pin: string }) {
+  /** QR -> Utility, or (from: 'AEPS') Trade -> Utility, behind the wallet PIN. */
+  async transferQrToMain(data: { amount: number; pin: string; from?: 'QR' | 'AEPS' }) {
     return this.post(API_ENDPOINTS.wallet.transfer, data);
   }
 

@@ -293,7 +293,7 @@ export const BbpsServiceScreen: React.FC = () => {
       <PinStep
         payee={`Paying ${biller?.displayname || biller?.name || categoryLabel}`}
         amount={Number(amount)}
-        detail={`${caNumber.trim()} · from Main wallet`}
+        detail={`${caNumber.trim()} · from Utility Wallet`}
         pin={pin}
         onPin={setPin}
         onSubmit={() => valid && onPay()}
@@ -519,12 +519,12 @@ export const BbpsServiceScreen: React.FC = () => {
               placeholder="0"
               error={
                 overBalance
-                  ? "Amount exceeds your main wallet balance"
+                  ? "Amount exceeds your Utility Wallet balance"
                   : belowMinimum
                     ? `Minimum payment amount is ₹${MIN_AMOUNT}`
                     : undefined
               }
-              helper={`Auto-filled when the biller returns a due amount · Main wallet ${money(available)}`}
+              helper={`Auto-filled when the biller returns a due amount · Utility Wallet ${money(available)}`}
             />
           </View>
 

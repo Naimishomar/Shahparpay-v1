@@ -597,7 +597,7 @@ export const RechargeScreen: React.FC = () => {
       <PinStep
         payee={`Recharging ${type === 'dth' ? number : spaced(number)}`}
         amount={Number(amount)}
-        detail={`${operator?.displayname || operator?.name || ''} · from Main wallet`}
+        detail={`${operator?.displayname || operator?.name || ''} · from Utility Wallet`}
         pin={pin}
         onPin={setPin}
         onSubmit={() => valid && onRecharge()}
@@ -646,7 +646,7 @@ export const RechargeScreen: React.FC = () => {
   // BHIM keeps "Proceed to Pay" pinned under the plans.
   const payBar = hasPlans && (
     <View style={styles.payBar}>
-      {overBalance && <Text style={styles.payBarError}>Amount exceeds your main wallet balance</Text>}
+      {overBalance && <Text style={styles.payBarError}>Amount exceeds your Utility Wallet balance</Text>}
       <Btn
         label={Number(amount) > 0 ? `Proceed to Pay ${rupee(amount)}` : 'Proceed to Pay'}
         onPress={() => setStep('pin')}
@@ -913,8 +913,8 @@ export const RechargeScreen: React.FC = () => {
                 onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))}
                 keyboardType="decimal-pad"
                 placeholder="0"
-                error={overBalance ? 'Amount exceeds your main wallet balance' : undefined}
-                helper={`Main wallet balance ${money(available)}`}
+                error={overBalance ? 'Amount exceeds your Utility Wallet balance' : undefined}
+                helper={`Utility Wallet balance ${money(available)}`}
               />
               <Btn
                 label={Number(amount) > 0 ? `Recharge ${rupee(amount)}` : 'Recharge'}

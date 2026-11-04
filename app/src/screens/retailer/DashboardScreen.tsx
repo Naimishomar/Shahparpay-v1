@@ -141,8 +141,10 @@ export const DashboardScreen: React.FC = () => {
   const go = (route: string, params?: object) => () => navigation.navigate(route, params);
 
   const wallets = [
-    { key: 'main', icon: 'wallet-outline', label: 'Main wallet', amount: balances.data?.mainBalance, action: 'Fund request', onPress: go('FundRequest') }, // Add money (Razorpay) hidden for now: go('AddMoney')
-    { key: 'aeps', icon: 'fingerprint', label: 'AEPS wallet', amount: balances.data?.aepsBalance, action: 'Withdraw', onPress: go('AepsSettlement') },
+    // Icchhamati's names. Fund requests and add money land in Trade; Trade
+    // moves into Utility (on the settlement screen) for recharge, BBPS, PAN, ITR.
+    { key: 'aeps', icon: 'fingerprint', label: 'Trade Wallet', amount: balances.data?.aepsBalance, action: 'Fund request', onPress: go('FundRequest') }, // Add money (Razorpay) hidden for now: go('AddMoney')
+    { key: 'main', icon: 'wallet-outline', label: 'Utility Wallet', amount: balances.data?.mainBalance, action: 'Top up', onPress: go('AepsSettlement') },
   ];
 
   return (

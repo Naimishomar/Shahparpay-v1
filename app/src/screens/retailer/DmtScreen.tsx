@@ -183,7 +183,7 @@ export const PayFlow: React.FC<{
         <PinBody
           payee={`Paying ${p.payeeName}`}
           amount={Number(p.amount)}
-          detail={`${p.mode} · from Main wallet`}
+          detail={`${p.mode} · from Trade Wallet`}
           pin={p.pin}
           onPin={(v) => p.setPin(v.slice(0, PIN_LENGTH))}
           onSubmit={submitPin}
@@ -228,7 +228,7 @@ export const PayFlow: React.FC<{
             </Pressable>
             {overBalance || p.blocked ? (
               <Text style={styles.amountError} accessibilityLiveRegion="polite">
-                {overBalance ? 'Amount exceeds your main wallet balance' : p.blocked}
+                {overBalance ? 'Amount exceeds your Trade Wallet balance' : p.blocked}
               </Text>
             ) : (
               <Text style={styles.words}>{words || (keypadOpen ? 'Enter amount' : 'Tap the amount to enter it')}</Text>
@@ -255,7 +255,7 @@ export const PayFlow: React.FC<{
             <Text style={styles.debitLabel}>Debit from</Text>
             <View style={styles.debitRight}>
               <Ionicons name="wallet-outline" size={16} color={colors.foreground} />
-              <Text style={styles.debitValue}>Main wallet · {money(p.available)}</Text>
+              <Text style={styles.debitValue}>Trade Wallet · {money(p.available)}</Text>
             </View>
           </View>
           <View style={styles.sendWrap}>
@@ -397,7 +397,8 @@ export const DmtScreen: React.FC = () => {
     return res;
   });
 
-  const available = balances.data?.mainBalance ?? 0;
+  // DMT is paid from the Trade (AEPS) wallet, as on Icchhamati.
+  const available = balances.data?.aepsBalance ?? 0;
   const ifscValid = IFSC_RE.test(beneIfsc.trim().toUpperCase());
   const beneValid =
     beneName.trim().length > 2 &&

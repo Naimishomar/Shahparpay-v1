@@ -302,8 +302,8 @@ export const EditRetailerSheet: React.FC<{
           </View>
 
           <View style={styles.details}>
-            <Row label="AEPS wallet" value={money(retailer.aepsWalletBalance)} mono />
-            <Row label="Main wallet" value={money(retailer.mainWalletBalance)} mono />
+            <Row label="Trade Wallet" value={money(retailer.aepsWalletBalance)} mono />
+            <Row label="Utility Wallet" value={money(retailer.mainWalletBalance)} mono />
             <Row label="Commissions earned" value={money(retailer.commissionsEarned)} mono last />
           </View>
 
