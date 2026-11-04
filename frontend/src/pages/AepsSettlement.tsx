@@ -75,9 +75,9 @@ const AepsSettlement = () => {
 
     const fetchAvailableBanks = async () => {
         try {
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/banks`);
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/aeps/icchhamati/settlement-banks`, getHeaders());
             if (res.data.success && res.data.data) {
-                setAvailableBanks(res.data.data);
+                setAvailableBanks(res.data.data.map((bankName: string) => ({ bankName })));
             }
         } catch (error) {
             console.error("Failed to fetch available banks", error);

@@ -315,7 +315,8 @@ export const getSettlementBanks = async (req, res) => {
     if (!settlementBanks || Date.now() - settlementBanksAt > 24 * 3600 * 1000) {
       const data = await icchhamatiPost('/api/v2/cash-deposit/bank-list', {});
       if (isOk(data) && Array.isArray(data.data)) {
-        settlementBanks = [...new Set(normaliseBanks(data.data).map((b) => b.bankName).filter(Boolean))].sort(
+        // The list carries Kotak's test rows ("ZKotak Bank 100021"); no retailer banks there.
+        settlementBanks = [...new Set(normaliseBanks(data.data).map((b) => b.bankName).filter((n) => n && !/^zkotak/i.test(n)))].sort(
           (a, b) => a.localeCompare(b)
         );
         settlementBanksAt = Date.now();
