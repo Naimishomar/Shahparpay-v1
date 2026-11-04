@@ -46,37 +46,6 @@ const getUser = async (req) => {
   return Retailer.findById(req.user.id);
 };
 
-// Settlement is accepted 9 AM - 9 PM IST.
-// Both bounds are configurable via env (HH:mm IST) to adapt to any merchant-specific window.
-const getIstMinutesNow = () => {
-  const now = new Date();
-  const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
-  return ist.getUTCHours() * 60 + ist.getUTCMinutes();
-};
-
-const getPayoutWindow = () => {
-  const parse = (v, fallback) => {
-    const [h, m] = (v || fallback).split(':').map(Number);
-    return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
-  };
-  return {
-    start: parse(process.env.PAYSPRINT_SETTLEMENT_START, '09:00'),
-    end: parse(process.env.PAYSPRINT_SETTLEMENT_END, '21:00'),
-  };
-};
-
-const isPayoutServiceActive = () => {
-  const { start, end } = getPayoutWindow();
-  const nowMin = getIstMinutesNow();
-  return nowMin >= start && nowMin < end;
-};
-
-const getServiceHoursError = () => {
-  const start = process.env.PAYSPRINT_SETTLEMENT_START || '09:00';
-  const end = process.env.PAYSPRINT_SETTLEMENT_END || '21:00';
-  return `Trade Wallet Settlement is available from ${start} to ${end} IST only. Please try again later.`;
-};
-
 /**
  * AEPS settlement pays out on Icchhamati, to the beneficiaries saved under the
  * retailer's registered mobile number — the same list DMT shows for that
@@ -205,12 +174,6 @@ export const initiateSettlement = async (req, res) => {
         success: false,
         message: `Settlement amount must be between ₹${min} and ₹${max}`,
       });
-    }
-
-    if (!isPayoutServiceActive()) {
-      return res
-        .status(400)
-        .json({ success: false, message: getServiceHoursError(), serviceHours: getPayoutWindow() });
     }
 
     // Whole rupees only: the provider is sent an integer amount.

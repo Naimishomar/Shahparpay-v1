@@ -5,12 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import { QrWallet as WalletMove } from './Collect';
 
-const isSettlementWindow = () => {
-    const ist = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
-    const mins = ist.getUTCHours() * 60 + ist.getUTCMinutes();
-    return mins >= 9 * 60 && mins < 21 * 60;
-};
-
 const SETTLEMENT_BASE_CHARGE = 5;
 const SETTLEMENT_GST_RATE = 18;
 const SETTLEMENT_GST_AMOUNT = Math.round(SETTLEMENT_BASE_CHARGE * (SETTLEMENT_GST_RATE / 100) * 100) / 100;
@@ -229,9 +223,6 @@ const AepsSettlement = () => {
             return toast.error(`Settlement amount must be between ₹${SETTLEMENT_MIN} and ₹${SETTLEMENT_MAX}`);
         }
 
-        if (!isSettlementWindow()) {
-            return toast.error("Trade Wallet Settlement is available from 9 AM to 9 PM IST only. Please try again during service hours.");
-        }
         
         setLoading(true);
         try {
@@ -261,7 +252,6 @@ const AepsSettlement = () => {
     const selectedBank = savedBanks.find(b => b._id === selectedBankId);
     const uploadDocBank = uploadDocBankId ? savedBanks.find(b => b._id === uploadDocBankId) : null;
 
-    const settlementOpen = isSettlementWindow();
     const amt = Number(amount);
     const amountValid = amt >= SETTLEMENT_MIN && amt <= SETTLEMENT_MAX;
     const txnPill = (status?: string) =>
@@ -286,13 +276,6 @@ const AepsSettlement = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ring-1 ${settlementOpen ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20' : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-amber-500/30'}`}>
-                            <span className="relative flex h-2 w-2">
-                                {settlementOpen && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />}
-                                <span className={`relative inline-flex h-2 w-2 rounded-full ${settlementOpen ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                            </span>
-                            {settlementOpen ? 'Open · 9 AM – 9 PM IST' : 'Closed · opens 9 AM IST'}
-                        </span>
                         <button
                             type="button"
                             onClick={handleSyncBanks}
@@ -507,7 +490,7 @@ const AepsSettlement = () => {
                     </div>
 
                     <ul className="space-y-2 text-xs text-muted-foreground">
-                        <li className="flex items-center gap-2"><Clock className="h-3.5 w-3.5 shrink-0" /> Available 9 AM – 9 PM IST</li>
+                        <li className="flex items-center gap-2"><Clock className="h-3.5 w-3.5 shrink-0" /> Available 24×7</li>
                         <li className="flex items-center gap-2"><IndianRupee className="h-3.5 w-3.5 shrink-0" /> ₹{SETTLEMENT_MIN} – ₹{SETTLEMENT_MAX.toLocaleString('en-IN')} per settlement</li>
                         <li className="flex items-center gap-2"><ShieldCheck className="h-3.5 w-3.5 shrink-0" /> Only active (verified) accounts can receive funds</li>
                     </ul>
