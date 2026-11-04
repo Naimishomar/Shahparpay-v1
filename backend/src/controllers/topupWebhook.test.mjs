@@ -73,9 +73,9 @@ const { topupWebhook, creditTopup } = await (async () => {
   const handler = cut('export const topupWebhook', 'const topupWebhook');
   const { verifyWebhookSignature, toRupees } = await import('../utils/razorpay.util.js');
   return new Function(
-    'Transaction', 'MainWallet', 'verifyWebhookSignature', 'toRupees',
+    'Transaction', 'MainWallet', 'AepsWallet', 'verifyWebhookSignature', 'toRupees',
     `${helper}\n${handler}\nreturn { topupWebhook, creditTopup };`
-  )(Transaction, MainWallet, verifyWebhookSignature, toRupees);
+  )(Transaction, {}, MainWallet, verifyWebhookSignature, toRupees);
 })();
 
 const sign = (raw, secret) => crypto.createHmac('sha256', secret).update(raw).digest('hex');
@@ -147,7 +147,7 @@ process.env.RAZORPAY_WEBHOOK_SECRET = SECRET;
 const first = await post(credited());
 assert.equal(first.code, 200);
 assert.equal(first.body.credited, true);
-assert.equal(balance(), 500, 'the captured amount, in rupees, reaches the main wallet');
+assert.equal(balance(), 500, 'the captured amount, in rupees, reaches the retailer Trade (AEPS) wallet');
 
 // Razorpay retries webhooks until it gets a 2xx. A retry must not pay twice.
 const retry = await post(credited());

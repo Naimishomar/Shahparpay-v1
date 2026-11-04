@@ -1049,7 +1049,7 @@ export const cashDeposit = async (req, res) => {
     } catch (error) {
       return res.status(400).json({
         success: false,
-        message: error.message || 'Insufficient Main Wallet balance for Cash Deposit',
+        message: error.message || 'Insufficient Utility Wallet balance for Cash Deposit',
       });
     }
 

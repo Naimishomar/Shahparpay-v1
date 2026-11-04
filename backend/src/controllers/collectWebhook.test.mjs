@@ -1,12 +1,12 @@
 // Run: node src/controllers/collectWebhook.test.mjs
 //
-// A counter-QR payment credits a retailer's QR wallet on Icchhamati's say-so.
+// A counter-QR payment credits a retailer's Utility (Main) wallet on Icchhamati's say-so.
 // Guards the ways that hands out money the platform never received: crediting
 // the gross instead of what arrived after Icchhamati's charge, crediting a
 // retried callback twice, and paying a retailer for another's virtual account.
 import assert from 'node:assert';
 
-const state = { retailers: [], transactions: [], qrWallets: [] };
+const state = { retailers: [], transactions: [], mainWallets: [] };
 
 // In-memory stand-ins; only the operators the handler uses.
 const mockModel = (rows, keyOf) => ({
@@ -24,7 +24,7 @@ const mockModel = (rows, keyOf) => ({
   },
 });
 const Transaction = mockModel(state.transactions, (row, q) => row.transactionId === q.transactionId);
-const QrWallet = mockModel(state.qrWallets, (row, q) => row.userId === q.userId);
+const MainWallet = mockModel(state.mainWallets, (row, q) => row.userId === q.userId);
 const Retailer = {
   find: (query) => ({
     select: () => ({
@@ -50,9 +50,9 @@ const collectionWebhook = await (async () => {
   const { normaliseStatus } = await import('../utils/icchhamati.util.js');
   const money = (value) => Math.round(Number(value) * 100) / 100;
   return new Function(
-    'Transaction', 'QrWallet', 'Retailer', 'normaliseStatus', 'money',
+    'Transaction', 'MainWallet', 'Retailer', 'normaliseStatus', 'money',
     `${body.replace('export const collectionWebhook', 'const collectionWebhook')}; return collectionWebhook;`
-  )(Transaction, QrWallet, Retailer, normaliseStatus, money);
+  )(Transaction, MainWallet, Retailer, normaliseStatus, money);
 })();
 
 const post = async (data) => {
@@ -68,7 +68,7 @@ const PAID = {
   vpa_account_id: 'VPA1', vpa_id: 'VPA1', txn_id: 'TXN1', utr: 'UTR1',
   amount: '1000', service_charge_with_gst: '11.8', status: 'success',
 };
-const balance = (userId) => state.qrWallets.find((w) => w.userId === userId)?.balance ?? 0;
+const balance = (userId) => state.mainWallets.find((w) => w.userId === userId)?.balance ?? 0;
 
 state.retailers.push({ _id: 'ret_1', collectionQr: { virtualAccountId: 'VPA1' } });
 

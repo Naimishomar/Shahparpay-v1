@@ -141,8 +141,8 @@ export const updateFundRequestStatus = async (req, res) => {
         });
         deducted = true;
 
-        // 2. Credit to Retailer
-        await updateWalletAtomically(fundRequest.retailerId, 'MAIN', fundRequest.amount, {
+        // 2. Credit to Retailer's Trade (AEPS) wallet
+        await updateWalletAtomically(fundRequest.retailerId, 'AEPS', fundRequest.amount, {
           transactionId: `${transactionId}_CRED`,
           userId: fundRequest.retailerId,
           type: 'FUND_REQUEST',

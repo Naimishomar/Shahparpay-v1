@@ -132,8 +132,17 @@ export const changePin = async (req, res) => {
   }
 };
 
+// Retailer self-transfers, mirroring Icchhamati: counter-QR (VPA) credits land
+// in its Utility Wallet (MAIN), and Trade (AEPS) moves one way into Utility,
+// like Icchhamati's self-transfer out of its primary Trade Wallet.
+const TRANSFERS = {
+  QR: { to: 'MAIN', type: 'QRTO_MAIN', prefix: 'QRM', done: 'Moved to your Utility Wallet.' },
+  AEPS: { to: 'MAIN', type: 'AEPSTOMAIN', prefix: 'TUT', done: 'Moved to your Utility Wallet.' },
+};
+
 /**
- * Moves counter-QR collections to the Main wallet, behind the wallet PIN.
+ * Moves money between a retailer's own wallets, behind the wallet PIN.
+ * Body: { amount, pin, from?: 'QR' | 'AEPS' } (defaults to QR).
  * @route POST /api/wallet/transfer
  */
 export const transferQrToMain = async (req, res) => {
@@ -152,20 +161,25 @@ export const transferQrToMain = async (req, res) => {
     const pinError = await checkWalletPin(await AepsWallet.findOne({ userId }), req.body.pin);
     if (pinError) return res.status(pinError.status).json({ success: false, message: pinError.message });
 
+    const from = String(req.body?.from || 'QR').toUpperCase();
+    const route = TRANSFERS[from];
+    if (!route) return res.status(400).json({ success: false, message: 'Unsupported wallet transfer.' });
+
     let transaction;
     try {
-      transaction = await transferBetweenWallets(userId, 'QR', 'MAIN', amount, {
-        transactionId: `QRM${Date.now()}${Math.floor(Math.random() * 1000)}`,
+      transaction = await transferBetweenWallets(userId, from, route.to, amount, {
+        transactionId: `${route.prefix}${Date.now()}${Math.floor(Math.random() * 1000)}`,
         userId,
-        type: 'QRTO_MAIN',
+        type: route.type,
         amount,
         status: 'SUCCESS',
-        metadata: { operator: 'QRTO_MAIN', source: 'LOCAL_WALLET_TRANSFER' },
+        // walletType tells the ledger which wallet the credit side landed in.
+        metadata: { operator: route.type, source: 'LOCAL_WALLET_TRANSFER', walletType: route.to },
       });
     } catch (error) {
       return res.status(400).json({ success: false, message: error.message || 'Wallet transfer failed.' });
     }
-    return res.status(200).json({ success: true, message: 'Moved to your main wallet.', transaction });
+    return res.status(200).json({ success: true, message: route.done, transaction });
   } catch (error) {
     console.error('QR transfer error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });

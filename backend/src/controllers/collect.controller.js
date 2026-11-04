@@ -6,7 +6,6 @@ import {
 } from '../utils/icchhamati.util.js';
 import Transaction from '../models/transaction.model.js';
 import MainWallet from '../models/mainWallet.model.js';
-import QrWallet from '../models/qrWallet.model.js';
 import Retailer from '../models/users/retailer.model.js';
 
 /**
@@ -274,7 +273,7 @@ export const syncCollectionTransaction = async (txn) => {
 
   if (claimed && status === 'SUCCESS') {
     // The gateway receives the payment under the platform's Icchhamati merchant
-    // account; after the provider confirms success, credit the retailer's Main wallet.
+    // account; after the provider confirms success, credit the retailer's Main (Utility) wallet, where Icchhamati credits PG and VPA collections too.
     await MainWallet.findOneAndUpdate(
       { userId: claimed.userId },
       {
@@ -476,13 +475,16 @@ export const collectionWebhook = async (req, res) => {
             utr: data.utr || null,
             paymentMode: data.payment_mode || null,
             remitterName: data.remitter_full_name || null,
+            walletType: 'MAIN',
           },
         },
       },
       { upsert: true, new: false, setDefaultsOnInsert: true }
     );
+    // Straight into the Utility (MAIN) wallet, where Icchhamati itself credits
+    // VPA payments. There is no separate QR wallet on Icchhamati.
     if (!existing) {
-      await QrWallet.findOneAndUpdate(
+      await MainWallet.findOneAndUpdate(
         { userId },
         { $inc: { balance: credit }, $setOnInsert: { userModel: 'Retailer' } },
         { upsert: true, setDefaultsOnInsert: true }

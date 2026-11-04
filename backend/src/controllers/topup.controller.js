@@ -1,5 +1,6 @@
 import Transaction from '../models/transaction.model.js';
 import MainWallet from '../models/mainWallet.model.js';
+import AepsWallet from '../models/aepsWallet.model.js';
 import {
   razorpayPost,
   razorpayGet,
@@ -54,6 +55,9 @@ const creditTopup = async (txn, { paymentId, paidPaise, method, vpa }) => {
         'metadata.paymentMethod': method || 'upi',
         'metadata.payerVpa': vpa || null,
         'metadata.creditedAt': new Date(),
+        // Retailers load money into the Trade (AEPS) wallet, as on Icchhamati;
+        // distributors keep theirs in Main, which their fund transfers draw on.
+        'metadata.walletType': txn.metadata?.userModel === 'Distributor' ? 'MAIN' : 'AEPS',
       },
     },
     { new: true }
@@ -61,7 +65,8 @@ const creditTopup = async (txn, { paymentId, paidPaise, method, vpa }) => {
   if (!claimed) return { credited: false, transaction: await Transaction.findById(txn._id) };
 
   try {
-    await MainWallet.findOneAndUpdate(
+    const Wallet = claimed.metadata.walletType === 'MAIN' ? MainWallet : AepsWallet;
+    await Wallet.findOneAndUpdate(
       { userId: claimed.userId },
       {
         $inc: { balance: amount },

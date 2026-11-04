@@ -117,7 +117,34 @@ for (const type of TYPES) {
 
 // The onboarding charge is a plain MAIN debit — no commission, no TDS, and it
 // must not be mistaken for an AEPS row in the all-wallets view.
-assert.strictEqual(getWalletLabel(tx('MERCHANT_ONBOARDING_CHARGE')), 'Main');
+assert.strictEqual(getWalletLabel(tx('MERCHANT_ONBOARDING_CHARGE')), 'Utility');
+
+// Since the Icchhamati wallet sync, DMT, direct payout, add money and fund
+// requests book to the Trade (AEPS) wallet; metadata.walletType routes them,
+// and older MAIN rows stay on the Utility wallet.
+for (const type of ['DMT', 'DIRECT_PAYOUT', 'WALLET_TOPUP', 'FUND_REQUEST']) {
+  const trade = getWalletDeltas(tx(type, { metadata: { walletType: 'AEPS' } }));
+  const legacy = getWalletDeltas(tx(type, { metadata: { walletType: 'MAIN' } }));
+  assert.strictEqual(trade.main, 0, `${type} on Trade must not touch Utility`);
+  assert.strictEqual(trade.aeps, legacy.main, `${type} must move the same amount on Trade`);
+  assert.strictEqual(legacy.aeps, 0);
+  assert.strictEqual(getWalletLabel(tx(type, { metadata: { walletType: 'AEPS' } })), 'Trade');
+}
+// A failed Trade-wallet DMT's synthesized refund credits Trade back.
+assert.strictEqual(
+  getWalletDeltas(tx('DMT', { transactionId: 'REF-X', metadata: { walletType: 'AEPS' } })).aeps,
+  100
+);
+// Counter-QR payments now credit Utility directly; older ones stayed in QR.
+assert.strictEqual(getWalletDeltas(tx('PG_COLLECTION', { metadata: { collectionChannel: 'QR', walletType: 'MAIN' } })).main, 100);
+assert.strictEqual(getWalletDeltas(tx('PG_COLLECTION', { metadata: { collectionChannel: 'QR' } })).qr, 100);
+// Leftover QR money moves into Utility, where Icchhamati credits VPA payments; Trade
+// moves one way into Utility.
+const qrToUtility = getWalletDeltas(tx('QRTO_MAIN', { metadata: { walletType: 'MAIN' } }));
+assert.deepStrictEqual([qrToUtility.main, qrToUtility.aeps, qrToUtility.qr], [100, 0, -100]);
+assert.strictEqual(getWalletLabel(tx('QRTO_MAIN', { metadata: { walletType: 'MAIN' } })), 'QR→Utility');
+const tradeToUtility = getWalletDeltas(tx('AEPSTOMAIN', { metadata: { walletType: 'MAIN' } }));
+assert.deepStrictEqual([tradeToUtility.main, tradeToUtility.aeps], [100, -100]);
 assert.ok(
   getNarration(tx('MERCHANT_ONBOARDING_CHARGE', { metadata: { requestId: '322432' } })).includes(
     '322432'

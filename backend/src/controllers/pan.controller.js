@@ -382,7 +382,7 @@ export const buyPsaCoupons = async (req, res) => {
     if (!debited) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient Main Wallet balance. Required ₹${couponAmount}.`,
+        message: `Insufficient Utility Wallet balance. Required ₹${couponAmount}.`,
       });
     }
 
@@ -864,7 +864,7 @@ export const purchaseStdCoupons = async (req, res) => {
     if (!debited) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient Main Wallet balance. Required ₹${totalAmount}.`,
+        message: `Insufficient Utility Wallet balance. Required ₹${totalAmount}.`,
       });
     }
 

@@ -35,19 +35,25 @@ const MONEY_MOVING_STATUSES = ['SUCCESS', 'REFUNDED', 'APPROVED'];
 // Which wallet each transaction actually moves money in/out of.
 // Verified against the controllers: daily auth (MAIN), PAN (debitMainWallet),
 // ITR (MAIN), GST_REGISTRATION (MAIN), AEPS_SETTLEMENT (AEPS), etc.
+// Shown under Icchhamati's names: MAIN is the Utility Wallet, AEPS the Trade Wallet.
 const WALLET_LABELS = {
-  AEPS_WITHDRAWAL: 'AEPS',
-  AADHAAR_PAY: 'AEPS',
-  AEPS_SETTLEMENT: 'AEPS',
-  AEPSTOMAIN: 'AEPS→Main',
-  QRTO_MAIN: 'QR→Main',
+  AEPS_WITHDRAWAL: 'Trade',
+  AADHAAR_PAY: 'Trade',
+  MATM: 'Trade',
+  AEPS_SETTLEMENT: 'Trade',
+  AEPSTOMAIN: 'Trade→Utility',
+  QRTO_MAIN: 'QR→Utility',
 };
 
-export const getWalletLabel = (tx) => WALLET_LABELS[tx.type] || 'Main';
+export const getWalletLabel = (tx) => {
+  if (tx.type === 'QRTO_MAIN' && tx.metadata?.walletType === 'AEPS') return 'QR→Trade';
+  if (tx.metadata?.walletType === 'AEPS' && !WALLET_LABELS[tx.type]) return 'Trade';
+  return WALLET_LABELS[tx.type] || 'Utility';
+};
 
 const TXNTYPE_LABELS = {
-  AEPS_WITHDRAWAL: 'AEPS Wallet',
-  MATM: 'MATM / AEPS Wallet',
+  AEPS_WITHDRAWAL: 'AEPS Withdrawal',
+  MATM: 'MATM Withdrawal',
   AADHAAR_PAY: 'AadhaarPay',
   WALLET_TOPUP: 'Wallet Topup',
   RECHARGE: 'Recharge',
@@ -64,7 +70,7 @@ const TXNTYPE_LABELS = {
   GST_REGISTRATION: 'GST Registration',
   DAILY_AUTH_CHARGE: 'Daily Auth',
   MERCHANT_ONBOARDING_CHARGE: 'Onboarding Charge',
-  AEPSTOMAIN: 'Wallet Transfer',
+  AEPSTOMAIN: 'Trade → Utility Transfer',
   QRTO_MAIN: 'QR Wallet Transfer',
   DIRECT_PAYOUT_REFUND: 'Refund',
   AEPS_DEPOSIT_REFUND: 'Refund',
@@ -132,9 +138,9 @@ export const getNarration = (tx) => {
     case 'MERCHANT_ONBOARDING_CHARGE':
       return `PaySprint onboarding charge${m.requestId ? ' ref ' + m.requestId : ''}`;
     case 'AEPSTOMAIN':
-      return 'AEPS → Main Transfer';
+      return 'Trade Wallet → Utility Wallet Transfer';
     case 'QRTO_MAIN':
-      return 'QR Wallet → Main Transfer';
+      return `QR Wallet → ${m.walletType === 'AEPS' ? 'Trade' : 'Utility'} Wallet Transfer`;
     default:
       return tx.type ? String(tx.type).replace(/_/g, ' ') : 'Transaction';
   }
@@ -172,14 +178,26 @@ const getCommissionSplit = (tx) => {
  * Commission is credited NET of 2% TDS.
  */
 export const getWalletDeltas = (tx) => {
+  const delta = typeDeltas(tx);
+  // Since the Icchhamati wallet sync, DMT, direct payout, add money and fund
+  // requests book to the Trade (AEPS) wallet. Their rows say
+  // so in metadata.walletType; older rows say MAIN and stay on Main.
+  if (tx.metadata?.walletType === 'AEPS' && delta.aeps === 0 && delta.main !== 0) {
+    return { ...delta, main: 0, aeps: delta.main };
+  }
+  return delta;
+};
+
+const typeDeltas = (tx) => {
   if (ENQUIRY_TYPES.includes(tx.type)) return { main: 0, aeps: 0 };
   const amount = toNumber(tx.amount);
   const { net } = getCommissionSplit(tx);
   const isRefund = isRefundTxnId(tx.transactionId);
 
-  // Counter-QR proceeds land in the separate QR wallet; payment-link
-  // collections credit Main and fall through to the inflow rule below.
-  if (tx.type === 'PG_COLLECTION' && tx.metadata?.collectionChannel === 'QR') {
+  // Counter-QR proceeds used to land in a separate QR wallet. Since the
+  // Icchhamati sync they credit Main (walletType MAIN) like payment links,
+  // and fall through to the inflow rule below.
+  if (tx.type === 'PG_COLLECTION' && tx.metadata?.collectionChannel === 'QR' && tx.metadata?.walletType !== 'MAIN') {
     return { main: 0, aeps: 0, qr: round2(amount) };
   }
 
@@ -398,7 +416,7 @@ export const getWalletLedger = async (req, res) => {
       // show the MAIN balance; AEPS rows show the AEPS balance. This makes
       // it obvious that e.g. the ₹1 daily 2FA charge comes OUT of Main.
       filtered = filtered.map((r) => {
-        const isAepsRow = r.WALLET === 'AEPS' || r.WALLET === 'AEPS→Main';
+        const isAepsRow = /Trade/.test(r.WALLET);
         return {
           ...r,
           OPENING: isAepsRow ? r.AEPS_OPENING : r.MAIN_OPENING,
@@ -452,7 +470,7 @@ export const getWalletLedger = async (req, res) => {
         currentCombined,
         currentMain,
         currentAeps,
-        wallet: walletFilter === 'AEPS' ? 'AEPS' : walletFilter === 'MAIN' ? 'Main' : 'All',
+        wallet: walletFilter === 'AEPS' ? 'Trade' : walletFilter === 'MAIN' ? 'Utility' : 'All',
         total: filtered.length,
         page: pageNo,
         hasMore: pageNo * pageSize < filtered.length,
@@ -470,7 +488,7 @@ export const getWalletLedger = async (req, res) => {
       currentCombined,
       currentMain,
       currentAeps,
-      wallet: walletFilter === 'AEPS' ? 'AEPS' : walletFilter === 'MAIN' ? 'Main' : 'All',
+      wallet: walletFilter === 'AEPS' ? 'Trade' : walletFilter === 'MAIN' ? 'Utility' : 'All',
       total: filtered.length,
       data: filtered,
     });

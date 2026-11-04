@@ -406,7 +406,7 @@ export const initiateTransfer = async (req, res) => {
     // it, so `amount` is the whole debit and the payout below sends totalAmount.
     const charge = getDmtCharge(totalAmount);
     try {
-      await lockFundsForTransaction(retailerId, 'MAIN', -(totalAmount + charge.total), {
+      await lockFundsForTransaction(retailerId, 'AEPS', -(totalAmount + charge.total), {
         transactionId,
         userId: retailerId,
         type: 'DMT',
@@ -425,7 +425,7 @@ export const initiateTransfer = async (req, res) => {
     } catch (walletError) {
       return res.status(400).json({
         success: false,
-        message: walletError.message || 'Insufficient Main Wallet balance for this transfer.',
+        message: walletError.message || 'Insufficient Trade Wallet balance for this transfer.',
       });
     }
 
@@ -499,7 +499,7 @@ export const initiateTransfer = async (req, res) => {
     }
 
     // Refunds the locked funds when the status is FAILED.
-    await resolveTransaction(transactionId, status, message, 'MAIN');
+    await resolveTransaction(transactionId, status, message, 'AEPS');
 
     return res.status(status === 'SUCCESS' ? 200 : 400).json({
       success: status === 'SUCCESS',

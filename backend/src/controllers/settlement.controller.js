@@ -734,7 +734,7 @@ export const initiateSettlement = async (req, res) => {
     if (aepsWallet.balance < totalDeduction) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient AEPS Wallet balance. (Amount: ₹${amount} + Charge: ₹${fee})`,
+        message: `Insufficient Trade Wallet balance. (Amount: ₹${amount} + Charge: ₹${fee})`,
       });
     }
 
@@ -763,7 +763,7 @@ export const initiateSettlement = async (req, res) => {
     } catch (walletError) {
       return res.status(400).json({
         success: false,
-        message: walletError.message || 'Insufficient AEPS Wallet balance',
+        message: walletError.message || 'Insufficient Trade Wallet balance',
       });
     }
 
@@ -887,10 +887,10 @@ export const initiateDirectPayout = async (req, res) => {
     const transactionId = `PAYOUT${Date.now()}${Math.floor(Math.random() * 1000)}`;
     const merchantCode = getMerchantCode(req);
 
-    // Deduct balance atomically from MAIN Wallet
+    // Deduct balance atomically from the Trade (AEPS) wallet, as Icchhamati does
     const { lockFundsForTransaction } = await import('../utils/wallet.util.js');
     try {
-      await lockFundsForTransaction(req.user.id, 'MAIN', -totalDeduction, {
+      await lockFundsForTransaction(req.user.id, 'AEPS', -totalDeduction, {
         transactionId,
         userId: req.user.id,
         type: 'DIRECT_PAYOUT',
@@ -909,7 +909,7 @@ export const initiateDirectPayout = async (req, res) => {
     } catch (walletError) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient Main Wallet balance. (Amount: ₹${amount} + Fee: ₹${fee})`,
+        message: `Insufficient Trade Wallet balance. (Amount: ₹${amount} + Fee: ₹${fee})`,
       });
     }
 
@@ -985,7 +985,7 @@ export const initiateDirectPayout = async (req, res) => {
         }
       );
     } else if (finalStatus === 'FAILED') {
-      await resolveTransaction(transactionId, 'FAILED', apiMessage, 'MAIN');
+      await resolveTransaction(transactionId, 'FAILED', apiMessage, 'AEPS');
     } else {
       return pendingPayoutResponse(res, transactionId, apiMessage);
     }
@@ -1061,7 +1061,8 @@ export const checkSettlementStatus = async (req, res) => {
         txn.transactionId,
         'FAILED',
         statusData.status || 'Transaction failed & refunded',
-        txn.type === 'DIRECT_PAYOUT' ? 'MAIN' : 'AEPS'
+        // Older direct payouts carry metadata.walletType = MAIN, which wins.
+        'AEPS'
       );
     } else if (finalStatus === 'SUCCESS') {
       await Transaction.updateOne(

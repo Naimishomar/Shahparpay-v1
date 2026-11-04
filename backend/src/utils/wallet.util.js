@@ -331,6 +331,9 @@ export const retailerNetCommission = (txn) => {
  * Atomically deducts funds and creates a PROCESSING transaction.
  * Safe from double-spend since it checks balance atomically.
  */
+/** The names Icchhamati gives these wallets, shown wherever a person reads them. */
+export const WALLET_NAMES = { MAIN: 'Utility Wallet', AEPS: 'Trade Wallet', QR: 'QR Wallet' };
+
 export const lockFundsForTransaction = async (userId, walletType, amount, transactionDetails) => {
   const formattedAmount = formatAmount(amount); // Typically a negative number (e.g. -103)
 
@@ -351,7 +354,7 @@ export const lockFundsForTransaction = async (userId, walletType, amount, transa
     );
 
     if (!updatedWallet) {
-      throw new Error(`Insufficient funds or wallet not found for ${walletType} wallet.`);
+      throw new Error(`Insufficient funds or wallet not found for ${WALLET_NAMES[walletType] || walletType}.`);
     }
 
     // 2. Create the Transaction Log as PROCESSING
@@ -514,7 +517,7 @@ export const updateWalletAtomically = async (userId, walletType, amount, transac
     );
 
     if (!updatedWallet) {
-      throw new Error(`Insufficient funds or wallet not found for ${walletType} wallet.`);
+      throw new Error(`Insufficient funds or wallet not found for ${WALLET_NAMES[walletType] || walletType}.`);
     }
 
     let transactionLogs;
@@ -561,7 +564,7 @@ export const transferBetweenWallets = async (
     );
 
     if (!deductedWallet) {
-      throw new Error(`Insufficient funds in ${fromWalletType} wallet.`);
+      throw new Error(`Insufficient funds in ${WALLET_NAMES[fromWalletType] || fromWalletType}.`);
     }
 
     const creditedWallet = await ToWalletModel.findOneAndUpdate(
