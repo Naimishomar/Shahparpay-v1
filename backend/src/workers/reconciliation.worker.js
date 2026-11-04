@@ -8,7 +8,8 @@ import {
   queryAepsDepositStatus,
   updateWalletAtomically,
 } from '../utils/wallet.util.js';
-import { fetchRechargeStatus, fetchPayoutStatus } from '../utils/icchhamati.util.js';
+import { fetchRechargeStatus } from '../utils/icchhamati.util.js';
+import { reconcileIcchhamatiPayout } from '../utils/icchhamatiPayout.js';
 import { syncCollectionTransaction } from '../controllers/collect.controller.js';
 
 /**
@@ -234,21 +235,17 @@ export const startReconciliationWorker = () => {
         // DIRECT_PAYOUT (PaySprint, removed) left nothing pending; any straggler waits too.
         const NO_RECONCILER_TYPES = ['DMT', 'AADHAAR_PAY', 'MATM', 'DIRECT_PAYOUT'];
 
-        // Trade wallet settlement paid by Icchhamati's /beneficiary-payout: the
-        // payout listing is its status. Only a definite SUCCESS / FAILED moves
-        // it; a payout the listing does not show yet stays held.
-        if (txn.type === 'AEPS_SETTLEMENT' && txn.metadata?.provider === 'ICCHHAMATI') {
+        // DMT and Trade wallet settlement paid by Icchhamati's /beneficiary-payout:
+        // the payout listing is their status. Only a definite SUCCESS / FAILED
+        // moves one; a payout the listing still shows pending stays held.
+        if (['AEPS_SETTLEMENT', 'DMT'].includes(txn.type) && txn.metadata?.provider === 'ICCHHAMATI') {
           try {
-            const { finalStatus: payoutStatus, data: row } = await fetchPayoutStatus(
-              txn.metadata?.refid || txn.transactionId
-            );
-            if (payoutStatus === 'SUCCESS' || payoutStatus === 'FAILED') {
-              if (row?.utr) await Transaction.updateOne({ _id: txn._id }, { $set: { 'metadata.utr': row.utr } });
-              await resolveTransaction(txn.transactionId, payoutStatus, row?.message || `Settlement ${payoutStatus.toLowerCase()}`, 'AEPS');
-              console.log(`CRON: Settlement ${txn.transactionId} resolved as ${payoutStatus}`);
+            const { finalStatus: payoutStatus } = await reconcileIcchhamatiPayout(txn);
+            if (payoutStatus !== 'PROCESSING') {
+              console.log(`CRON: ${txn.type} ${txn.transactionId} resolved as ${payoutStatus}`);
             }
           } catch (error) {
-            console.error(`CRON: Settlement reconciliation failed for ${txn.transactionId}:`, error.message);
+            console.error(`CRON: Payout reconciliation failed for ${txn.transactionId}:`, error.message);
           }
           continue;
         }

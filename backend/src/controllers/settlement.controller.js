@@ -10,9 +10,9 @@ import {
   payoutOutcome,
   providerMessage,
   makeReferenceId,
-  fetchPayoutStatus,
 } from '../utils/icchhamati.util.js';
 import { lockFundsForTransaction, resolveTransaction } from '../utils/wallet.util.js';
+import { reconcileIcchhamatiPayout } from '../utils/icchhamatiPayout.js';
 import {
   requireMobile,
   beneficiaryMobile,
@@ -20,12 +20,14 @@ import {
   fetchProviderBeneficiaries,
 } from './dmt.controller.js';
 
+// Accepted and held: shown as submitted, and as Pending in history until the
+// payout listing reports SUCCESS (or FAILED, which refunds).
 const pendingPayoutResponse = (res, transactionId, apiMessage) =>
   res.status(202).json({
-    success: false,
+    success: true,
     pending: true,
     transactionId,
-    message: 'Payout is being confirmed with the bank. Check its status shortly.',
+    message: 'Settlement submitted. It shows Pending until the bank confirms it.',
     detail: typeof apiMessage === 'string' ? apiMessage : undefined,
   });
 
@@ -309,16 +311,11 @@ export const checkSettlementStatus = async (req, res) => {
     }
 
     if (txn.metadata?.provider === 'ICCHHAMATI') {
-      const refid = txn.metadata?.refid || txn.transactionId;
-      // A settled txn is only re-read; resolveTransaction ignores non-pending rows.
-      const { finalStatus, data: row } =
+      // A settled txn is only re-read; a held one is asked about.
+      const { finalStatus, row } =
         txn.status === 'PENDING' || txn.status === 'PROCESSING'
-          ? await fetchPayoutStatus(refid)
-          : { finalStatus: txn.status, data: null };
-      if (finalStatus === 'SUCCESS' || finalStatus === 'FAILED') {
-        if (row?.utr) await Transaction.updateOne({ _id: txn._id }, { $set: { 'metadata.utr': row.utr } });
-        await resolveTransaction(txn.transactionId, finalStatus, row?.message || null, 'AEPS');
-      }
+          ? await reconcileIcchhamatiPayout(txn)
+          : { finalStatus: txn.status, row: null };
       const txnStatus = finalStatus === 'SUCCESS' ? 1 : finalStatus === 'FAILED' ? 0 : 3;
       return res.status(200).json({
         success: true,

@@ -29,9 +29,11 @@ import { payoutOutcome } from '../utils/icchhamati.util.js';
 
 // --- Payout answers ---------------------------------------------------------
 
-assert.equal(payoutOutcome({ status: 1, data: { status: 'success' } }), 'SUCCESS');
+// Accepted is only created: live answers say data.status 1 while the listing
+// still says pending, so nothing is SUCCESS until the listing says so.
+assert.equal(payoutOutcome({ status: 1, message: 'Transaction Accepted', data: { status: 1, message: 'Transaction created successfully' } }), 'PENDING');
+assert.equal(payoutOutcome({ status: 1, data: { status: 'success' } }), 'PENDING');
 assert.equal(payoutOutcome({ status: 1, data: { status: 'Pending' } }), 'PENDING');
-assert.equal(payoutOutcome({ status: 1, data: {} }), 'PENDING');
 assert.equal(payoutOutcome({ status: 0, message: 'Insufficient balance' }), 'FAILED');
 
 console.log('settlement tests passed');

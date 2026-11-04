@@ -523,9 +523,8 @@ export const initiateTransfer = async (req, res) => {
     });
 
     if (status === 'PENDING') {
-      // ponytail: the provider publishes no payout status endpoint, so a pending
-      // transfer stays PROCESSING until it is settled by hand in the admin
-      // portal. Wire it into the reconciliation cron once they expose one.
+      // Held as PROCESSING; the reconciliation cron reads the payout listing
+      // and marks it SUCCESS (or FAILED, refunded) once the bank answers.
       return res.status(200).json({
         success: true,
         pending: true,
