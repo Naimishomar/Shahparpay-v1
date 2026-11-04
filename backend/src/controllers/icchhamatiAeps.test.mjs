@@ -1,7 +1,7 @@
 // Run: node src/controllers/icchhamatiAeps.test.mjs
 // The two calls that decide what a retailer sees and whether money moves.
 import assert from 'node:assert';
-import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks, recordStep, fingpayFailed, failureReason, correctedDraft, draftDetails, txnFields } from './icchhamatiAeps.controller.js';
+import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks, recordStep, fingpayFailed, failureReason, correctedDraft, draftDetails, txnFields, readTxnRequest } from './icchhamatiAeps.controller.js';
 import { parseServicesUpdate, usesAepsProvider } from '../utils/services.js';
 
 // --- Receipt fields from /doAeps ------------------------------------------
@@ -122,6 +122,14 @@ assert.equal(transactionOutcome(crash), 'PROCESSING');
 const http500 = { status: 0, message: 'Server Error' };
 Object.defineProperty(http500, 'httpStatus', { value: 502 });
 assert.equal(transactionOutcome(http500), 'PROCESSING');
+
+// Cash deposit (CD) carries an amount like a withdrawal, within the same cap.
+const cd = { aepsType: 'cd', aadhaarNumber: '123412341234', customerMobile: '9876543210', bankID: '607152' };
+assert.equal(readTxnRequest({ ...cd, amount: 500 }).amount, 500);
+assert.equal(readTxnRequest({ ...cd, amount: 500 }).aepsType, 'CD');
+assert.ok(readTxnRequest(cd).error, 'a deposit needs an amount');
+assert.ok(readTxnRequest({ ...cd, amount: 10001 }).error, 'a deposit is capped like a withdrawal');
+assert.equal(readTxnRequest({ ...cd, aepsType: 'BE', amount: 500 }).amount, undefined);
 
 // --- provider switch ------------------------------------------------------
 

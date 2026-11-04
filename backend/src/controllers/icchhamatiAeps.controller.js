@@ -15,7 +15,12 @@ import {
   providerCrashed,
   makeReferenceId,
 } from '../utils/icchhamati.util.js';
-import { applyAepsWithdrawalSuccess } from '../utils/wallet.util.js';
+import {
+  applyAepsWithdrawalSuccess,
+  applyAepsDepositSuccess,
+  lockFundsForTransaction,
+  resolveTransaction,
+} from '../utils/wallet.util.js';
 import { recordAepsEnquiry } from '../utils/aepsEnquiry.js';
 import { aepsKycDone } from '../utils/services.js';
 import { uploadOnR2 } from '../utils/r2.js';
@@ -855,11 +860,14 @@ export const getBanks = async (req, res) => {
   }
 };
 
-const AEPS_TYPES = ['CW', 'BE', 'MS', 'M'];
+// CD is Icchhamati's cash deposit: the retailer takes the customer's cash and
+// the bank credits the customer's account, so the retailer's wallet pays it.
+const AEPS_TYPES = ['CW', 'BE', 'MS', 'M', 'CD'];
 const MONEY_TYPES = ['CW', 'M'];
+const AMOUNT_TYPES = [...MONEY_TYPES, 'CD'];
 
 /** Request validation shared by the OTP and the transaction itself. */
-const readTxnRequest = (body = {}) => {
+export const readTxnRequest = (body = {}) => {
   const aepsType = String(body.aepsType || '').toUpperCase();
   const aadhaarNumber = String(body.aadhaarNumber ?? '').replace(/\D/g, '');
   const customerMobile = String(body.customerMobile ?? '').replace(/\D/g, '');
@@ -870,7 +878,7 @@ const readTxnRequest = (body = {}) => {
   if (!/^[6-9]\d{9}$/.test(customerMobile))
     return { error: 'Enter the customer’s 10-digit mobile number.' };
   if (!bankID) return { error: 'Select the customer’s bank.' };
-  if (MONEY_TYPES.includes(aepsType)) {
+  if (AMOUNT_TYPES.includes(aepsType)) {
     if (!Number.isFinite(amount) || amount < 1) return { error: 'Enter an amount.' };
     if (amount > AEPS_MAX_AMOUNT)
       return { error: `Amount cannot exceed ₹${AEPS_MAX_AMOUNT} per transaction.` };
@@ -880,7 +888,7 @@ const readTxnRequest = (body = {}) => {
     aadhaarNumber,
     customerMobile,
     bankID,
-    amount: MONEY_TYPES.includes(aepsType) ? amount : undefined,
+    amount: AMOUNT_TYPES.includes(aepsType) ? amount : undefined,
   };
 };
 
@@ -979,7 +987,32 @@ export const doTransaction = async (req, res) => {
       });
     }
 
-    if (MONEY_TYPES.includes(txn.aepsType)) {
+    const isDeposit = txn.aepsType === 'CD';
+    if (isDeposit) {
+      // ponytail: Trade is inferred (all Icchhamati AEPS money sits there); no CD
+      // has run on our Icchhamati account yet to confirm which wallet it debits.
+      try {
+        record = await lockFundsForTransaction(retailer._id, 'AEPS', -txn.amount, {
+          transactionId: makeReferenceId('ICD'),
+          userId: retailer._id,
+          type: 'AEPS_DEPOSIT',
+          amount: txn.amount,
+          metadata: {
+            provider: 'icchhamati',
+            outletId: outletOf(retailer),
+            aadhaar: maskAadhaar(txn.aadhaarNumber),
+            bankIIN: txn.bankID,
+            bankName,
+            mobile: txn.customerMobile,
+          },
+        });
+      } catch {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient Trade Wallet balance for this ₹${txn.amount} cash deposit.`,
+        });
+      }
+    } else if (MONEY_TYPES.includes(txn.aepsType)) {
       record = await Transaction.create({
         transactionId: makeReferenceId(txn.aepsType === 'M' ? 'IAP' : 'ICW'),
         userId: retailer._id,
@@ -999,7 +1032,8 @@ export const doTransaction = async (req, res) => {
 
     let data;
     try {
-      data = await icchhamatiPost('/api/v2/aeps/doAeps', {
+      // Same body as doAeps; Icchhamati's own portal sends CD to this path.
+      data = await icchhamatiPost(isDeposit ? '/api/v2/cash-deposit/process' : '/api/v2/aeps/doAeps', {
         outletId: outletOf(retailer),
         customerMobile: txn.customerMobile,
         aadhaarNumber: txn.aadhaarNumber,
@@ -1010,8 +1044,8 @@ export const doTransaction = async (req, res) => {
         amount: txn.amount ?? '',
         xml: String(xml),
         deviceIMEI: retailer.icchhamatiAeps?.deviceIMEI || undefined,
-        otp: otp || undefined,
-        txnOtpRequestId: txnOtpRequestId || undefined,
+        otp: isDeposit ? undefined : otp || undefined,
+        txnOtpRequestId: isDeposit ? undefined : txnOtpRequestId || undefined,
       });
     } catch (error) {
       // A timeout says nothing about whether the bank debited the customer.
@@ -1070,9 +1104,23 @@ export const doTransaction = async (req, res) => {
     };
     await record.save();
 
+    if (isDeposit && outcome === 'FAILED') {
+      // The bank credited no one: the held amount goes back to Trade.
+      await resolveTransaction(record.transactionId, 'FAILED', message, 'AEPS');
+      return res.status(400).json({ success: false, message, data: receipt });
+    }
+
     if (outcome === 'SUCCESS') {
-      const credited =
-        txn.aepsType === 'M'
+      const credited = isDeposit
+        ? await applyAepsDepositSuccess({
+            transactionId: record._id,
+            userId: retailer._id,
+            amount: txn.amount,
+            message,
+            retailerWallet: AepsWallet,
+            distributorWallet: AepsWallet,
+          })
+        : txn.aepsType === 'M'
           ? await applyAadhaarPaySuccess({
               transactionId: record._id,
               userId: retailer._id,

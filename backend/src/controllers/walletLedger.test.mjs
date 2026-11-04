@@ -75,6 +75,7 @@ const EXPECTED = {
 
   DAILY_AUTH_CHARGE: ['main', -1],
   MERCHANT_ONBOARDING_CHARGE: ['main', -1],
+  ACCOUNT_VERIFICATION: ['main', -1],
 };
 
 // Internal wallet transfers move money between two wallets.
@@ -122,7 +123,7 @@ assert.strictEqual(getWalletLabel(tx('MERCHANT_ONBOARDING_CHARGE')), 'Utility');
 // Since the Icchhamati wallet sync, DMT, direct payout, add money and fund
 // requests book to the Trade (AEPS) wallet; metadata.walletType routes them,
 // and older MAIN rows stay on the Utility wallet.
-for (const type of ['DMT', 'DIRECT_PAYOUT', 'WALLET_TOPUP', 'FUND_REQUEST']) {
+for (const type of ['DMT', 'DIRECT_PAYOUT', 'WALLET_TOPUP', 'FUND_REQUEST', 'AEPS_DEPOSIT']) {
   const trade = getWalletDeltas(tx(type, { metadata: { walletType: 'AEPS' } }));
   const legacy = getWalletDeltas(tx(type, { metadata: { walletType: 'MAIN' } }));
   assert.strictEqual(trade.main, 0, `${type} on Trade must not touch Utility`);

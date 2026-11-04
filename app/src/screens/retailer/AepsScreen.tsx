@@ -324,8 +324,8 @@ export const AepsScreen: React.FC = () => {
   const activePipes: string[] = icch ? [] : status.data?.activePipes ?? [];
   const kycDone = !!status.data?.isMerchantKycComplete;
   const dailyAuthDone = !!status.data?.isDailyAuthDoneToday;
-  // Icchhamati has no cash deposit.
-  const services = icch ? SERVICES.filter((s) => s.key !== 'deposit') : SERVICES;
+  // Icchhamati cash deposit (CD) is paid from the Trade Wallet.
+  const services = SERVICES;
 
   useEffect(() => {
     if (!pipe && activePipes.length) setPipe(activePipes[0]);
@@ -447,7 +447,7 @@ export const AepsScreen: React.FC = () => {
           ? 'Enter the customer\'s 10-digit mobile number.'
           : spec.amount && amountValue <= 0
             ? 'Enter the transaction amount.'
-            : (service === 'withdrawal' || (icch && service === 'aadhaarpay')) && amountValue > AEPS_MAX_WITHDRAWAL
+            : (service === 'withdrawal' || (icch && (service === 'aadhaarpay' || service === 'deposit'))) && amountValue > AEPS_MAX_WITHDRAWAL
               ? `A single AEPS withdrawal cannot exceed ${money(AEPS_MAX_WITHDRAWAL)}.`
               : needsOtp && (!otpSent || otp.length !== 6)
                 ? `Withdrawals above ${money(AEPS_OTP_THRESHOLD)} need the customer's OTP.`
@@ -502,7 +502,7 @@ export const AepsScreen: React.FC = () => {
 
   /** Icchhamati's doAeps shape; the backend fills the outlet and scanner serial. */
   const icchPayload = () => ({
-    aepsType: ({ withdrawal: 'CW', balance: 'BE', statement: 'MS', aadhaarpay: 'M' } as const)[service as 'withdrawal'],
+    aepsType: ({ withdrawal: 'CW', balance: 'BE', statement: 'MS', aadhaarpay: 'M', deposit: 'CD' } as const)[service as 'withdrawal'],
     aadhaarNumber,
     customerMobile: mobileNumber,
     bankID: bankIin(bank!),

@@ -756,6 +756,10 @@ export const applyAepsDepositSuccess = async ({
   amount,
   paysprintRef,
   message,
+  // Icchhamati deposits are paid from the Trade (AEPS) wallet, and their
+  // commission lands there, like every other Icchhamati AEPS earning.
+  retailerWallet = MainWallet,
+  distributorWallet = MainWallet,
 }) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -781,6 +785,8 @@ export const applyAepsDepositSuccess = async ({
       retailerGross: getAepsDepositCommission(numericAmount),
       distributorGross: getDistributorCommission('AEPS_DEPOSIT', numericAmount),
       pool: getApiCommission('AEPS_DEPOSIT', numericAmount),
+      retailerWallet,
+      distributorWallet,
     });
 
     claimed.transactionId = paysprintRef || claimed.transactionId;

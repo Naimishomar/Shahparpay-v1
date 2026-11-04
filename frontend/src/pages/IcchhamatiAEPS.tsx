@@ -110,6 +110,7 @@ const TXN_TABS = [
     { key: 'CW', label: 'Cash Withdrawal', icon: IndianRupee },
     { key: 'MS', label: 'Mini Statement', icon: FileText },
     { key: 'M', label: 'Aadhaar Pay', icon: CreditCard },
+    { key: 'CD', label: 'Cash Deposit', icon: Landmark },
 ] as const;
 type TxnType = (typeof TXN_TABS)[number]['key'];
 
@@ -599,8 +600,9 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
 
     useEffect(() => { call('/banks', undefined, 'get').then((r) => r.success && setBanks(r.data || [])); }, []);
 
-    const moves = tab === 'CW' || tab === 'M';
-    const needsOtp = moves && Number(amount) > OTP_THRESHOLD;
+    const moves = tab === 'CW' || tab === 'M' || tab === 'CD';
+    // Cash deposit takes no customer OTP on Icchhamati.
+    const needsOtp = (tab === 'CW' || tab === 'M') && Number(amount) > OTP_THRESHOLD;
     const bank = banks.find((b) => String(b.iinno) === bankID);
     const resetOtp = () => { setOtp(''); setOtpRef(''); };
 
@@ -670,7 +672,7 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
                             </select>
                         </Field>
                         {moves && (
-                            <Field label="Amount">
+                            <Field label={tab === 'CD' ? 'Amount (paid from your Trade Wallet)' : 'Amount'}>
                                 <input value={amount} onChange={(e) => { setAmount(e.target.value.replace(/\D/g, '').slice(0, 5)); resetOtp(); }} inputMode="numeric" placeholder="Up to ₹10,000" className={INPUT} />
                             </Field>
                         )}
