@@ -4,7 +4,9 @@ import {
   normaliseStatus,
   providerMessage,
 } from '../utils/icchhamati.util.js';
+import mongoose from 'mongoose';
 import Transaction from '../models/transaction.model.js';
+import { logActivity } from '../utils/activity.js';
 import MainWallet from '../models/mainWallet.model.js';
 import Retailer from '../models/users/retailer.model.js';
 
@@ -411,6 +413,27 @@ export const generateQr = async (req, res) => {
 const money = (value) => Math.round(Number(value) * 100) / 100;
 
 /**
+ * A QR callback that credits nobody still leaves a row in the admin activity
+ * log, so a callback that arrived can be told from one that never did.
+ */
+const logUncredited = (req, reason, data, ownerId) =>
+  logActivity({
+    req,
+    action: 'qr.callback.uncredited',
+    target: ownerId ? { _id: ownerId, role: 'retailer' } : undefined,
+    summary: `QR payment ${data.txn_id ?? data.utr ?? '?'} of ₹${data.amount ?? '?'} not credited: ${reason}`,
+    meta: {
+      reason,
+      virtualAccountId: data.vpa_account_id ?? data.vpa_id ?? null,
+      txnId: data.txn_id ?? null,
+      utr: data.utr ?? null,
+      amount: data.amount ?? null,
+      charge: data.service_charge_with_gst ?? null,
+      status: data.status ?? null,
+    },
+  });
+
+/**
  * A `vpa_transaction` callback: credits the QR's owner, once per provider
  * transaction, with what actually reached the platform's wallet (amount less
  * service_charge_with_gst). Reached through the shared Icchhamati callback,
@@ -429,11 +452,13 @@ export const collectionWebhook = async (req, res) => {
     const credit = money(amount - charge);
 
     if (!accountIds.length || !providerTxnId || !(amount > 0)) {
+      logUncredited(req, 'incomplete notification', data);
       return res.status(400).json({ success: false, message: 'Incomplete QR payment notification' });
     }
     // Well-formed but not money: acknowledged so Icchhamati stops retrying.
     if (status !== 'SUCCESS') {
       console.warn(`[QR Webhook] ${providerTxnId} reported ${data.status}; nothing credited.`);
+      logUncredited(req, `status ${data.status}`, data);
       return res.status(200).json({ status: 1, message: 'Success', credited: false });
     }
 
@@ -445,50 +470,62 @@ export const collectionWebhook = async (req, res) => {
     }).select('_id').limit(2);
     if (owners.length !== 1) {
       console.error(`[QR Webhook] ${providerTxnId}: virtual account ${accountIds.join('/')} has ${owners.length ? 'several owners' : 'no owner'}; nothing credited.`);
+      logUncredited(req, owners.length ? 'several retailers own this QR' : 'no retailer owns this QR', data);
       return res.status(owners.length ? 409 : 404).json({ success: false, message: 'QR virtual account is not mapped to exactly one retailer' });
     }
     if (!(credit > 0)) {
       console.error(`[QR Webhook] ${providerTxnId}: charge ${charge} leaves nothing to credit on ${amount}.`);
+      logUncredited(req, `charge ₹${charge} is not less than amount ₹${amount}`, data, owners[0]._id);
       return res.status(200).json({ status: 1, message: 'Success', credited: false });
     }
     const userId = owners[0]._id;
 
     // Inserted once per provider transaction: a retried callback finds the row
-    // already there (the update returns it) and credits nothing.
+    // already there (the update returns it) and credits nothing. Row and credit
+    // commit together: a crash between them would otherwise leave a row that
+    // blocks every retry with the money never credited.
     const transactionId = `QR_${providerTxnId}`;
-    const existing = await Transaction.findOneAndUpdate(
-      { transactionId },
-      {
-        $setOnInsert: {
-          transactionId,
-          userId,
-          type: 'PG_COLLECTION',
-          amount: credit,
-          status: 'SUCCESS',
-          commissions: { chargeDeducted: charge },
-          metadata: {
-            provider: 'ICCHHAMATI',
-            collectionChannel: 'QR',
-            virtualAccountId: accountIds[0],
-            providerTxnId,
-            grossAmount: amount,
-            utr: data.utr || null,
-            paymentMode: data.payment_mode || null,
-            remitterName: data.remitter_full_name || null,
-            walletType: 'MAIN',
+    let existing;
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        existing = await Transaction.findOneAndUpdate(
+          { transactionId },
+          {
+            $setOnInsert: {
+              transactionId,
+              userId,
+              type: 'PG_COLLECTION',
+              amount: credit,
+              status: 'SUCCESS',
+              commissions: { chargeDeducted: charge },
+              metadata: {
+                provider: 'ICCHHAMATI',
+                collectionChannel: 'QR',
+                virtualAccountId: accountIds[0],
+                providerTxnId,
+                grossAmount: amount,
+                utr: data.utr || null,
+                paymentMode: data.payment_mode || null,
+                remitterName: data.remitter_full_name || null,
+                walletType: 'MAIN',
+              },
+            },
           },
-        },
-      },
-      { upsert: true, new: false, setDefaultsOnInsert: true }
-    );
-    // Straight into the Utility (MAIN) wallet, where Icchhamati itself credits
-    // VPA payments. There is no separate QR wallet on Icchhamati.
-    if (!existing) {
-      await MainWallet.findOneAndUpdate(
-        { userId },
-        { $inc: { balance: credit }, $setOnInsert: { userModel: 'Retailer' } },
-        { upsert: true, setDefaultsOnInsert: true }
-      );
+          { upsert: true, new: false, setDefaultsOnInsert: true, session }
+        );
+        // Straight into the Utility (MAIN) wallet, where Icchhamati itself credits
+        // VPA payments. There is no separate QR wallet on Icchhamati.
+        if (!existing) {
+          await MainWallet.findOneAndUpdate(
+            { userId },
+            { $inc: { balance: credit }, $setOnInsert: { userModel: 'Retailer' } },
+            { upsert: true, setDefaultsOnInsert: true, session }
+          );
+        }
+      });
+    } finally {
+      await session.endSession();
     }
     // `status: 1` is Icchhamati's documented acknowledgement; anything else is retried.
     return res.status(200).json({ status: 1, message: 'Success', transactionId, credited: !existing });

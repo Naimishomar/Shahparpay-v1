@@ -23,6 +23,18 @@ const mockModel = (rows, keyOf) => ({
     return options.new ? created : null;
   },
 });
+// One session per callback; its work runs once, and endSession must always follow.
+const sessions = { started: 0, ended: 0 };
+const mongoose = {
+  startSession: async () => {
+    sessions.started += 1;
+    return { withTransaction: async (fn) => fn(), endSession: async () => { sessions.ended += 1; } };
+  },
+};
+const activity = [];
+const logActivity = (entry) => activity.push(entry);
+const reasonsLogged = () => activity.map((a) => a.meta.reason);
+
 const Transaction = mockModel(state.transactions, (row, q) => row.transactionId === q.transactionId);
 const MainWallet = mockModel(state.mainWallets, (row, q) => row.userId === q.userId);
 const Retailer = {
@@ -49,10 +61,14 @@ const collectionWebhook = await (async () => {
   const body = src.slice(from, next === -1 ? undefined : next);
   const { normaliseStatus } = await import('../utils/icchhamati.util.js');
   const money = (value) => Math.round(Number(value) * 100) / 100;
+  // The uncredited-callback logger sits just above the handler.
+  const logFrom = src.indexOf('const logUncredited');
+  assert.ok(logFrom > -1 && logFrom < from, 'logUncredited must precede collectionWebhook');
+  const logger = src.slice(logFrom, src.indexOf('/**', logFrom));
   return new Function(
-    'Transaction', 'MainWallet', 'Retailer', 'normaliseStatus', 'money',
-    `${body.replace('export const collectionWebhook', 'const collectionWebhook')}; return collectionWebhook;`
-  )(Transaction, MainWallet, Retailer, normaliseStatus, money);
+    'Transaction', 'MainWallet', 'Retailer', 'normaliseStatus', 'money', 'mongoose', 'logActivity',
+    `${logger}\n${body.replace('export const collectionWebhook', 'const collectionWebhook')}; return collectionWebhook;`
+  )(Transaction, MainWallet, Retailer, normaliseStatus, money, mongoose, logActivity);
 })();
 
 const post = async (data) => {
@@ -121,5 +137,29 @@ state.retailers.push({ _id: 'ret_2', collectionQr: { virtualAccountId: 'VPA1' } 
 assert.strictEqual((await post({ ...PAID, txn_id: 'TXN4' })).code, 409);
 assert.strictEqual(balance('ret_2'), 0);
 assert.strictEqual(state.transactions.length, 3);
+
+// Every callback that credited nobody left a reason in the activity log.
+assert.deepStrictEqual(reasonsLogged(), [
+  'status failed',
+  'incomplete notification', 'incomplete notification', 'incomplete notification',
+  'no retailer owns this QR',
+  'several retailers own this QR',
+]);
+assert.ok(activity.every((a) => a.action === 'qr.callback.uncredited'));
+
+// A charge that eats the whole amount is logged against the QR's owner.
+{
+  state.retailers.push({ _id: 'ret_4', collectionQr: { virtualAccountId: 'VPA4' } });
+  const r = await post({ ...PAID, vpa_account_id: 'VPA4', vpa_id: 'VPA4', txn_id: 'TXN7', amount: '1', service_charge_with_gst: '1.18' });
+  assert.strictEqual(r.body.credited, false);
+  assert.strictEqual(balance('ret_4'), 0);
+  const last = activity.at(-1);
+  assert.match(last.meta.reason, /charge/);
+  assert.strictEqual(last.target._id, 'ret_4');
+}
+
+// Credits ran inside a session, and every session was closed.
+assert.ok(sessions.started >= 4);
+assert.strictEqual(sessions.started, sessions.ended);
 
 console.log('collectWebhook: all assertions passed');
