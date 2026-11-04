@@ -24,7 +24,6 @@ import { useAsync, useAction } from '@/hooks/useAsync';
 import { bankInitials } from '@/components/aeps/BiometricCapture';
 import { StatusText } from '@/components/aeps/TransactionReceipt';
 import api from '@/services/api';
-import { useAuth } from '@/context/AuthContext';
 
 const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const MODES = [
@@ -33,7 +32,6 @@ const MODES = [
 ];
 
 export const AepsSettlementScreen: React.FC = () => {
-  const { user } = useAuth();
   const [bankId, setBankId] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [pin, setPin] = useState('');
@@ -383,8 +381,6 @@ export const AepsSettlementScreen: React.FC = () => {
         </View>
       </View>
 
-      {user?.role === 'retailer' && <TradeToUtility available={available} onMoved={reloadAll} />}
-
       <View>
         <SectionTitle>Settlement history</SectionTitle>
         {history.loading ? <SkeletonRows count={3} /> : history.data?.length ? (
@@ -449,55 +445,6 @@ const Stat: React.FC<{ label: string; value: string; tone: string }> = ({ label,
     </Text>
   </View>
 );
-
-/** Trade -> Utility, one way, as Icchhamati's self-transfer out of its Trade Wallet. */
-const TradeToUtility: React.FC<{ available: number; onMoved: () => void }> = ({ available, onMoved }) => {
-  const [amount, setAmount] = useState('');
-  const [pin, setPin] = useState('');
-  const [notice, setNotice] = useState('');
-  const move = useAction(async () => {
-    const res = await api.transferQrToMain({ amount: Number(amount), pin, from: 'AEPS' });
-    if (!res.success) throw new Error(res.message);
-    setAmount('');
-    setPin('');
-    setNotice(res.message || 'Moved to your Utility Wallet.');
-    onMoved();
-  });
-  return (
-    <View>
-      <SectionTitle>Move to Utility Wallet</SectionTitle>
-      <View style={[styles.card, styles.form]}>
-        <Input
-          label="Amount"
-          value={amount}
-          onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))}
-          keyboardType="decimal-pad"
-          leftIcon="currency-inr"
-          error={Number(amount) > available ? 'Amount exceeds your Trade Wallet balance' : undefined}
-          helperText="Recharge, bill payment, PAN and ITR are paid from the Utility Wallet."
-        />
-        <Input
-          label="Wallet PIN"
-          value={pin}
-          onChangeText={(v) => setPin(v.replace(/\D/g, '').slice(0, 4))}
-          keyboardType="number-pad"
-          secureTextEntry
-          maxLength={4}
-        />
-        {!!move.error && <ErrorBanner message={move.error} />}
-        {!!notice && <SuccessBanner message={notice} />}
-        <Button
-          onPress={() => { setNotice(''); move.run(); }}
-          loading={move.pending}
-          disabled={!(Number(amount) > 0) || Number(amount) > available || pin.length !== 4}
-          fullWidth
-        >
-          Move to Utility Wallet
-        </Button>
-      </View>
-    </View>
-  );
-};
 
 const styles = themed((c) => ({
   card: {

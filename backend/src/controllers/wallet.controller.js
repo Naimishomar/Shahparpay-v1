@@ -132,17 +132,16 @@ export const changePin = async (req, res) => {
   }
 };
 
-// Retailer self-transfers, mirroring Icchhamati: counter-QR (VPA) credits land
-// in its Utility Wallet (MAIN), and Trade (AEPS) moves one way into Utility,
-// like Icchhamati's self-transfer out of its primary Trade Wallet.
+// Retailer self-transfer: leftover legacy QR wallet money into Utility (MAIN).
+// Trade -> Utility is gone: Icchhamati does not offer it. Old AEPSTOMAIN rows
+// still show in history and the ledger.
 const TRANSFERS = {
   QR: { to: 'MAIN', type: 'QRTO_MAIN', prefix: 'QRM', done: 'Moved to your Utility Wallet.' },
-  AEPS: { to: 'MAIN', type: 'AEPSTOMAIN', prefix: 'TUT', done: 'Moved to your Utility Wallet.' },
 };
 
 /**
  * Moves money between a retailer's own wallets, behind the wallet PIN.
- * Body: { amount, pin, from?: 'QR' | 'AEPS' } (defaults to QR).
+ * Body: { amount, pin, from?: 'QR' } (defaults to QR).
  * @route POST /api/wallet/transfer
  */
 export const transferQrToMain = async (req, res) => {
