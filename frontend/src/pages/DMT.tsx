@@ -402,7 +402,7 @@ const DMT = () => {
                             </div>
                             <div>
                                 <h2 className="text-lg font-semibold">Add Beneficiary</h2>
-                                <p className="text-sm text-muted-foreground">For sender +91 {sender}</p>
+                                <p className="text-sm text-muted-foreground">For sender +91 {sender} · ₹4 account verification from Utility Wallet</p>
                             </div>
                         </div>
                         <div className="space-y-4">

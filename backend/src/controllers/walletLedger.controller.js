@@ -70,6 +70,7 @@ const TXNTYPE_LABELS = {
   GST_REGISTRATION: 'GST Registration',
   DAILY_AUTH_CHARGE: 'Daily Auth',
   MERCHANT_ONBOARDING_CHARGE: 'Onboarding Charge',
+  ACCOUNT_VERIFICATION: 'Account Verification',
   AEPSTOMAIN: 'Trade → Utility Transfer',
   QRTO_MAIN: 'QR Wallet Transfer',
   DIRECT_PAYOUT_REFUND: 'Refund',
@@ -135,6 +136,8 @@ export const getNarration = (tx) => {
       return `GST Registration ${m.name || ''}`.trim();
     case 'DAILY_AUTH_CHARGE':
       return 'Daily 2FA Auth Charge';
+    case 'ACCOUNT_VERIFICATION':
+      return `Account Verification A/C ${m.beneficiaryAccount || 'N/A'}`;
     case 'MERCHANT_ONBOARDING_CHARGE':
       return `PaySprint onboarding charge${m.requestId ? ' ref ' + m.requestId : ''}`;
     case 'AEPSTOMAIN':

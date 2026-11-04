@@ -566,6 +566,7 @@ export const DmtScreen: React.FC = () => {
             <Text style={styles.cardTitle} accessibilityRole="header">
               New beneficiary
             </Text>
+            <Text style={[styles.senderMeta, { marginTop: -space.md, marginBottom: space.md }]}>₹4 account verification is charged from your Utility Wallet.</Text>
             <View style={styles.form}>
               <Input label="Beneficiary name" required value={beneName} onChangeText={setBeneName} />
               <Input

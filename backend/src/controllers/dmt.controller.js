@@ -8,7 +8,7 @@ import {
   providerMessage,
   makeReferenceId,
 } from '../utils/icchhamati.util.js';
-import { getDmtCharge, lockFundsForTransaction, resolveTransaction } from '../utils/wallet.util.js';
+import { getDmtCharge, lockFundsForTransaction, resolveTransaction, updateWalletAtomically } from '../utils/wallet.util.js';
 import DmtTransaction from '../models/dmtTransaction.model.js';
 import Transaction from '../models/transaction.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
@@ -117,6 +117,9 @@ export const fetchBeneficiaries = async (req, res) => {
   }
 };
 
+/** What Icchhamati charges per bank-account verification (penny drop). */
+const ACCOUNT_VERIFICATION_CHARGE = Number(process.env.ACCOUNT_VERIFICATION_CHARGE || 4);
+
 export const addBeneficiary = async (req, res) => {
   try {
     const { benename, name, beneaccount, accno, account, ifsc } = req.body;
@@ -142,11 +145,49 @@ export const addBeneficiary = async (req, res) => {
     // the provider's penny-drop check and prevents an account typo from
     // entering the OTP/payout flow. Credentials are supplied by the existing
     // server-side ICCHHAMATI_MID / ICCHHAMATI_MKEY environment variables.
-    const verification = await verifyBankAccountWithProvider({
-      name: beneName,
-      accountNumber: beneAccount,
-      ifsc: normalizedIfsc,
-    });
+    // Icchhamati debits ₹4 from its Utility Wallet for every account
+    // verification, so the retailer's Utility (MAIN) wallet pays it here too.
+    const chargeId = makeReferenceId('ACV');
+    try {
+      await updateWalletAtomically(req.user.id, 'MAIN', -ACCOUNT_VERIFICATION_CHARGE, {
+        transactionId: chargeId,
+        userId: req.user.id,
+        type: 'ACCOUNT_VERIFICATION',
+        amount: ACCOUNT_VERIFICATION_CHARGE,
+        status: 'SUCCESS',
+        metadata: { beneficiaryAccount: beneAccount, ifsc: normalizedIfsc, provider: 'ICCHHAMATI' },
+      });
+    } catch (walletError) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient Utility Wallet balance for account verification (₹${ACCOUNT_VERIFICATION_CHARGE}).`,
+      });
+    }
+    // A refused or unreachable call verified nothing, so it costs nothing.
+    const refundCharge = (reason) =>
+      updateWalletAtomically(req.user.id, 'MAIN', ACCOUNT_VERIFICATION_CHARGE, {
+        transactionId: `REF-${chargeId}`,
+        userId: req.user.id,
+        type: 'ACCOUNT_VERIFICATION',
+        amount: ACCOUNT_VERIFICATION_CHARGE,
+        status: 'SUCCESS',
+        metadata: { originalTxn: chargeId, note: reason },
+      }).catch((e) => console.error('[DMT] verification refund failed', chargeId, e?.message));
+
+    let verification;
+    try {
+      verification = await verifyBankAccountWithProvider({
+        name: beneName,
+        accountNumber: beneAccount,
+        ifsc: normalizedIfsc,
+      });
+    } catch (error) {
+      await refundCharge('Refund: account verification did not reach the provider');
+      throw error;
+    }
+    if (!isOk(verification.response)) {
+      await refundCharge('Refund: provider refused the account verification');
+    }
 
     if (!verification.verified) {
       return res.status(400).json({
