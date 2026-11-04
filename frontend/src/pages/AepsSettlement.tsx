@@ -3,7 +3,6 @@ import { Send, Plus, Building2, Clock, Trash2, RefreshCw, SearchCheck, FileUp, L
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
-import { QrWallet as WalletMove } from './Collect';
 
 const SETTLEMENT_BASE_CHARGE = 5;
 const SETTLEMENT_GST_RATE = 18;
@@ -297,8 +296,6 @@ const AepsSettlement = () => {
                     </div>
                 </div>
             </section>
-
-            {user?.role === 'retailer' && <WalletMove getHeaders={getHeaders} from="AEPS" />}
 
             <form onSubmit={handleSettlement} className="grid gap-6 xl:grid-cols-[1fr_380px]">
                 {/* Transfer to bank */}

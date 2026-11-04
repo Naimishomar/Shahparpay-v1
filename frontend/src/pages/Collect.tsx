@@ -461,14 +461,13 @@ const CounterQr = ({ api, getHeaders }: { api: string; getHeaders: () => object 
     );
 };
 
-// Self-transfers, as on Icchhamati: QR money moves into the Utility Wallet,
-// where Icchhamati credits collections, and Trade moves one way into Utility.
+// Self-transfer: leftover QR money moves into the Utility Wallet, where
+// Icchhamati credits collections.
 const MOVES = {
     QR: { key: 'qrBalance', title: 'QR wallet', hint: 'QR/UPI money from before payments went straight to your Utility Wallet.', to: 'Utility Wallet' },
-    AEPS: { key: 'aepsBalance', title: 'Trade Wallet', hint: 'Move money to your Utility Wallet for recharge, bill payment, PAN and ITR.', to: 'Utility Wallet' },
 } as const;
 
-/** A retailer wallet's balance, and the move out of it (QR or Trade, into Utility). */
+/** The legacy QR wallet balance, and the move out of it into Utility. */
 export const QrWallet = ({ getHeaders, history = [], from = 'QR' }: { getHeaders: () => object; history?: any[]; from?: keyof typeof MOVES }) => {
     const cfg = MOVES[from];
     const [qrBalance, setQrBalance] = useState(0);
