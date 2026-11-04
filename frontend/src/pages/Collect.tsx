@@ -408,7 +408,7 @@ const CounterQr = ({ api, getHeaders }: { api: string; getHeaders: () => object 
 
     return (
         <section className="rounded-2xl border bg-card p-6 shadow-sm">
-            <h2 className="text-lg font-semibold">Counter QR</h2>
+            <h2 className="text-lg font-semibold">QR/UPI Transaction</h2>
             <p className="mb-4 text-sm text-muted-foreground">A standing UPI QR to print for your counter. Every payment is credited to your Utility Wallet automatically.</p>
             {!qrLoaded ? (
                 <div className="flex min-h-[200px] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
@@ -464,7 +464,7 @@ const CounterQr = ({ api, getHeaders }: { api: string; getHeaders: () => object 
 // Self-transfers, as on Icchhamati: QR money moves into the Utility Wallet,
 // where Icchhamati credits collections, and Trade moves one way into Utility.
 const MOVES = {
-    QR: { key: 'qrBalance', title: 'QR wallet', hint: 'Counter QR money from before payments went straight to your Utility Wallet.', to: 'Utility Wallet' },
+    QR: { key: 'qrBalance', title: 'QR wallet', hint: 'QR/UPI money from before payments went straight to your Utility Wallet.', to: 'Utility Wallet' },
     AEPS: { key: 'aepsBalance', title: 'Trade Wallet', hint: 'Move money to your Utility Wallet for recharge, bill payment, PAN and ITR.', to: 'Utility Wallet' },
 } as const;
 

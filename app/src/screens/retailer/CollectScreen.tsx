@@ -280,7 +280,7 @@ export const CollectScreen: React.FC = () => {
             <View key={txn.transactionId}>
               <TxnRow
                 icon={txn.metadata?.collectionChannel === 'QR' ? 'qrcode' : 'link-variant'}
-                title={txn.metadata?.payerName || txn.metadata?.remitterName || (txn.metadata?.collectionChannel === 'QR' ? 'Counter QR' : 'Payment link')}
+                title={txn.metadata?.payerName || txn.metadata?.remitterName || (txn.metadata?.collectionChannel === 'QR' ? 'QR/UPI Transaction' : 'Payment link')}
                 subtitle={txn.transactionId}
                 date={shortDate(txn.createdAt)}
                 amount={`${txn.status === 'SUCCESS' ? '+ ' : ''}${money(txn.amount)}`}
@@ -346,7 +346,7 @@ const CounterQr: React.FC<{ onMoved: () => void }> = ({ onMoved }) => {
 
   return (
     <>
-      <SectionTitle>Counter QR</SectionTitle>
+      <SectionTitle>QR/UPI Transaction</SectionTitle>
       <View style={[styles.card, styles.form]}>
         {qr.loading ? (
           <SkeletonRows count={2} />
@@ -407,7 +407,7 @@ const CounterQr: React.FC<{ onMoved: () => void }> = ({ onMoved }) => {
           <View style={[styles.card, styles.form]}>
             <View>
               <Text style={styles.payeeAmount}>{money(qrBalance)}</Text>
-              <Text style={styles.payeeMeta}>Counter QR money from before payments went straight to your Utility Wallet.</Text>
+              <Text style={styles.payeeMeta}>QR/UPI money from before payments went straight to your Utility Wallet.</Text>
             </View>
             <Input
               label="Amount"
