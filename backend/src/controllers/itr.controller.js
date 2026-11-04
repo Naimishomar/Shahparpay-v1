@@ -19,6 +19,20 @@ export const launchItrFiling = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Retailer not found' });
     }
 
+    // eSevaTech debits the filing fee by webhook after submit; a short Utility
+    // Wallet there means a filed return we cannot charge. Stop it at launch.
+    // ponytail: the real fee is only known at submit, so this is a floor
+    // (ITR_MIN_BALANCE), not an exact check; the submit-time check still runs.
+    const minBalance = Number(process.env.ITR_MIN_BALANCE) || 100;
+    const mainWallet = await MainWallet.findOne({ userId: retailer._id });
+    const balance = mainWallet?.balance || 0;
+    if (balance < minBalance) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient Utility Wallet balance. You need at least ₹${minBalance} to file an ITR (current balance ₹${balance.toFixed(2)}).`,
+      });
+    }
+
     const partner_unique_id = process.env.ESEVATECH_PARTNER_UNIQUE_ID;
     const secret_key = process.env.ESEVATECH_SECRET_KEY;
 
