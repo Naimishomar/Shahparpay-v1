@@ -211,6 +211,15 @@ export const makeReferenceId = (prefix = 'SPP') => {
 };
 
 /**
+ * SUCCESS / PENDING / FAILED for a /beneficiary-payout answer. The envelope
+ * says whether the payout was accepted; the row's own status whether it has
+ * settled, so accepted-not-settled is PENDING. A gateway crash (5xx / Laravel
+ * exception) is an unknown outcome, not a refusal: the money may be on its way.
+ */
+export const payoutOutcome = (data) =>
+  isOk(data) ? normaliseStatus(data?.data?.status ?? '2') : providerCrashed(data) ? 'PENDING' : 'FAILED';
+
+/**
  * Asks the provider where a money transfer ended up.
  *
  * Returns PROCESSING for anything short of a definite answer, including a

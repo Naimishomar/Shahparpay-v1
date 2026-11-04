@@ -46,7 +46,7 @@ const PENDING_PILL = 'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-am
 const SALE_ICON: Record<string, typeof Banknote> = {
     'DMT': Banknote,
     'AEPS': Fingerprint,
-    'AEPS Settlement': Building2,
+    'Trade Wallet Settlement': Building2,
     'Direct Payout': Building2,
     'Wallet Topup': Wallet,
     'Recharge / BBPS': Smartphone,
@@ -56,7 +56,7 @@ const SALE_ICON: Record<string, typeof Banknote> = {
 const SALE_ACCENT: Record<string, keyof typeof ACCENTS> = {
     'DMT': 'blue',
     'AEPS': 'emerald',
-    'AEPS Settlement': 'orange',
+    'Trade Wallet Settlement': 'orange',
     'Direct Payout': 'orange',
     'Wallet Topup': 'cyan',
     'Recharge / BBPS': 'violet',

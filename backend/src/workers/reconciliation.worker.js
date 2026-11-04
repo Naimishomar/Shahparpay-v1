@@ -8,51 +8,8 @@ import {
   queryAepsDepositStatus,
   updateWalletAtomically,
 } from '../utils/wallet.util.js';
-import axios from 'axios';
-import crypto from 'crypto';
-import { generatePaySprintToken } from '../utils/paysprint.util.js';
-import { fetchRechargeStatus } from '../utils/icchhamati.util.js';
+import { fetchRechargeStatus, fetchPayoutStatus } from '../utils/icchhamati.util.js';
 import { syncCollectionTransaction } from '../controllers/collect.controller.js';
-
-/**
- * PaySprint header generator helper
- */
-const getPaySprintHeaders = () => {
-  return {
-    Token: generatePaySprintToken(),
-    Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-    'Content-Type': 'application/json',
-  };
-};
-
-/**
- * Checks status of a stuck payout transaction
- */
-const verifyPayoutStatus = async (transaction) => {
-  try {
-    const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
-
-    // Same contract as the manual status check: { refid, ackno } in, and the
-    // verdict is data.txn_status (1 success, 0 failed & refunded, 2/3/4 pending).
-    // `status:false` only means the enquiry itself failed, which proves nothing
-    // about the payout, so it must never trigger a refund.
-    const payload = { refid: transaction.metadata?.refid || transaction.transactionId };
-    if (transaction.metadata?.ackno) payload.ackno = transaction.metadata.ackno;
-    const response = await axios.post(`${baseUrl}/service/payout/payout/status`, payload, {
-      headers: getPaySprintHeaders(),
-    });
-
-    const txnStatus = response.data?.data?.txn_status;
-    if (txnStatus === 1) return 'SUCCESS';
-    if (txnStatus === 0) return 'FAILED';
-    return 'PROCESSING';
-  } catch (error) {
-    // If API fails to respond (e.g. 404/500), we cannot safely refund yet.
-    // Must stay PROCESSING until manually resolved or PaySprint API recovers.
-    console.error(`Status API failed for ${transaction.transactionId}:`, error.message);
-    return 'PROCESSING';
-  }
-};
 
 /**
  * Resolves a stuck AEPS_WITHDRAWAL transaction against the AEPS status query
@@ -274,7 +231,28 @@ export const startReconciliationWorker = () => {
         // A Micro ATM withdrawal the provider did not confirm: the customer's
         // card may have been debited and the cash handed over, so it waits for
         // an admin rather than being "refunded" money that was never debited.
-        const NO_RECONCILER_TYPES = ['DMT', 'AADHAAR_PAY', 'MATM'];
+        // DIRECT_PAYOUT (PaySprint, removed) left nothing pending; any straggler waits too.
+        const NO_RECONCILER_TYPES = ['DMT', 'AADHAAR_PAY', 'MATM', 'DIRECT_PAYOUT'];
+
+        // Trade wallet settlement paid by Icchhamati's /beneficiary-payout: the
+        // payout listing is its status. Only a definite SUCCESS / FAILED moves
+        // it; a payout the listing does not show yet stays held.
+        if (txn.type === 'AEPS_SETTLEMENT' && txn.metadata?.provider === 'ICCHHAMATI') {
+          try {
+            const { finalStatus: payoutStatus, data: row } = await fetchPayoutStatus(
+              txn.metadata?.refid || txn.transactionId
+            );
+            if (payoutStatus === 'SUCCESS' || payoutStatus === 'FAILED') {
+              if (row?.utr) await Transaction.updateOne({ _id: txn._id }, { $set: { 'metadata.utr': row.utr } });
+              await resolveTransaction(txn.transactionId, payoutStatus, row?.message || `Settlement ${payoutStatus.toLowerCase()}`, 'AEPS');
+              console.log(`CRON: Settlement ${txn.transactionId} resolved as ${payoutStatus}`);
+            }
+          } catch (error) {
+            console.error(`CRON: Settlement reconciliation failed for ${txn.transactionId}:`, error.message);
+          }
+          continue;
+        }
+
         if (AEPS_TYPES.includes(txn.type)) {
           try {
             // PAYSPRINT-DISABLED: both resolvers ask PaySprint, whose AEPS APIs
@@ -298,9 +276,7 @@ export const startReconciliationWorker = () => {
           continue;
         }
 
-        if (txn.type === 'DIRECT_PAYOUT') {
-          finalStatus = await verifyPayoutStatus(txn);
-        } else if (txn.type === 'PG_COLLECTION') {
+        if (txn.type === 'PG_COLLECTION') {
           // A payment link is only settled while the retailer has the Collect
           // page open — on the gateway's redirect back, or by the poll that runs
           // beside it. Close the tab and a customer's payment was never credited

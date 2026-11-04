@@ -16,7 +16,7 @@ const retailerProjects = [
   { name: "Dashboard", url: "/dashboard", icon: BarChart3 },
   { name: "ITR Filing", url: "/itr", service: "itr", icon: FileText },
   { name: "AEPS", url: "/aeps", service: "aeps", icon: ScanFace },
-  { name: "AEPS Settlement", url: "/aeps-settlement", icon: Landmark },
+  { name: "Trade Wallet Settlement", url: "/aeps-settlement", icon: Landmark },
   { name: "Micro ATM", url: "/matm", service: "matm", icon: CreditCard },
   { name: "PAN Card", url: "/pan", service: "pan", icon: FileText },
   { name: "Lead Generation", url: "/lead-generation", service: "lead", icon: UserPlus },
@@ -24,7 +24,6 @@ const retailerProjects = [
   { name: "Recharge", url: "/recharge", service: "recharge", icon: Zap },
   { name: "BBPS", url: "/bbps", service: "bbps", icon: Zap },
   { name: "Collect Payments", url: "/payments/collect", service: "collect", icon: Link2 },
-  // { name: "Direct Payout", url: "/direct-payout", icon: ArrowRightLeft },
   {
     name: "Reports",
     icon: BarChart3,

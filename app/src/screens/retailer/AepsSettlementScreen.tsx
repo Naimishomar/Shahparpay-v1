@@ -233,7 +233,7 @@ export const AepsSettlementScreen: React.FC = () => {
           <EmptyState
             icon="bank-off-outline"
             title="No settlement bank yet"
-            subtitle="Add the account you want your balance settled into, or pull one in from PaySprint"
+            subtitle="Add the account as a DMT beneficiary on your registered mobile, then sync it here"
           />
         )}
 
@@ -249,7 +249,7 @@ export const AepsSettlementScreen: React.FC = () => {
           <Text style={styles.addText}>{showAddBank ? 'Cancel' : 'Add new bank account'}</Text>
         </Pressable>
         <Pressable
-          onPress={() => run(() => syncBanks.run(), 'Banks synced from PaySprint.')}
+          onPress={() => run(() => syncBanks.run(), 'Banks synced.')}
           disabled={syncBanks.pending}
           style={({ pressed }) => [styles.addRow, (pressed || syncBanks.pending) && { opacity: 0.6 }]}
           accessibilityRole="button"
@@ -257,7 +257,7 @@ export const AepsSettlementScreen: React.FC = () => {
           accessibilityState={{ busy: syncBanks.pending }}
         >
           <IconTile icon="cloud-download-outline" size={44} iconSize={20} />
-          <Text style={styles.addText}>{syncBanks.pending ? 'Syncing…' : 'Sync banks from PaySprint'}</Text>
+          <Text style={styles.addText}>{syncBanks.pending ? 'Syncing…' : 'Sync banks'}</Text>
         </Pressable>
         {!!syncBanks.error && <ErrorBanner message={syncBanks.error} />}
 

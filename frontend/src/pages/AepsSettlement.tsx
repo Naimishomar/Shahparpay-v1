@@ -106,7 +106,7 @@ const AepsSettlement = () => {
         try {
             const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/settlement/sync-banks`, getHeaders());
             if (res.data.success) {
-                toast.success(`Synced ${res.data.synced ?? 0} bank account(s) from PaySprint`);
+                toast.success(`Synced ${res.data.synced ?? 0} bank account(s)`);
                 fetchSavedBanks();
             } else {
                 toast.error(res.data.message || "Failed to sync banks");
@@ -230,7 +230,7 @@ const AepsSettlement = () => {
         }
 
         if (!isSettlementWindow()) {
-            return toast.error("AEPS Settlement is available from 9 AM to 9 PM IST only. Please try again during service hours.");
+            return toast.error("Trade Wallet Settlement is available from 9 AM to 9 PM IST only. Please try again during service hours.");
         }
         
         setLoading(true);
@@ -280,7 +280,7 @@ const AepsSettlement = () => {
                             <Building2 className="h-7 w-7" />
                         </div>
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">AEPS Settlement</h1>
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Trade Wallet Settlement</h1>
                             <p className="text-sm text-muted-foreground">Move your Trade Wallet balance to your bank account</p>
                         </div>
                     </div>
@@ -298,7 +298,7 @@ const AepsSettlement = () => {
                             onClick={handleSyncBanks}
                             disabled={syncing}
                             className="flex items-center gap-2 rounded-xl border bg-background/70 backdrop-blur px-4 py-2 text-sm font-medium hover:bg-background disabled:opacity-50"
-                            title="Sync settlement accounts from PaySprint"
+                            title="Sync settlement accounts"
                         >
                             <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
                             {syncing ? 'Syncing...' : 'Sync Banks'}
@@ -355,7 +355,7 @@ const AepsSettlement = () => {
                             <div className="relative flex flex-col items-center gap-2 py-6 text-center">
                                 <Landmark className="h-8 w-8 opacity-70" />
                                 <p className="font-semibold">No bank account added</p>
-                                <p className="text-xs opacity-70">Add a bank or sync from PaySprint to start settling.</p>
+                                <p className="text-xs opacity-70">Add the account as a DMT beneficiary on your registered mobile, then sync.</p>
                             </div>
                         )}
                     </div>

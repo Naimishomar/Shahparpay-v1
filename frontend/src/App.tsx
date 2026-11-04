@@ -31,7 +31,6 @@ const AepsPage = page(() => import("./pages/AepsPage"))
 
 const PaysprintOnly = ({ children }: { children: React.ReactNode }) =>
   usesAepsProvider(useAuth().user, 'paysprint') ? <>{children}</> : <Navigate to="/aeps" replace />
-const DirectPayout = page(() => import("./pages/DirectPayout"))
 const DMT = page(() => import("./pages/DMT"))
 const Recharge = page(() => import("./pages/Recharge"))
 const BBPS = page(() => import("./pages/BBPS"))
@@ -144,7 +143,6 @@ function App() {
         <Route path="/aeps/pipes" element={<PaysprintOnly><PipeStatus/></PaysprintOnly>}/>
         <Route path="/aeps-settlement" element={<AepsSettlement/>}/>
         <Route path="/matm" element={<ServiceGate service="matm">{PAYSPRINT_ENABLED ? <MATM/> : <IcchhamatiMATM/>}</ServiceGate>}/>
-        <Route path="/direct-payout" element={<ServiceGate service="payout"><DirectPayout/></ServiceGate>}/>
         <Route path="/dmt" element={<ServiceGate service="dmt"><DMT/></ServiceGate>}/>
         <Route path="/recharge" element={<ServiceGate service="recharge"><Recharge/></ServiceGate>}/>
         <Route path="/bbps" element={<ServiceGate service="bbps"><BBPS/></ServiceGate>}/>

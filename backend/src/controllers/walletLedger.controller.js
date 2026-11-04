@@ -117,7 +117,7 @@ export const getNarration = (tx) => {
     case 'DMT':
       return `DMT A/C ${m.beneficiaryAccount || 'N/A'}`;
     case 'AEPS_SETTLEMENT':
-      return `AEPS Settlement A/C ${m.bankAccount || m.accountNumber || 'N/A'}`;
+      return `Trade Wallet Settlement A/C ${m.bankAccount || m.accountNumber || 'N/A'}`;
     case 'DIRECT_PAYOUT':
       return `Direct Payout A/C ${m.bankAccount || m.accountNumber || 'N/A'}`;
     case 'AEPS_DEPOSIT':

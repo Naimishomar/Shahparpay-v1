@@ -109,7 +109,7 @@ export const getRetailerStats = async (req, res) => {
           service = 'AEPS';
           details = `Aadhaar: *${txn.metadata?.aadhaar ? txn.metadata.aadhaar.slice(-4) : 'N/A'}`;
         } else if (txn.type === 'AEPS_SETTLEMENT') {
-          service = 'AEPS Settlement';
+          service = 'Trade Wallet Settlement';
           details = `A/C: ${txn.metadata?.bankAccount || txn.metadata?.accountNumber || 'N/A'}`;
         } else if (txn.type === 'DIRECT_PAYOUT') {
           service = 'Direct Payout';

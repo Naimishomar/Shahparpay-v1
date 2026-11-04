@@ -3,8 +3,7 @@ import {
   icchhamatiPost,
   icchhamatiDelete,
   isOk,
-  normaliseStatus,
-  providerCrashed,
+  payoutOutcome,
   providerMessage,
   makeReferenceId,
 } from '../utils/icchhamati.util.js';
@@ -28,12 +27,12 @@ import { checkWalletPin } from '../utils/walletPin.js';
  */
 
 /** The sender's mobile is the only thing tying a beneficiary to a customer. */
-const requireMobile = (mobile) => {
+export const requireMobile = (mobile) => {
   const digits = String(mobile || '').replace(/\D/g, '');
   return /^[6-9]\d{9}$/.test(digits) ? digits : null;
 };
 
-const beneficiaryMobile = (row) =>
+export const beneficiaryMobile = (row) =>
   String(row.mobile ?? row.mobile_number ?? row.remitter_mobile ?? row.user?.mobile ?? '').replace(
     /\D/g,
     ''
@@ -41,10 +40,10 @@ const beneficiaryMobile = (row) =>
 
 // Icchhamati currently returns `id`; retain the aliases used by older account
 // responses so OTP, delete, and payout always use the provider's real ID.
-const getBeneficiaryId = (row) =>
+export const getBeneficiaryId = (row) =>
   row.id ?? row.beneficiary_id ?? row.bene_id ?? row.beneficiaryId ?? row.beneId;
 
-const fetchProviderBeneficiaries = async () => {
+export const fetchProviderBeneficiaries = async () => {
   const rows = [];
   let page = 1;
   let lastPage = 1;
@@ -494,11 +493,7 @@ export const initiateTransfer = async (req, res) => {
     // is PENDING, not SUCCESS.
     // A gateway crash (5xx / Laravel exception) is an unknown outcome, not a
     // refusal: the payout may already be on its way, so hold the funds.
-    const status = isOk(data)
-      ? normaliseStatus(data?.data?.status ?? '2')
-      : providerCrashed(data)
-        ? 'PENDING'
-        : 'FAILED';
+    const status = payoutOutcome(data);
     const message = providerMessage(
       data,
       status === 'FAILED' ? 'The transfer was not accepted.' : ''
