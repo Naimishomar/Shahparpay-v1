@@ -107,8 +107,8 @@ const AdminOverview = ({
                 {data && [
                     ['Retailers', data.users.retailers.toLocaleString('en-IN'), `+${data.users.newRetailers} new`, () => onNavigate('users?role=retailer')],
                     ['Distributors', data.users.distributors.toLocaleString('en-IN'), `+${data.users.newDistributors} new`, () => onNavigate('users?role=distributor')],
-                    ['Main wallet float', inrShort(data.wallets.mainFloat), 'All users', null],
-                    ['AEPS wallet float', inrShort(data.wallets.aepsFloat), 'All users', null],
+                    ['Utility Wallet float', inrShort(data.wallets.mainFloat), 'All users', null],
+                    ['Trade Wallet float', inrShort(data.wallets.aepsFloat), 'All users', null],
                     ['Admin wallet', inrShort(data.wallets.adminBalance), 'Your balance', null],
                     ['Paid to network', inrShort(data.totals.distributorEarned + data.totals.retailerEarned), `Last ${days} days`, null],
                 ].map(([label, value, hint, action]) => {

@@ -690,7 +690,7 @@ const EsevaPanTab: React.FC = () => {
                         <div className="rounded-2xl border bg-background/50 p-4 text-sm">
                             <p className="flex gap-2 text-xs text-muted-foreground">
                                 <Wallet className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                                Coupon charges are calculated by Shahparpay and debited from your Main Wallet on submission.
+                                Coupon charges are calculated by Shahparpay and debited from your Utility Wallet on submission.
                             </p>
                         </div>
 

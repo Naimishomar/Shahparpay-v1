@@ -88,7 +88,7 @@ const ITR: React.FC = () => {
                 {[
                     { icon: KeyRound, title: 'Launch securely', text: 'A single-use token opens the eSevaTech module in a new tab. It stays valid for 15 minutes.' },
                     { icon: FileText, title: 'File the return', text: "Fill in and validate the client's details in the portal, then submit." },
-                    { icon: Wallet, title: 'Pay on success', text: 'Your Main Wallet is charged only on a successful submission. Rejections are refunded automatically.' },
+                    { icon: Wallet, title: 'Pay on success', text: 'Your Utility Wallet is charged only on a successful submission. Rejections are refunded automatically.' },
                 ].map(({ icon: Icon, title, text }, i) => (
                     <div key={title} className="relative overflow-hidden rounded-2xl border bg-card p-5 shadow-sm">
                         <span aria-hidden className="pointer-events-none absolute -right-2 -top-4 text-7xl font-black text-black/[0.04] dark:text-white/[0.05]">{i + 1}</span>
@@ -113,7 +113,7 @@ const ITR: React.FC = () => {
                             { ok: true, text: 'Wallet balance checks run automatically during submission.' },
                             { ok: true, text: 'Each single-use token is valid for 15 minutes.' },
                             { ok: true, text: 'Validate information carefully before submitting the form.' },
-                            { ok: false, text: 'Refunds for rejected requests are credited to your Main Wallet automatically.' },
+                            { ok: false, text: 'Refunds for rejected requests are credited to your Utility Wallet automatically.' },
                         ].map(({ ok, text }) => (
                             <li key={text} className="flex items-start gap-3 rounded-xl border bg-background/50 p-3 text-sm text-muted-foreground">
                                 <div className={`shrink-0 rounded-full p-1 ring-1 ${ok ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-emerald-500/20' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-amber-500/20'}`}>
@@ -135,7 +135,7 @@ const ITR: React.FC = () => {
                         <div>
                             <h4 className="text-lg font-semibold">Secure filing</h4>
                             <p className="mt-2 text-sm leading-relaxed opacity-80">
-                                ITR filing through eSevaTech uses secure single-use tokens. Your Main Wallet is only charged upon successful submission.
+                                ITR filing through eSevaTech uses secure single-use tokens. Your Utility Wallet is only charged upon successful submission.
                             </p>
                         </div>
                         <p className="mt-auto flex items-center gap-2 border-t border-white/15 pt-4 text-xs opacity-70">

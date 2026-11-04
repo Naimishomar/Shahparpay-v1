@@ -92,8 +92,8 @@ const UserDirectory = ({
                             <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
                                 <th className="px-4 py-3 font-medium">{role === 'retailer' ? 'Retailer' : 'Distributor'}</th>
                                 {role === 'retailer' ? <th className="px-4 py-3 font-medium">Distributor</th> : <th className="px-4 py-3 font-medium text-right">Retailers</th>}
-                                <th className="px-4 py-3 font-medium text-right">Main</th>
-                                <th className="px-4 py-3 font-medium text-right">AEPS</th>
+                                <th className="px-4 py-3 font-medium text-right">Utility</th>
+                                <th className="px-4 py-3 font-medium text-right">Trade</th>
                                 {role === 'retailer' && <th className="px-4 py-3 font-medium text-right">Lifetime volume</th>}
                                 <th className="px-4 py-3 font-medium">Last sign-in</th>
                                 <th className="px-4 py-3 font-medium">Status</th>

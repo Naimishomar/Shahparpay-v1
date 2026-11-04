@@ -409,7 +409,7 @@ const CounterQr = ({ api, getHeaders }: { api: string; getHeaders: () => object 
     return (
         <section className="rounded-2xl border bg-card p-6 shadow-sm">
             <h2 className="text-lg font-semibold">Counter QR</h2>
-            <p className="mb-4 text-sm text-muted-foreground">A standing UPI QR to print for your counter. Every payment is credited to your QR wallet automatically.</p>
+            <p className="mb-4 text-sm text-muted-foreground">A standing UPI QR to print for your counter. Every payment is credited to your Utility Wallet automatically.</p>
             {!qrLoaded ? (
                 <div className="flex min-h-[200px] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
             ) : qr ? (
@@ -461,8 +461,16 @@ const CounterQr = ({ api, getHeaders }: { api: string; getHeaders: () => object 
     );
 };
 
-/** The QR wallet counter-QR payments land in, and the move to Main. */
-const QrWallet = ({ getHeaders, history }: { getHeaders: () => object; history: any[] }) => {
+// Self-transfers, as on Icchhamati: QR money moves into the Utility Wallet,
+// where Icchhamati credits collections, and Trade moves one way into Utility.
+const MOVES = {
+    QR: { key: 'qrBalance', title: 'QR wallet', hint: 'Counter QR money from before payments went straight to your Utility Wallet.', to: 'Utility Wallet' },
+    AEPS: { key: 'aepsBalance', title: 'Trade Wallet', hint: 'Move money to your Utility Wallet for recharge, bill payment, PAN and ITR.', to: 'Utility Wallet' },
+} as const;
+
+/** A retailer wallet's balance, and the move out of it (QR or Trade, into Utility). */
+export const QrWallet = ({ getHeaders, history = [], from = 'QR' }: { getHeaders: () => object; history?: any[]; from?: keyof typeof MOVES }) => {
+    const cfg = MOVES[from];
     const [qrBalance, setQrBalance] = useState(0);
     const [move, setMove] = useState({ amount: '', pin: '' });
     const [moving, setMoving] = useState(false);
@@ -471,7 +479,7 @@ const QrWallet = ({ getHeaders, history }: { getHeaders: () => object; history: 
     const fetchBalance = async () => {
         try {
             const res = await axios.get(`${walletApi}/balance`, getHeaders());
-            if (res.data.success) setQrBalance(Number(res.data.data?.qrBalance) || 0);
+            if (res.data.success) setQrBalance(Number(res.data.data?.[cfg.key]) || 0);
         } catch { /* the balance tile just stays as it was */ }
     };
 
@@ -486,13 +494,13 @@ const QrWallet = ({ getHeaders, history }: { getHeaders: () => object; history: 
     const moveToMain = async () => {
         const amount = Number(move.amount);
         if (!(amount > 0)) return toast.error('Enter an amount');
-        if (amount > qrBalance) return toast.error('That is more than your QR wallet balance');
+        if (amount > qrBalance) return toast.error(`That is more than your ${cfg.title} balance`);
         if (!/^\d{4}$/.test(move.pin)) return toast.error('Enter your 4-digit wallet PIN');
         setMoving(true);
         try {
-            const res = await axios.post(`${walletApi}/transfer`, { amount, pin: move.pin }, getHeaders());
+            const res = await axios.post(`${walletApi}/transfer`, { amount, pin: move.pin, from }, getHeaders());
             if (res.data.success) {
-                toast.success(res.data.message || 'Moved to your main wallet');
+                toast.success(res.data.message || `Moved to your ${cfg.to}`);
                 setMove({ amount: '', pin: '' });
                 fetchBalance();
                 window.dispatchEvent(new Event('wallet-updated'));
@@ -504,13 +512,16 @@ const QrWallet = ({ getHeaders, history }: { getHeaders: () => object; history: 
         }
     };
 
+    // QR payments now credit Utility directly; the QR card only lingers to empty an old balance.
+    if (from === 'QR' && qrBalance <= 0) return null;
+
     return (
         <section className="grid gap-6 rounded-2xl border bg-card p-6 shadow-sm lg:col-span-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:items-end">
             <div className="flex flex-col gap-3">
                 <div className="flex items-start justify-between gap-3">
                     <div>
-                        <h2 className="text-lg font-semibold">QR wallet</h2>
-                        <p className="text-sm text-muted-foreground">Counter QR payments land here, less the provider's charge.</p>
+                        <h2 className="text-lg font-semibold">{cfg.title}</h2>
+                        <p className="text-sm text-muted-foreground">{cfg.hint}</p>
                     </div>
                     <div className={`rounded-xl p-2.5 ${SILVER_TILE}`}><Wallet className="h-5 w-5" /></div>
                 </div>
@@ -534,7 +545,7 @@ const QrWallet = ({ getHeaders, history }: { getHeaders: () => object; history: 
                 </div>
                 <button onClick={moveToMain} disabled={moving || qrBalance <= 0} className={`flex items-center justify-center gap-2 whitespace-nowrap rounded-xl px-5 py-2.5 font-bold disabled:opacity-50 sm:mt-[26px] ${ACTIVE_BUTTON}`}>
                     {moving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Landmark className="h-5 w-5" />}
-                    {moving ? 'Moving...' : 'Move to main wallet'}
+                    {moving ? 'Moving...' : `Move to ${cfg.to}`}
                     {!moving && <ArrowRight className="h-4 w-4" />}
                 </button>
             </div>

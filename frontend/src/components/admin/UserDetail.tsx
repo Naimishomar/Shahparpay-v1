@@ -163,8 +163,8 @@ const UserDetail = ({
 
                     <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
                         {[
-                            ['Main wallet', inr.format(data.wallets.main)],
-                            ['AEPS wallet', inr.format(data.wallets.aeps)],
+                            ['Utility Wallet', inr.format(data.wallets.main)],
+                            ['Trade Wallet', inr.format(data.wallets.aeps)],
                             [role === 'retailer' ? 'Lifetime volume' : 'Network volume', inrShort(data.stats.volume)],
                             [role === 'retailer' ? 'Commission earned' : 'Commission earned', inr.format(data.stats.earned)],
                             ['Success rate', successRate === null ? '—' : `${successRate}%`],

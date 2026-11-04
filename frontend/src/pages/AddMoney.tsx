@@ -81,7 +81,7 @@ const AddMoney = () => {
           setStatus(next);
           fetchHistory();
           if (next === 'SUCCESS') {
-            toast.success(`₹${res.data.data.amount} added to your main wallet`);
+            toast.success(`₹${res.data.data.amount} added to your Trade Wallet`);
           } else {
             toast.error('The payment did not go through.');
           }
@@ -131,7 +131,7 @@ const AddMoney = () => {
                         </div>
                         <div>
                             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Add Money</h1>
-                            <p className="text-sm text-muted-foreground">Pay by UPI and your main wallet is credited instantly — no deposit slip, no approval.</p>
+                            <p className="text-sm text-muted-foreground">Pay by UPI and your Trade Wallet is credited instantly — no deposit slip, no approval.</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2 self-start lg:self-auto rounded-xl border bg-background/70 backdrop-blur px-4 py-2.5">
@@ -250,7 +250,7 @@ const AddMoney = () => {
               )}
               {status === 'SUCCESS' && (
                 <p className="flex items-center justify-center gap-2 rounded-full bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/20">
-                  <CheckCircle2 className="h-4 w-4" /> Added to your main wallet
+                  <CheckCircle2 className="h-4 w-4" /> Added to your Trade Wallet
                 </p>
               )}
               {status === 'FAILED' && (

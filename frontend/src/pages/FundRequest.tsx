@@ -117,7 +117,7 @@ const FundRequest = () => {
                         </div>
                         <div>
                             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Fund Request</h1>
-                            <p className="text-sm text-muted-foreground">Request Main Wallet funds from your distributor against a bank deposit.</p>
+                            <p className="text-sm text-muted-foreground">Request Trade Wallet funds from your distributor against a bank deposit.</p>
                         </div>
                     </div>
                     <button

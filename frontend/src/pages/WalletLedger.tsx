@@ -37,7 +37,7 @@ const isFailed = (r: LedgerRow) => /FAIL|REJECT/i.test(r.remarks || '');
 
 const getTxnTypeColor = (type: string) => {
     const map: Record<string, string> = {
-        'AEPS Wallet': 'bg-sky-500/10 text-sky-700 dark:text-sky-400 ring-sky-500/20 border-blue-500/30',
+        'AEPS Withdrawal': 'bg-sky-500/10 text-sky-700 dark:text-sky-400 ring-sky-500/20 border-blue-500/30',
         'AadhaarPay': 'bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/30',
         'Recharge': 'bg-cyan-500/10 text-cyan-500 border-cyan-500/30',
         'BBPS': 'bg-teal-500/10 text-teal-500 border-teal-500/30',
@@ -51,14 +51,14 @@ const getTxnTypeColor = (type: string) => {
         'Wallet Topup': 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20 border-emerald-500/30',
         'ITR': 'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-amber-500/20 border-yellow-500/30',
         'Refund': 'bg-gray-500/10 text-gray-500 border-gray-500/30',
-        'Wallet Transfer': 'bg-sky-500/10 text-sky-500 border-sky-500/30',
+        'Trade → Utility Transfer': 'bg-sky-500/10 text-sky-500 border-sky-500/30',
     };
     return map[type] || 'bg-gray-500/10 text-gray-500 border-gray-500/30';
 };
 
 const getWalletColor = (wallet: string) => {
-    if (wallet === 'AEPS') return 'bg-sky-500/10 text-sky-700 dark:text-sky-400 ring-sky-500/20 border-blue-500/30';
-    if (wallet === 'AEPS→Main') return 'bg-sky-500/10 text-sky-500 border-sky-500/30';
+    if (wallet === 'Trade') return 'bg-sky-500/10 text-sky-700 dark:text-sky-400 ring-sky-500/20 border-blue-500/30';
+    if (/Trade/.test(wallet)) return 'bg-sky-500/10 text-sky-500 border-sky-500/30';
     return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30';
 };
 
@@ -245,8 +245,8 @@ const WalletLedger = () => {
                                 className="flex-1 md:flex-none px-3 py-2 bg-background border rounded-xl text-sm shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500"
                             >
                                 <option value="ALL">All Wallets</option>
-                                <option value="AEPS">AEPS Wallet</option>
-                                <option value="MAIN">Main Wallet</option>
+                                <option value="AEPS">Trade Wallet</option>
+                                <option value="MAIN">Utility Wallet</option>
                             </select>
                             <select
                                 value={txnTypeFilter}
@@ -335,7 +335,7 @@ const WalletLedger = () => {
                                                 </TableCell>
                                                 <TableCell className="px-4 py-2 text-center">
                                                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full ring-1 text-[10px] font-bold uppercase tracking-wider border ${getWalletColor(r.WALLET)}`}>
-                                                        {r.WALLET || "Main"}
+                                                        {r.WALLET || "Utility"}
                                                     </span>
                                                 </TableCell>
                                                 <TableCell className="text-sm font-medium text-right px-4 py-2 text-foreground/80">{fmt(r.OPENING)}</TableCell>

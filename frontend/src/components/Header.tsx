@@ -59,10 +59,10 @@ const Header = () => {
     const wallets = user?.role === 'admin'
         ? [{ label: 'Admin Wallet', value: balances.adminBalance, tile: WALLET_TILES.silver }]
         : [
-            { label: 'AEPS Wallet', value: balances.aepsBalance, tile: WALLET_TILES.silver },
-            { label: 'Main Wallet', value: balances.mainBalance, tile: WALLET_TILES.emerald },
-            // Counter-QR collections; only retailers own a QR.
-            ...(user?.role === 'retailer' ? [{ label: 'QR Wallet', value: balances.qrBalance, tile: WALLET_TILES.cyan }] : []),
+            { label: 'Trade Wallet', value: balances.aepsBalance, tile: WALLET_TILES.silver },
+            { label: 'Utility Wallet', value: balances.mainBalance, tile: WALLET_TILES.emerald },
+            // QR payments now credit Utility; the tile stays only while an old QR balance remains.
+            ...(user?.role === 'retailer' && balances.qrBalance > 0 ? [{ label: 'QR Wallet', value: balances.qrBalance, tile: WALLET_TILES.cyan }] : []),
         ];
 
     const avatar = (size: string) => (

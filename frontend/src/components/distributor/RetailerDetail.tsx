@@ -179,8 +179,8 @@ const RetailerDetail = ({
                             ))}
                     </div>
                     <div className="flex flex-wrap gap-2 text-xs">
-                        <span className="rounded-full border bg-background/70 px-3 py-1">Main wallet <b className="tabular-nums">{inr.format(retailer.mainWalletBalance || 0)}</b></span>
-                        <span className="rounded-full border bg-background/70 px-3 py-1">AEPS wallet <b className="tabular-nums">{inr.format(retailer.aepsWalletBalance || 0)}</b></span>
+                        <span className="rounded-full border bg-background/70 px-3 py-1">Utility Wallet <b className="tabular-nums">{inr.format(retailer.mainWalletBalance || 0)}</b></span>
+                        <span className="rounded-full border bg-background/70 px-3 py-1">Trade Wallet <b className="tabular-nums">{inr.format(retailer.aepsWalletBalance || 0)}</b></span>
                         <span className="rounded-full border bg-background/70 px-3 py-1">Joined <b>{new Date(retailer.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</b></span>
                     </div>
                 </div>

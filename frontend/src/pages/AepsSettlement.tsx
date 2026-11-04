@@ -3,6 +3,7 @@ import { Send, Plus, Building2, Clock, Trash2, RefreshCw, SearchCheck, FileUp, L
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import { QrWallet as WalletMove } from './Collect';
 
 const isSettlementWindow = () => {
     const ist = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
@@ -24,7 +25,7 @@ const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm text
 const FILE_INPUT = 'w-full rounded-xl border bg-background px-3 py-2 text-sm text-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-900 file:px-3 file:py-1.5 file:text-white dark:file:bg-zinc-200 dark:file:text-zinc-900';
 
 const AepsSettlement = () => {
-    const { token } = useAuth();
+    const { token, user } = useAuth();
     const [savedBanks, setSavedBanks] = useState<any[]>([]);
     const [availableBanks, setAvailableBanks] = useState<any[]>([]);
     const [history, setHistory] = useState<any[]>([]);
@@ -280,7 +281,7 @@ const AepsSettlement = () => {
                         </div>
                         <div>
                             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">AEPS Settlement</h1>
-                            <p className="text-sm text-muted-foreground">Move your AEPS wallet balance to your bank account</p>
+                            <p className="text-sm text-muted-foreground">Move your Trade Wallet balance to your bank account</p>
                         </div>
                     </div>
 
@@ -313,6 +314,8 @@ const AepsSettlement = () => {
                     </div>
                 </div>
             </section>
+
+            {user?.role === 'retailer' && <WalletMove getHeaders={getHeaders} from="AEPS" />}
 
             <form onSubmit={handleSettlement} className="grid gap-6 xl:grid-cols-[1fr_380px]">
                 {/* Transfer to bank */}
@@ -498,7 +501,7 @@ const AepsSettlement = () => {
                             <span className="font-semibold">{mode}</span>
                         </div>
                         <div className="flex items-end justify-between gap-3 border-t pt-3">
-                            <span className="text-muted-foreground">Total deduction from AEPS Wallet</span>
+                            <span className="text-muted-foreground">Total deduction from Trade Wallet</span>
                             <span className="text-2xl font-bold tracking-tight tabular-nums">₹{amountValid ? (amt + SETTLEMENT_FEE).toFixed(2) : '0.00'}</span>
                         </div>
                     </div>

@@ -106,7 +106,7 @@ const DirectPayout = () => {
                     <div className="flex flex-col gap-4 bg-primary/5 p-5 border-l-4 border-primary rounded-lg">
                         <div className="flex justify-between items-center border-b border-border/50 pb-2">
                             <h2 className="text-lg font-bold text-foreground">Transfer to Any Beneficiary</h2>
-                            <span className="text-xs px-3 py-1 bg-yellow-500/20 text-yellow-600 rounded-full font-medium">Deducts from Main Wallet</span>
+                            <span className="text-xs px-3 py-1 bg-yellow-500/20 text-yellow-600 rounded-full font-medium">Deducts from Trade Wallet</span>
                         </div>
 
                         <form onSubmit={handlePayout} className="space-y-6 mt-4">
@@ -217,7 +217,7 @@ const DirectPayout = () => {
 
                         <div className="mt-4 pt-4 border-t border-border/50">
                             <p className="text-sm text-foreground/80 leading-relaxed">
-                                <strong className="text-foreground">Note (Only For IMPS):</strong> ₹3.00 will be deducted from your Main Wallet for transfers between ₹100 and ₹10,000.<br/>
+                                <strong className="text-foreground">Note (Only For IMPS):</strong> ₹3.00 will be deducted from your Trade Wallet for transfers between ₹100 and ₹10,000.<br/>
                                 ₹5.00 will be deducted for transfers between ₹10,001 and ₹25,000.<br/>
                                 ₹8.00 will be deducted for transfers above ₹25,000 up to ₹500,000.
                             </p>
