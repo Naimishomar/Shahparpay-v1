@@ -494,8 +494,8 @@ const Recharge = () => {
                                     <tr key={item._id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors">
                                         <td className="px-4 py-3 text-muted-foreground">{idx + 1}</td>
                                         <td className="px-4 py-3 whitespace-nowrap">{new Date(item.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}</td>
-                                        <td className="px-4 py-3 font-medium tabular-nums">{item.metadata?.number}</td>
-                                        <td className="px-4 py-3">{item.metadata?.operator}</td>
+                                        <td className="px-4 py-3 font-medium tabular-nums">{item.metadata?.caNumber || item.metadata?.number}</td>
+                                        <td className="px-4 py-3">{item.metadata?.operatorName || item.metadata?.operator}</td>
                                         <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{item.transactionId}</td>
                                         <td className="px-4 py-3 font-semibold tabular-nums">₹ {item.amount}</td>
                                         <td className="px-4 py-3 text-muted-foreground">0</td>
@@ -510,12 +510,12 @@ const Recharge = () => {
                                                     setReceiptData({
                                                         transactionId: item.transactionId,
                                                         status: item.status,
-                                                        operatorRef: item.metadata?.operatorRef,
+                                                        operatorRef: item.metadata?.operatorTxnId || item.metadata?.operatorRef,
                                                         date: item.createdAt,
                                                         amount: item.amount,
-                                                        number: item.metadata?.number,
-                                                        operator: item.metadata?.operator,
-                                                        type: item.metadata?.rechargeType?.toLowerCase() === 'dth' ? 'dth' : 'prepaid'
+                                                        number: item.metadata?.caNumber || item.metadata?.number,
+                                                        operator: item.metadata?.operatorName || item.metadata?.operator,
+                                                        type: String(item.metadata?.mode || item.metadata?.rechargeType || '').toLowerCase() === 'dth' ? 'dth' : 'prepaid'
                                                     });
                                                     setShowReceiptModal(true);
                                                 }}
@@ -616,7 +616,7 @@ const Recharge = () => {
                             <div className="flex flex-col items-center gap-2 pb-4" style={{ borderBottom: '1px solid #e5e7eb' }}>
                                 <img src={logo} alt="Shahparpay" className="w-48 h-auto max-h-24 object-contain" crossOrigin="anonymous" />
                                 <h2 className="text-xl font-bold mt-2" style={{ color: '#1f2937' }}>Shahparpay Pvt. Ltd.</h2>
-                                <p className="text-sm" style={{ color: '#6b7280' }}>{receiptData.status === 'PENDING' ? 'Recharge Pending' : 'Recharge Successful'}</p>
+                                <p className="text-sm" style={{ color: '#6b7280' }}>{receiptData.status === 'PENDING' ? 'Recharge Pending' : receiptData.status === 'FAILED' ? 'Recharge Failed' : 'Recharge Successful'}</p>
                             </div>
                             <div className="flex flex-col gap-3 py-2">
                                 <div className="flex justify-between">

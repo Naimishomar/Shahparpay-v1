@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Send, Plus, Building2, Clock, Trash2, RefreshCw, SearchCheck, FileUp, Landmark, Phone, KeyRound, IndianRupee, ShieldCheck } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Send, Plus, Building2, Clock, Trash2, RefreshCw, SearchCheck, FileUp, Landmark, Phone, KeyRound, IndianRupee, ShieldCheck, CheckCircle2, XCircle, Download, X } from 'lucide-react';
 import axios from 'axios';
+import html2canvas from 'html2canvas-pro';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import logo from '../assets/logo.png';
 
 const SETTLEMENT_BASE_CHARGE = 5;
 const SETTLEMENT_GST_RATE = 18;
@@ -37,6 +39,7 @@ const AepsSettlement = () => {
     const [amount, setAmount] = useState('');
     const [pin, setPin] = useState('');
     const [mode, setMode] = useState('IMPS');
+    const [receipt, setReceipt] = useState<SettlementReceiptData | null>(null);
 
     // Add Bank Modal state
     const [showAddBank, setShowAddBank] = useState(false);
@@ -224,6 +227,27 @@ const AepsSettlement = () => {
 
         
         setLoading(true);
+        const bank = savedBanks.find(b => b._id === selectedBankId);
+        // A receipt is issued whenever the backend created a transaction, whatever its outcome.
+        const issueReceipt = (body: any, status: SettlementReceiptData['status']) => {
+            const transactionId = body?.data?.transactionId || body?.transactionId;
+            if (!transactionId) return false;
+            setReceipt({
+                status,
+                message: body?.message || '',
+                transactionId,
+                utr: body?.data?.response?.rrn || body?.data?.response?.utr || '',
+                amount: amt,
+                fee: SETTLEMENT_FEE,
+                mode,
+                bankName: bank?.bankName || '',
+                accountNumber: String(bank?.accountNumber || ''),
+                accountHolderName: bank?.accountHolderName || '',
+                beneficiaryMobile,
+                at: new Date(),
+            });
+            return true;
+        };
         try {
             const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/settlement/initiate`, {
                 bankId: selectedBankId,
@@ -234,15 +258,21 @@ const AepsSettlement = () => {
             }, getHeaders());
 
             if (res.data.success) {
-                toast.success("Settlement request submitted successfully!");
+                if (!issueReceipt(res.data, res.data.pending ? 'PENDING' : 'SUCCESS')) {
+                    toast.success("Settlement request submitted successfully!");
+                }
                 setAmount('');
                 setPin('');
                 fetchHistory(); // refresh history after settlement
-            } else {
+            } else if (!issueReceipt(res.data, 'FAILED')) {
                 toast.error(res.data.message || "Settlement failed");
             }
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Failed to initiate settlement");
+            if (!issueReceipt(error.response?.data, 'FAILED')) {
+                toast.error(error.response?.data?.message || "Failed to initiate settlement");
+            } else {
+                fetchHistory();
+            }
         }
         window.dispatchEvent(new Event('wallet-updated'));
         setLoading(false);
@@ -766,6 +796,90 @@ const AepsSettlement = () => {
                     </div>
                 </div>
             )}
+
+            {receipt && <SettlementReceipt receipt={receipt} onClose={() => setReceipt(null)} />}
+        </div>
+    );
+};
+
+type SettlementReceiptData = {
+    status: 'SUCCESS' | 'PENDING' | 'FAILED';
+    message: string;
+    transactionId: string;
+    utr: string;
+    amount: number;
+    fee: number;
+    mode: string;
+    bankName: string;
+    accountNumber: string;
+    accountHolderName: string;
+    beneficiaryMobile: string;
+    at: Date;
+};
+
+/** Opens after every settlement the backend accepted, whatever the outcome; same layout as the AEPS receipt. */
+const SettlementReceipt = ({ receipt, onClose }: { receipt: SettlementReceiptData; onClose: () => void }) => {
+    const ref = useRef<HTMLDivElement>(null);
+    const { status } = receipt;
+    const tone = status === 'SUCCESS' ? 'text-emerald-600' : status === 'PENDING' ? 'text-amber-600' : 'text-red-600';
+    const label = status === 'SUCCESS' ? 'Settlement successful' : status === 'PENDING' ? 'Awaiting bank confirmation' : 'Settlement failed';
+    const inr = (n: number) => `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const rows = ([
+        ['Type', 'Trade Wallet Settlement'],
+        ['Amount', inr(receipt.amount)],
+        ['Charges (incl. GST)', inr(receipt.fee)],
+        ['Total debited', status === 'FAILED' ? `${inr(0)} (refunded)` : inr(receipt.amount + receipt.fee)],
+        ['Mode', receipt.mode],
+        ['Account holder', receipt.accountHolderName],
+        ['Bank', receipt.bankName],
+        ['Account number', receipt.accountNumber],
+        ['Beneficiary mobile', receipt.beneficiaryMobile],
+        ['UTR', receipt.utr],
+        ['Reference ID', receipt.transactionId],
+    ] as [string, string][]).filter(([, v]) => v);
+
+    const download = async () => {
+        if (!ref.current) return;
+        try {
+            const canvas = await html2canvas(ref.current, { scale: 2, backgroundColor: '#ffffff' });
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = `Settlement_Receipt_${receipt.transactionId}.png`;
+            a.click();
+        } catch {
+            toast.error('Could not download the receipt.');
+        }
+    };
+
+    return (
+        <div role="dialog" aria-modal="true" aria-label="Settlement receipt" onClick={onClose} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <div onClick={(e) => e.stopPropagation()} className="relative max-h-[90vh] w-full max-w-md overflow-y-auto no-scrollbar rounded-2xl bg-white shadow-2xl">
+                <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 rounded-full p-1.5 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+                <div ref={ref} className="space-y-4 bg-white p-6 text-slate-800">
+                    <div className="border-b border-dashed border-slate-300 pb-4 text-center">
+                        <img src={logo} alt="Shahparpay" className="mx-auto mb-1 h-10 w-auto object-contain" />
+                        <p className="text-xs uppercase tracking-widest text-slate-500">Settlement receipt</p>
+                    </div>
+                    <div className="flex flex-col items-center gap-1 text-center">
+                        {status === 'SUCCESS' ? <CheckCircle2 className="h-12 w-12 text-emerald-500" /> : status === 'PENDING' ? <Clock className="h-12 w-12 text-amber-500" /> : <XCircle className="h-12 w-12 text-red-500" />}
+                        <p className={`text-lg font-bold ${tone}`}>{label}</p>
+                        {receipt.message && receipt.message !== label && <p className="text-sm text-slate-500">{receipt.message}</p>}
+                        <p className="text-xs text-slate-500">{receipt.at.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                    </div>
+                    <dl className="space-y-2 text-sm">
+                        {rows.map(([k, v]) => (
+                            <div key={k} className="flex justify-between gap-3 border-b border-dashed border-slate-200 pb-2 last:border-0">
+                                <dt className="text-slate-500">{k}</dt><dd className="break-all text-right font-medium tabular-nums">{v}</dd>
+                            </div>
+                        ))}
+                    </dl>
+                    <p className="text-center text-[11px] text-slate-400">System generated receipt; no signature required.</p>
+                </div>
+                <div className="flex gap-3 border-t p-4">
+                    <button onClick={download} className="flex flex-1 items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold hover:bg-black/5"><Download size={16} /> Download</button>
+                    <button onClick={onClose} className={`flex-1 rounded-xl py-2.5 text-sm font-semibold ${ACTIVE_BUTTON}`}>Done</button>
+                </div>
+            </div>
         </div>
     );
 };
