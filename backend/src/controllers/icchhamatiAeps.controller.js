@@ -473,6 +473,7 @@ export const verifyStep = (route) => async (req, res) => {
     if (route === 'aadhaar/send-otp') body.aadhaar = retailer.aadhaarNumber;
 
     const data = await icchhamatiPost(step.path, body);
+    if (route === 'aadhaar/verify-otp' && isOk(data)) await fillShopAddressFromAadhaar(retailer, data);
     // Aadhaar's OTP reference arrives at the top level, not under data.
     if (isOk(data) && data.txnid) {
       return res.status(200).json({
@@ -484,6 +485,56 @@ export const verifyStep = (route) => async (req, res) => {
     return relay(res, data, step.ok, 'Verification failed.');
   } catch (error) {
     return fail(res, route, error);
+  }
+};
+
+const isObject = (v) => v && typeof v === 'object' && !Array.isArray(v);
+const text = (v) => (v == null ? '' : String(v).trim());
+
+/**
+ * The address from a verify-aadhaar-otp answer, as draft fields, or null.
+ * Icchhamati does not document it: read a single address string or UIDAI's
+ * split fields (house, street, loc, vtc, dist, pc) at any of the usual depths.
+ */
+export const aadhaarAddress = (data) => {
+  for (const level of [data?.data?.data, data?.data, data].filter(isObject)) {
+    const a = isObject(level.address) ? level.address : level;
+    const get = (...keys) => keys.map((k) => text(a[k])).find(Boolean) || '';
+    const full = typeof level.address === 'string' ? text(level.address) : get('full_address', 'aadhaar_address');
+    const parts = ['house', 'street', 'landmark', 'loc', 'locality', 'vtc', 'po', 'subdist'].map((k) => text(a[k])).filter(Boolean);
+    const shop_address = full || [...new Set(parts)].join(', ');
+    if (shop_address.length < 10) continue;
+    const out = { shop_address };
+    const city = get('vtc', 'city');
+    const district = get('dist', 'district');
+    const pin = get('pc', 'pincode', 'zip').replace(/\D/g, '');
+    if (city) out.shop_city = city;
+    if (district) out.shop_district = district;
+    if (/^\d{6}$/.test(pin)) out.shop_pin_code = pin;
+    return out;
+  }
+  return null;
+};
+
+/** The shop address must be the one on the Aadhaar: copy it onto the draft once Aadhaar is verified. */
+const fillShopAddressFromAadhaar = async (retailer, data) => {
+  try {
+    const address = aadhaarAddress(data);
+    if (!address) {
+      // ponytail: shape unconfirmed; keys only (no PII) so the reader can be fixed from a live log.
+      const keys = [data, data?.data, data?.data?.data].filter(isObject).map((l) => Object.keys(l).join(','));
+      console.warn('Icchhamati Aadhaar verify: no address found. Keys:', keys.join(' | '));
+      return;
+    }
+    const { status, body } = await correctDraftDetails(retailer, address);
+    if (status !== 200) return console.error('Icchhamati Aadhaar address not copied to draft:', body.message);
+    // Resending the draft must keep PAN, mobile, email and Aadhaar verified; say so loudly if it did not.
+    const after = body.data?.step?.step;
+    if (['pan', 'mobile', 'email', 'aadhaar'].includes(after)) {
+      console.error(`Icchhamati Aadhaar address copy sent outlet ${outletOf(retailer)} back to the ${after} step`);
+    }
+  } catch (error) {
+    console.error('Icchhamati Aadhaar address copy failed:', error.message);
   }
 };
 
@@ -1209,6 +1260,8 @@ export const correctedDraft = (draft, input = {}) => {
   for (const [key, check] of Object.entries(EDITABLE)) {
     if (input[key] === undefined) continue;
     const value = key === 'ifsc_code' ? String(input[key]).trim().toUpperCase() : String(input[key]).trim();
+    // Same as the draft already holds: no change, so no resend for it.
+    if (value === (draft[key] == null ? '' : String(draft[key]).trim())) continue;
     const error = check(value);
     if (error) return { error };
     changes[key] = value;

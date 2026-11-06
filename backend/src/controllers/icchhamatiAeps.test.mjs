@@ -1,7 +1,7 @@
 // Run: node src/controllers/icchhamatiAeps.test.mjs
 // The two calls that decide what a retailer sees and whether money moves.
 import assert from 'node:assert';
-import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks, recordStep, fingpayFailed, failureReason, correctedDraft, draftDetails, txnFields, readTxnRequest } from './icchhamatiAeps.controller.js';
+import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks, recordStep, fingpayFailed, failureReason, correctedDraft, draftDetails, txnFields, readTxnRequest, aadhaarAddress } from './icchhamatiAeps.controller.js';
 import { parseServicesUpdate, usesAepsProvider } from '../utils/services.js';
 
 // --- Receipt fields from /doAeps ------------------------------------------
@@ -40,6 +40,10 @@ import { parseServicesUpdate, usesAepsProvider } from '../utils/services.js';
   assert.match(correctedDraft(draft, { phone: '12345' }).error, /mobile/);
   assert.match(correctedDraft(draft, { shop_address: 'Kolkata' }).error, /full shop address/);
   assert.equal(correctedDraft(draft, {}).error, 'Nothing to update.');
+  // Aadhaar address equal to the draft's: nothing to resend, so a re-verify never loops.
+  assert.equal(correctedDraft(draft, { shop_address: '4/1 Victoria Lane Telinipara', shop_pin_code: '712125' }).error, 'Nothing to update.');
+  assert.deepEqual(Object.keys(correctedDraft(draft, { shop_address: '4/1 Victoria Lane Telinipara', shop_pin_code: '712126' }).body).length > 0, true);
+  assert.equal(correctedDraft(draft, { shop_address: '4/1 Victoria Lane Telinipara', shop_pin_code: '712126' }).body.shop_pin_code, '712126');
   assert.deepEqual(Object.keys(draftDetails(draft)).sort(), ['account_number', 'bank_branch', 'bank_name', 'email', 'ifsc_code', 'phone', 'shop_address', 'shop_city', 'shop_district', 'shop_pin_code', 'state_id']);
 }
 
@@ -190,5 +194,16 @@ assert.equal(r.isMerchantKycComplete, true, 'eKYC done: only the daily login is 
 r = fakeRetailer('ready', true);
 await recordStep(r, 'ready');
 assert.equal(r.saves, 0, 'nothing changed, nothing written');
+
+// --- Shop address from Aadhaar -----------------------------------------------
+
+{
+  const split = aadhaarAddress({ status: 1, data: { house: '4/1', street: 'Victoria Lane', loc: 'Telinipara', vtc: 'Bhadreswar', dist: 'Hooghly', pc: 712125 } });
+  assert.deepEqual(split, { shop_address: '4/1, Victoria Lane, Telinipara, Bhadreswar', shop_city: 'Bhadreswar', shop_district: 'Hooghly', shop_pin_code: '712125' });
+  assert.equal(aadhaarAddress({ status: 1, data: { data: { address: '12 MG Road, Indore' } } }).shop_address, '12 MG Road, Indore');
+  assert.equal(aadhaarAddress({ status: 1, data: { address: { house: '9', street: 'Ring Road', dist: 'Patna', pc: '800001' } } }).shop_district, 'Patna');
+  assert.equal(aadhaarAddress({ status: 1, message: 'Aadhaar verified', data: null }), null);
+  assert.equal(aadhaarAddress({ status: 1, data: { vtc: 'Kolkata' } }), null, 'too short to pass the draft check');
+}
 
 console.log('icchhamatiAeps tests passed');

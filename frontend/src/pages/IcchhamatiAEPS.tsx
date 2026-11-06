@@ -3,7 +3,7 @@ import html2canvas from 'html2canvas-pro';
 import axios from 'axios';
 import { toast } from 'sonner';
 import {
-    BadgeCheck, CheckCircle2, Clock, CreditCard, FileText, Fingerprint, IndianRupee, Landmark, Loader2, MapPin,
+    ArrowLeft, BadgeCheck, CheckCircle2, Clock, CreditCard, FileText, Fingerprint, IndianRupee, Landmark, Loader2, MapPin,
     Download, RefreshCcw, ShieldCheck, Store, Upload, Video, Wallet, X, XCircle,
 } from 'lucide-react';
 import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, inr } from '../components/distributor/shared';
@@ -261,7 +261,7 @@ const IcchhamatiAEPS = () => {
                         {status.step !== 'register' && status.detailsEditable && (
                             <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background px-4 py-3 text-sm">
                                 <span className="text-muted-foreground">Entered a wrong mobile, email, address or bank detail?</span>
-                                <button type="button" disabled={busy} onClick={() => setEditing(true)} className={`${SECONDARY_BUTTON} py-2`}>Edit details</button>
+                                <button type="button" disabled={busy} onClick={() => setEditing(true)} className={`${SECONDARY_BUTTON} py-2`}><ArrowLeft size={16} /> Back: edit details</button>
                             </div>
                         )}
                         <OnboardingStep

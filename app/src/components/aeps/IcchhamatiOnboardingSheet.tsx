@@ -98,13 +98,13 @@ export const IcchhamatiOnboardingSheet: React.FC<{
         <DetailsEditor status={status} onDone={(saved) => { setEditing(false); if (saved) onChanged(); }} />
       ) : (
         <>
-          {canEdit && (
-            <Button variant="ghost" icon="pencil-outline" fullWidth onPress={() => setEditing(true)}>
-              Entered a wrong mobile, email, address or bank detail? Edit details
-            </Button>
-          )}
           {/* Keyed so each step starts with an empty form. */}
           <StepBody key={`${step}-${serviceType}`} step={step} status={status} onChanged={onChanged} onClose={onClose} serviceType={serviceType} />
+          {canEdit && (
+            <Button variant="secondary" icon="arrow-left" fullWidth onPress={() => setEditing(true)}>
+              Back: edit mobile, email, address or bank
+            </Button>
+          )}
         </>
       ))}
     </Sheet>
