@@ -1,3 +1,5 @@
+import fs from 'fs';
+import { readAadhaarQr } from '../utils/aadhaarQr.js';
 import Retailer from '../models/users/retailer.model.js';
 import Distributor from '../models/users/distributor.model.js';
 import Customer from '../models/users/customer.model.js';
@@ -1393,5 +1395,31 @@ export const resetPassword = async (req, res) => {
   } catch (error) {
     console.error('Reset password error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error.' });
+  }
+};
+
+/**
+ * POST /aadhaar-address (multipart `image`): reads the QR on the back of an
+ * Aadhaar so the onboarding form can fill the address. The photo is not kept.
+ */
+export const readAadhaarAddress = async (req, res) => {
+  const filePath = req.file?.path;
+  try {
+    if (!filePath || !req.file.mimetype?.startsWith('image/')) {
+      return res.status(400).json({ success: false, message: 'Upload a photo of the back of the Aadhaar.' });
+    }
+    const address = await readAadhaarQr(filePath);
+    if (!address) {
+      return res.status(422).json({
+        success: false,
+        message: 'Could not read the QR on this photo. Take a clear photo of the whole back side, or type the address.',
+      });
+    }
+    return res.status(200).json({ success: true, message: 'Address read from the Aadhaar QR', data: address });
+  } catch (error) {
+    console.error('Aadhaar QR read error:', error.message);
+    return res.status(422).json({ success: false, message: 'Could not read this photo. Type the address instead.' });
+  } finally {
+    if (filePath) fs.promises.unlink(filePath).catch(() => {});
   }
 };

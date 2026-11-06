@@ -16,6 +16,12 @@ import api from '@/services/api';
 
 const PREFIXES = ['Mr', 'Mrs', 'Miss'];
 
+/** The state as INDIAN_STATES spells it; UIDAI writes "west bengal" or "Jammu & Kashmir". Same as the web wizard. */
+const knownState = (name: string) => {
+  const key = (v: string) => v.toLowerCase().replace(/&/g, 'and').replace(/[^a-z]/g, '');
+  return INDIAN_STATES.find((option) => key(option) === key(name)) || '';
+};
+
 // Same rules as the web wizard (frontend/src/components/distributor/CreateRetailerWizard.tsx).
 const AADHAAR_RE = /^\d{12}$/;
 const PAN_RE = /^[A-Z]{5}\d{4}[A-Z]$/;
@@ -98,6 +104,23 @@ export const OnboardMemberSheet: React.FC<{
   const [state, setState] = useState('');
   const [stateOpen, setStateOpen] = useState(false);
   const [landmark, setLandmark] = useState('');
+  const [aadhaarBack, setAadhaarBack] = useState<PickedFile | null>(null);
+  const [qrNote, setQrNote] = useState('');
+
+  /** Reads the QR on the back of the Aadhaar and fills the address from it. */
+  const readQr = useAction(async (file: PickedFile) => {
+    setQrNote('');
+    const res = await api.readAadhaarAddress(file);
+    if (!res?.success) throw new Error(res?.message || 'Could not read the QR. Type the address instead.');
+    const a = res.data || {};
+    if (a.businessAddress) setBusinessAddress(a.businessAddress);
+    if (a.city) setCity(a.city);
+    if (a.district) setDistrict(a.district);
+    if (knownState(a.state || '')) setState(knownState(a.state));
+    if (a.landmark) setLandmark(a.landmark);
+    setQrNote('Address filled from the Aadhaar QR. Check it before continuing.');
+    return res;
+  });
 
   const [brandName, setBrandName] = useState('');
   const [website, setWebsite] = useState('');
@@ -487,6 +510,19 @@ export const OnboardMemberSheet: React.FC<{
               />
               <ImageField label="Aadhaar photo" required={isRetailer} value={aadhaarPicture} onChange={setAadhaarPicture} helperText="JPG or PNG, a clear photo" />
               <ImageField label="PAN photo" required={isRetailer} value={panPicture} onChange={setPanPicture} helperText="JPG or PNG, a clear photo" />
+              <ImageField
+                label="Aadhaar back photo"
+                value={aadhaarBack}
+                onChange={(file) => {
+                  setAadhaarBack(file);
+                  setQrNote('');
+                  readQr.setError(null);
+                  if (file) readQr.run(file);
+                }}
+                helperText={readQr.pending ? 'Reading the QR…' : 'Optional. The side with the QR code; the shop address is filled from it.'}
+              />
+              {!!readQr.error && <Banner tone="error" message={readQr.error} />}
+              {!!qrNote && <SuccessBanner message={qrNote} />}
 
               <Text style={styles.sectionTitle}>Shop details</Text>
               <Input label="Business name" required value={businessName} onChangeText={setBusinessName} placeholder="e.g. Sharma Mobile Centre" leftIcon="storefront-outline" />

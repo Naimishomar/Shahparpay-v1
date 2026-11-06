@@ -18,6 +18,7 @@ import {
   changePassword,
   forgotPassword,
   resetPassword,
+  readAadhaarAddress,
 } from '../controllers/auth.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 import { upload } from '../middlewares/multer.middleware.js';
@@ -66,5 +67,8 @@ router.post(
   ]),
   createRetailer
 );
+
+// Onboarding: the address from the QR on the back of an Aadhaar photo.
+router.post('/aadhaar-address', authMiddlewares, upload.single('image'), readAadhaarAddress);
 
 export default router;

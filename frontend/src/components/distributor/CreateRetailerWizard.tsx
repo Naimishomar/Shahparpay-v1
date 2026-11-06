@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
     ArrowLeft, ArrowRight, BadgeCheck, Building2, Check, CheckCircle2, FileImage, Globe, IdCard, Loader2, Mail,
     Package, Pencil, ShieldCheck, Sparkles, Upload, User, UserPlus, X,
@@ -74,6 +74,12 @@ const FilePicker = ({ label, file, onChange, required, error }: {
     );
 };
 
+/** The state as INDIAN_STATES spells it; UIDAI writes "west bengal" or "Jammu & Kashmir". */
+const knownState = (name: string) => {
+    const key = (s: string) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z]/g, '');
+    return INDIAN_STATES.find((s) => key(s) === key(name)) || '';
+};
+
 const CreateRetailerWizard = ({
     formData, setFormData, parentName, merchantCode, setMerchantCode, isExistingMerchant, setIsExistingMerchant,
     aadhaarPicture, setAadhaarPicture, panPicture, setPanPicture, profilePicture, setProfilePicture,
@@ -107,6 +113,36 @@ const CreateRetailerWizard = ({
     const [step, setStep] = useState(0);
     const [touched, setTouched] = useState<Set<number>>(new Set());
     const [showPassword, setShowPassword] = useState(false);
+
+    // The QR read is slow; the form may change meanwhile, so the fill merges into the latest one.
+    const latestForm = useRef(formData);
+    latestForm.current = formData;
+    const [aadhaarBack, setAadhaarBack] = useState<File | null>(null);
+    const [qrState, setQrState] = useState<{ reading?: boolean; ok?: string; error?: string }>({});
+
+    /** Reads the QR on the back of the Aadhaar and fills the address from it. */
+    const readAadhaarBack = async (file: File | null) => {
+        setAadhaarBack(file);
+        setQrState({});
+        if (!file) return;
+        setQrState({ reading: true });
+        try {
+            const body = new FormData();
+            body.append('image', file);
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/aadhaar-address`, { method: 'POST', body });
+            const json = await res.json().catch(() => ({}));
+            if (!json.success) return setQrState({ error: json.message || 'Could not read the QR. Type the address instead.' });
+            const a = json.data || {};
+            const filled = Object.fromEntries(
+                Object.entries({ businessAddress: a.businessAddress, city: a.city, district: a.district, state: knownState(a.state || ''), landmark: a.landmark })
+                    .filter(([, val]) => val),
+            );
+            setFormData({ ...latestForm.current, ...filled });
+            setQrState({ ok: 'Address filled from the Aadhaar QR. Check it before continuing.' });
+        } catch {
+            setQrState({ error: 'Could not reach the server. Type the address instead.' });
+        }
+    };
 
     const v = (k: string) => String(formData[k] ?? '');
     const set = (k: string, value: string | boolean) => setFormData({ ...formData, [k]: value });
@@ -347,6 +383,13 @@ const CreateRetailerWizard = ({
                             </Field>
                             <FilePicker label="Aadhaar photo" required={isRetailer} file={aadhaarPicture} onChange={setAadhaarPicture} error={err('aadhaarPicture')} />
                             <FilePicker label="PAN photo" required={isRetailer} file={panPicture} onChange={setPanPicture} error={err('panPicture')} />
+                            <div className="space-y-1.5">
+                                <FilePicker label="Aadhaar back photo" file={aadhaarBack} onChange={readAadhaarBack} />
+                                <p className={`text-xs ${qrState.error ? 'text-red-600 dark:text-red-400' : qrState.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                                    {qrState.reading ? <span className="inline-flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Reading the QR…</span>
+                                        : qrState.error || qrState.ok || 'Optional. The side with the QR code; the shop address is filled from it.'}
+                                </p>
+                            </div>
 
                             <div className="md:col-span-2 border-t pt-5">
                                 <p className={`${LABEL} mb-4 flex items-center gap-2`}><Building2 size={14} /> Shop details</p>

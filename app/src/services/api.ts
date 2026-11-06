@@ -1026,6 +1026,11 @@ class ApiService {
     return this.get(`${API_ENDPOINTS.distributor.retailers}/${id}/aeps-status`);
   }
 
+  /** The address from the QR on the back of an Aadhaar photo: { success, message, data }. */
+  async readAadhaarAddress(image: { uri: string; name: string; type: string }) {
+    return this.envelope(this.postForm(API_ENDPOINTS.auth.aadhaarAddress, {}, { image }));
+  }
+
   async createRetailer(
     data: Record<string, any>,
     files?: Record<string, { uri: string; name: string; type: string } | undefined>
