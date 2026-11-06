@@ -638,6 +638,9 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
         setResult({ ok: res.success ? true : res.data?.verification === 'PENDING' ? 'pending' : false, message: res.message, data: res.data || {}, at: new Date() });
         setShowReceipt(true);
         resetOtp();
+        // After money has moved the customer's details are cleared, so the same
+        // withdrawal cannot be sent twice by accident; enquiries keep them.
+        if (res.success && moves) { setAadhaar(''); setMobile(''); setBankID(''); setAmount(''); }
     };
 
     if (tab === 'M' && status.aadhaarPayReady === false) {

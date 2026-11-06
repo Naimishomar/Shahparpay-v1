@@ -643,6 +643,9 @@ export const AepsScreen: React.FC = () => {
         miniStatement: response?.success ? icchStatement(response.data?.miniStatementStructureModel) : undefined,
       });
       invalidateOtp();
+      // After money has moved the customer's details are cleared, so the same
+      // withdrawal cannot be sent twice by accident; enquiries keep them.
+      if (response?.success && service !== 'balance' && service !== 'statement') resetForm();
       if (response?.success) status.refresh();
       return response?.success ? response : null;
     }
