@@ -71,6 +71,9 @@ export const OnboardMemberSheet: React.FC<{
   onCreated: () => void;
 }> = ({ visible, onClose, kind, onCreated }) => {
   const spec = KIND[kind];
+  // Retailers may be onboarded remotely and cannot read out an OTP, so only
+  // distributors verify their email before the account is created.
+  const needsOtp = kind !== 'retailer';
 
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
@@ -190,7 +193,7 @@ export const OnboardMemberSheet: React.FC<{
           ? 'Enter the last name.'
           : !EMAIL_RE.test(email.trim())
             ? 'Enter a valid email address.'
-            : !emailVerified
+            : needsOtp && !emailVerified
               ? 'Verify the email address with the code we sent.'
               : contactNumber.length !== 10
                 ? 'Enter a 10-digit mobile number.'
@@ -228,7 +231,7 @@ export const OnboardMemberSheet: React.FC<{
 
     return [identity, business, documents, null];
   }, [
-    firstName, lastName, email, emailVerified, contactNumber, dob, password,
+    needsOtp, firstName, lastName, email, emailVerified, contactNumber, dob, password,
     businessName, businessAddress, city, district, state, hasGst, gstNumber,
     aadhaarNumber, panNumber, aadhaarPicture, panPicture,
   ]);
@@ -364,10 +367,10 @@ export const OnboardMemberSheet: React.FC<{
                 autoComplete="email"
                 leftIcon="email-outline"
                 editable={!emailVerified}
-                helperText="A 6-digit code confirms the address before the account is created"
+                helperText={needsOtp ? 'A 6-digit code confirms the address before the account is created' : undefined}
               />
 
-              {emailVerified ? (
+              {!needsOtp ? null : emailVerified ? (
                 <Banner tone="success" message="Email address verified." />
               ) : (
                 <>

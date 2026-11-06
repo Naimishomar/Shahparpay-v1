@@ -43,15 +43,13 @@ const DistributorPortal = () => {
         prefix: 'Mr', firstName: '', lastName: '', email: '', contactNumber: '', password: '', 
         dob: '', city: '', landmark: '', district: '', state: '', 
         businessName: '', businessAddress: '', 
-        aadhaarNumber: '', panNumber: '', hasGst: false, gstNumber: '', otp: '',
+        aadhaarNumber: '', panNumber: '', hasGst: false, gstNumber: '',
         aepsProvider: PAYSPRINT_ENABLED ? 'paysprint' : 'icchhamati',
         // Every service is on by default; the distributor switches off what they don't want.
         ...Object.fromEntries(SERVICES.map((svc) => [`svc_${svc.key}`, 'Yes'])),
         
         website: '', brandName: '', companyRegisterName: '', supportEmail: '', supportMobile: ''
     });
-    const [otpSent, setOtpSent] = useState(false);
-    const [sendingOtp, setSendingOtp] = useState(false);
     const [aadhaarPicture, setAadhaarPicture] = useState<File | null>(null);
     const [panPicture, setPanPicture] = useState<File | null>(null);
     const [profilePicture, setProfilePicture] = useState<File | null>(null);
@@ -74,8 +72,6 @@ const DistributorPortal = () => {
 
     // Verification States
     const [merchantCode, setMerchantCode] = useState('');
-    const [isEmailVerified, setIsEmailVerified] = useState(false);
-    const [verifyingEmail, setVerifyingEmail] = useState(false);
 
     useEffect(() => {
         if (isInitializing) return;
@@ -157,55 +153,6 @@ const DistributorPortal = () => {
 
     if (!user || user.role !== 'distributor') return null;
 
-    const handleSendOtp = async () => {
-        if (!formData.email) {
-            toast.error("Please enter an email address first.");
-            return;
-        }
-        setSendingOtp(true);
-        try {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/send-verification-otp`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: formData.email, name: `${formData.firstName} ${formData.lastName}` })
-            });
-            const data = await res.json();
-            if (data.success) {
-                setOtpSent(true);
-                toast.success("OTP sent successfully to the email.");
-            } else {
-                toast.error(data.message || "Failed to send OTP.");
-            }
-        } catch (e) {
-            toast.error("System error while sending OTP.");
-        } finally {
-            setSendingOtp(false);
-        }
-    };
-
-    const handleVerifyEmail = async () => {
-        if (!formData.otp) return toast.error("Enter Email OTP.");
-        setVerifyingEmail(true);
-        try {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/verify-email-otp`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: formData.email, otp: formData.otp })
-            });
-            const data = await res.json();
-            if (data.success) {
-                setIsEmailVerified(true);
-                toast.success("Email verified successfully!");
-            } else {
-                toast.error(data.message || "Invalid Email OTP.");
-            }
-        } catch (e) {
-            toast.error("Error verifying email.");
-        } finally {
-            setVerifyingEmail(false);
-        }
-    };
-
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -230,7 +177,6 @@ const DistributorPortal = () => {
         if (aadhaarPicture) data.append('aadhaarPicture', aadhaarPicture);
         if (panPicture) data.append('panPicture', panPicture);
         if (profilePicture) data.append('profilePicture', profilePicture);
-        if (formData.otp) data.append('otp', formData.otp);
         data.append('merchantCode', merchantCode);
         data.append('isExistingMerchant', String(isExistingMerchant && formData.aepsProvider !== 'icchhamati'));
 
@@ -710,17 +656,6 @@ const DistributorPortal = () => {
                         aadhaarPicture={aadhaarPicture} setAadhaarPicture={setAadhaarPicture}
                         panPicture={panPicture} setPanPicture={setPanPicture}
                         profilePicture={profilePicture} setProfilePicture={setProfilePicture}
-                        otpSent={otpSent}
-                        sendingOtp={sendingOtp}
-                        isEmailVerified={isEmailVerified}
-                        verifyingEmail={verifyingEmail}
-                        onSendOtp={handleSendOtp}
-                        onVerifyEmail={handleVerifyEmail}
-                        onResetEmail={() => {
-                            setOtpSent(false);
-                            setIsEmailVerified(false);
-                            setFormData({ ...formData, otp: '' });
-                        }}
                         isLoading={isLoading}
                         message={message}
                         onSubmit={handleCreateSubmit}

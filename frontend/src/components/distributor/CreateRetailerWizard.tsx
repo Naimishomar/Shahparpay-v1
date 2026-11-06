@@ -90,8 +90,10 @@ const CreateRetailerWizard = ({
     aadhaarPicture: File | null; setAadhaarPicture: (f: File | null) => void;
     panPicture: File | null; setPanPicture: (f: File | null) => void;
     profilePicture: File | null; setProfilePicture: (f: File | null) => void;
-    otpSent: boolean; sendingOtp: boolean; isEmailVerified: boolean; verifyingEmail: boolean;
-    onSendOtp: () => void; onVerifyEmail: () => void; onResetEmail: () => void;
+    // Email OTP is only asked of distributors; a retailer may be onboarded remotely
+    // and cannot be expected to read out a code, so retailers skip it.
+    otpSent?: boolean; sendingOtp?: boolean; isEmailVerified?: boolean; verifyingEmail?: boolean;
+    onSendOtp?: () => void; onVerifyEmail?: () => void; onResetEmail?: () => void;
     isLoading: boolean;
     message: string;
     onSubmit: (e: React.FormEvent) => void;
@@ -101,6 +103,7 @@ const CreateRetailerWizard = ({
     const isRetailer = kind === 'retailer';
     const STEPS = isRetailer ? RETAILER_STEPS : DISTRIBUTOR_STEPS;
     const noun = isRetailer ? 'retailer' : 'distributor';
+    const needsOtp = !isRetailer;
     const [step, setStep] = useState(0);
     const [touched, setTouched] = useState<Set<number>>(new Set());
     const [showPassword, setShowPassword] = useState(false);
@@ -115,7 +118,7 @@ const CreateRetailerWizard = ({
         {
             ...(!v('firstName').trim() && { firstName: 'Required' }),
             ...(!v('lastName').trim() && { lastName: 'Required' }),
-            ...(!/^\S+@\S+\.\S+$/.test(v('email')) ? { email: 'Enter a valid email' } : !isEmailVerified ? { email: 'Verify this email with the OTP' } : {}),
+            ...(!/^\S+@\S+\.\S+$/.test(v('email')) ? { email: 'Enter a valid email' } : needsOtp && !isEmailVerified ? { email: 'Verify this email with the OTP' } : {}),
             ...(!MOBILE.test(v('contactNumber')) && { contactNumber: 'Enter a 10-digit mobile number' }),
             ...(!v('dob') && { dob: 'Required' }),
             ...(v('password').length < 6 && { password: 'At least 6 characters' }),
@@ -229,14 +232,14 @@ const CreateRetailerWizard = ({
                                 </div>
                             </Field>
 
-                            <Field label="Email" required error={err('email')} hint={isEmailVerified ? undefined : 'We send a 6-digit code to confirm the address.'} className="md:col-span-2">
+                            <Field label="Email" required error={err('email')} hint={!needsOtp || isEmailVerified ? undefined : 'We send a 6-digit code to confirm the address.'} className="md:col-span-2">
                                 <div className="flex gap-2">
                                     <div className="relative flex-1">
                                         <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                        {text('email', { type: 'email', placeholder: 'name@example.com', disabled: otpSent, className: `${inputCls('email')} pl-9 disabled:opacity-70` })}
+                                        {text('email', { type: 'email', placeholder: 'name@example.com', disabled: needsOtp && otpSent, className: `${inputCls('email')} pl-9 disabled:opacity-70` })}
                                         {isEmailVerified && <CheckCircle2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-500" />}
                                     </div>
-                                    {!otpSent ? (
+                                    {!needsOtp ? null : !otpSent ? (
                                         <button type="button" onClick={onSendOtp} disabled={sendingOtp || !/^\S+@\S+\.\S+$/.test(v('email'))} className={SECONDARY_BUTTON}>
                                             {sendingOtp ? <Loader2 size={16} className="animate-spin" /> : null} Send OTP
                                         </button>
@@ -244,7 +247,7 @@ const CreateRetailerWizard = ({
                                         <button type="button" onClick={onResetEmail} className={SECONDARY_BUTTON}>Change</button>
                                     ) : null}
                                 </div>
-                                {otpSent && !isEmailVerified && (
+                                {needsOtp && otpSent && !isEmailVerified && (
                                     <div className="mt-2 flex gap-2 animate-in fade-in">
                                         <input
                                             value={v('otp')}
@@ -503,7 +506,7 @@ const CreateRetailerWizard = ({
                         <p className={`${LABEL} mb-4`}>Checklist</p>
                         <ul className="space-y-3 text-sm">
                             {[
-                                ['Email verified', isEmailVerified],
+                                needsOtp ? ['Email verified', isEmailVerified] : ['Valid email', /^\S+@\S+\.\S+$/.test(v('email'))],
                                 ['Mobile & date of birth', MOBILE.test(v('contactNumber')) && !!v('dob')],
                                 [isRetailer ? 'Aadhaar number & photo' : 'Aadhaar number', AADHAAR.test(v('aadhaarNumber')) && (!isRetailer || !!aadhaarPicture)],
                                 [isRetailer ? 'PAN number & photo' : 'PAN number', PAN.test(v('panNumber')) && (!isRetailer || !!panPicture)],
