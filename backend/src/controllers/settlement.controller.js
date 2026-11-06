@@ -246,8 +246,8 @@ export const initiateSettlement = async (req, res) => {
         amount: Number(amount),
         transfer_mode: mode,
         transaction_id: transactionId,
-        // Icchhamati reads type 3 as a payout (settlement); DMT sends no type.
-        type: 3,
+        // Icchhamati reads type "3" as a payout (settlement) and wants it as a string; DMT sends no type.
+        type: '3',
         details: `Trade wallet settlement ${transactionId}`,
       });
     } catch (providerError) {
