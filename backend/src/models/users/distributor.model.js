@@ -74,7 +74,7 @@ const distributorSchema = new mongoose.Schema(
       type: String,
       unique: true,
       sparse: true,
-      match: [/^[2-9]{1}[0-9]{12}$/, 'Please enter a valid Aadhar number'],
+      match: [/^[2-9]{1}[0-9]{11}$/, 'Please enter a valid Aadhar number'],
     },
     aadhaarPicture: { type: String }, // Cloudinary URL
     panNumber: {
