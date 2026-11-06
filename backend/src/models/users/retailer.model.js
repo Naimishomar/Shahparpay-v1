@@ -16,11 +16,22 @@ const retailerSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+    // A self-signed-up retailer has none until an admin approves them, and may
+    // stay directly under the admin (null) after that.
     distributorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Distributor',
-      required: true,
+      default: null,
+      required: function () {
+        return this.signupSource !== 'self';
+      },
     },
+    // 'self': signed up from the app, and kept out of the dashboard until an
+    // admin approves. A distributor's retailers are approved when created.
+    signupSource: { type: String, enum: ['distributor', 'self'], default: 'distributor' },
+    verificationStatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'approved' },
+    verificationNote: { type: String, trim: true, default: null },
+    verifiedAt: { type: Date, default: null },
     name: {
       type: String,
       required: true,

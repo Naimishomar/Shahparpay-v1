@@ -226,6 +226,7 @@ export const API_ENDPOINTS = {
     aadhaarVerifyOtp: '/api/auth/paysprint/aadhaar/verify-otp',
     verifyPan: '/api/auth/paysprint/pan/verify',
     createRetailer: '/api/auth/create-retailer',
+    signupRetailer: '/api/auth/signup-retailer',
     aadhaarAddress: '/api/auth/aadhaar-address',
     createDistributor: '/api/auth/create-distributor',
   },

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Banknote, ChevronLeft, Clock, History, Loader2, Mail, MapPin, Package, Phone, Power, Receipt, RefreshCcw, ShieldCheck, Store, Users } from 'lucide-react';
+import { ArrowRight, Banknote, ChevronLeft, Clock, History, Loader2, Mail, MapPin, Package, Phone, Power, Receipt, RefreshCcw, ShieldCheck, Store, UserCheck, Users, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { CARD, INPUT, LABEL, PENDING_PILL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, STATUS_PILL, ago, inr, inrShort, serviceLabel, useApiGet } from '../distributor/shared';
 import { Avatar, Skeleton } from '../distributor/ui';
@@ -131,6 +131,9 @@ const UserDetail = ({
                                     {active
                                         ? <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20">Active</span>
                                         : <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 bg-red-500/10 text-red-700 dark:text-red-400 ring-red-500/20">Inactive</span>}
+                                    {role === 'retailer' && user.verificationStatus === 'pending' && <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}>Awaiting verification</span>}
+                                    {role === 'retailer' && user.verificationStatus === 'rejected' && <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${STATUS_PILL.FAILED}`}>Signup rejected</span>}
+                                    {role === 'retailer' && user.signupSource === 'self' && <span className="rounded-full border bg-background/70 px-2.5 py-0.5 text-xs">Self signup</span>}
                                     {role === 'retailer' && (aepsKycDone(user)
                                         ? <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20"><ShieldCheck size={12} /> KYC verified</span>
                                         : <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}><Clock size={12} /> {aepsStepLabel(user)}</span>)}
@@ -192,6 +195,10 @@ const UserDetail = ({
                         <button onClick={() => setConfirmStatus(false)} className={SECONDARY_BUTTON}>Cancel</button>
                     </div>
                 </div>
+            )}
+
+            {role === 'retailer' && (user.verificationStatus === 'pending' || user.verificationStatus === 'rejected') && (
+                <VerificationCard token={token} user={user} busy={busy === 'verify'} onDecide={(body, ok) => call('verify', `/api/admin/console/retailers/${id}/verification`, 'PATCH', body, ok)} />
             )}
 
             {role === 'retailer' && (
@@ -334,9 +341,10 @@ const UserDetail = ({
                         <div className="flex items-start gap-3"><MapPin size={16} className="mt-0.5 text-muted-foreground" /><dd className="font-medium">{[user.businessName, user.businessAddress, address].filter(Boolean).join(' · ') || '—'}</dd></div>
                         <div className="flex items-center gap-3"><Clock size={16} className="text-muted-foreground" /><dd className="text-muted-foreground">Joined {new Date(user.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</dd></div>
                     </dl>
-                    <div className="mt-5 grid grid-cols-2 gap-4">
+                    <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-4">
                         <DocTile label="Aadhaar" number={user.aadhaarNumber} picture={user.aadhaarPicture} />
                         <DocTile label="PAN" number={user.panNumber} picture={user.panPicture} />
+                        <DocTile label="Photo" picture={user.profilePicture} />
                     </div>
                 </section>
 
@@ -367,6 +375,70 @@ const UserDetail = ({
 };
 
 export default UserDetail;
+
+/**
+ * Approve or reject a self signup. Approving places the retailer under the
+ * chosen distributor, or directly under the admin; the reject reason is shown
+ * to the retailer.
+ */
+const VerificationCard = ({ token, user, busy, onDecide }: { token: string | null; user: any; busy: boolean; onDecide: (body: object, ok: string) => void }) => {
+    const { data: distributors } = useApiGet<any[]>(token, '/api/admin/distributors');
+    const [distributorId, setDistributorId] = useState('');
+    const [rejecting, setRejecting] = useState(false);
+    const [note, setNote] = useState('');
+
+    return (
+        <section className={`${CARD} border-amber-500/30`}>
+            <div className="mb-5 flex items-center gap-3">
+                <div className={`rounded-xl p-2 ${SILVER_TILE}`}><UserCheck className="h-4 w-4" /></div>
+                <div>
+                    <h2 className="text-lg font-semibold">{user.verificationStatus === 'rejected' ? 'Signup rejected' : 'Verify this signup'}</h2>
+                    <p className="text-sm text-muted-foreground">Check the documents and shop address below. Until approved, the retailer can sign in but use nothing.</p>
+                </div>
+            </div>
+            {user.verificationStatus === 'rejected' && user.verificationNote && (
+                <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-400">
+                    <p className={LABEL}>Reason given</p>
+                    <p className="mt-1 whitespace-pre-wrap">{user.verificationNote}</p>
+                </div>
+            )}
+            {rejecting ? (
+                <div className="flex flex-col gap-3">
+                    <label className="flex flex-col gap-1.5">
+                        <span className={LABEL}>Reason (the retailer sees this)</span>
+                        <textarea className={`${INPUT} min-h-24`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Aadhaar photo is blurry; please contact support with a clear copy." autoFocus />
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            onClick={() => onDecide({ status: 'rejected', note: note.trim() }, 'Signup rejected')}
+                            disabled={busy || !note.trim()}
+                            className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-500/15 disabled:opacity-50 dark:text-red-400"
+                        >
+                            {busy ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />} Reject signup
+                        </button>
+                        <button onClick={() => setRejecting(false)} className={SECONDARY_BUTTON}>Cancel</button>
+                    </div>
+                </div>
+            ) : (
+                <div className="flex flex-col gap-3 md:flex-row md:items-end">
+                    <label className="flex flex-1 flex-col gap-1.5">
+                        <span className={LABEL}>Place under</span>
+                        <select className={INPUT} value={distributorId} onChange={(e) => setDistributorId(e.target.value)}>
+                            <option value="">No distributor (under admin)</option>
+                            {(distributors || []).map((d) => <option key={d._id} value={d._id}>{d.name} ({d.distributorId})</option>)}
+                        </select>
+                    </label>
+                    <button onClick={() => onDecide({ status: 'approved', distributorId: distributorId || null }, 'Retailer approved')} disabled={busy} className={PRIMARY_BUTTON}>
+                        {busy ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />} Approve
+                    </button>
+                    {user.verificationStatus !== 'rejected' && (
+                        <button onClick={() => setRejecting(true)} disabled={busy} className={SECONDARY_BUTTON}><XCircle size={16} /> Reject</button>
+                    )}
+                </div>
+            )}
+        </section>
+    );
+};
 
 /**
  * Corrects the shop address on the retailer's Icchhamati AEPS draft. The

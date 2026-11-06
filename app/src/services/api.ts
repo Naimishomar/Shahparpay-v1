@@ -94,6 +94,8 @@ const PUBLIC_AUTH_PATHS = [
   API_ENDPOINTS.auth.refreshToken,
   API_ENDPOINTS.auth.sendVerificationOtp,
   API_ENDPOINTS.auth.verifyEmailOtp,
+  API_ENDPOINTS.auth.signupRetailer,
+  API_ENDPOINTS.auth.aadhaarAddress,
 ];
 
 class ApiService {
@@ -1036,6 +1038,14 @@ class ApiService {
     files?: Record<string, { uri: string; name: string; type: string } | undefined>
   ) {
     return this.postForm(API_ENDPOINTS.auth.createRetailer, data, files);
+  }
+
+  /** Public self signup: createRetailer's body plus the verified email `otp`. Pending until an admin approves. */
+  async signupRetailer(
+    data: Record<string, any>,
+    files?: Record<string, { uri: string; name: string; type: string } | undefined>
+  ) {
+    return this.postForm(API_ENDPOINTS.auth.signupRetailer, data, files);
   }
 
   // --------------------------------------------------------------- Admin

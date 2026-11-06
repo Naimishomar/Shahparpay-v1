@@ -7,6 +7,7 @@ import { palettes } from '../theme/colors';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { LoginScreen } from '@/screens/auth/LoginScreen';
 import { LandingScreen } from '@/screens/auth/LandingScreen';
+import { AccountPendingScreen } from '@/screens/auth/AccountPendingScreen';
 import { DashboardScreen } from '@/screens/retailer/DashboardScreen';
 import { AepsScreen } from '@/screens/retailer/AepsScreen';
 import { AepsSettlementScreen } from '@/screens/retailer/AepsSettlementScreen';
@@ -211,7 +212,11 @@ export const AppNavigator: React.FC = () => {
     !token ? null
     : user?.role === 'admin' ? ADMIN_SCREENS
     : user?.role === 'distributor' ? DISTRIBUTOR_SCREENS
+    // A self-signed-up retailer waits for an admin; missing status = approved.
+    : user?.verificationStatus === 'pending' || user?.verificationStatus === 'rejected' ? null
     : RETAILER_SCREENS;
+  // Outside MainLayout: its header and menu call retailer APIs that answer 403 until approved.
+  const pending = !!token && !screens;
 
   return (
     <NavigationContainer theme={navTheme}>
@@ -225,8 +230,14 @@ export const AppNavigator: React.FC = () => {
             cardStyle: { backgroundColor: palette.background, flex: 1, overflow: 'hidden' },
           }}
         >
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Landing" component={LandingScreen} />
+          {pending ? (
+            <Stack.Screen name="AccountPending" component={AccountPendingScreen} />
+          ) : (
+            <>
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="Landing" component={LandingScreen} />
+            </>
+          )}
         </Stack.Navigator>
       )}
     </NavigationContainer>

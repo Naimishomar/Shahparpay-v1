@@ -623,9 +623,24 @@ export const createDistributor = async (req, res) => {
   }
 };
 
+/**
+ * POST /signup-retailer (public, multipart): a retailer signs up from the app
+ * with the distributor's form. The email must carry a fresh OTP. The account
+ * waits for an admin, who approves it and picks the distributor.
+ */
+export const signupRetailer = async (req, res) => {
+  const { email, otp } = req.body || {};
+  if (!email || !otp || !(await Otp.check(email, otp))) {
+    return res.status(400).json({ success: false, message: 'Verify your email with the OTP first.' });
+  }
+  req.selfSignup = true;
+  return createRetailer(req, res);
+};
+
 export const createRetailer = async (req, res) => {
   try {
-    if (req.user.role !== 'distributor')
+    const self = req.selfSignup === true;
+    if (!self && req.user?.role !== 'distributor')
       return res
         .status(403)
         .json({ success: false, message: 'Only Distributors can create Retailers.' });
@@ -689,7 +704,8 @@ export const createRetailer = async (req, res) => {
 
     let parsedAddress = typeof address === 'string' ? JSON.parse(address) : address;
 
-    const retailerId = req.body.merchantCode || `RT${customAlphabet('0123456789', 6)()}`;
+    // Only a distributor may carry over an existing merchant code.
+    const retailerId = (!self && req.body.merchantCode) || `RT${customAlphabet('0123456789', 6)()}`;
 
     // Paysprint Merchant Onboarding / Verification
     // (Skipping this backend auto-onboarding because the endpoint returns HTML/404.
@@ -721,7 +737,10 @@ export const createRetailer = async (req, res) => {
     const isMerchantKycComplete = false; // They still need to do Web KYC
 
     const newRetailer = new Retailer({
-      distributorId: req.user.id,
+      distributorId: self ? null : req.user.id,
+      signupSource: self ? 'self' : 'distributor',
+      verificationStatus: self ? 'pending' : 'approved',
+      verifiedAt: self ? null : new Date(),
       retailerId,
       name,
       prefix,
@@ -756,23 +775,37 @@ export const createRetailer = async (req, res) => {
       companyRegisterName,
       supportEmail,
       supportMobile,
-      isExistingMerchant: isExistingMerchant === 'true' || isExistingMerchant === true,
-      disabledServices: parseDisabledServices(disabledServices) || [],
+      isExistingMerchant: !self && (isExistingMerchant === 'true' || isExistingMerchant === true),
+      // Services are a distributor's call; a self signup starts with all on.
+      disabledServices: self ? [] : parseDisabledServices(disabledServices) || [],
       // PAYSPRINT-DISABLED: aepsProvider: aepsProvider || 'paysprint',
       aepsProvider: 'icchhamati',
     });
 
     await newRetailer.save();
-    logActivity({ req, action: 'retailer.create', target: { _id: newRetailer._id, role: 'retailer', name: newRetailer.name }, summary: `Onboarded retailer ${newRetailer.name} (${newRetailer.retailerId})` });
+    const target = { _id: newRetailer._id, role: 'retailer', name: newRetailer.name };
+    await Otp.deleteOne({ email });
+    if (self) {
+      logActivity({ req, actor: target, action: 'retailer.signup', target, summary: `Retailer ${newRetailer.name} (${newRetailer.retailerId}) signed up; awaiting admin verification` });
+      return res.status(201).json({
+        success: true,
+        message: 'Account created. An admin will verify it; you can sign in to check the status.',
+        data: { retailerId: newRetailer.retailerId, verificationStatus: newRetailer.verificationStatus },
+      });
+    }
+
+    logActivity({ req, action: 'retailer.create', target, summary: `Onboarded retailer ${newRetailer.name} (${newRetailer.retailerId})` });
 
     await Distributor.findByIdAndUpdate(req.user.id, { $push: { retailers: newRetailer._id } });
-
-    await Otp.deleteOne({ email });
 
     return res
       .status(201)
       .json({ success: true, message: 'Retailer created successfully.', data: newRetailer });
   } catch (error) {
+    if (error?.code === 11000) {
+      const field = { email: 'email', contactNumber: 'mobile number', aadhaarNumber: 'Aadhaar', panNumber: 'PAN', retailerId: 'retailer ID' }[Object.keys(error.keyPattern || {})[0]] || 'detail';
+      return res.status(409).json({ success: false, message: `This ${field} is already registered.` });
+    }
     console.error('Create Retailer Error:', error);
     return res
       .status(500)

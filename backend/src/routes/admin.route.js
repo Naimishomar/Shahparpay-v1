@@ -14,6 +14,7 @@ import {
   getUserDetail,
   setUserStatus,
   setRetailerServices,
+  setRetailerVerification,
   getRetailerAepsStatus,
   updateRetailerAepsAddress,
   getActivity,
@@ -36,6 +37,7 @@ router.get('/console/users', getUsers);
 router.get('/console/users/:role/:id', getUserDetail);
 router.patch('/console/users/:role/:id/status', setUserStatus);
 router.put('/console/retailers/:id/services', setRetailerServices);
+router.patch('/console/retailers/:id/verification', setRetailerVerification);
 router.get('/console/retailers/:id/aeps-status', getRetailerAepsStatus);
 router.put('/console/retailers/:id/aeps-address', updateRetailerAepsAddress);
 router.get('/console/activity', getActivity);

@@ -23,6 +23,10 @@ interface User {
     disabledServices?: string[];
     /** The AEPS provider this retailer is onboarded with; absent means PaySprint. */
     aepsProvider?: AepsProvider;
+    /** Self signups wait for an admin; absent means approved. */
+    verificationStatus?: 'pending' | 'approved' | 'rejected';
+    /** Why the admin rejected the signup. */
+    verificationNote?: string;
 }
 
 interface AuthContextType {

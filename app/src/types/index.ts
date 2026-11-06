@@ -36,6 +36,11 @@ export interface User {
     state?: string;
   };
   createdAt?: string;
+  /** Self-signed-up retailers wait for an admin; missing means approved. */
+  verificationStatus?: 'pending' | 'approved' | 'rejected';
+  /** The admin's reason when rejected. */
+  verificationNote?: string;
+  signupSource?: string;
 }
 
 export interface AuthState {

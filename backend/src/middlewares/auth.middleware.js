@@ -3,6 +3,10 @@ import Admin from '../models/users/admin.model.js';
 import Distributor from '../models/users/distributor.model.js';
 import Retailer from '../models/users/retailer.model.js';
 
+/** Pending or rejected; a retailer created before the field existed counts as approved. */
+export const isAwaitingVerification = (user) =>
+  user?.verificationStatus === 'pending' || user?.verificationStatus === 'rejected';
+
 export const authMiddlewares = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -35,6 +39,18 @@ export const authMiddlewares = async (req, res, next) => {
     // Deactivation must end a session that is already open, not just block the next login.
     if (user.isActive === false) {
       return res.status(403).json({ success: false, code: 'ACCOUNT_INACTIVE', message: 'Account is inactive.' });
+    }
+
+    // A self-signed-up retailer waits for an admin: only their own account
+    // routes (/api/auth: profile, logout, password) work until approved.
+    if (decodedToken.role === 'retailer' && isAwaitingVerification(user) && !req.originalUrl.startsWith('/api/auth/')) {
+      return res.status(403).json({
+        success: false,
+        code: 'ACCOUNT_PENDING_VERIFICATION',
+        message: user.verificationStatus === 'rejected'
+          ? 'Your account was not approved. Contact support.'
+          : 'Your account is waiting for admin verification.',
+      });
     }
 
     req.user = user;

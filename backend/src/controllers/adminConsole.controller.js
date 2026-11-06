@@ -295,11 +295,13 @@ export const getUsers = async (req, res) => {
       if (req.query.kyc === 'pending') Object.assign(filter, aepsKycPendingFilter());
       if (req.query.kyc === 'done') Object.assign(filter, aepsKycDoneFilter());
       if (req.query.distributor && mongoose.isValidObjectId(req.query.distributor)) filter.distributorId = req.query.distributor;
+      // Self signups waiting for (or refused) admin verification.
+      if (['pending', 'rejected'].includes(req.query.verification)) filter.verificationStatus = req.query.verification;
     }
     const sort = { newest: { createdAt: -1 }, oldest: { createdAt: 1 }, name: { name: 1 } }[req.query.sort] || { createdAt: -1 };
 
     const query = Model.find(filter)
-      .select('name email contactNumber businessName retailerId distributorId profilePicture isActive isMerchantKycComplete icchhamatiAeps.step icchhamatiAeps.stepAt disabledServices createdAt address')
+      .select('name email contactNumber businessName retailerId distributorId profilePicture isActive isMerchantKycComplete icchhamatiAeps.step icchhamatiAeps.stepAt disabledServices createdAt address signupSource verificationStatus verificationNote')
       .sort(sort)
       .skip(skip)
       .limit(limit);
@@ -475,6 +477,68 @@ export const setUserStatus = async (req, res) => {
     return res.status(200).json({ success: true, message: req.body.isActive ? 'Account activated' : 'Account deactivated', data: user });
   } catch (error) {
     console.error('Admin set status error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+/**
+ * PATCH /api/admin/console/retailers/:id/verification
+ *   { status: 'approved' | 'rejected', distributorId?: id | null, note?: string }
+ * Decides a self signup. Approving may place the retailer under a distributor;
+ * null (or none) leaves them directly under the admin.
+ */
+export const setRetailerVerification = async (req, res) => {
+  try {
+    if (forbid(req, res)) return;
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid retailer id' });
+    const { status, distributorId, note } = req.body || {};
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'status must be approved or rejected' });
+    }
+    const reason = String(note ?? '').trim();
+    if (status === 'rejected' && !reason) {
+      return res.status(400).json({ success: false, message: 'Give the reason for rejecting; the retailer sees it.' });
+    }
+
+    const retailer = await Retailer.findById(req.params.id).select('name retailerId distributorId signupSource verificationStatus');
+    if (!retailer) return res.status(404).json({ success: false, message: 'Retailer not found' });
+
+    let distributor = null;
+    if (status === 'approved' && distributorId) {
+      if (!mongoose.isValidObjectId(distributorId)) return res.status(400).json({ success: false, message: 'Invalid distributor' });
+      distributor = await Distributor.findById(distributorId).select('name distributorId');
+      if (!distributor) return res.status(404).json({ success: false, message: 'Distributor not found' });
+    }
+
+    retailer.verificationStatus = status;
+    retailer.verificationNote = status === 'rejected' ? reason : reason || null;
+    retailer.verifiedAt = new Date();
+    // Placement is only decided here for a self signup; a distributor's retailer keeps theirs.
+    if (status === 'approved' && retailer.signupSource === 'self') {
+      const previous = retailer.distributorId;
+      retailer.distributorId = distributor?._id || null;
+      if (previous && String(previous) !== String(distributor?._id)) {
+        await Distributor.updateOne({ _id: previous }, { $pull: { retailers: retailer._id } });
+      }
+      if (distributor) await Distributor.updateOne({ _id: distributor._id }, { $addToSet: { retailers: retailer._id } });
+    }
+    await retailer.save();
+
+    logActivity({
+      req,
+      action: status === 'approved' ? 'retailer.approve' : 'retailer.reject',
+      target: { _id: retailer._id, role: 'retailer', name: retailer.name },
+      summary: status === 'approved'
+        ? `Approved retailer ${retailer.name} (${retailer.retailerId})${distributor ? ` under ${distributor.name}` : ' under the admin'}`
+        : `Rejected retailer ${retailer.name} (${retailer.retailerId}): ${reason}`,
+    });
+    return res.status(200).json({
+      success: true,
+      message: status === 'approved' ? 'Retailer approved' : 'Retailer rejected',
+      data: { _id: retailer._id, verificationStatus: retailer.verificationStatus, distributorId: retailer.distributorId, verificationNote: retailer.verificationNote },
+    });
+  } catch (error) {
+    console.error('Admin retailer verification error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

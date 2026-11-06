@@ -13,6 +13,7 @@ import CreateRetailerWizard from '../components/distributor/CreateRetailerWizard
 import DistributorProfile from '../components/distributor/DistributorProfile';
 import AdminFundRequests from '../components/admin/AdminFundRequests';
 import IcchhamatiAccount from '../components/admin/IcchhamatiAccount';
+import RetailerSignups from '../components/admin/RetailerSignups';
 
 const AdminPortal = () => {
     const { user, token, isInitializing } = useAuth();
@@ -356,6 +357,8 @@ const AdminPortal = () => {
                         <UserDirectory key={searchParams.toString()} token={token} initial={Object.fromEntries(searchParams) as UserQuery} onOpenUser={openUser} />
                     )
                 )}
+
+                {activeTab === 'signups' && <RetailerSignups token={token} onOpenUser={openUser} />}
 
                 {activeTab === 'activity' && <ActivityLog token={token} onOpenUser={openUser} />}
 

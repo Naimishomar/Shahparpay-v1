@@ -19,6 +19,7 @@ import {
   forgotPassword,
   resetPassword,
   readAadhaarAddress,
+  signupRetailer,
 } from '../controllers/auth.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 import { upload } from '../middlewares/multer.middleware.js';
@@ -68,7 +69,20 @@ router.post(
   createRetailer
 );
 
+// A retailer signing up on their own: same form, no distributor, waits for an admin.
+router.post(
+  '/signup-retailer',
+  authLimiter,
+  upload.fields([
+    { name: 'profilePicture', maxCount: 1 },
+    { name: 'aadhaarPicture', maxCount: 1 },
+    { name: 'panPicture', maxCount: 1 },
+  ]),
+  signupRetailer
+);
+
 // Onboarding: the address from the QR on the back of an Aadhaar photo.
-router.post('/aadhaar-address', authMiddlewares, upload.single('image'), readAadhaarAddress);
+// Public: the self-signup form uses it before there is an account. Reads only, keeps nothing.
+router.post('/aadhaar-address', authLimiter, upload.single('image'), readAadhaarAddress);
 
 export default router;

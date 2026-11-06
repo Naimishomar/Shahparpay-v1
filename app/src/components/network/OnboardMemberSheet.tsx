@@ -28,7 +28,8 @@ const PAN_RE = /^[A-Z]{5}\d{4}[A-Z]$/;
 const MOBILE_RE = /^[6-9]\d{9}$/;
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 
-export type MemberKind = 'retailer' | 'distributor';
+/** 'self': a retailer signing themselves up from the login screen. */
+export type MemberKind = 'retailer' | 'distributor' | 'self';
 
 const KIND = {
   retailer: {
@@ -36,6 +37,12 @@ const KIND = {
     idLabel: 'Retailer ID',
     prefix: 'RT',
     create: (data: Record<string, any>, files: any) => api.createRetailer(data, files),
+  },
+  self: {
+    title: 'Create your account',
+    idLabel: 'Retailer ID',
+    prefix: 'RT',
+    create: (data: Record<string, any>, files: any) => api.signupRetailer(data, files),
   },
   distributor: {
     title: 'Onboard a distributor',
@@ -58,13 +65,14 @@ export const OnboardMemberSheet: React.FC<{
   onCreated: () => void;
 }> = ({ visible, onClose, kind, onCreated }) => {
   const spec = KIND[kind];
-  const isRetailer = kind === 'retailer';
+  const self = kind === 'self';
+  const isRetailer = kind !== 'distributor';
   // Retailers may be onboarded remotely and cannot read out an OTP, so only
-  // distributors verify their email before the account is created.
-  const needsOtp = !isRetailer;
+  // distributors (and a retailer signing up themselves) verify their email.
+  const needsOtp = kind !== 'retailer';
   const { user } = useAuth();
   const parentName = (user as { name?: string } | null)?.name || 'you';
-  const steps = ['Account', 'KYC & business', isRetailer ? 'Services & branding' : 'Branding', 'Review'];
+  const steps = ['Account', 'KYC & business', isRetailer && !self ? 'Services & branding' : 'Branding', 'Review'];
 
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
@@ -187,7 +195,7 @@ export const OnboardMemberSheet: React.FC<{
         profilePicture: profilePicture ?? undefined,
       }
     );
-    if (!res.success) throw new Error(res.message || `Failed to create ${kind}.`);
+    if (!res.success) throw new Error(res.message || 'Failed to create the account.');
     setDone(true);
     onCreated();
     return res;
@@ -232,7 +240,7 @@ export const OnboardMemberSheet: React.FC<{
         ['Email', email],
         ['Mobile', contactNumber && `+91 ${contactNumber}`],
         ['Date of birth', dob],
-        [spec.idLabel, merchantCode + (isRetailer && isPaysprint && isExistingMerchant ? ' (existing)' : '')],
+        ...(self ? [] : [[spec.idLabel, merchantCode + (isRetailer && isPaysprint && isExistingMerchant ? ' (existing)' : '')]]),
         ...(isRetailer ? [['AEPS provider', providerLabel]] : []),
       ],
     },
@@ -253,7 +261,7 @@ export const OnboardMemberSheet: React.FC<{
       rows: [
         ['Brand', brandName],
         ['Website', website],
-        ...(isRetailer
+        ...(isRetailer && !self
           ? [['Packages', enabledServices.length === SERVICES.length ? 'All services' : enabledServices.map((svc) => svc.label).join(', ') || 'None']]
           : []),
       ],
@@ -265,13 +273,13 @@ export const OnboardMemberSheet: React.FC<{
       visible={visible}
       onClose={onClose}
       title={spec.title}
-      subtitle={isRetailer ? `Four short steps. They'll join your network under ${parentName}.` : 'Four short steps to add a distributor to the platform.'}
+      subtitle={self ? 'An admin verifies your account before you can start.' : isRetailer ? `Four short steps. They'll join your network under ${parentName}.` : 'Four short steps to add a distributor to the platform.'}
       icon="account-plus-outline"
       dismissible={!create.pending}
       footer={
         done ? (
-          <Button icon="check" onPress={onClose} fullWidth>
-            Done
+          <Button icon={self ? 'login' : 'check'} onPress={onClose} fullWidth>
+            {self ? 'Back to sign in' : 'Done'}
           </Button>
         ) : (
           <View style={styles.footerRow}>
@@ -292,7 +300,7 @@ export const OnboardMemberSheet: React.FC<{
                 loading={create.pending}
                 style={styles.flex}
               >
-                {create.pending ? 'Creating…' : `Create ${kind}`}
+                {create.pending ? 'Creating…' : self ? 'Create account' : `Create ${kind}`}
               </Button>
             )}
           </View>
@@ -302,7 +310,9 @@ export const OnboardMemberSheet: React.FC<{
       {done ? (
         <SuccessBanner
           message={
-            isRetailer
+            self
+              ? 'Account created — an admin will verify it. Sign in to check the status.'
+              : isRetailer
               ? `Retailer created successfully! They sign in with this email and password, then complete AEPS onboarding themselves from the AEPS page.`
               : `Distributor created successfully! They sign in with this email and password and can start onboarding retailers right away.`
           }
@@ -443,7 +453,7 @@ export const OnboardMemberSheet: React.FC<{
                 rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
                 onRightIconPress={() => setShowPassword(!showPassword)}
                 rightIconLabel={showPassword ? 'Hide' : 'Show'}
-                helperText="They can change it after signing in."
+                helperText={self ? 'You can change it after signing in.' : 'They can change it after signing in.'}
               />
               <ImageField label="Profile photo" value={profilePicture} onChange={setProfilePicture} />
 
@@ -463,10 +473,10 @@ export const OnboardMemberSheet: React.FC<{
                           if (p === 'icchhamati') setIsExistingMerchant(false);
                         }}
                       />
-                      <Text style={styles.providerHint}>They start on this provider. You can add the other one later from their page.</Text>
+                      {!self && <Text style={styles.providerHint}>They start on this provider. You can add the other one later from their page.</Text>}
                     </View>
                   )}
-                  {isPaysprint && (
+                  {isPaysprint && !self && (
                     <Toggle
                       label="Already a PaySprint merchant"
                       hint="Tick this to migrate them with their existing merchant ID instead of a new one."
@@ -474,6 +484,8 @@ export const OnboardMemberSheet: React.FC<{
                       onChange={setIsExistingMerchant}
                     />
                   )}
+                  {!self && (
+                  <>
                   <Input
                     label={isExistingMerchant ? 'Existing merchant ID' : 'Retailer ID (auto-generated)'}
                     value={merchantCode}
@@ -483,6 +495,8 @@ export const OnboardMemberSheet: React.FC<{
                     autoCapitalize="characters"
                   />
                   <Input label="Parent distributor" value={parentName} editable={false} disabled />
+                  </>
+                  )}
                 </>
               )}
             </>
@@ -571,7 +585,7 @@ export const OnboardMemberSheet: React.FC<{
                 leftIcon="phone-outline"
               />
 
-              {isRetailer && (
+              {isRetailer && !self && (
                 <>
                   <Text style={styles.sectionTitle}>Service packages</Text>
                   <Text style={styles.sectionHint}>

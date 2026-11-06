@@ -21,6 +21,7 @@ import { TopGlow } from '@/components/ui/TopGlow';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import api from '@/services/api';
 import { BrandMark } from '@/components/ui/BrandMark';
+import { OnboardMemberSheet } from '@/components/network/OnboardMemberSheet';
 
 const OTP_LENGTH = 6;
 const FORM_MAX_WIDTH = 440;
@@ -114,6 +115,7 @@ export const LoginScreen: React.FC = () => {
   const [focus, setFocus] = useState<'id' | 'password' | null>(null);
 
   // Forgot password: identifier -> emailed code -> new password.
+  const [signupOpen, setSignupOpen] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotId, setForgotId] = useState('');
   const [forgotEmail, setForgotEmail] = useState('');
@@ -409,12 +411,20 @@ export const LoginScreen: React.FC = () => {
               Login
             </Button>
 
+            <Pressable onPress={() => setSignupOpen(true)} style={styles.signup} hitSlop={{ top: 8, bottom: 8 }} accessibilityRole="button">
+              <Text style={styles.trustText}>
+                New retailer? <Text style={styles.forgotText}>Create an account</Text>
+              </Text>
+            </Pressable>
+
             <View style={styles.trust}>
               <Ionicons name="shield-checkmark-outline" size={16} color={colors.mutedForeground} />
               <Text style={styles.trustText}>Secured with 256-bit encryption</Text>
             </View>
         </View>
       </ScrollView>
+
+      <OnboardMemberSheet visible={signupOpen} kind="self" onClose={() => setSignupOpen(false)} onCreated={() => {}} />
 
       <Sheet
         visible={forgotOpen}
@@ -517,6 +527,7 @@ const styles = themed((c) => ({
   trust: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: space.xl },
   trustText: { fontSize: t.caption, color: c.mutedForeground },
   forgotForm: { gap: 16 },
+  signup: { alignSelf: 'center', marginTop: space.lg, minHeight: 32, justifyContent: 'center' },
   // OTP step
   topbar: { paddingTop: space.md, paddingBottom: space.md, paddingHorizontal: space.lg, flexDirection: 'row' },
   otpPad: { paddingHorizontal: space.lg, paddingTop: space.lg },
