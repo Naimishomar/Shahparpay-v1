@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, Share, TextInput, Pressable, Linking, Image } from 'react-native';
+import { View, Text, Share, Pressable, Linking, Image } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import QRCode from 'react-native-qrcode-svg';
+import { useIsFocused } from '@react-navigation/native';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { TxnRow } from '@/components/ui/TransactionReport';
 import { Button } from '@/components/ui/Button';
@@ -9,34 +10,40 @@ import { Input } from '@/components/ui/Input';
 import {
   Screen,
   EmptyState,
-  ErrorBanner,
   SectionTitle,
-  SuccessBanner,
+  StatusPill,
+  Toast,
   money,
   shortDate,
   SkeletonRows,
 } from '@/components/ui/Screen';
-import { useAsync, useAction } from '@/hooks/useAsync';
+import { useAsync } from '@/hooks/useAsync';
+import { useInterval } from '@/hooks';
 import api from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 
 /** The gateway refuses anything smaller: "Minimum amount is 200.00". */
 const MIN_ORDER_AMOUNT = 200;
+const QUICK_AMOUNTS = [200, 500, 1000, 2000, 5000];
 
 /** The gateway refuses an order with no email, though it documents it optional. */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+type ToastState = { message: string; tone: 'error' | 'success' | 'info' };
+type Notify = (message: string, tone?: ToastState['tone']) => void;
+
+const errorMessage = (e: any, fallback: string) => e?.response?.data?.message || fallback;
+
 /**
- * Collecting money from a customer.
+ * Collecting money from a customer. Mirrors the web portal's Collect page.
  *
  * A payment link is a one-off order the customer pays by UPI, card or
  * netbanking; the wallet is credited only once the gateway confirms it, which is
  * why nothing here trusts the customer saying they paid and every order is
  * checked against the gateway.
  *
- * The standing counter QR is issued here too. Its payments settle into the
- * platform's Icchhamati wallet and are credited to the retailer's QR wallet,
- * less Icchhamati's charge, from which the retailer moves them to Main.
+ * The standing counter QR is issued here too; its payments are credited to the
+ * Utility Wallet. The QR wallet card only lingers to empty an old balance.
  */
 export const CollectScreen: React.FC = () => {
   const [name, setName] = useState('');
@@ -44,55 +51,89 @@ export const CollectScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [amount, setAmount] = useState('');
   const [order, setOrder] = useState<any>(null);
-  const [notice, setNotice] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [toast, setToast] = useState<ToastState>({ message: '', tone: 'error' });
+  const notify: Notify = (message, tone = 'error') => setToast({ message, tone });
 
   const history = useAsync<any[]>(async () => (await api.getCollectionHistory()).data ?? [], []);
+  const rows = history.data ?? [];
 
-  const createOrder = useAction(async () => {
-    const res = await api.createCollectionOrder({
-      name: name.trim(),
-      mobile: mobile.trim(),
-      email: email.trim(),
-      amount: Number(amount),
+  // Silent refetch: no skeleton flash, and a failed poll keeps the old rows.
+  const fetchHistory = async () => {
+    try {
+      const res = await api.getCollectionHistory();
+      if (res.success) history.setData(res.data || []);
+    } catch {
+      /* keep what is on screen */
+    }
+  };
+
+  // Keep pending rows in sync while the screen is visible, but only while
+  // something is actually pending; settled history never changes.
+  const focused = useIsFocused();
+  const hasPending = rows.some((row) => row.status === 'PENDING');
+  useInterval(fetchHistory, focused && hasPending ? 20000 : null);
+
+  const verify = async (reference: string) => {
+    setVerifying(true);
+    try {
+      const res = await api.verifyCollectionOrder(reference);
+      const status = res.data?.status || 'PENDING';
+      if (status === 'SUCCESS') notify(res.message || 'Payment received', 'success');
+      else if (status === 'PENDING') notify(res.message || 'Payment not completed yet', 'info');
+      else notify(res.message || 'Payment failed');
+      setOrder((prev: any) => (prev && prev.transactionId === reference ? { ...prev, status } : prev));
+      fetchHistory();
+    } catch (e) {
+      notify(errorMessage(e, 'Could not verify the payment'));
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const createOrder = async () => {
+    const value = Number(amount);
+    if (!name.trim()) return notify("Enter the customer's name");
+    if (mobile.length !== 10) return notify('Enter a valid 10-digit mobile number');
+    if (!EMAIL_RE.test(email.trim())) return notify("Enter the customer's email address");
+    if (!(value >= MIN_ORDER_AMOUNT)) return notify(`The minimum payment amount is ₹${MIN_ORDER_AMOUNT}`);
+
+    setCreating(true);
+    try {
+      const res = await api.createCollectionOrder({
+        name: name.trim(),
+        mobile,
+        email: email.trim(),
+        amount: value,
+      });
+      if (res.success) {
+        setOrder({ ...res.data, status: 'PENDING' });
+        fetchHistory();
+      } else {
+        notify(res.message || 'Could not create the payment link');
+      }
+    } catch (e) {
+      notify(errorMessage(e, 'Could not create the payment link'));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // Brings an earlier link back into the request card, to share or check again.
+  const showOrder = (row: any) =>
+    setOrder({
+      transactionId: row.transactionId,
+      orderId: row.metadata?.orderId || row.transactionId,
+      paymentUrl: row.metadata?.paymentUrl,
+      amount: row.amount,
+      status: row.status,
     });
-    if (!res.success) throw new Error(res.message);
-    return res.data;
-  });
 
-  const verify = useAction(async (transactionId: string) => {
-    const res = await api.verifyCollectionOrder(transactionId);
-    // A customer who has not paid yet is not an error, so `success` being false
-    // on a pending order must not read as a failure.
-    return { status: res.data?.status ?? 'PENDING', message: res.message };
-  });
-
-  const orderValid =
-    name.trim().length > 2 &&
-    mobile.length === 10 &&
-    EMAIL_RE.test(email.trim()) &&
-    Number(amount) >= MIN_ORDER_AMOUNT;
-
-  const onCheck = async (transactionId: string) => {
-    const res = await verify.run(transactionId);
-    if (!res) return;
-    setNotice(res.message || `Payment ${res.status.toLowerCase()}`);
-    setOrder((prev: any) =>
-      prev && prev.transactionId === transactionId ? { ...prev, status: res.status } : prev
-    );
-    history.reload();
-  };
-
-  const reset = () => {
-    setOrder(null);
-    setAmount('');
-    setNotice('');
-  };
-
-  const initials = (order?.name || 'C')
-    .split(' ')
-    .slice(0, 2)
-    .map((part: string) => part.charAt(0).toUpperCase())
-    .join('');
+  const collected = rows
+    .filter((r) => r.status === 'SUCCESS')
+    .reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  const pendingCount = rows.filter((r) => r.status === 'PENDING').length;
 
   return (
     <Screen
@@ -100,212 +141,169 @@ export const CollectScreen: React.FC = () => {
       onRefresh={history.refresh}
       error={history.error}
       onRetry={history.reload}
+      overlay={<Toast message={toast.message} tone={toast.tone} onHide={() => setToast((s) => ({ ...s, message: '' }))} />}
     >
-      {!order ? (
-        <>
-          <View style={styles.entry}>
-            <Text style={styles.entryTitle}>Request a payment</Text>
-            <View style={styles.amountRow}>
-              <Text style={[styles.amountSymbol, !amount && styles.amountPlaceholder]}>₹</Text>
-              <TextInput
-                value={amount}
-                onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))}
-                keyboardType="decimal-pad"
-                placeholder="0"
-                placeholderTextColor={colors.borderStrong}
-                style={[styles.amountInput, { width: Math.max(1, amount.length) * 30 + 8 }]}
-                accessibilityLabel="Amount"
-                maxLength={9}
-              />
-            </View>
-            <Text
-              style={[styles.entryHint, !!amount && Number(amount) < MIN_ORDER_AMOUNT && styles.entryError]}
-            >
-              {amount && Number(amount) < MIN_ORDER_AMOUNT
-                ? `The minimum payment amount is ₹${MIN_ORDER_AMOUNT}`
-                : 'Customer pays by UPI, card or netbanking'}
-            </Text>
-          </View>
+      <Text style={styles.entryHint}>Send a payment link the customer can pay by UPI, card or netbanking.</Text>
+      <View style={styles.stats}>
+        <View style={[styles.card, styles.stat]}>
+          <Text style={styles.payeeMeta}>Collected</Text>
+          <Text style={styles.payeeAmount}>{money(collected)}</Text>
+        </View>
+        <View style={[styles.card, styles.stat]}>
+          <Text style={styles.payeeMeta}>Pending</Text>
+          <Text style={styles.payeeAmount}>{pendingCount}</Text>
+        </View>
+      </View>
 
-          <SectionTitle>Customer</SectionTitle>
-          <View style={[styles.card, styles.form]}>
-            <Input
-              label="Customer name"
-              required
-              value={name}
-              onChangeText={setName}
-              leftIcon="account-outline"
-            />
-            <Input
-              label="Customer mobile"
-              required
-              value={mobile}
-              onChangeText={(v) => setMobile(v.replace(/\D/g, '').slice(0, 10))}
-              keyboardType="number-pad"
-              placeholder="10-digit mobile number"
-              leftIcon="phone-outline"
-              autoComplete="tel"
-            />
-            <Input
-              label="Customer email"
-              required
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              leftIcon="email-outline"
-              error={email.trim() && !EMAIL_RE.test(email.trim()) ? 'Enter a valid email address' : undefined}
-            />
+      <SectionTitle>New Payment Request</SectionTitle>
+      <View style={[styles.card, styles.form]}>
+        <Input label="Customer Name" value={name} onChangeText={setName} placeholder="Full name" leftIcon="account-outline" />
+        <Input
+          label="Customer Mobile"
+          value={mobile}
+          onChangeText={(v) => setMobile(v.replace(/\D/g, '').slice(0, 10))}
+          keyboardType="number-pad"
+          placeholder="10-digit mobile"
+          leftIcon="phone-outline"
+          autoComplete="tel"
+        />
+        <Input
+          label="Customer Email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          placeholder="name@example.com"
+          leftIcon="email-outline"
+        />
+        <View>
+          <Input
+            label="Amount"
+            value={amount}
+            onChangeText={(v) => setAmount(v.replace(/\D/g, ''))}
+            keyboardType="number-pad"
+            placeholder={`Minimum ₹${MIN_ORDER_AMOUNT}`}
+            leftIcon="currency-inr"
+          />
+          <View style={styles.quickRow}>
+            {QUICK_AMOUNTS.map((preset) => {
+              const on = amount === String(preset);
+              return (
+                <Pressable
+                  key={preset}
+                  onPress={() => setAmount(String(preset))}
+                  style={({ pressed }) => [styles.quickChip, on && styles.quickChipOn, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                >
+                  <Text style={[styles.quickText, on && styles.quickTextOn]}>₹{preset.toLocaleString('en-IN')}</Text>
+                </Pressable>
+              );
+            })}
           </View>
-          {!!createOrder.error && <ErrorBanner message={createOrder.error} />}
-          <Button
-            onPress={async () => {
-              setNotice('');
-              const data = await createOrder.run();
-              if (data) {
-                setOrder({ ...data, name: name.trim(), status: 'PENDING' });
-                history.reload();
-              }
-            }}
-            loading={createOrder.pending}
-            disabled={!orderValid}
-            fullWidth
-          >
-            Create payment link
-          </Button>
-        </>
-      ) : (
-        <>
-          {/* BHIM's profile QR: the link as a white code on a dark card, the
-              payee row under it, and Open | Share split across the bottom. */}
-          <View style={styles.qrCard}>
-            {!!order.paymentUrl && (
-              <View style={styles.qrFrame}>
-                {/* White in both themes: UPI apps need dark-on-light to read it. */}
-                <QRCode value={String(order.paymentUrl)} size={220} color="#000" backgroundColor="#fff" />
-              </View>
-            )}
-            <Text style={styles.link} selectable numberOfLines={2}>
-              {order.paymentUrl}
-            </Text>
-            <View style={styles.payeeRow}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{initials}</Text>
-              </View>
-              <View style={styles.payeeText}>
-                <Text style={styles.payee} numberOfLines={1}>
-                  {order.name}
-                </Text>
-                <Text style={styles.payeeMeta} numberOfLines={1}>
-                  Order {order.orderId}
-                </Text>
-              </View>
-              <View style={styles.payeeRight}>
-                <Text style={styles.payeeAmount}>{money(order.amount)}</Text>
-                {/* Pending is the strip below; only a settled order needs its status. */}
-                {order.status !== 'PENDING' && (
-                  <Text
-                    style={[
-                      styles.payeeStatus,
-                      { color: order.status === 'SUCCESS' ? colors.success : order.status === 'FAILED' ? colors.destructive : colors.warning },
-                    ]}
-                  >
-                    {String(order.status).charAt(0) + String(order.status).slice(1).toLowerCase()}
-                  </Text>
-                )}
-              </View>
-            </View>
-            <View style={styles.split}>
-              <Pressable
-                onPress={() => Linking.openURL(order.paymentUrl).catch(() => {})}
-                style={({ pressed }) => [styles.splitAction, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel="Open link"
-              >
-                <Ionicons name="open-outline" size={20} color={colors.foreground} />
-                <Text style={styles.splitText}>Open link</Text>
-              </Pressable>
-              <View style={styles.splitRule} />
-              <Pressable
-                onPress={() =>
-                  Share.share({
-                    message: `Pay ₹${order.amount} here: ${order.paymentUrl}`,
-                  })
-                }
-                style={({ pressed }) => [styles.splitAction, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel="Send link"
-              >
-                <Ionicons name="share-outline" size={20} color={colors.foreground} />
-                <Text style={styles.splitText}>Send link</Text>
-              </Pressable>
-            </View>
-          </View>
+        </View>
+        <Button icon="link-variant" onPress={createOrder} loading={creating} fullWidth>
+          Create Payment Link
+        </Button>
+      </View>
 
-          {order.status === 'PENDING' && (
-            <View style={styles.waiting} accessibilityRole="text">
-              <Ionicons name="time-outline" size={22} color={colors.mutedForeground} />
-              <View style={styles.waitingText}>
-                <Text style={styles.waitingTitle}>Waiting for payment</Text>
-                {/* This screen does not poll: say so rather than promise it updates. */}
-                <Text style={styles.waitingHint}>Check the status once the customer has paid</Text>
-              </View>
+      {order ? (
+        <View style={styles.qrCard}>
+          {!!order.paymentUrl && (
+            <View style={styles.qrFrame}>
+              {/* White in both themes: UPI apps need dark-on-light to read it. */}
+              <QRCode value={String(order.paymentUrl)} size={220} color="#000" backgroundColor="#fff" />
             </View>
           )}
-          {!!verify.error && <ErrorBanner message={verify.error} />}
-          {!!notice && <SuccessBanner message={notice} />}
-
-          <Button
-            onPress={() => onCheck(order.transactionId)}
-            loading={verify.pending}
-            fullWidth
-          >
-            Check payment status
-          </Button>
-          <Button variant="outline" onPress={reset} fullWidth>
-            New amount
-          </Button>
-          <Text style={styles.footnote}>
-            Your wallet is credited only once the gateway confirms the payment.
-          </Text>
-        </>
-      )}
-
-      <CounterQr onMoved={history.reload} />
-
-      <SectionTitle>Recent collections</SectionTitle>
-      {history.loading ? <SkeletonRows count={3} /> : history.data?.length ? (
-        <View style={styles.listCard}>
-          {history.data.slice(0, 20).map((txn: any, index: number, list: any[]) => (
-            <View key={txn.transactionId}>
-              <TxnRow
-                icon={txn.metadata?.collectionChannel === 'QR' ? 'qrcode' : 'link-variant'}
-                title={txn.metadata?.payerName || txn.metadata?.remitterName || (txn.metadata?.collectionChannel === 'QR' ? 'QR/UPI Transaction' : 'Payment link')}
-                subtitle={txn.transactionId}
-                date={shortDate(txn.createdAt)}
-                amount={`${txn.status === 'SUCCESS' ? '+ ' : ''}${money(txn.amount)}`}
-                credit={txn.status === 'SUCCESS'}
-                failed={txn.status === 'FAILED'}
-                status={txn.status}
-                last={txn.status === 'PENDING' || index === list.length - 1}
-              />
-              {txn.status === 'PENDING' && (
-                <View style={[styles.recheck, index === list.length - 1 && styles.recheckLast]}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon="refresh"
-                    onPress={() => onCheck(txn.transactionId)}
-                  >
-                    Check status
-                  </Button>
-                </View>
-              )}
+          <View style={styles.payeeRow}>
+            <View style={styles.payeeText}>
+              <Text style={styles.payeeAmount}>{money(order.amount)}</Text>
+              <Text style={styles.payeeMeta} numberOfLines={1}>
+                Order {order.orderId}
+              </Text>
             </View>
-          ))}
+            <StatusPill status={order.status} />
+          </View>
+          <View style={styles.split}>
+            <Pressable
+              onPress={() => Linking.openURL(order.paymentUrl).catch(() => {})}
+              style={({ pressed }) => [styles.splitAction, pressed && styles.pressed]}
+              accessibilityRole="button"
+            >
+              <Ionicons name="open-outline" size={20} color={colors.foreground} />
+              <Text style={styles.splitText}>Open</Text>
+            </Pressable>
+            <View style={styles.splitRule} />
+            {/* The web's "Copy link"; the native share sheet also offers Copy. */}
+            <Pressable
+              onPress={() => Share.share({ message: order.paymentUrl })}
+              style={({ pressed }) => [styles.splitAction, pressed && styles.pressed]}
+              accessibilityRole="button"
+            >
+              <Ionicons name="share-outline" size={20} color={colors.foreground} />
+              <Text style={styles.splitText}>Share</Text>
+            </Pressable>
+            <View style={styles.splitRule} />
+            <Pressable
+              onPress={() => verify(order.transactionId)}
+              disabled={verifying}
+              style={({ pressed }) => [styles.splitAction, (pressed || verifying) && styles.pressed]}
+              accessibilityRole="button"
+            >
+              <Ionicons name="refresh" size={20} color={colors.foreground} />
+              <Text style={styles.splitText}>Status</Text>
+            </Pressable>
+          </View>
+          <Text style={[styles.footnote, styles.qrCardFootnote]}>Credited only once the gateway confirms it.</Text>
         </View>
       ) : (
-        <EmptyState icon="link-variant-off" title="No payment requests yet" />
+        <EmptyState icon="qrcode" title="No active request" />
+      )}
+
+      <CounterQr notify={notify} />
+
+      <QrWallet notify={notify} qrCredits={rows.filter((r) => r.metadata?.collectionChannel === 'QR').length} />
+
+      <SectionTitle
+        action={
+          <Button variant="ghost" size="sm" icon="refresh" onPress={fetchHistory}>
+            Refresh
+          </Button>
+        }
+      >
+        Recent Collections
+      </SectionTitle>
+      {history.loading ? <SkeletonRows count={3} /> : rows.length ? (
+        <View style={styles.listCard}>
+          {rows.map((txn: any, index: number, list: any[]) => {
+            const isQr = txn.metadata?.collectionChannel === 'QR';
+            return (
+              <View key={txn.transactionId}>
+                <TxnRow
+                  icon={isQr ? 'qrcode' : 'link-variant'}
+                  title={txn.metadata?.payerName || txn.metadata?.remitterName || '—'}
+                  subtitle={isQr ? 'QR' : 'Link'}
+                  date={shortDate(txn.createdAt)}
+                  amount={money(txn.amount)}
+                  credit={txn.status === 'SUCCESS'}
+                  failed={txn.status === 'FAILED'}
+                  status={txn.status}
+                  last={txn.status === 'PENDING' || index === list.length - 1}
+                  onPress={txn.metadata?.paymentUrl ? () => showOrder(txn) : undefined}
+                />
+                {txn.status === 'PENDING' && (
+                  <View style={[styles.recheck, index === list.length - 1 && styles.recheckLast]}>
+                    <Button variant="ghost" size="sm" icon="refresh" onPress={() => verify(txn.transactionId)}>
+                      Check
+                    </Button>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </View>
+      ) : (
+        <EmptyState icon="inbox-outline" title="No payment requests yet." />
       )}
     </Screen>
   );
@@ -313,41 +311,45 @@ export const CollectScreen: React.FC = () => {
 
 const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 
-/** The retailer's standing counter QR, and the QR wallet its payments land in. */
-const CounterQr: React.FC<{ onMoved: () => void }> = ({ onMoved }) => {
+/** The retailer's standing counter QR. */
+const CounterQr: React.FC<{ notify: Notify }> = ({ notify }) => {
   const { user } = useAuth();
   const qr = useAsync<any>(async () => (await api.getCollectionQr()).data ?? null, []);
-  const balance = useAsync<number>(async () => Number((await api.getWalletBalance()).data?.qrBalance) || 0, []);
   const [holder, setHolder] = useState(user?.name || '');
   const [account, setAccount] = useState('');
   const [ifsc, setIfsc] = useState('');
-  const [amount, setAmount] = useState('');
-  const [pin, setPin] = useState('');
-  const [notice, setNotice] = useState('');
+  const [generating, setGenerating] = useState(false);
 
-  const generate = useAction(async () => {
-    const res = await api.generateCollectionQr({ name: holder.trim(), account_number: account, account_ifsc: ifsc });
-    if (!res.success) throw new Error(res.message);
-    qr.reload();
-  });
+  const generate = async () => {
+    if (!holder.trim() || !account || !IFSC_RE.test(ifsc)) {
+      return notify('Enter the account holder name, account number and a valid IFSC');
+    }
+    setGenerating(true);
+    try {
+      const res = await api.generateCollectionQr({ name: holder, account_number: account, account_ifsc: ifsc });
+      if (res.success) {
+        qr.setData(res.data);
+        notify(res.message || 'QR code generated', 'success');
+      } else notify(res.message || 'Could not generate the QR code');
+    } catch (e) {
+      notify(errorMessage(e, 'Could not generate the QR code'));
+    } finally {
+      setGenerating(false);
+    }
+  };
 
-  const move = useAction(async () => {
-    const res = await api.transferQrToMain({ amount: Number(amount), pin });
-    if (!res.success) throw new Error(res.message);
-    setAmount('');
-    setPin('');
-    setNotice(res.message || 'Moved to your Utility Wallet');
-    balance.reload();
-    onMoved();
-  });
-
-  const qrBalance = balance.data ?? 0;
   const code = qr.data;
+  const upiUri = code?.upiHandle
+    ? `upi://pay?pa=${encodeURIComponent(code.upiHandle)}${code.name ? `&pn=${encodeURIComponent(code.name)}` : ''}&cu=INR`
+    : '';
 
   return (
     <>
       <SectionTitle>QR/UPI Transaction</SectionTitle>
       <View style={[styles.card, styles.form]}>
+        <Text style={styles.payeeMeta}>
+          A standing UPI QR to print for your counter. Every payment is credited to your Utility Wallet automatically.
+        </Text>
         {qr.loading ? (
           <SkeletonRows count={2} />
         ) : code ? (
@@ -356,23 +358,31 @@ const CounterQr: React.FC<{ onMoved: () => void }> = ({ onMoved }) => {
               <View style={styles.qrFrame}>
                 <Image source={{ uri: code.qrImage }} style={styles.qrImage} accessibilityLabel="Your UPI QR code" />
               </View>
-            ) : !!code.upiHandle && (
+            ) : !!upiUri && (
               // QRs generated before the provider's image was kept: draw it from the UPI handle.
               <View style={styles.qrFrame} accessibilityLabel="Your UPI QR code">
-                <QRCode value={`upi://pay?pa=${encodeURIComponent(code.upiHandle)}&cu=INR`} size={220} />
+                <QRCode value={upiUri} size={220} />
               </View>
             )}
             {!!code.upiHandle && <Text style={styles.payee} selectable>{code.upiHandle}</Text>}
             <Text style={styles.payeeMeta}>Virtual account {code.virtualAccountId}</Text>
-            <Text style={styles.footnote}>Print this for your counter. Every payment is credited to your Utility Wallet automatically.</Text>
+            {/* ponytail: opens the provider's file to save; a handle-only QR has no file, so no download there. */}
+            {!!code.qrImage && (
+              <Button variant="outline" icon="download" onPress={() => Linking.openURL(code.qrImage).catch(() => {})} fullWidth>
+                Download QR
+              </Button>
+            )}
+            {!!code.qrPdf && (
+              <Button variant="outline" icon="download" onPress={() => Linking.openURL(code.qrPdf).catch(() => {})} fullWidth>
+                Printable PDF
+              </Button>
+            )}
           </View>
         ) : (
           <>
-            <Text style={styles.payeeMeta}>A standing UPI QR for your counter. Payments are credited to your Utility Wallet automatically.</Text>
-            <Input label="Account holder name" required value={holder} onChangeText={setHolder} leftIcon="account-outline" />
+            <Input label="Account holder name" value={holder} onChangeText={setHolder} leftIcon="account-outline" />
             <Input
               label="Account number"
-              required
               value={account}
               onChangeText={(v) => setAccount(v.replace(/\D/g, '').slice(0, 18))}
               keyboardType="number-pad"
@@ -380,65 +390,85 @@ const CounterQr: React.FC<{ onMoved: () => void }> = ({ onMoved }) => {
             />
             <Input
               label="IFSC"
-              required
               value={ifsc}
               onChangeText={(v) => setIfsc(v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11))}
               autoCapitalize="characters"
-              error={ifsc.length === 11 && !IFSC_RE.test(ifsc) ? 'Enter a valid IFSC' : undefined}
             />
-            {!!generate.error && <ErrorBanner message={generate.error} />}
-            <Button
-              icon="qrcode"
-              onPress={() => generate.run()}
-              loading={generate.pending}
-              disabled={holder.trim().length < 3 || account.length < 6 || !IFSC_RE.test(ifsc)}
-              fullWidth
-            >
+            <Button icon="qrcode" onPress={generate} loading={generating} fullWidth>
               Generate QR
             </Button>
           </>
         )}
       </View>
+    </>
+  );
+};
 
-      {/* QR payments now credit Utility directly; this only empties an old QR balance. */}
-      {qrBalance > 0 && (
-        <>
-          <SectionTitle>QR wallet</SectionTitle>
-          <View style={[styles.card, styles.form]}>
-            <View>
-              <Text style={styles.payeeAmount}>{money(qrBalance)}</Text>
-              <Text style={styles.payeeMeta}>QR/UPI money from before payments went straight to your Utility Wallet.</Text>
-            </View>
-            <Input
-              label="Amount"
-              value={amount}
-              onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))}
-              keyboardType="decimal-pad"
-              leftIcon="currency-inr"
-              error={Number(amount) > qrBalance ? 'More than your QR wallet balance' : undefined}
-            />
-            <Input
-              label="Wallet PIN"
-              value={pin}
-              onChangeText={(v) => setPin(v.replace(/\D/g, '').slice(0, 4))}
-              keyboardType="number-pad"
-              secureTextEntry
-              leftIcon="lock-outline"
-            />
-            {!!move.error && <ErrorBanner message={move.error} />}
-            {!!notice && <SuccessBanner message={notice} />}
-            <Button
-              icon="bank-transfer-in"
-              onPress={() => { setNotice(''); move.run(); }}
-              loading={move.pending}
-              disabled={!(Number(amount) > 0) || Number(amount) > qrBalance || pin.length !== 4}
-              fullWidth
-            >
-              Move to Utility Wallet
-            </Button>
-          </View>
-        </>
-      )}
+/** The legacy QR wallet balance, and the move out of it into Utility. */
+const QrWallet: React.FC<{ notify: Notify; qrCredits: number }> = ({ notify, qrCredits }) => {
+  // A QR payment arrives by webhook and shows up in the history; the balance follows it.
+  const balance = useAsync<number>(async () => Number((await api.getWalletBalance()).data?.qrBalance) || 0, [qrCredits]);
+  const [amount, setAmount] = useState('');
+  const [pin, setPin] = useState('');
+  const [moving, setMoving] = useState(false);
+  const qrBalance = balance.data ?? 0;
+
+  const moveToUtility = async () => {
+    const value = Number(amount);
+    if (!(value > 0)) return notify('Enter an amount');
+    if (value > qrBalance) return notify('That is more than your QR wallet balance');
+    if (!/^\d{4}$/.test(pin)) return notify('Enter your 4-digit wallet PIN');
+    setMoving(true);
+    try {
+      const res = await api.transferQrToMain({ amount: value, pin });
+      if (res.success) {
+        notify(res.message || 'Moved to your Utility Wallet', 'success');
+        setAmount('');
+        setPin('');
+        balance.reload();
+      } else notify(res.message || 'Transfer failed');
+    } catch (e) {
+      notify(errorMessage(e, 'Transfer failed'));
+    } finally {
+      setMoving(false);
+    }
+  };
+
+  // QR payments now credit Utility directly; this only empties an old QR balance.
+  if (qrBalance <= 0) return null;
+
+  return (
+    <>
+      <SectionTitle>QR wallet</SectionTitle>
+      <View style={[styles.card, styles.form]}>
+        <View>
+          <Text style={styles.payeeAmount}>{money(qrBalance)}</Text>
+          <Text style={styles.payeeMeta}>QR/UPI money from before payments went straight to your Utility Wallet.</Text>
+        </View>
+        <View>
+          <Input
+            label="Amount"
+            value={amount}
+            onChangeText={(v) => setAmount(v.replace(/[^\d.]/g, ''))}
+            keyboardType="decimal-pad"
+            leftIcon="currency-inr"
+          />
+          <Pressable onPress={() => setAmount(String(qrBalance))} hitSlop={8} accessibilityRole="button">
+            <Text style={styles.fullBalance}>Use full balance</Text>
+          </Pressable>
+        </View>
+        <Input
+          label="Wallet PIN"
+          value={pin}
+          onChangeText={(v) => setPin(v.replace(/\D/g, '').slice(0, 4))}
+          keyboardType="number-pad"
+          secureTextEntry
+          leftIcon="lock-outline"
+        />
+        <Button icon="bank-transfer-in" onPress={moveToUtility} loading={moving} fullWidth>
+          Move to Utility Wallet
+        </Button>
+      </View>
     </>
   );
 };
@@ -446,22 +476,23 @@ const CounterQr: React.FC<{ onMoved: () => void }> = ({ onMoved }) => {
 const styles = themed((c) => ({
   counterQr: { alignItems: 'center', gap: space.sm },
   qrImage: { width: 220, height: 220 },
-  entry: { alignItems: 'center', paddingTop: space.lg, paddingBottom: space.sm, gap: space.md },
-  entryTitle: { fontSize: t.bodyLg, fontWeight: '500', color: c.foreground },
-  amountRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: space.sm },
-  amountSymbol: { fontSize: 44, fontWeight: '300', color: c.foreground, marginRight: 6 },
-  amountPlaceholder: { color: c.borderStrong },
-  amountInput: {
-    fontSize: 52,
-    fontWeight: '300',
-    color: c.foreground,
-    textAlign: 'center',
-    padding: 0,
-    fontVariant: ['tabular-nums'],
-    outlineStyle: 'none',
-  } as any,
-  entryHint: { fontSize: t.small, color: c.mutedForeground, textAlign: 'center' },
-  entryError: { color: c.destructive },
+  entryHint: { fontSize: t.small, color: c.mutedForeground },
+  stats: { flexDirection: 'row', gap: space.md },
+  stat: { flex: 1, gap: 2 },
+  quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.sm },
+  quickChip: {
+    minHeight: 36,
+    justifyContent: 'center',
+    paddingHorizontal: space.md,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: c.borderStrong,
+  },
+  quickChipOn: { backgroundColor: c.surfaceAlt, borderColor: c.foreground },
+  quickText: { fontSize: t.small, color: c.mutedForeground },
+  quickTextOn: { color: c.foreground, fontWeight: '500' },
+  fullBalance: { marginTop: space.sm, fontSize: t.small, fontWeight: '500', color: c.mutedForeground },
+  qrCardFootnote: { paddingBottom: space.lg },
   card: {
     backgroundColor: c.card,
     borderRadius: radius.lg,
@@ -481,23 +512,11 @@ const styles = themed((c) => ({
     alignItems: 'center',
   },
   qrFrame: { backgroundColor: '#fff', padding: 12, borderRadius: radius.sm },
-  link: { marginTop: space.md, fontSize: t.caption, color: c.mutedForeground, textAlign: 'center' },
   payeeRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, alignSelf: 'stretch', paddingVertical: space.lg },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: c.surfaceAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { fontSize: t.body, fontWeight: '500', color: c.foreground },
   payeeText: { flex: 1, minWidth: 0, gap: 2 },
   payee: { fontSize: t.body + 1, fontWeight: '500', color: c.foreground },
   payeeMeta: { fontSize: t.small, color: c.mutedForeground },
-  payeeRight: { alignItems: 'flex-end', gap: 2 },
   payeeAmount: { fontSize: t.bodyLg, fontWeight: '500', color: c.foreground, fontVariant: ['tabular-nums'] },
-  payeeStatus: { fontSize: t.caption, fontWeight: '500' },
   split: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -515,19 +534,6 @@ const styles = themed((c) => ({
   },
   splitText: { fontSize: t.body + 1, color: c.foreground },
   splitRule: { width: 1, height: 36, backgroundColor: c.border },
-  waiting: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    padding: space.lg,
-    borderRadius: radius.lg,
-    backgroundColor: c.card,
-    borderWidth: 1,
-    borderColor: c.border,
-  },
-  waitingText: { flex: 1, gap: 2 },
-  waitingTitle: { fontSize: t.body, fontWeight: '500', color: c.foreground },
-  waitingHint: { fontSize: t.small, color: c.mutedForeground },
   footnote: { fontSize: t.caption, color: c.mutedForeground, textAlign: 'center', lineHeight: 18 },
   listCard: {
     backgroundColor: c.card,

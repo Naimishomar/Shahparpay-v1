@@ -181,16 +181,18 @@ export interface ReportEntry {
 }
 
 export const REPORT_ITEMS: ReportEntry[] = [
-  { name: 'Wallet Ledger', route: 'WalletLedgerReport', icon: 'notebook-outline', hint: 'Every credit and debit' },
-  { name: 'AEPS Report', route: 'AepsReport', icon: 'fingerprint', hint: 'Withdrawals and enquiries', type: 'AEPS' },
-  { name: 'DMT Report', route: 'DmtReport', icon: 'bank-transfer', hint: 'Money transfers', type: 'DMT' },
-  { name: 'Payout Report', route: 'PayoutReport', icon: 'cash-fast', hint: 'Settlements and payouts' },
-  { name: 'Recharge Report', route: 'RechargeReport', icon: 'cellphone', hint: 'Mobile and DTH recharges', type: 'RECHARGE' },
-  { name: 'BBPS Report', route: 'BbpsReport', icon: 'receipt', hint: 'Utility bill payments', type: 'BILL_PAYMENT' },
-  { name: 'UPI Report', route: 'UpiReport', icon: 'qrcode', hint: 'UPI collections', type: 'WALLET_TOPUP' },
-  { name: 'PAN Report', route: 'PanReport', icon: 'card-account-details-outline', hint: 'PAN applications' },
-  { name: 'ITR Report', route: 'ItrReport', icon: 'file-document-outline', hint: 'Filings and charges' },
-  { name: 'Lead Report', route: 'LeadReport', icon: 'account-plus-outline', hint: 'Referred customers' },
+  // Same names and order as the web sidebar's Reports group (app-sidebar.tsx).
+  { name: 'Ledgar', route: 'WalletLedgerReport', icon: 'notebook-outline', hint: 'Every credit and debit' },
+  { name: 'All Reports', route: 'LedgerReport', icon: 'file-document-multiple-outline', hint: 'View your comprehensive transaction history and balances.' },
+  { name: 'AEPS Reports', route: 'AepsReport', icon: 'fingerprint', hint: 'View your Aadhaar Enabled Payment System transactions.', type: 'AEPS' },
+  { name: 'DMT Reports', route: 'DmtReport', icon: 'bank-transfer', hint: 'View your Domestic Money Transfer transactions.', type: 'DMT' },
+  { name: 'Payout Reports', route: 'PayoutReport', icon: 'cash-fast', hint: 'View your Direct Payout settlements and transfers.', type: 'AEPS_SETTLEMENT' },
+  { name: 'UPI Reports', route: 'UpiReport', icon: 'qrcode', hint: 'View your UPI Payments history.', type: 'UPI' },
+  { name: 'PAN Reports', route: 'PanReport', icon: 'card-account-details-outline', hint: 'View all PAN Card service transactions (Biometric, Standard & eSevaTech).' },
+  { name: 'ITR Reports', route: 'ItrReport', icon: 'file-document-outline', hint: 'View all Income Tax Return filings and transactions.' },
+  { name: 'Lead Generation Reports', route: 'LeadReport', icon: 'account-plus-outline', hint: 'View all generated leads and track their application status.' },
+  { name: 'Recharge Reports', route: 'RechargeReport', icon: 'cellphone', hint: 'Mobile prepaid and DTH recharge transactions and retailer commissions.', type: 'RECHARGE' },
+  { name: 'BBPS Reports', route: 'BbpsReport', icon: 'receipt', hint: 'Bill payment transactions, statuses, amounts, and retailer commissions.', type: 'BILL_PAYMENT' },
 ];
 
 /**
@@ -291,6 +293,7 @@ export const API_ENDPOINTS = {
     beneficiaryFetch: '/api/dmt/beneficiary/fetch',
     beneficiaryAdd: '/api/dmt/beneficiary/add',
     beneficiaryOtp: '/api/dmt/beneficiary/otp',
+    beneficiaryDeleteOtp: '/api/dmt/beneficiary/delete-otp',
     beneficiaryVerify: '/api/dmt/beneficiary/verify',
     beneficiaryDelete: '/api/dmt/beneficiary/delete',
     transfer: '/api/dmt/transfer',

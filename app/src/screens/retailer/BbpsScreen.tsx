@@ -7,13 +7,10 @@ import {
   Screen,
   Banner,
   SectionTitle,
-  money,
-  shortDate,
   SkeletonRows,
   SkeletonCard,
   SkeletonGrid,
 } from '@/components/ui/Screen';
-import { StatusText } from './RechargeScreen';
 import { useAsync } from '@/hooks/useAsync';
 import api from '@/services/api';
 
@@ -141,8 +138,6 @@ export const BbpsScreen: React.FC = () => {
       .sort((a: Category, b: Category) => Number(b.available) - Number(a.available));
   }, []);
 
-  const history = useAsync<any[]>(async () => (await api.getRechargeHistory()).data ?? [], []);
-  const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
 
   const items = categories.data ?? [];
   const groups = GROUP_ORDER.map((group) => ({
@@ -154,28 +149,28 @@ export const BbpsScreen: React.FC = () => {
     <Screen
       loading={categories.loading}
       skeleton={<View style={{ gap: 16 }}><SkeletonCard><SkeletonRows count={1} amount={false} /></SkeletonCard><SkeletonCard title><SkeletonGrid count={8} /></SkeletonCard><SkeletonCard title><SkeletonGrid count={4} /></SkeletonCard></View>}
-      refreshing={categories.refreshing || history.refreshing}
-      onRefresh={() => {
-        categories.refresh();
-        history.refresh();
-        balances.refresh();
-      }}
+      refreshing={categories.refreshing}
+      onRefresh={categories.refresh}
       error={categories.error}
       onRetry={categories.reload}
     >
-      {/* The wallet bills are paid from, as Home draws a wallet card. */}
+      {/* The website's hero: what this is, and how many services are live. */}
       <View style={styles.wallet}>
         <View style={styles.walletIcon}>
-          <Ionicons name="wallet-outline" size={22} color={colors.highlight} />
+          <Ionicons name="receipt-outline" size={22} color={colors.highlight} />
         </View>
         <View style={styles.flex}>
-          <Text style={styles.walletLabel}>Paid from Utility Wallet</Text>
           <Text style={styles.walletValue} numberOfLines={1}>
-            {money(balances.data?.mainBalance)}
+            Bill Payments
           </Text>
+          <Text style={styles.walletLabel}>Bharat Bill Payment System for instant bill payments.</Text>
         </View>
-        <Text style={styles.walletNote}>Earn commission{'\n'}on every bill</Text>
+        {!!items.length && (
+          <Text style={styles.walletNote}>{items.filter((i) => i.available).length} services live</Text>
+        )}
       </View>
+
+      <SectionTitle>Choose a category</SectionTitle>
 
       {!categories.loading && !categories.error && !items.length && (
         <Banner
@@ -223,30 +218,6 @@ export const BbpsScreen: React.FC = () => {
         </View>
       ))}
 
-      <SectionTitle>Recent payments</SectionTitle>
-      <View style={styles.list}>
-        {history.loading ? <SkeletonRows count={3} /> : history.data?.length ? (
-          history.data.slice(0, 20).map((txn: any, i: number, all: any[]) => (
-            <View key={txn._id || txn.transactionId} style={[styles.rowI, i === all.length - 1 && styles.rowLast]}>
-              <CategoryTile icon={categoryIcon(txn.metadata?.mode)} size={44} />
-              <View style={styles.flex}>
-                <Text style={styles.rowTitle} numberOfLines={1}>
-                  {txn.metadata?.caNumber || txn.transactionId}
-                </Text>
-                <Text style={styles.rowMeta} numberOfLines={1}>
-                  {[txn.metadata?.operatorName || txn.metadata?.mode, shortDate(txn.createdAt)].filter(Boolean).join(' · ')}
-                </Text>
-              </View>
-              <View style={styles.rowRight}>
-                <Text style={styles.rowAmount}>{money(txn.amount)}</Text>
-                <StatusText status={txn.status} />
-              </View>
-            </View>
-          ))
-        ) : (
-          <Text style={styles.empty}>No bill payments yet</Text>
-        )}
-      </View>
     </Screen>
   );
 };
@@ -288,21 +259,6 @@ const styles = themed((c) => ({
   labelOff: { color: c.mutedForeground },
   soon: { fontSize: t.micro, color: c.mutedForeground, marginTop: -4 },
 
-  list: { paddingHorizontal: space.lg, paddingVertical: space.xs, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, backgroundColor: c.card },
-  rowI: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    paddingVertical: space.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: c.border,
-  },
-  rowLast: { borderBottomWidth: 0 },
-  rowTitle: { fontSize: t.body, fontWeight: '500', color: c.foreground },
-  rowMeta: { fontSize: t.caption, color: c.mutedForeground, marginTop: 3 },
-  rowRight: { alignItems: 'flex-end', gap: 3 },
-  rowAmount: { fontSize: t.body, fontWeight: '500', color: c.foreground, fontVariant: ['tabular-nums'] },
-  empty: { fontSize: t.small, color: c.mutedForeground, paddingVertical: space.lg, textAlign: 'center' },
 }));
 
 export default BbpsScreen;

@@ -24,7 +24,6 @@ import { SelectField } from '@/components/ui/Input';
 import { TopGlow } from '@/components/ui/TopGlow';
 import {
   Screen,
-  Banner,
   ErrorBanner,
   SkeletonRows,
   Row,
@@ -33,9 +32,6 @@ import {
   Toast,
   money,
   shortDate,
-  Skeleton,
-  SkeletonCard,
-  SkeletonTitle,
 } from '@/components/ui/Screen';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
@@ -45,19 +41,14 @@ import { useTheme } from '@/context/ThemeContext';
 
 const TYPES = [
   { key: 'prepaid', label: 'Prepaid' },
-  { key: 'postpaid', label: 'Postpaid' },
   { key: 'dth', label: 'DTH' },
+  { key: 'history', label: 'History' },
 ];
 
 interface Operator {
   id: string | number;
   name: string;
   displayname?: string;
-}
-
-interface Circle {
-  id: string;
-  name: string;
 }
 
 /* ---------- primitives shared with the BBPS and DMT screens ---------- */
@@ -301,6 +292,8 @@ export interface PayReceipt {
   settled: boolean;
   heading: string;
   amount: string;
+  /** When it happened; defaults to now (a fresh payment). */
+  date?: string;
   rows: { label: string; value?: string | null; dashBefore?: boolean }[];
 }
 
@@ -336,7 +329,7 @@ export const DoneBody: React.FC<{ receipt: PayReceipt; onDone: () => void; share
           </Text>
           <Text style={[styles.succAmount, { color: ink }]}>{receipt.amount}</Text>
           <Text style={[styles.succDate, { color: ink }]}>
-            {new Date()
+            {new Date(receipt.date ?? Date.now())
               .toLocaleString('en-IN', {
                 day: 'numeric',
                 month: 'short',
@@ -387,116 +380,126 @@ export const DoneBody: React.FC<{ receipt: PayReceipt; onDone: () => void; share
 
 /** First "2 GB/day" / "500 MB" in a plan's text — the Data column of the card. */
 const dataOf = (plan: any) =>
-  String(plan?.desc || plan?.description || '').match(/\d+(\.\d+)?\s?(GB|MB)(\s?\/\s?day)?/i)?.[0] ?? '—';
+  String(plan?.description || '').match(/\d+(\.\d+)?\s?(GB|MB)(\s?\/\s?day)?/i)?.[0] ?? '—';
 
-const priceOf = (plan: any) => String(plan?.rs ?? plan?.amount ?? '');
 const rupee = (value: any) => money(value).replace(/\.00$/, '');
 
 const spaced = (n: string) => (n.length > 5 ? `${n.slice(0, 5)} ${n.slice(5)}` : n);
+
+const MOBILE = /^[6-9]\d{9}$/;
+
+/** The website's receipt status: accepted is not the same as recharged. */
+const receiptStatus = (res: any) => {
+  const d = res?.data || {};
+  if (res?.pending || String(d.status).toUpperCase() === 'PENDING') return 'PENDING';
+  return d.status === false || d.response_code === 0 ? 'FAILED' : 'SUCCESS';
+};
+
+/** Same rows as the website's Transaction Receipt. */
+const rechargeReceipt = (r: {
+  status: string;
+  amount: any;
+  number?: string;
+  operator?: string;
+  transactionId?: string;
+  operatorRef?: string;
+  date?: string;
+}): PayReceipt => {
+  const s = String(r.status || '').toUpperCase();
+  return {
+    settled: s === 'SUCCESS',
+    heading: s === 'PENDING' ? 'Recharge Pending' : s === 'FAILED' ? 'Recharge Failed' : 'Recharge Successful',
+    amount: rupee(r.amount),
+    date: r.date,
+    rows: [
+      { label: 'Status', value: s || 'N/A' },
+      { label: 'Number', value: r.number },
+      { label: 'Operator', value: r.operator },
+      { label: 'Transaction ID', value: r.transactionId, dashBefore: true },
+      { label: 'Operator Ref', value: r.operatorRef || 'N/A' },
+    ],
+  };
+};
 
 export const RechargeScreen: React.FC = () => {
   // Home's DTH shortcut opens straight onto the DTH tab.
   const route = useRoute<any>();
   const [type, setType] = useState<string>(route.params?.type ?? 'prepaid');
-  const [operator, setOperator] = useState<Operator | null>(null);
-  const [showOperators, setShowOperators] = useState(false);
-  const [operatorQuery, setOperatorQuery] = useState('');
-  // A prepaid recharge is routed by circle as well as operator, and the circle is
-  // a provider code rather than a name, so the list has to come from the provider.
-  const [circle, setCircle] = useState<Circle | null>(null);
-  const [planList, setPlanList] = useState<any[]>([]);
+
+  // Prepaid. The provider resolves operator and circle from the number during
+  // the plan lookup; they are kept for the recharge request, not typed in.
+  const [mobile, setMobile] = useState('');
+  const [resolvedOperator, setResolvedOperator] = useState('');
+  const [resolvedCircle, setResolvedCircle] = useState('');
   const [planMeta, setPlanMeta] = useState<any>(null);
+  const [planList, setPlanList] = useState<any[]>([]);
   // Which plan category tab is showing, and the plan search. Display only.
   const [planGroup, setPlanGroup] = useState('');
   const [planQuery, setPlanQuery] = useState('');
-  const [number, setNumber] = useState('');
-  const [amount, setAmount] = useState('');
+  const [prepaidAmount, setPrepaidAmount] = useState('');
+
+  // DTH.
+  const [dthNumber, setDthNumber] = useState('');
+  const [dthOperator, setDthOperator] = useState<Operator | null>(null);
+  const [showOperators, setShowOperators] = useState(false);
+  const [operatorQuery, setOperatorQuery] = useState('');
+  const [dthAmount, setDthAmount] = useState('');
+  const [dthDetails, setDthDetails] = useState<any>(null);
+
   const [pin, setPin] = useState('');
   const [step, setStep] = useState<'form' | 'pin'>('form');
   const [receipt, setReceipt] = useState<PayReceipt | null>(null);
 
-  // Re-fetches whenever the tab changes; the previous operator no longer applies,
-  // and neither do the plans that were fetched for it.
+  const isDth = type === 'dth';
+  const amount = isDth ? dthAmount : prepaidAmount;
+  const setAmount = isDth ? setDthAmount : setPrepaidAmount;
+  const number = isDth ? dthNumber.trim() : mobile;
+
+  // The website loads only the DTH list: prepaid has no operator to pick.
   const operators = useAsync<Operator[]>(async () => {
-    setOperator(null);
-    setPlanList([]);
-    setPlanMeta(null);
-    const res = await api.getRechargeOperators(type);
-    // A refused list is not an empty list. Swallowing the failure left the
-    // retailer staring at an empty dropdown with nothing to say whether the
-    // provider was down, the service was off, or the app was broken.
-    if (!res.success) throw new Error(res.message || 'Could not load operators.');
+    const res = await api.getRechargeOperators('dth');
+    // A refused list is not an empty list — say why.
+    if (!res.success) throw new Error(res.message || 'Could not load dth operators');
     return res.data ?? [];
-  }, [type]);
+  }, []);
 
   const history = useAsync<any[]>(async () => (await api.getRechargeHistory()).data ?? [], []);
 
-  const checkStatus = useAction(async (transactionId: string) => {
-    const res = await api.getRechargeStatus(transactionId);
-    if (!res.success) throw new Error(res.message);
-    return res;
-  });
-  const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
-
   const plans = useAction(async () => {
-    const res = await api.browseRechargePlans({ mobileNumber: number.trim() });
-    if (!res.success) throw new Error(res.message);
-    // Keep `meta` together with the grouped plans. The website uses this
-    // metadata to populate the operator, circle and logo after lookup.
-    return res;
+    const res = await api.browseRechargePlans({ mobileNumber: mobile });
+    return res?.success ? res : null;
   });
 
   const dthInfo = useAction(async () => {
-    const res = await api.getDthInfo({
-      dthNumber: number.trim(),
-      operator: String(operator?.id),
-    });
-    if (!res.success) throw new Error(res.message);
+    const res = await api.getDthInfo({ dthNumber, operator: String(dthOperator?.id) });
+    if (!res.success) return null;
     return Array.isArray(res.data) ? res.data[0] : res.data;
   });
 
   const recharge = useAction(async () => {
-    const res = await api.doRecharge({
-      [type === 'dth' ? 'dthNumber' : 'mobileNumber']: number.trim(),
-      operator: operator?.id,
-      circle: circle?.id,
-      amount: Number(amount),
-      pin,
-      type,
-    });
+    const res = await api.doRecharge(
+      isDth
+        ? { type, dthNumber: dthNumber.trim(), operator: dthOperator?.id, amount: dthAmount, pin }
+        : { type, mobileNumber: mobile, operator: resolvedOperator, circle: resolvedCircle, amount: prepaidAmount, pin }
+    );
     if (!res.success) throw new Error(res.message);
     return res;
   });
 
-  const [dthDetails, setDthDetails] = useState<any>(null);
-
   /**
-   * A rejected recharge is news, not a state the retailer is stuck in, so it
-   * shows as a toast and clears itself. The error is drained out of the action
-   * as it is shown, otherwise it would re-fire the toast on the next render.
+   * A rejected call is news, not a state the retailer is stuck in, so it shows
+   * as a toast and clears itself. The error is drained out of the action as it
+   * is shown, otherwise it would re-fire the toast on the next render.
    */
-  const [toast, setToast] = useState('');
-  const failures = [recharge, plans, dthInfo, checkStatus];
+  const [toast, setToast] = useState<{ message: string; tone?: 'error' | 'info' }>({ message: '' });
+  const say = (message: string, tone: 'error' | 'info' = 'error') => setToast({ message, tone });
+  const failures = [recharge, plans, dthInfo];
   useEffect(() => {
     const failed = failures.find((a) => a.error);
     if (!failed) return;
-    setToast(failed.error as string);
+    say(failed.error || 'Failed to connect to server');
     failed.setError(null);
-  }, [recharge.error, plans.error, dthInfo.error, checkStatus.error]);
-
-  const minLength = type === 'dth' ? 6 : 10;
-  const available = balances.data?.mainBalance ?? 0;
-  const overBalance = Number(amount) > available;
-  // Everything but the PIN, which the PIN step collects.
-  const ready =
-    !!operator &&
-    // Without a circle a prepaid recharge is routed to the wrong lane, so it is
-    // as required as the operator itself.
-    (type !== 'prepaid' || !!circle) &&
-    number.trim().length >= minLength &&
-    Number(amount) > 0 &&
-    !overBalance;
-  const valid = ready && pin.length === 4;
+  }, [recharge.error, plans.error, dthInfo.error]);
 
   const filteredOperators = useMemo(
     () =>
@@ -507,100 +510,99 @@ export const RechargeScreen: React.FC = () => {
   );
 
   const onBrowsePlans = async () => {
+    if (!MOBILE.test(mobile)) return say('Please enter a valid 10-digit mobile number.');
     const payload: any = await plans.run();
     if (!payload) return;
-
-    // The website displays the provider metadata returned alongside `data`.
-    // Keep the same response shape here so the retailer can verify that the
-    // number resolved to the expected operator and circle before paying.
     const meta = payload.meta || {};
-    setPlanMeta(meta);
-    if (meta.operator) {
-      setOperator({
-        id: String(meta.operator),
-        name: meta.operatorName || String(meta.operator),
-        displayname: meta.operatorName || String(meta.operator),
-      });
-    }
-    if (meta.circle) {
-      setCircle({ id: String(meta.circle), name: meta.circleName || String(meta.circle) });
-    }
+    setPlanMeta({
+      ...meta,
+      logo: meta.logo || payload.logo || payload.data?.logo || null,
+      operatorName: meta.operatorName || payload.operatorname || payload.data?.operatorname || null,
+      circleName: meta.circleName || payload.circalname || payload.data?.circalname || null,
+    });
+    setResolvedOperator(meta.operator ? String(meta.operator) : '');
+    setResolvedCircle(meta.circle ? String(meta.circle) : '');
 
-    const grouped = payload.data ?? payload;
-    const flat = Array.isArray(grouped)
-      ? grouped
-      : Object.entries(grouped).flatMap(([group, items]: any) =>
-          (Array.isArray(items) ? items : []).map((p: any) => ({ ...p, group }))
-        );
+    // `data` holds the plans by category (TOPUP, 3G/4G, ...).
+    const grouped = payload.data || {};
+    const flat: any[] = [];
+    Object.keys(grouped).forEach((category) => {
+      if (!Array.isArray(grouped[category])) return;
+      grouped[category].forEach((p: any) =>
+        flat.push({
+          category,
+          amount: p.rs || p.amount,
+          description: p.desc || p.description,
+          validity: p.validity,
+        })
+      );
+    });
     setPlanList(flat);
-    setPlanGroup(String(flat[0]?.group ?? ''));
-    // The first plan starts selected; it is only an amount until the retailer
-    // confirms with the PIN.
-    setAmount(flat[0] ? priceOf(flat[0]) : '');
+    setPlanGroup(String(flat[0]?.category ?? ''));
+    setPlanQuery('');
+    if (!flat.length) say('No active plans were returned. You can enter the recharge amount manually.', 'info');
   };
 
-  // The provider derives operator and circle from the number, so the lookup
-  // runs as soon as all ten digits are in.
-  useEffect(() => {
-    if (type === 'prepaid' && number.length === 10 && !planMeta && !plans.pending) onBrowsePlans();
-  }, [number, type]);
+  const onFetchDthInfo = async () => {
+    if (!dthNumber || !dthOperator) return say('Please enter DTH number and select operator first.');
+    const info = await dthInfo.run();
+    if (info) setDthDetails(info);
+  };
 
-  const planGroups = Array.from(new Set(planList.map((p: any) => String(p.group ?? '')).filter(Boolean)));
-  const pq = planQuery.trim().toLowerCase().replace(/[₹\s]/g, '');
-  // A search looks across every tab, as BHIM's does.
-  const shownPlans = pq
-    ? planList.filter((p: any) =>
-        [priceOf(p), p.desc, p.description, p.validity].some((v) =>
-          String(v ?? '').toLowerCase().replace(/\s/g, '').includes(pq)
-        )
-      )
-    : planGroup
-      ? planList.filter((p: any) => String(p.group ?? '') === planGroup)
-      : planList;
-  const selectedPlan = planList.find((p: any) => !!amount && priceOf(p) === amount);
-  // A retailer's own pick ("Change") wins over what the number was detected as.
-  const operatorName = String(
-    operator?.displayname || operator?.name || planMeta?.operatorName || planMeta?.operator || 'Unknown operator'
-  );
+  // The website's checks, in its words. The PIN is collected by the PIN step.
+  const onRechargePress = () => {
+    if (isDth) {
+      if (!dthNumber.trim() || !dthOperator || !dthAmount || Number(dthAmount) < 10) return say('Please fill all fields.');
+    } else {
+      if (!MOBILE.test(mobile) || !prepaidAmount) return say('Enter mobile number, amount and transaction PIN.');
+      if (!resolvedOperator || !resolvedCircle)
+        return say('Please browse plans first so the operator and circle can be detected.');
+    }
+    setStep('pin');
+  };
+
+  const operatorName = isDth
+    ? dthOperator?.displayname || dthOperator?.name || ''
+    : planMeta?.operatorName || resolvedOperator;
 
   const onRecharge = async () => {
     const res = await recharge.run();
-    if (res) {
-      // An operator can accept a recharge before confirming it, so the wording
-      // must not claim it has landed.
-      const settled = !res.pending;
-      setReceipt({
-        settled,
-        heading: settled ? `Recharged ${spaced(number)}` : 'Recharge submitted, awaiting operator',
-        amount: rupee(amount),
-        rows: [
-          { label: type === 'dth' ? 'Subscriber ID' : 'Mobile number', value: type === 'dth' ? number : spaced(number) },
-          { label: 'Operator', value: operator?.displayname || operator?.name },
-          { label: 'Circle', value: type === 'prepaid' ? circle?.name : null },
-          { label: 'Operator ref', value: res.data?.txnId || res.data?.operatorRef, dashBefore: true },
-          { label: 'Transaction ID', value: res.data?.transactionId, dashBefore: !(res.data?.txnId || res.data?.operatorRef) },
-          { label: 'Status', value: settled ? null : res.message },
-        ],
-      });
-      setAmount('');
-      setPin('');
-      setStep('form');
-      balances.reload();
-      history.reload();
+    if (!res) return;
+    const d = res.data || {};
+    setReceipt(
+      rechargeReceipt({
+        status: receiptStatus(res),
+        amount,
+        number,
+        operator: isDth ? dthOperator?.name || 'Unknown' : d.operatorname || d.operator || resolvedOperator,
+        transactionId: d.transactionId || d.ackno || d.refid || 'TXN' + Date.now(),
+        operatorRef: d.opr_txn_id || d.operatorid || d.operator_ref,
+      })
+    );
+    setPin('');
+    setStep('form');
+    if (isDth) {
+      setDthNumber('');
+      setDthAmount('');
+      setDthDetails(null);
+    } else {
+      setMobile('');
+      setPrepaidAmount('');
     }
+    history.reload();
   };
 
-  const toastNode = <Toast message={toast} onHide={() => setToast('')} />;
+  const toastNode = <Toast message={toast.message} tone={toast.tone} onHide={() => setToast({ message: '' })} />;
 
   if (step === 'pin') {
     return (
       <PinStep
-        payee={`Recharging ${type === 'dth' ? number : spaced(number)}`}
+        payee={`Recharging ${isDth ? number : spaced(number)}`}
         amount={Number(amount)}
-        detail={`${operator?.displayname || operator?.name || ''} · from Utility Wallet`}
+        detail={`${operatorName} · from Utility Wallet`}
         pin={pin}
         onPin={setPin}
-        onSubmit={() => valid && onRecharge()}
+        onSubmit={() => pin.length === 4 && onRecharge()}
         onClose={() => {
           setPin('');
           setStep('form');
@@ -611,48 +613,29 @@ export const RechargeScreen: React.FC = () => {
     );
   }
 
-  const operatorPicker = showOperators && (
-    <View style={styles.picker}>
-      <Field label="Search operator" value={operatorQuery} onChangeText={setOperatorQuery} autoCapitalize="none" />
-      {operators.loading ? (
-        <SkeletonRows count={5} amount={false} avatar={36} />
-      ) : (
-        <ScrollView style={styles.pickerList} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-          {filteredOperators.map((op) => (
-            <Pressable
-              key={String(op.id)}
-              onPress={() => {
-                setOperator(op);
-                setShowOperators(false);
-                setOperatorQuery('');
-                // Plans on screen belong to the operator being replaced.
-                setPlanList([]);
-              }}
-              style={({ pressed }) => [styles.pickerItem, pressed && styles.pickerItemPressed]}
-              accessibilityRole="button"
-            >
-              <Text style={styles.pickerText}>{op.displayname || op.name}</Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
-            </Pressable>
-          ))}
-          {!filteredOperators.length && <Text style={styles.pickerEmpty}>No operators in this category</Text>}
-        </ScrollView>
-      )}
-    </View>
-  );
-
   const hasPlans = type === 'prepaid' && planList.length > 0;
+  const pq = planQuery.trim().toLowerCase();
+  const planGroups = Array.from(new Set(planList.map((p: any) => String(p.category ?? '')).filter(Boolean)));
+  // The website's search: amount or validity, across every category.
+  const shownPlans = pq
+    ? planList.filter((p: any) =>
+        [p.amount, p.validity].some((v) => v && String(v).toLowerCase().includes(pq))
+      )
+    : planGroup
+      ? planList.filter((p: any) => String(p.category ?? '') === planGroup)
+      : planList;
+  const selectedPlan = planList.find((p: any) => !!amount && String(p.amount) === amount);
+  const rechargeLabel = Number(amount) > 0 ? `Recharge ${rupee(amount)}` : 'Recharge';
 
-  // BHIM keeps "Proceed to Pay" pinned under the plans.
-  const payBar = hasPlans && (
-    <View style={styles.payBar}>
-      {overBalance && <Text style={styles.payBarError}>Amount exceeds your Utility Wallet balance</Text>}
-      <Btn
-        label={Number(amount) > 0 ? `Proceed to Pay ${rupee(amount)}` : 'Proceed to Pay'}
-        onPress={() => setStep('pin')}
-        disabled={!ready}
-      />
-    </View>
+  const amountField = (
+    <Field
+      label="Amount"
+      prefix="₹"
+      value={amount}
+      onChangeText={(v) => setAmount(v.replace(/\D/g, ''))}
+      keyboardType="number-pad"
+      placeholder="0"
+    />
   );
 
   return (
@@ -661,311 +644,291 @@ export const RechargeScreen: React.FC = () => {
         overlay={
           <>
             {toastNode}
-            {payBar}
+            {hasPlans && (
+              <View style={styles.payBar}>
+                <Btn label={rechargeLabel} onPress={onRechargePress} />
+              </View>
+            )}
           </>
         }
         refreshing={history.refreshing}
         onRefresh={() => {
           history.refresh();
-          balances.refresh();
           operators.refresh();
         }}
       >
         <Segmented options={TYPES} value={type} onChange={setType} scroll={false} />
 
-        {!!operators.error && <ErrorBanner message={operators.error} onRetry={operators.reload} />}
-        {/* The provider can answer with an empty catalogue — its prepaid list
-            is empty today — which is not a failure and not something the
-            retailer can fix by tapping again. Postpaid and DTH need a pick
-            from it, so say so there. */}
-        {type !== 'prepaid' && !operators.loading && !operators.error && !(operators.data ?? []).length && (
-          <Banner
-            tone="warning"
-            message={`No ${TYPES.find((x) => x.key === type)?.label.toLowerCase() ?? ''} operators are available from the provider right now. Please try again later.`}
-          />
-        )}
-
-        {type !== 'prepaid' && (
-          <Field
-            label="Operator"
-            value={operator ? operator.displayname || operator.name : ''}
-            placeholder={operators.loading ? 'Loading operators…' : 'Select operator'}
-            open={showOperators}
-            onPress={() => setShowOperators(!showOperators)}
-          />
-        )}
-        {type !== 'prepaid' && operatorPicker}
-
-        <Field
-            label={type === 'dth' ? 'Subscriber ID' : 'Mobile number'}
-            value={type === 'dth' ? number : spaced(number)}
-            onChangeText={(v) => {
-              setNumber(v.replace(/\D/g, '').slice(0, type === 'dth' ? 15 : 10));
-              if (type === 'prepaid') {
+        {type === 'prepaid' && (
+          <>
+            <Field
+              label="Mobile Number"
+              prefix="+91"
+              value={spaced(mobile)}
+              onChangeText={(v) => {
+                setMobile(v.replace(/\D/g, '').slice(0, 10));
+                setResolvedOperator('');
+                setResolvedCircle('');
                 setPlanMeta(null);
-                setOperator(null);
-                setCircle(null);
                 setPlanList([]);
-              }
-            }}
-            keyboardType="number-pad"
-            placeholder={type === 'dth' ? 'Customer ID' : '10-digit mobile number'}
-            autoComplete={type === 'dth' ? undefined : 'tel'}
-            right={
-              type === 'prepaid' && plans.pending ? (
-                <ActivityIndicator style={styles.fieldSpinner} size="small" color={colors.mutedForeground} />
-              ) : null
-            }
-            helper={
-              type === 'prepaid' && number.length < 10
-                ? `Enter all 10 digits to detect the operator and circle (${number.length}/10)`
-                : undefined
-            }
-          />
+              }}
+              keyboardType="number-pad"
+              placeholder="10-digit mobile number"
+              autoComplete="tel"
+            />
+            <Btn
+              ghost
+              icon="format-list-bulleted"
+              label="Browse Plans"
+              onPress={onBrowsePlans}
+              loading={plans.pending}
+              disabled={!MOBILE.test(mobile)}
+            />
 
-        {/* While the number is being looked up: the operator card and the plan
-            list, as shapes, where they are about to appear. */}
-        {type === 'prepaid' && plans.pending && !planMeta && (
-          <View style={styles.skel}>
-            <SkeletonCard>
-              <SkeletonRows count={1} amount={false} />
-            </SkeletonCard>
-            <SkeletonTitle />
-            <Skeleton height={48} radius={24} />
-            <SkeletonCard>
-              <SkeletonRows count={4} />
-            </SkeletonCard>
-          </View>
-        )}
-        {!!planMeta && type === 'prepaid' && (
-          <View style={styles.opCard}>
-            {planMeta.logo ? (
-              <Image source={{ uri: planMeta.logo }} style={styles.opAvatar} resizeMode="contain" />
-            ) : (
-              <View style={styles.opAvatar}>
-                <Text style={styles.opAvatarText}>{operatorName.slice(0, 3)}</Text>
+            {!!resolvedOperator && !!resolvedCircle && (
+              <View style={styles.opCard}>
+                {planMeta?.logo ? (
+                  <Image source={{ uri: planMeta.logo }} style={styles.opAvatar} resizeMode="contain" />
+                ) : (
+                  <View style={styles.opAvatar}>
+                    <Text style={styles.opAvatarText}>{String(operatorName).slice(0, 3)}</Text>
+                  </View>
+                )}
+                <View style={styles.flex}>
+                  <Text style={styles.opNumber} numberOfLines={1}>
+                    {operatorName}
+                  </Text>
+                  <Text style={styles.opMeta} numberOfLines={1}>
+                    {spaced(mobile)} • {planMeta?.circleName || resolvedCircle}
+                  </Text>
+                </View>
               </View>
             )}
-            <View style={styles.flex}>
-              <Text style={styles.opNumber} numberOfLines={1}>
-                {operatorName}
-              </Text>
-              <Text style={styles.opMeta} numberOfLines={1}>
-                {spaced(number)} • {planMeta.circleName || planMeta.circle || 'Circle unavailable'}
-              </Text>
-            </View>
-            {/* Only offered when there is something to change to. */}
-            {!!(operators.data ?? []).length && (
-              <Pressable
-                onPress={() => setShowOperators(!showOperators)}
-                style={({ pressed }) => [styles.changePill, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel="Change operator"
-              >
-                <Text style={styles.changeText}>Change</Text>
-              </Pressable>
-            )}
-          </View>
-        )}
-        {type === 'prepaid' && operatorPicker}
-        {type === 'prepaid' && !!planMeta && !(planMeta.circle || circle) && (
-          <Text style={styles.hint}>The provider did not return a circle for this number.</Text>
-        )}
 
-        {/* DTH customer details are PaySprint's (HLR lookup); Icchhamati has no equivalent. */}
-        {PAYSPRINT_ENABLED && type === 'dth' && (
-          <Btn
-            ghost
-            icon="information-outline"
-            label="Fetch DTH info"
-            onPress={async () => setDthDetails(await dthInfo.run())}
-            loading={dthInfo.pending}
-            disabled={!operator || number.trim().length < 6}
-          />
-        )}
-        {!!dthDetails && (
-          <View style={styles.card}>
-            <Row label="Customer" value={dthDetails.customerName || dthDetails.name} />
-            <Row label="Balance" value={dthDetails.balance ? money(dthDetails.balance) : '—'} />
-            <Row label="Monthly recharge" value={dthDetails.MonthlyRecharge || '—'} />
-            <Row label="Next recharge" value={dthDetails.NextRechargeDate || '—'} last />
-          </View>
-        )}
+            {amountField}
+            {!hasPlans && <Btn label={rechargeLabel} onPress={onRechargePress} loading={recharge.pending} />}
 
-        {hasPlans ? (
-          <View style={styles.plans}>
-            <SectionTitle>Search by amount or plan validity</SectionTitle>
-            <View style={styles.search}>
-              <Ionicons name="search-outline" size={22} color={colors.mutedForeground} />
-              <TextInput
-                value={planQuery}
-                onChangeText={setPlanQuery}
-                placeholder="Search for a plan, eg ₹35 or 2 GB, etc"
-                placeholderTextColor={colors.mutedForeground}
-                style={styles.searchInput}
-                accessibilityLabel="Search plans"
-              />
-              {!!planQuery && (
-                <Pressable onPress={() => setPlanQuery('')} hitSlop={10} accessibilityRole="button" accessibilityLabel="Clear search">
-                  <Ionicons name="close" size={20} color={colors.mutedForeground} />
-                </Pressable>
-              )}
-            </View>
-
-            {planGroups.length > 1 && !pq && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.tabsScroll}
-                contentContainerStyle={styles.tabs}
-              >
-                {planGroups.map((g) => {
-                  const on = g === planGroup;
-                  return (
-                    <Pressable
-                      key={g}
-                      onPress={() => setPlanGroup(g)}
-                      style={[styles.tab, on && styles.tabOn]}
-                      accessibilityRole="tab"
-                      accessibilityState={{ selected: on }}
-                    >
-                      <Text style={[styles.tabText, on && styles.tabTextOn]}>{g}</Text>
+            {hasPlans && (
+              <View style={styles.plans}>
+                <SectionTitle>{`Available Plans for ${mobile}`}</SectionTitle>
+                <View style={styles.search}>
+                  <Ionicons name="search-outline" size={22} color={colors.mutedForeground} />
+                  <TextInput
+                    value={planQuery}
+                    onChangeText={setPlanQuery}
+                    placeholder="Search by amount or validity (e.g., 299 or 28 Days)"
+                    placeholderTextColor={colors.mutedForeground}
+                    style={styles.searchInput}
+                    accessibilityLabel="Search plans"
+                  />
+                  {!!planQuery && (
+                    <Pressable onPress={() => setPlanQuery('')} hitSlop={10} accessibilityRole="button" accessibilityLabel="Clear search">
+                      <Ionicons name="close" size={20} color={colors.mutedForeground} />
                     </Pressable>
-                  );
-                })}
-              </ScrollView>
-            )}
-
-            {!!selectedPlan && (
-              <View>
-                <Text style={styles.detailTitle}>{rupee(priceOf(selectedPlan))} Plan detail</Text>
-                <View style={styles.detailCard}>
-                  {[
-                    ['Data', dataOf(selectedPlan)],
-                    [
-                      'Validity',
-                      selectedPlan.validity && selectedPlan.validity !== 'NA' ? String(selectedPlan.validity) : '—',
-                    ],
-                    ['Amount', rupee(priceOf(selectedPlan))],
-                  ].map(([label, value]) => (
-                    <View key={label} style={styles.detailCol}>
-                      <Text style={styles.detailLabel}>{label}</Text>
-                      <Text style={styles.detailValue} numberOfLines={1} adjustsFontSizeToFit>
-                        {value}
-                      </Text>
-                    </View>
-                  ))}
+                  )}
                 </View>
-                {!!(selectedPlan.desc || selectedPlan.description) && (
-                  <>
-                    <View style={styles.detailGap}>
-                      <SectionTitle>Plan Details</SectionTitle>
+
+                {planGroups.length > 1 && !pq && (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.tabsScroll}
+                    contentContainerStyle={styles.tabs}
+                  >
+                    {planGroups.map((g) => {
+                      const on = g === planGroup;
+                      return (
+                        <Pressable
+                          key={g}
+                          onPress={() => setPlanGroup(g)}
+                          style={[styles.tab, on && styles.tabOn]}
+                          accessibilityRole="tab"
+                          accessibilityState={{ selected: on }}
+                        >
+                          <Text style={[styles.tabText, on && styles.tabTextOn]}>{g}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                )}
+
+                {!!selectedPlan && (
+                  <View>
+                    <Text style={styles.detailTitle}>{rupee(selectedPlan.amount)} Plan detail</Text>
+                    <View style={styles.detailCard}>
+                      {[
+                        ['Data', dataOf(selectedPlan)],
+                        ['Validity', selectedPlan.validity ? String(selectedPlan.validity) : '—'],
+                        ['Amount', rupee(selectedPlan.amount)],
+                      ].map(([label, value]) => (
+                        <View key={label} style={styles.detailCol}>
+                          <Text style={styles.detailLabel}>{label}</Text>
+                          <Text style={styles.detailValue} numberOfLines={1} adjustsFontSizeToFit>
+                            {value}
+                          </Text>
+                        </View>
+                      ))}
                     </View>
-                    <Text style={styles.detailText}>{selectedPlan.desc || selectedPlan.description}</Text>
-                  </>
+                    {!!selectedPlan.description && (
+                      <Text style={styles.detailText}>{selectedPlan.description}</Text>
+                    )}
+                  </View>
+                )}
+
+                <View style={styles.card}>
+                  {shownPlans.length ? (
+                    shownPlans.map((plan: any, i: number, all: any[]) => {
+                      const price = String(plan.amount ?? '');
+                      const picked = !!price && price === amount;
+                      return (
+                        <Pressable
+                          key={`${plan.category}-${price}-${i}`}
+                          onPress={() => setPrepaidAmount(price)}
+                          style={({ pressed }) => [styles.planRow, i === all.length - 1 && styles.rowLast, pressed && styles.pressed]}
+                          accessibilityRole="radio"
+                          accessibilityState={{ checked: picked }}
+                          accessibilityLabel={`${rupee(price)} plan, Validity: ${plan.validity ?? ''}`}
+                        >
+                          <View style={styles.flex}>
+                            <Text style={styles.planAmount}>{rupee(price)}</Text>
+                            {!!plan.description && (
+                              <Text style={styles.planDesc} numberOfLines={2}>
+                                {plan.description}
+                              </Text>
+                            )}
+                          </View>
+                          {!!plan.validity && <Text style={styles.planValidity}>{`Validity: ${plan.validity}`}</Text>}
+                          <View style={[styles.radio, picked && styles.radioOn]}>{picked && <View style={styles.radioDot} />}</View>
+                        </Pressable>
+                      );
+                    })
+                  ) : (
+                    <Text style={styles.empty}>No plan matches that search</Text>
+                  )}
+                </View>
+              </View>
+            )}
+          </>
+        )}
+
+        {isDth && (
+          <>
+            {!!operators.error && <ErrorBanner message={operators.error} onRetry={operators.reload} />}
+            <Field
+              label="DTH Number"
+              value={dthNumber}
+              onChangeText={setDthNumber}
+              maxLength={20}
+              autoCapitalize="characters"
+              placeholder="Enter DTH Number"
+            />
+            <Field
+              label="DTH Operator"
+              value={dthOperator ? dthOperator.displayname || dthOperator.name : ''}
+              placeholder="Select DTH Operator"
+              open={showOperators}
+              onPress={() => setShowOperators(!showOperators)}
+            />
+            {showOperators && (
+              <View style={styles.picker}>
+                <Field label="Search operator" value={operatorQuery} onChangeText={setOperatorQuery} autoCapitalize="none" />
+                {operators.loading ? (
+                  <SkeletonRows count={5} amount={false} avatar={36} />
+                ) : (
+                  <ScrollView style={styles.pickerList} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                    {filteredOperators.map((op) => (
+                      <Pressable
+                        key={String(op.id)}
+                        onPress={() => {
+                          setDthOperator(op);
+                          setShowOperators(false);
+                          setOperatorQuery('');
+                        }}
+                        style={({ pressed }) => [styles.pickerItem, pressed && styles.pickerItemPressed]}
+                        accessibilityRole="button"
+                      >
+                        <Text style={styles.pickerText}>{op.displayname || op.name}</Text>
+                        <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
+                      </Pressable>
+                    ))}
+                    {!filteredOperators.length && <Text style={styles.pickerEmpty}>No operators in this category</Text>}
+                  </ScrollView>
                 )}
               </View>
             )}
 
-            <View style={styles.detailGap}>
-              <SectionTitle>{pq ? `Plans matching “${planQuery.trim()}”` : 'All plans'}</SectionTitle>
-            </View>
-            <View style={styles.card}>
-              {shownPlans.length ? (
-                shownPlans.slice(0, 40).map((plan: any, i: number, all: any[]) => {
-                  const price = priceOf(plan);
-                  const picked = !!price && price === amount;
-                  const validity = plan.validity && plan.validity !== 'NA' ? String(plan.validity) : '';
-                  return (
-                    <Pressable
-                      key={`${price}-${i}`}
-                      onPress={() => setAmount(price)}
-                      style={({ pressed }) => [styles.planRow, i === all.length - 1 && styles.rowLast, pressed && styles.pressed]}
-                      accessibilityRole="radio"
-                      accessibilityState={{ checked: picked }}
-                      accessibilityLabel={`${rupee(price)} plan${validity ? `, ${validity}` : ''}`}
-                    >
-                      <View style={styles.flex}>
-                        <Text style={styles.planAmount}>{rupee(price)}</Text>
-                        {!!(plan.desc || plan.description) && (
-                          <Text style={styles.planDesc} numberOfLines={2}>
-                            {plan.desc || plan.description}
-                          </Text>
-                        )}
-                      </View>
-                      {!!validity && <Text style={styles.planValidity}>{validity}</Text>}
-                      <View style={[styles.radio, picked && styles.radioOn]}>{picked && <View style={styles.radioDot} />}</View>
-                    </Pressable>
-                  );
-                })
-              ) : (
-                <Text style={styles.empty}>No plan matches that search</Text>
-              )}
-            </View>
-          </View>
-        ) : (
-          (type !== 'prepaid' || !!planMeta) && (
-            <>
-              <Field
-                label="Amount"
-                prefix="₹"
-                value={amount}
-                onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))}
-                keyboardType="decimal-pad"
-                placeholder="0"
-                error={overBalance ? 'Amount exceeds your Utility Wallet balance' : undefined}
-                helper={`Utility Wallet balance ${money(available)}`}
-              />
-              <Btn
-                label={Number(amount) > 0 ? `Recharge ${rupee(amount)}` : 'Recharge'}
-                onPress={() => setStep('pin')}
-                disabled={!ready}
-              />
-            </>
-          )
+            {/* DTH customer details are PaySprint's (HLR lookup); Icchhamati has no equivalent. */}
+            {PAYSPRINT_ENABLED && (
+              <Btn ghost icon="magnify" label="Fetch Details" onPress={onFetchDthInfo} loading={dthInfo.pending} />
+            )}
+            {!!dthDetails && (
+              <View style={styles.card}>
+                <Row label="Name" value={dthDetails.customerName || '-'} />
+                <Row label="Balance" value={`₹ ${dthDetails.Balance || 0}`} />
+                <Row label="Plan" value={dthDetails.planName || '-'} />
+                <Row label="Next Recharge" value={dthDetails.NextRechargeDate || '-'} />
+                <Row label="Status" value={dthDetails.status || 'Active'} />
+                <Row label="Monthly" value={`₹ ${dthDetails.MonthlyRecharge || 0}`} last />
+              </View>
+            )}
+
+            {amountField}
+            <Btn label={rechargeLabel} onPress={onRechargePress} loading={recharge.pending} />
+          </>
         )}
 
-        <View style={styles.detailGap}>
-          <SectionTitle>Recent recharges</SectionTitle>
-        </View>
-        <View style={styles.card}>
-          {history.loading ? <SkeletonRows count={3} /> : history.data?.length ? (
-            history.data.slice(0, 20).map((txn: any, i: number, all: any[]) => (
-              <View key={txn._id || txn.transactionId} style={[styles.rowI, i === all.length - 1 && styles.rowLast]}>
-                <IconTile icon="cellphone" size={44} iconSize={20} />
-                <View style={styles.flex}>
-                  <Text style={styles.rowTitle} numberOfLines={1}>
-                    {txn.metadata?.caNumber || txn.transactionId}
-                  </Text>
-                  <Text style={styles.rowMeta} numberOfLines={1}>
-                    {[txn.metadata?.operatorName, shortDate(txn.createdAt)].filter(Boolean).join(' · ')}
-                  </Text>
-                  {/* Operators settle asynchronously: a PENDING row can still
-                      flip to SUCCESS or FAILED minutes later. */}
-                  {String(txn.status).toUpperCase() === 'PENDING' && (
-                    <Pressable
-                      onPress={async () => {
-                        const res = await checkStatus.run(txn.transactionId);
-                        if (res) history.reload();
-                      }}
-                      disabled={checkStatus.pending}
-                      hitSlop={12}
-                      accessibilityRole="button"
-                    >
-                      <Text style={styles.rowLink}>{checkStatus.pending ? 'Checking…' : 'Check operator status'}</Text>
-                    </Pressable>
-                  )}
-                </View>
-                <View style={styles.rowRight}>
-                  <Text style={styles.rowAmount}>{money(txn.amount)}</Text>
-                  <StatusText status={txn.status} />
-                </View>
-              </View>
-            ))
-          ) : (
-            <Text style={styles.empty}>No recharges yet</Text>
-          )}
-        </View>
+        {type === 'history' && (
+          <>
+            <SectionTitle>Recharge History</SectionTitle>
+            <View style={styles.card}>
+              {history.loading ? (
+                <SkeletonRows count={3} />
+              ) : history.data?.length ? (
+                history.data.map((txn: any, i: number, all: any[]) => (
+                  <Pressable
+                    key={txn._id || txn.transactionId}
+                    onPress={() =>
+                      setReceipt(
+                        rechargeReceipt({
+                          status: txn.status,
+                          amount: txn.amount,
+                          number: txn.metadata?.caNumber,
+                          operator: txn.metadata?.operatorName || txn.metadata?.operator,
+                          transactionId: txn.transactionId,
+                          operatorRef: txn.metadata?.operatorTxnId,
+                          date: txn.createdAt,
+                        })
+                      )
+                    }
+                    style={({ pressed }) => [styles.rowI, i === all.length - 1 && styles.rowLast, pressed && styles.pressed]}
+                    accessibilityRole="button"
+                    accessibilityHint="Opens the receipt"
+                  >
+                    <IconTile icon="cellphone" size={44} iconSize={20} />
+                    <View style={styles.flex}>
+                      <Text style={styles.rowTitle} numberOfLines={1}>
+                        {txn.metadata?.caNumber || '—'}
+                      </Text>
+                      <Text style={styles.rowMeta} numberOfLines={1}>
+                        {[txn.metadata?.operatorName || txn.metadata?.operator, shortDate(txn.createdAt)].filter(Boolean).join(' · ')}
+                      </Text>
+                      <Text style={styles.rowMeta} numberOfLines={1} selectable>
+                        {txn.transactionId}
+                      </Text>
+                      <Text style={styles.rowLink}>Receipt</Text>
+                    </View>
+                    <View style={styles.rowRight}>
+                      <Text style={styles.rowAmount}>{money(txn.amount)}</Text>
+                      <StatusText status={txn.status} />
+                    </View>
+                  </Pressable>
+                ))
+              ) : (
+                <Text style={styles.empty}>No recharge transaction found</Text>
+              )}
+            </View>
+          </>
+        )}
       </Screen>
 
       <Modal visible={!!receipt} animationType="slide" onRequestClose={() => setReceipt(null)} statusBarTranslucent>
@@ -981,7 +944,6 @@ const styles = themed((c) => ({
   flex: { flex: 1, minWidth: 0 },
   pressed: { opacity: 0.7 },
   disabled: { opacity: 0.4 },
-  hint: { fontSize: t.caption, color: c.mutedForeground },
 
   // Field — matches the shared Input.
   fieldWrap: { gap: 7 },
@@ -1008,7 +970,6 @@ const styles = themed((c) => ({
     color: c.foreground,
     ...({ outlineStyle: 'none' } as any),
   },
-  fieldSpinner: { marginRight: 4 },
   fieldErrorText: { fontSize: t.caption, color: c.destructive },
   fieldHelper: { fontSize: t.caption, color: c.mutedForeground, lineHeight: 16 },
 
@@ -1039,15 +1000,6 @@ const styles = themed((c) => ({
   opAvatarText: { fontSize: t.body, fontWeight: '500', color: c.foreground },
   opNumber: { fontSize: t.bodyLg, fontWeight: '400', color: c.foreground, fontVariant: ['tabular-nums'] },
   opMeta: { fontSize: t.small, color: c.mutedForeground, marginTop: 2 },
-  changePill: {
-    minHeight: 44,
-    paddingHorizontal: space.lg,
-    borderRadius: radius.pill,
-    backgroundColor: c.surfaceAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  changeText: { fontSize: t.body, color: c.foreground },
 
   picker: { gap: space.sm, padding: space.md, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, backgroundColor: c.card },
   pickerList: { maxHeight: 260 },
@@ -1106,7 +1058,6 @@ const styles = themed((c) => ({
   detailCol: { flex: 1, minWidth: 0, gap: 4 },
   detailLabel: { fontSize: t.body, color: c.foreground },
   detailValue: { fontSize: t.bodyLg + 1, fontWeight: '400', color: c.foreground, fontVariant: ['tabular-nums'] },
-  detailGap: { marginTop: space.sm },
   detailText: { fontSize: t.body, lineHeight: 24, color: c.foreground, marginTop: space.md },
 
   planRow: {
@@ -1142,7 +1093,6 @@ const styles = themed((c) => ({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: c.border,
   },
-  payBarError: { fontSize: t.caption, color: c.destructive, textAlign: 'center' },
 
   // List card + rows (Home's idiom)
   card: { paddingHorizontal: space.lg, paddingVertical: space.xs, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, backgroundColor: c.card },
@@ -1218,7 +1168,6 @@ const styles = themed((c) => ({
   kvValue: { flexShrink: 1, fontSize: t.small, fontWeight: '500', color: c.foreground, textAlign: 'right' },
   dash: { borderTopWidth: 1, borderStyle: 'dashed', borderColor: c.borderStrong, marginVertical: space.sm },
   doneBar: { flexDirection: 'row', gap: space.md, paddingHorizontal: space.lg, paddingTop: space.md, backgroundColor: c.background },
-  skel: { gap: space.lg },
 }));
 
 export default RechargeScreen;

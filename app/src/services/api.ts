@@ -583,7 +583,7 @@ class ApiService {
     return this.get(`${API_ENDPOINTS.settlement.accountStatus}/${id}`);
   }
 
-  async initiateSettlement(data: { bankId: string; amount: number; pin: string; mode?: string }) {
+  async initiateSettlement(data: { bankId: string; amount: number; pin: string; mode?: string; beneficiaryMobile?: string }) {
     return this.post(API_ENDPOINTS.settlement.initiate, data);
   }
 
@@ -609,6 +609,11 @@ class ApiService {
   // activated it, so these two are part of adding one, not an extra feature.
   async sendDmtBeneficiaryOtp(beneficiary_id: string) {
     return this.post(API_ENDPOINTS.dmt.beneficiaryOtp, { beneficiary_id });
+  }
+
+  /** Deleting a beneficiary is authorised by its own OTP, not the activation one. */
+  async sendDmtBeneficiaryDeleteOtp(beneficiary_id: string) {
+    return this.post(API_ENDPOINTS.dmt.beneficiaryDeleteOtp, { beneficiary_id });
   }
 
   async verifyDmtBeneficiary(data: { beneficiary_id: string; otp: string }) {
@@ -666,6 +671,7 @@ class ApiService {
     caNumber: string;
     operator: string;
     type?: string;
+    category?: string;
     customerMobile?: string;
     amount?: number;
   }) {
@@ -713,7 +719,7 @@ class ApiService {
 
   /** Leftover QR wallet money -> Utility, behind the wallet PIN. */
   async transferQrToMain(data: { amount: number; pin: string }) {
-    return this.post(API_ENDPOINTS.wallet.transfer, data);
+    return this.post(API_ENDPOINTS.wallet.transfer, { ...data, from: 'QR' });
   }
 
   // --------------------------------------------------------------- TOP-UP
@@ -795,11 +801,11 @@ class ApiService {
     return this.post(API_ENDPOINTS.pan.esevaApplyCoupon, data);
   }
 
-  async getPanServiceStatus(application_number: string) {
+  async getPanServiceStatus(application_number: string | number) {
     return this.post(API_ENDPOINTS.pan.esevaServiceStatus, { application_number });
   }
 
-  async getPanCouponStatus(application_number: string) {
+  async getPanCouponStatus(application_number: string | number) {
     return this.post(API_ENDPOINTS.pan.esevaCouponStatus, { application_number });
   }
 

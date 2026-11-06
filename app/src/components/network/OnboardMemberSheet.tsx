@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
@@ -7,48 +7,32 @@ import { Input, SelectField } from '@/components/ui/Input';
 import { ImageField } from '@/components/ui/ImageField';
 import { Sheet } from '@/components/ui/Sheet';
 import { Banner, Row, Segmented, SuccessBanner } from '@/components/ui/Screen';
-import { AEPS_PROVIDERS, PAYSPRINT_ENABLED, type AepsProvider } from '@/constants/services';
+import { AEPS_PROVIDERS, PAYSPRINT_ENABLED, SERVICES, type AepsProvider } from '@/constants/services';
 import { useAction } from '@/hooks/useAsync';
 import { INDIAN_STATES } from '@/constants';
+import { useAuth } from '@/context/AuthContext';
 import type { PickedFile } from '@/services/imagePicker';
 import api from '@/services/api';
 
-/** Commission packages the backend stores verbatim against each service. */
-const PACKAGES = ['Standard', 'Premium'];
-
-const SERVICE_PACKAGES = [
-  { key: 'dmtPackage', label: 'DMT' },
-  { key: 'rechargePackage', label: 'Recharge' },
-  { key: 'aepsPackage', label: 'AEPS' },
-  { key: 'bbpsPackage', label: 'BBPS' },
-  { key: 'payoutPackage', label: 'Payout' },
-  { key: 'cmsPackage', label: 'CMS' },
-  { key: 'ccpayPackage', label: 'CCPay' },
-  { key: 'payinPackage', label: 'Payin' },
-  { key: 'upiPackage', label: 'UPI' },
-] as const;
-
 const PREFIXES = ['Mr', 'Mrs', 'Miss'];
 
-const STEPS = ['Identity', 'Business', 'Documents', 'Packages'] as const;
-
-const AADHAAR_RE = /^[2-9][0-9]{11}$/;
-const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+// Same rules as the web wizard (frontend/src/components/distributor/CreateRetailerWizard.tsx).
+const AADHAAR_RE = /^\d{12}$/;
+const PAN_RE = /^[A-Z]{5}\d{4}[A-Z]$/;
+const MOBILE_RE = /^[6-9]\d{9}$/;
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 
 export type MemberKind = 'retailer' | 'distributor';
 
 const KIND = {
   retailer: {
-    title: 'Onboard retailer',
-    subtitle: 'Creates a retailer under your distributor account',
+    title: 'Onboard a retailer',
     idLabel: 'Retailer ID',
     prefix: 'RT',
     create: (data: Record<string, any>, files: any) => api.createRetailer(data, files),
   },
   distributor: {
-    title: 'Onboard distributor',
-    subtitle: 'Creates a distributor on the platform',
+    title: 'Onboard a distributor',
     idLabel: 'Distributor ID',
     prefix: 'DT',
     create: (data: Record<string, any>, files: any) => api.createDistributor(data, files),
@@ -57,12 +41,9 @@ const KIND = {
 
 /**
  * Network onboarding, shared by the distributor portal (creates retailers) and
- * the admin portal (creates distributors). The backend takes the same
- * multipart body for both, so only the endpoint and the ID prefix differ.
- *
- * Split into four steps because the full form is ~30 fields; each step is
- * validated before the next unlocks, so errors surface next to their cause
- * rather than in one wall at submit time.
+ * the admin portal (creates distributors). Fields, placeholders, steps and
+ * rules mirror the web wizard so both portals onboard the same way; the
+ * backend takes the same multipart body for both.
  */
 export const OnboardMemberSheet: React.FC<{
   visible: boolean;
@@ -71,16 +52,19 @@ export const OnboardMemberSheet: React.FC<{
   onCreated: () => void;
 }> = ({ visible, onClose, kind, onCreated }) => {
   const spec = KIND[kind];
+  const isRetailer = kind === 'retailer';
   // Retailers may be onboarded remotely and cannot read out an OTP, so only
   // distributors verify their email before the account is created.
-  const needsOtp = kind !== 'retailer';
+  const needsOtp = !isRetailer;
+  const { user } = useAuth();
+  const parentName = (user as { name?: string } | null)?.name || 'you';
+  const steps = ['Account', 'KYC & business', isRetailer ? 'Services & branding' : 'Branding', 'Review'];
 
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
 
-  // Generated once per sheet open. The backend accepts it verbatim as the
-  // merchant code, so it must not change between steps.
-  const [merchantCode] = useState(
+  // Generated once per sheet open; editable only for an existing PaySprint merchant.
+  const [merchantCode, setMerchantCode] = useState(
     () => `${spec.prefix}${Math.floor(100000 + Math.random() * 900000)}`
   );
 
@@ -98,16 +82,7 @@ export const OnboardMemberSheet: React.FC<{
   const [showPassword, setShowPassword] = useState(false);
   const [isExistingMerchant, setIsExistingMerchant] = useState(false);
   const [aepsProvider, setAepsProvider] = useState<AepsProvider>(PAYSPRINT_ENABLED ? 'paysprint' : 'icchhamati');
-
-  const [businessName, setBusinessName] = useState('');
-  const [businessAddress, setBusinessAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [district, setDistrict] = useState('');
-  const [state, setState] = useState('');
-  const [stateOpen, setStateOpen] = useState(false);
-  const [landmark, setLandmark] = useState('');
-  const [hasGst, setHasGst] = useState(false);
-  const [gstNumber, setGstNumber] = useState('');
+  const isPaysprint = PAYSPRINT_ENABLED && aepsProvider !== 'icchhamati';
 
   const [aadhaarNumber, setAadhaarNumber] = useState('');
   const [panNumber, setPanNumber] = useState('');
@@ -115,25 +90,37 @@ export const OnboardMemberSheet: React.FC<{
   const [panPicture, setPanPicture] = useState<PickedFile | null>(null);
   const [profilePicture, setProfilePicture] = useState<PickedFile | null>(null);
 
-  const [packages, setPackages] = useState<Record<string, string>>({});
-  const [openPackage, setOpenPackage] = useState<string | null>(null);
+  const [businessName, setBusinessName] = useState('');
+  const [companyRegisterName, setCompanyRegisterName] = useState('');
+  const [businessAddress, setBusinessAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [district, setDistrict] = useState('');
+  const [state, setState] = useState('');
+  const [stateOpen, setStateOpen] = useState(false);
+  const [landmark, setLandmark] = useState('');
 
   const [brandName, setBrandName] = useState('');
-  const [companyRegisterName, setCompanyRegisterName] = useState('');
   const [website, setWebsite] = useState('');
   const [supportEmail, setSupportEmail] = useState('');
   const [supportMobile, setSupportMobile] = useState('');
 
+  // Every service is on by default; the distributor switches off what they don't want.
+  const [services, setServices] = useState<Record<string, 'Yes' | 'No'>>(
+    () => Object.fromEntries(SERVICES.map((svc) => [svc.key, 'Yes' as const]))
+  );
+  const setAllServices = (value: 'Yes' | 'No') =>
+    setServices(Object.fromEntries(SERVICES.map((svc) => [svc.key, value])));
+
   const sendOtp = useAction(async () => {
     const res = await api.sendVerificationOtp(email.trim(), `${firstName} ${lastName}`.trim());
-    if (!res.success) throw new Error(res.message || 'Could not send the verification email.');
+    if (!res.success) throw new Error(res.message || 'Failed to send OTP.');
     setOtpSent(true);
     return res;
   });
 
   const verifyOtp = useAction(async () => {
     const res = await api.verifyEmailOtp(email.trim(), emailOtp.trim());
-    if (!res.success) throw new Error(res.message || 'That code did not match.');
+    if (!res.success) throw new Error(res.message || 'Invalid Email OTP.');
     setEmailVerified(true);
     return res;
   });
@@ -143,35 +130,33 @@ export const OnboardMemberSheet: React.FC<{
       {
         merchantCode,
         prefix,
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        email: email.trim(),
-        contactNumber: contactNumber.trim(),
+        firstName,
+        lastName,
+        email,
+        contactNumber,
         password,
         dob,
-        otp: emailOtp.trim(),
-        businessName: businessName.trim(),
-        businessAddress: businessAddress.trim(),
+        ...(needsOtp ? { otp: emailOtp } : {}),
+        businessName,
+        businessAddress,
         // Nested field: multer flattens the form, so the controller parses this.
-        address: JSON.stringify({
-          city: city.trim(),
-          district: district.trim(),
-          state,
-          landmark: landmark.trim(),
-        }),
-        aadhaarNumber: aadhaarNumber.trim(),
-        panNumber: panNumber.trim().toUpperCase(),
-        hasGst,
-        gstNumber: hasGst ? gstNumber.trim().toUpperCase() : '',
-        brandName: brandName.trim(),
-        companyRegisterName: companyRegisterName.trim(),
-        website: website.trim(),
-        supportEmail: supportEmail.trim(),
-        supportMobile: supportMobile.trim(),
-        ...(kind === 'retailer'
-          ? { aepsProvider, isExistingMerchant: isExistingMerchant && aepsProvider === 'paysprint' }
+        address: JSON.stringify({ city, landmark, district, state }),
+        aadhaarNumber,
+        panNumber,
+        hasGst: false,
+        gstNumber: '',
+        brandName,
+        companyRegisterName,
+        website,
+        supportEmail,
+        supportMobile,
+        ...(isRetailer
+          ? {
+              aepsProvider,
+              isExistingMerchant: isExistingMerchant && isPaysprint,
+              disabledServices: JSON.stringify(SERVICES.filter((svc) => services[svc.key] === 'No').map((svc) => svc.key)),
+            }
           : {}),
-        ...packages,
       },
       {
         aadhaarPicture: aadhaarPicture ?? undefined,
@@ -179,72 +164,85 @@ export const OnboardMemberSheet: React.FC<{
         profilePicture: profilePicture ?? undefined,
       }
     );
-    if (!res.success) throw new Error(res.message || `Could not create the ${kind}.`);
+    if (!res.success) throw new Error(res.message || `Failed to create ${kind}.`);
     setDone(true);
     onCreated();
     return res;
   });
 
-  const errors = useMemo(() => {
-    const identity =
-      !firstName.trim()
-        ? 'Enter the first name.'
-        : !lastName.trim()
-          ? 'Enter the last name.'
-          : !EMAIL_RE.test(email.trim())
-            ? 'Enter a valid email address.'
-            : needsOtp && !emailVerified
-              ? 'Verify the email address with the code we sent.'
-              : contactNumber.length !== 10
-                ? 'Enter a 10-digit mobile number.'
-                : !dob
-                  ? 'Enter the date of birth as YYYY-MM-DD.'
-                  : password.length < 6
-                    ? 'Set a password of at least 6 characters.'
-                    : null;
-
-    const business =
-      !businessName.trim()
-        ? 'Enter the business name.'
-        : !businessAddress.trim()
-          ? 'Enter the street address.'
-          : !city.trim()
-            ? 'Enter the city.'
-            : !district.trim()
-              ? 'Enter the district.'
-              : !state
-                ? 'Select the state.'
-                : hasGst && gstNumber.trim().length !== 15
-                  ? 'A GST number is 15 characters.'
-                  : null;
-
-    const documents =
-      !AADHAAR_RE.test(aadhaarNumber.trim())
-        ? 'Enter a valid 12-digit Aadhaar number.'
-        : !PAN_RE.test(panNumber.trim().toUpperCase())
-          ? 'Enter a valid PAN, e.g. ABCDE1234F.'
-          : !aadhaarPicture
-            ? 'Attach a photo of the Aadhaar card.'
-            : !panPicture
-              ? 'Attach a photo of the PAN card.'
-              : null;
-
-    return [identity, business, documents, null];
-  }, [
-    needsOtp, firstName, lastName, email, emailVerified, contactNumber, dob, password,
-    businessName, businessAddress, city, district, state, hasGst, gstNumber,
-    aadhaarNumber, panNumber, aadhaarPicture, panPicture,
-  ]);
+  // First problem on each step, worded as on the web wizard.
+  const errors: (string | null)[] = [
+    !firstName.trim() ? 'First name: Required'
+      : !lastName.trim() ? 'Last name: Required'
+      : !EMAIL_RE.test(email) ? 'Enter a valid email'
+      : needsOtp && !emailVerified ? 'Verify this email with the OTP'
+      : !MOBILE_RE.test(contactNumber) ? 'Enter a 10-digit mobile number'
+      : !dob ? 'Date of birth: Required'
+      : password.length < 6 ? 'Password: At least 6 characters'
+      : isRetailer && isPaysprint && isExistingMerchant && !merchantCode.trim() ? 'Enter the existing merchant ID'
+      : null,
+    !AADHAAR_RE.test(aadhaarNumber) ? 'Aadhaar is 12 digits'
+      : !PAN_RE.test(panNumber) ? 'PAN format: ABCDE1234F'
+      : isRetailer && !aadhaarPicture ? 'Upload the Aadhaar photo'
+      : isRetailer && !panPicture ? 'Upload the PAN photo'
+      : !businessName.trim() ? 'Business name: Required'
+      : !businessAddress.trim() ? 'Street address: Required'
+      : !city.trim() ? 'City: Required'
+      : !district.trim() ? 'District: Required'
+      : !state ? 'Select a state'
+      : null,
+    null,
+    null,
+  ];
 
   const blocked = errors[step];
-  const allValid = errors.every((error) => !error);
+  const firstInvalid = errors.findIndex(Boolean);
+  const enabledServices = SERVICES.filter((svc) => services[svc.key] === 'Yes');
+  const providerLabel = AEPS_PROVIDERS.find((p) => p.key === (isPaysprint ? 'paysprint' : 'icchhamati'))?.label || '';
+
+  const review = [
+    {
+      title: 'Account',
+      to: 0,
+      rows: [
+        ['Name', `${prefix} ${firstName} ${lastName}`],
+        ['Email', email],
+        ['Mobile', contactNumber && `+91 ${contactNumber}`],
+        ['Date of birth', dob],
+        [spec.idLabel, merchantCode + (isRetailer && isPaysprint && isExistingMerchant ? ' (existing)' : '')],
+        ...(isRetailer ? [['AEPS provider', providerLabel]] : []),
+      ],
+    },
+    {
+      title: 'KYC & business',
+      to: 1,
+      rows: [
+        ['Aadhaar', aadhaarNumber && `XXXX XXXX ${aadhaarNumber.slice(-4)}`],
+        ['PAN', panNumber],
+        ['Documents', [aadhaarPicture && 'Aadhaar', panPicture && 'PAN', profilePicture && 'Profile'].filter(Boolean).join(', ')],
+        ['Business', businessName],
+        ['Address', [businessAddress, city, district, state].filter(Boolean).join(', ')],
+      ],
+    },
+    {
+      title: steps[2],
+      to: 2,
+      rows: [
+        ['Brand', brandName],
+        ['Website', website],
+        ...(isRetailer
+          ? [['Packages', enabledServices.length === SERVICES.length ? 'All services' : enabledServices.map((svc) => svc.label).join(', ') || 'None']]
+          : []),
+      ],
+    },
+  ];
 
   return (
     <Sheet
       visible={visible}
       onClose={onClose}
       title={spec.title}
-      subtitle={spec.subtitle}
+      subtitle={isRetailer ? `Four short steps. They'll join your network under ${parentName}.` : 'Four short steps to add a distributor to the platform.'}
       icon="account-plus-outline"
       dismissible={!create.pending}
       footer={
@@ -255,29 +253,23 @@ export const OnboardMemberSheet: React.FC<{
         ) : (
           <View style={styles.footerRow}>
             {step > 0 && (
-              <Button variant="secondary" onPress={() => setStep(step - 1)} style={styles.flex}>
+              <Button variant="secondary" icon="arrow-left" onPress={() => setStep(step - 1)} disabled={create.pending} style={styles.flex}>
                 Back
               </Button>
             )}
-            {step < STEPS.length - 1 ? (
-              <Button
-                icon="arrow-right"
-                onPress={() => setStep(step + 1)}
-                disabled={!!blocked}
-                style={styles.flex}
-              >
-                Next
+            {step < steps.length - 1 ? (
+              <Button icon="arrow-right" onPress={() => setStep(step + 1)} disabled={!!blocked} style={styles.flex}>
+                {step === 2 ? 'Review' : 'Continue'}
               </Button>
             ) : (
               <Button
-                icon="account-check-outline"
-            haptic="success"
-                onPress={create.run}
+                icon="account-plus-outline"
+                haptic="success"
+                onPress={() => (firstInvalid === -1 ? create.run() : setStep(firstInvalid))}
                 loading={create.pending}
-                disabled={!allValid}
                 style={styles.flex}
               >
-                Create {kind}
+                {create.pending ? 'Creating…' : `Create ${kind}`}
               </Button>
             )}
           </View>
@@ -286,51 +278,41 @@ export const OnboardMemberSheet: React.FC<{
     >
       {done ? (
         <SuccessBanner
-          message={`${kind === 'retailer' ? 'Retailer' : 'Distributor'} created with ID ${merchantCode}. They can sign in with the email and password you set.`}
+          message={
+            isRetailer
+              ? `Retailer created successfully! They sign in with this email and password, then complete AEPS onboarding themselves from the AEPS page.`
+              : `Distributor created successfully! They sign in with this email and password and can start onboarding retailers right away.`
+          }
         />
       ) : (
         <>
           <View style={styles.stepper}>
-            {STEPS.map((label, index) => (
-              <View key={label} style={styles.stepperItem}>
-                <View
-                  style={[
-                    styles.stepDot,
-                    index === step && styles.stepDotActive,
-                    index < step && styles.stepDotDone,
-                  ]}
-                >
+            {steps.map((label, index) => (
+              <Pressable
+                key={label}
+                // Forward jumps only past steps that are already complete.
+                onPress={() => (index <= step || errors.slice(0, index).every((e) => !e)) && setStep(index)}
+                style={styles.stepperItem}
+                accessibilityRole="button"
+              >
+                <View style={[styles.stepDot, index === step && styles.stepDotActive, index < step && styles.stepDotDone]}>
                   {index < step ? (
                     <MaterialCommunityIcons name="check" size={12} color={colors.success} />
                   ) : (
-                    <Text style={[styles.stepNumber, index === step && styles.stepNumberActive]}>
-                      {index + 1}
-                    </Text>
+                    <Text style={[styles.stepNumber, index === step && styles.stepNumberActive]}>{index + 1}</Text>
                   )}
                 </View>
-                <Text
-                  style={[styles.stepLabel, index === step && styles.stepLabelActive]}
-                  numberOfLines={1}
-                >
+                <Text style={[styles.stepLabel, index === step && styles.stepLabelActive]} numberOfLines={1}>
                   {label}
                 </Text>
-              </View>
+              </Pressable>
             ))}
-          </View>
-
-          <View style={styles.summary}>
-            <Row label={spec.idLabel} value={merchantCode} mono last />
           </View>
 
           {step === 0 && (
             <>
               <View>
-                <SelectField
-                  label="Prefix"
-                  value={prefix}
-                  open={prefixOpen}
-                  onPress={() => setPrefixOpen(!prefixOpen)}
-                />
+                <SelectField label="Prefix" value={prefix} open={prefixOpen} onPress={() => setPrefixOpen(!prefixOpen)} />
                 {prefixOpen && (
                   <View style={styles.picker}>
                     {PREFIXES.map((option) => (
@@ -350,75 +332,72 @@ export const OnboardMemberSheet: React.FC<{
                 )}
               </View>
 
-              <Input label="First name" required value={firstName} onChangeText={setFirstName} leftIcon="account-outline" autoCapitalize="words" />
-              <Input label="Last name" required value={lastName} onChangeText={setLastName} leftIcon="account-outline" autoCapitalize="words" />
+              <Input label="First name" required value={firstName} onChangeText={setFirstName} placeholder="First name" leftIcon="account-outline" autoCapitalize="words" />
+              <Input label="Last name" required value={lastName} onChangeText={setLastName} placeholder="Last name" leftIcon="account-outline" autoCapitalize="words" />
 
               <Input
-                label="Email address"
+                label="Email"
                 required
                 value={email}
-                onChangeText={(v) => {
-                  setEmail(v);
-                  setEmailVerified(false);
-                  setOtpSent(false);
-                }}
+                onChangeText={setEmail}
+                placeholder="name@example.com"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
                 leftIcon="email-outline"
-                editable={!emailVerified}
-                helperText={needsOtp ? 'A 6-digit code confirms the address before the account is created' : undefined}
+                editable={!(needsOtp && otpSent)}
+                helperText={needsOtp && !emailVerified ? 'We send a 6-digit code to confirm the address.' : undefined}
               />
 
-              {!needsOtp ? null : emailVerified ? (
-                <Banner tone="success" message="Email address verified." />
+              {needsOtp && (emailVerified ? (
+                <Banner tone="success" message="Email verified successfully!" />
               ) : (
                 <>
                   {!!sendOtp.error && <Banner tone="error" message={sendOtp.error} />}
                   {!!verifyOtp.error && <Banner tone="error" message={verifyOtp.error} />}
-                  <Button
-                    variant="outline"
-                    icon="email-fast-outline"
-                    onPress={sendOtp.run}
-                    loading={sendOtp.pending}
-                    disabled={!EMAIL_RE.test(email.trim())}
-                    fullWidth
-                  >
-                    {otpSent ? 'Resend verification code' : 'Send verification code'}
-                  </Button>
-                  {otpSent && (
+                  {!otpSent ? (
+                    <Button variant="outline" icon="email-fast-outline" onPress={sendOtp.run} loading={sendOtp.pending} disabled={!EMAIL_RE.test(email)} fullWidth>
+                      Send OTP
+                    </Button>
+                  ) : (
                     <>
                       <Input
-                        label="Verification code"
-                        required
                         value={emailOtp}
                         onChangeText={(v) => setEmailOtp(v.replace(/\D/g, '').slice(0, 6))}
                         keyboardType="number-pad"
                         maxLength={6}
                         leftIcon="email-check-outline"
-                        placeholder="6 digits"
+                        placeholder="6-digit OTP"
                       />
-                      <Button
-                        icon="check"
-                        onPress={verifyOtp.run}
-                        loading={verifyOtp.pending}
-                        disabled={emailOtp.length !== 6}
-                        fullWidth
-                      >
-                        Verify email
-                      </Button>
+                      <View style={styles.footerRow}>
+                        <Button
+                          variant="secondary"
+                          onPress={() => {
+                            setOtpSent(false);
+                            setEmailOtp('');
+                          }}
+                          style={styles.flex}
+                        >
+                          Change
+                        </Button>
+                        <Button icon="shield-check-outline" onPress={verifyOtp.run} loading={verifyOtp.pending} disabled={emailOtp.length !== 6} style={styles.flex}>
+                          Verify
+                        </Button>
+                      </View>
                     </>
                   )}
                 </>
-              )}
+              ))}
 
               <Input
-                label="Mobile number"
+                label="Mobile"
                 required
                 value={contactNumber}
                 onChangeText={(v) => setContactNumber(v.replace(/\D/g, '').slice(0, 10))}
+                placeholder="98765 43210"
                 keyboardType="number-pad"
                 leftIcon="phone-outline"
+                helperText="+91"
               />
               <Input
                 label="Date of birth"
@@ -434,54 +413,90 @@ export const OnboardMemberSheet: React.FC<{
                 required
                 value={password}
                 onChangeText={setPassword}
+                placeholder="At least 6 characters"
                 secureTextEntry={!showPassword}
+                autoComplete="new-password"
                 leftIcon="lock-outline"
                 rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
                 onRightIconPress={() => setShowPassword(!showPassword)}
-                rightIconLabel={showPassword ? 'Hide password' : 'Show password'}
-                helperText="At least 6 characters. Share it with them securely."
+                rightIconLabel={showPassword ? 'Hide' : 'Show'}
+                helperText="They can change it after signing in."
               />
+              <ImageField label="Profile photo" value={profilePicture} onChange={setProfilePicture} />
 
-              {PAYSPRINT_ENABLED && kind === 'retailer' && (
-                <View>
-                  <Text style={styles.providerLabel}>AEPS provider</Text>
-                  <Segmented
-                    scroll={false}
-                    options={AEPS_PROVIDERS.filter((p) => p.key !== 'both').map((p) => ({ key: p.key, label: p.label }))}
-                    value={aepsProvider}
-                    onChange={setAepsProvider}
+              {!isRetailer && <Input label="Distributor ID (auto-generated)" value={merchantCode} editable={false} disabled />}
+
+              {isRetailer && (
+                <>
+                  {PAYSPRINT_ENABLED && (
+                    <View>
+                      <Text style={styles.providerLabel}>AEPS provider</Text>
+                      <Segmented
+                        scroll={false}
+                        options={AEPS_PROVIDERS.filter((p) => p.key !== 'both').map((p) => ({ key: p.key, label: p.label }))}
+                        value={aepsProvider}
+                        onChange={(p) => {
+                          setAepsProvider(p);
+                          if (p === 'icchhamati') setIsExistingMerchant(false);
+                        }}
+                      />
+                      <Text style={styles.providerHint}>They start on this provider. You can add the other one later from their page.</Text>
+                    </View>
+                  )}
+                  {isPaysprint && (
+                    <Toggle
+                      label="Already a PaySprint merchant"
+                      hint="Tick this to migrate them with their existing merchant ID instead of a new one."
+                      value={isExistingMerchant}
+                      onChange={setIsExistingMerchant}
+                    />
+                  )}
+                  <Input
+                    label={isExistingMerchant ? 'Existing merchant ID' : 'Retailer ID (auto-generated)'}
+                    value={merchantCode}
+                    onChangeText={(v) => setMerchantCode(v.toUpperCase())}
+                    editable={isExistingMerchant}
+                    disabled={!isExistingMerchant}
+                    autoCapitalize="characters"
                   />
-                  <Text style={styles.providerHint}>They start on this provider. You can add the other one later from the web portal.</Text>
-                </View>
-              )}
-
-              {kind === 'retailer' && aepsProvider === 'paysprint' && (
-                <Toggle
-                  label="Already onboarded with PaySprint"
-                  hint="Skips the new-merchant flow when the shop already has a PaySprint merchant code."
-                  value={isExistingMerchant}
-                  onChange={setIsExistingMerchant}
-                />
+                  <Input label="Parent distributor" value={parentName} editable={false} disabled />
+                </>
               )}
             </>
           )}
 
           {step === 1 && (
             <>
-              <Input label="Business name" required value={businessName} onChangeText={setBusinessName} leftIcon="storefront-outline" />
-              <Input label="Street address" required value={businessAddress} onChangeText={setBusinessAddress} leftIcon="map-marker-outline" />
-              <Input label="City" required value={city} onChangeText={setCity} leftIcon="city-variant-outline" />
-              <Input label="District" required value={district} onChangeText={setDistrict} leftIcon="map-outline" />
+              <Input
+                label="Aadhaar number"
+                required
+                value={aadhaarNumber}
+                onChangeText={(v) => setAadhaarNumber(v.replace(/\D/g, '').slice(0, 12))}
+                placeholder="1234 5678 9012"
+                keyboardType="number-pad"
+                leftIcon="card-account-details-outline"
+              />
+              <Input
+                label="PAN number"
+                required
+                value={panNumber}
+                onChangeText={(v) => setPanNumber(v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10))}
+                placeholder="ABCDE1234F"
+                autoCapitalize="characters"
+                leftIcon="card-text-outline"
+              />
+              <ImageField label="Aadhaar photo" required={isRetailer} value={aadhaarPicture} onChange={setAadhaarPicture} helperText="JPG or PNG, a clear photo" />
+              <ImageField label="PAN photo" required={isRetailer} value={panPicture} onChange={setPanPicture} helperText="JPG or PNG, a clear photo" />
+
+              <Text style={styles.sectionTitle}>Shop details</Text>
+              <Input label="Business name" required value={businessName} onChangeText={setBusinessName} placeholder="e.g. Sharma Mobile Centre" leftIcon="storefront-outline" />
+              <Input label="Company registered name" value={companyRegisterName} onChangeText={setCompanyRegisterName} placeholder="Optional" leftIcon="domain" />
+              <Input label="Street address" required value={businessAddress} onChangeText={setBusinessAddress} placeholder="Shop no., street, area" leftIcon="map-marker-outline" />
+              <Input label="City" required value={city} onChangeText={setCity} placeholder="City" leftIcon="city-variant-outline" />
+              <Input label="District" required value={district} onChangeText={setDistrict} placeholder="District" leftIcon="map-outline" />
 
               <View>
-                <SelectField
-                  label="State"
-                  required
-                  value={state}
-                  placeholder="Select the state"
-                  open={stateOpen}
-                  onPress={() => setStateOpen(!stateOpen)}
-                />
+                <SelectField label="State" required value={state} placeholder="Select state" open={stateOpen} onPress={() => setStateOpen(!stateOpen)} />
                 {stateOpen && (
                   <ScrollView style={styles.pickerScroll} nestedScrollEnabled>
                     {INDIAN_STATES.map((option) => (
@@ -501,115 +516,78 @@ export const OnboardMemberSheet: React.FC<{
                 )}
               </View>
 
-              <Input label="Landmark" value={landmark} onChangeText={setLandmark} leftIcon="signs-post" />
-
-              <Toggle label="Registered for GST" value={hasGst} onChange={setHasGst} />
-              {hasGst && (
-                <Input
-                  label="GST number"
-                  required
-                  value={gstNumber}
-                  onChangeText={(v) => setGstNumber(v.toUpperCase().slice(0, 15))}
-                  autoCapitalize="characters"
-                  leftIcon="file-certificate-outline"
-                  helperText="15 characters"
-                />
-              )}
+              <Input label="Landmark" value={landmark} onChangeText={setLandmark} placeholder="Optional" leftIcon="signs-post" />
             </>
           )}
 
           {step === 2 && (
             <>
+              <Text style={styles.sectionTitle}>Branding & support (optional)</Text>
+              <Input label="Brand name" value={brandName} onChangeText={setBrandName} placeholder="Brand name" leftIcon="tag-outline" />
+              <Input label="Website" value={website} onChangeText={setWebsite} placeholder="www.company.com" autoCapitalize="none" keyboardType="url" leftIcon="web" helperText="https://" />
+              <Input label="Support email" value={supportEmail} onChangeText={setSupportEmail} placeholder="support@company.com" autoCapitalize="none" keyboardType="email-address" leftIcon="email-outline" />
               <Input
-                label="Aadhaar number"
-                required
-                value={aadhaarNumber}
-                onChangeText={(v) => setAadhaarNumber(v.replace(/\D/g, '').slice(0, 12))}
+                label="Support mobile"
+                value={supportMobile}
+                onChangeText={(v) => setSupportMobile(v.replace(/\D/g, '').slice(0, 10))}
+                placeholder="Support number"
                 keyboardType="number-pad"
-                leftIcon="card-account-details-outline"
-                placeholder="12 digits"
+                leftIcon="phone-outline"
               />
-              <ImageField
-                label="Aadhaar card photo"
-                required
-                value={aadhaarPicture}
-                onChange={setAadhaarPicture}
-                helperText="Both sides in one frame, or the front if the address is printed there"
-              />
-              <Input
-                label="PAN number"
-                required
-                value={panNumber}
-                onChangeText={(v) => setPanNumber(v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10))}
-                autoCapitalize="characters"
-                leftIcon="card-text-outline"
-                placeholder="ABCDE1234F"
-              />
-              <ImageField label="PAN card photo" required value={panPicture} onChange={setPanPicture} />
-              <ImageField
-                label="Profile photo"
-                value={profilePicture}
-                onChange={setProfilePicture}
-                helperText="Optional. Shown on their dashboard and receipts."
-              />
+
+              {isRetailer && (
+                <>
+                  <Text style={styles.sectionTitle}>Service packages</Text>
+                  <Text style={styles.sectionHint}>
+                    Services set to No are hidden from the retailer and blocked. You can change this later from the retailer's page.
+                  </Text>
+                  <View style={styles.footerRow}>
+                    <Button variant="outline" size="sm" onPress={() => setAllServices('Yes')} style={styles.flex}>All Yes</Button>
+                    <Button variant="outline" size="sm" onPress={() => setAllServices('No')} style={styles.flex}>All No</Button>
+                  </View>
+                  <View style={styles.summary}>
+                    {SERVICES.map((svc, index) => (
+                      <View key={svc.key} style={[styles.serviceRow, index === SERVICES.length - 1 && styles.serviceRowLast]}>
+                        <View style={styles.flex}>
+                          <Text style={styles.toggleLabel}>{svc.label}</Text>
+                          <Text style={styles.toggleHint}>{svc.hint}</Text>
+                        </View>
+                        <View style={styles.serviceSwitch}>
+                          <Segmented
+                            scroll={false}
+                            options={[{ key: 'Yes', label: 'Yes' }, { key: 'No', label: 'No' }]}
+                            value={services[svc.key]}
+                            onChange={(value) => setServices({ ...services, [svc.key]: value })}
+                          />
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              )}
             </>
           )}
 
           {step === 3 && (
             <>
-              <Text style={styles.sectionHint}>
-                Commission packages are optional — leave a service blank to keep the platform default.
-              </Text>
-              {SERVICE_PACKAGES.map((service) => (
-                <View key={service.key}>
-                  <SelectField
-                    label={`${service.label} package`}
-                    value={packages[service.key] ?? ''}
-                    placeholder="Platform default"
-                    open={openPackage === service.key}
-                    onPress={() => setOpenPackage(openPackage === service.key ? null : service.key)}
-                  />
-                  {openPackage === service.key && (
-                    <View style={styles.picker}>
-                      {PACKAGES.map((option) => (
-                        <Pressable
-                          key={option}
-                          onPress={() => {
-                            setPackages({ ...packages, [service.key]: option });
-                            setOpenPackage(null);
-                          }}
-                          style={({ pressed }) => [styles.pickerItem, pressed && styles.pickerItemPressed]}
-                          accessibilityRole="button"
-                        >
-                          <Text style={styles.pickerText}>{option}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  )}
+              {review.map((block) => (
+                <View key={block.title} style={styles.summary}>
+                  <View style={styles.reviewHeader}>
+                    <Text style={styles.toggleLabel}>{block.title}</Text>
+                    <Pressable onPress={() => setStep(block.to)} accessibilityRole="button" hitSlop={8}>
+                      <Text style={styles.editLink}>Edit</Text>
+                    </Pressable>
+                  </View>
+                  {block.rows.map(([label, value], index) => (
+                    <Row key={label} label={label} value={value || '—'} last={index === block.rows.length - 1} />
+                  ))}
                 </View>
               ))}
-
-              <Text style={styles.sectionHint}>Branding (optional)</Text>
-              <Input label="Brand name" value={brandName} onChangeText={setBrandName} leftIcon="tag-outline" />
-              <Input label="Company registered name" value={companyRegisterName} onChangeText={setCompanyRegisterName} leftIcon="domain" />
-              <Input label="Website" value={website} onChangeText={setWebsite} autoCapitalize="none" keyboardType="url" leftIcon="web" />
-              <Input label="Support email" value={supportEmail} onChangeText={setSupportEmail} autoCapitalize="none" keyboardType="email-address" leftIcon="email-outline" />
-              <Input
-                label="Support mobile"
-                value={supportMobile}
-                onChangeText={(v) => setSupportMobile(v.replace(/\D/g, '').slice(0, 10))}
-                keyboardType="number-pad"
-                leftIcon="phone-outline"
-              />
-
               {!!create.error && <Banner tone="error" message={create.error} />}
             </>
           )}
 
-          {!!blocked && step < STEPS.length - 1 && <Banner tone="warning" message={blocked} />}
-          {!allValid && step === STEPS.length - 1 && (
-            <Banner tone="warning" message={errors.find(Boolean) as string} />
-          )}
+          {!!blocked && <Banner tone="warning" message={blocked} />}
         </>
       )}
     </Sheet>
@@ -688,6 +666,19 @@ const styles = themed((c) => ({
   pickerItemPressed: { backgroundColor: c.surfaceAlt },
   pickerText: { fontSize: t.small, color: c.foreground },
   sectionHint: { fontSize: t.caption, color: c.mutedForeground, lineHeight: 18 },
+  sectionTitle: { fontSize: t.small, fontWeight: '700', color: c.foreground, marginTop: space.sm },
+  serviceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    paddingVertical: space.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  serviceRowLast: { borderBottomWidth: 0 },
+  serviceSwitch: { width: 120 },
+  reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: space.md },
+  editLink: { fontSize: t.micro, fontWeight: '700', color: c.mutedForeground },
   toggle: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm, minHeight: 44 },
   toggleText: { flex: 1, gap: 2 },
   toggleLabel: { fontSize: t.small, fontWeight: '600', color: c.foreground },

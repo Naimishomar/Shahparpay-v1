@@ -1,162 +1,134 @@
 import React, { useState } from 'react';
 import { View, Text, Linking } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, space, type as t } from '../../theme/colors';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { IconTile } from '@/components/ui/Gradient';
-import {
-  Screen,
-  SectionTitle,
-  Banner,
-  EmptyState,
-  ErrorBanner,
-  Row,
-  money,
-  shortDate,
-  SkeletonRows,
-} from '@/components/ui/Screen';
-import { useAsync, useAction } from '@/hooks/useAsync';
+import { Screen, SectionTitle, Toast } from '@/components/ui/Screen';
 import api from '@/services/api';
 
+// Same copy as the web ITR page (frontend/src/pages/ITR.tsx).
+const STEPS = [
+  { icon: 'lock-outline', title: 'Launch securely', text: 'A single-use token opens the eSevaTech module in a new tab. It stays valid for 15 minutes.' },
+  { icon: 'file-document-outline', title: 'File the return', text: "Fill in and validate the client's details in the portal, then submit." },
+  { icon: 'wallet-outline', title: 'Pay on success', text: 'Your Utility Wallet is charged only on a successful submission. Rejections are refunded automatically.' },
+];
+
+const GUIDELINES = [
+  { ok: true, text: 'Wallet balance checks run automatically during submission.' },
+  { ok: true, text: 'Each single-use token is valid for 15 minutes.' },
+  { ok: true, text: 'Validate information carefully before submitting the form.' },
+  { ok: false, text: 'Refunds for rejected requests are credited to your Utility Wallet automatically.' },
+];
+
 export const ItrScreen: React.FC = () => {
-  const [openError, setOpenError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' }>({ message: '', tone: 'error' });
 
-  const history = useAsync<any[]>(async () => (await api.getItrHistory()).data ?? [], []);
-  const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
-
-  // The backend brokers an eSevaTech session and hands back a one-time URL.
-  const launch = useAction(async () => {
-    const res = await api.launchItr();
-    if (!res.success || !res.redirect_url) {
-      throw new Error(res.message || 'Could not start an ITR session.');
-    }
-    return res.redirect_url as string;
-  });
-
+  // POST /api/itr/launch with an empty body, exactly as the web does. The
+  // backend rejects the launch (e.g. Utility Wallet below ₹100) with a message.
   const onLaunch = async () => {
-    setOpenError('');
-    const url = await launch.run();
-    if (!url) return;
-    if (await Linking.canOpenURL(url)) {
-      await Linking.openURL(url);
-      history.reload();
-    } else {
-      setOpenError('This device cannot open the ITR filing portal.');
+    setLoading(true);
+    try {
+      const res = await api.launchItr();
+      if (res?.success && res?.redirect_url) {
+        setToast({ message: 'ITR portal link generated successfully! Redirecting...', tone: 'success' });
+        await Linking.openURL(res.redirect_url);
+      } else {
+        setToast({ message: res?.message || 'Failed to launch ITR portal.', tone: 'error' });
+      }
+    } catch (error: any) {
+      setToast({
+        message: error?.response?.data?.message || 'An error occurred while generating the ITR portal URL.',
+        tone: 'error',
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <Screen
-      refreshing={history.refreshing}
-      onRefresh={() => {
-        history.refresh();
-        balances.refresh();
-      }}
-      error={history.error}
-      onRetry={history.reload}
+      overlay={<Toast message={toast.message} tone={toast.tone} onHide={() => setToast((s) => ({ ...s, message: '' }))} />}
     >
       <Card>
-        <CardContent style={styles.wallet}>
-          <IconTile icon="wallet-outline" size={48} iconSize={22} />
-          <Text style={styles.walletLabel}>Utility Wallet balance</Text>
-          <Text style={styles.walletValue} numberOfLines={1} adjustsFontSizeToFit>
-            {money(balances.data?.mainBalance)}
-          </Text>
-        </CardContent>
-      </Card>
-
-      <SectionTitle>Start a filing</SectionTitle>
-      <Card>
         <CardContent style={styles.form}>
+          <View style={styles.heroTop}>
+            <IconTile icon="file-document-outline" size={48} iconSize={22} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>ITR Filing Services</Text>
+              <Text style={styles.tag}>eSevaTech partner</Text>
+            </View>
+          </View>
           <Text style={styles.help}>
-            Filing opens the eSevaTech portal already signed in as your retailer account. Each
-            completed filing is debited from your wallet and appears below.
+            Submit and manage Income Tax Returns for your clients through the secure eSevaTech ITR module.
           </Text>
-          <Banner
-            tone="info"
-            message="The portal opens in your browser. Come back and pull to refresh once you finish."
-          />
-          {!!launch.error && <ErrorBanner message={launch.error} />}
-          {!!openError && <ErrorBanner message={openError} />}
-          <Button
-            onPress={onLaunch}
-            loading={launch.pending}
-            size="lg"
-            fullWidth
-          >
-            Open ITR portal
+          <Button onPress={onLaunch} loading={loading} size="lg" fullWidth icon="arrow-top-right" iconRight>
+            {loading ? 'Generating secure link...' : 'Open Filing Module'}
           </Button>
         </CardContent>
       </Card>
 
-      <SectionTitle>Filing history</SectionTitle>
+      <SectionTitle>How it works</SectionTitle>
       <Card>
-        <CardContent>
-          {history.loading ? <SkeletonRows count={3} /> : history.data?.length ? (
-            history.data.slice(0, 20).map((txn: any, index: number, shown: any[]) => (
-              <View
-                key={txn._id || txn.transactionId}
-                style={[styles.item, index === shown.length - 1 && styles.itemLast]}
-              >
-                <View style={styles.itemTop}>
-                  <IconTile icon="file-document-outline" size={44} iconSize={20} />
-                  <Text style={styles.itemAmount}>{money(txn.amount)}</Text>
-                  <StatusText status={txn.status} />
-                </View>
-                <Row label="Reference" value={txn.transactionId} />
-                <Row label="Client" value={txn.metadata?.client_name || txn.metadata?.pan} />
-                <Row label="Date" value={shortDate(txn.createdAt)} last />
+        <CardContent style={styles.form}>
+          {STEPS.map((step, i) => (
+            <View key={step.title} style={styles.heroTop}>
+              <IconTile icon={step.icon} size={44} iconSize={20} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemTitle}>{`${i + 1}. ${step.title}`}</Text>
+                <Text style={styles.help}>{step.text}</Text>
               </View>
-            ))
-          ) : (
-            <EmptyState
-              icon="file-document-outline"
-              title="No filings yet"
-              subtitle="Completed ITR filings and their charges appear here"
-            />
-          )}
+            </View>
+          ))}
+        </CardContent>
+      </Card>
+
+      <SectionTitle>Guidelines & Rules</SectionTitle>
+      <Card>
+        <CardContent style={styles.form}>
+          {GUIDELINES.map(({ ok, text }) => (
+            <View key={text} style={styles.rule}>
+              <MaterialCommunityIcons
+                name={ok ? 'check-circle-outline' : 'alert-circle-outline'}
+                size={18}
+                color={ok ? colors.success : colors.warning}
+              />
+              <Text style={[styles.help, { flex: 1 }]}>{text}</Text>
+            </View>
+          ))}
+        </CardContent>
+      </Card>
+
+      <SectionTitle>Secure filing</SectionTitle>
+      <Card>
+        <CardContent style={styles.form}>
+          <View style={styles.heroTop}>
+            <IconTile icon="shield-check-outline" size={44} iconSize={20} />
+            <Text style={[styles.help, { flex: 1 }]}>
+              ITR filing through eSevaTech uses secure single-use tokens. Your Utility Wallet is only charged upon
+              successful submission.
+            </Text>
+          </View>
+          <View style={styles.rule}>
+            <MaterialCommunityIcons name="script-text-outline" size={16} color={colors.mutedForeground} />
+            <Text style={[styles.help, { flex: 1 }]}>Every transaction is logged in your Wallet Ledger.</Text>
+          </View>
         </CardContent>
       </Card>
     </Screen>
   );
 };
 
-/** BHIM status: small coloured text, never a filled pill. */
-const StatusText: React.FC<{ status?: string | null }> = ({ status }) => {
-  const s = String(status || 'PENDING').toUpperCase();
-  const color = /SUCCESS|COMPLETE|APPROVED|ACTIVE|ACCEPTED|CONVERTED/.test(s)
-    ? colors.success
-    : /FAIL|REJECT/.test(s)
-      ? colors.destructive
-      : colors.warning;
-  return (
-    <Text style={{ fontSize: t.small, fontWeight: '500', color }}>
-      {s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, ' ')}
-    </Text>
-  );
-};
-
 const styles = themed((c) => ({
   form: { gap: space.lg },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  title: { fontSize: t.h2, fontWeight: '500', color: c.foreground },
+  tag: { fontSize: t.small, color: c.mutedForeground },
   help: { fontSize: t.small, color: c.mutedForeground, lineHeight: 19 },
-  wallet: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  walletLabel: { flex: 1, fontSize: t.small, color: c.mutedForeground },
-  walletValue: { fontSize: t.h2, fontWeight: '400', color: c.foreground, fontVariant: ['tabular-nums'] },
-  item: { paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
-  itemLast: { borderBottomWidth: 0 },
-  itemTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    marginBottom: 2,
-  },
-  itemAmount: {
-    flex: 1,
-    fontSize: t.bodyLg,
-    fontWeight: '500',
-    color: c.foreground,
-    fontVariant: ['tabular-nums'],
-  },
+  itemTitle: { fontSize: t.body, fontWeight: '500', color: c.foreground },
+  rule: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
 }));
 
 export default ItrScreen;

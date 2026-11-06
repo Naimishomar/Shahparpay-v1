@@ -10,24 +10,19 @@ import {
 import { useRoute } from "@react-navigation/native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors, themed, radius, space, type as t } from "../../theme/colors";
-import { CategoryTile, categoryIcon } from "./BbpsScreen";
 import {
   Btn,
   DoneBody,
   Field,
   PayReceipt,
   PinStep,
-  StatusText,
 } from "./RechargeScreen";
 import {
   Screen,
   Banner,
   SkeletonRows,
   Row,
-  SectionTitle,
   Toast,
-  money,
-  shortDate,
 } from "@/components/ui/Screen";
 import { useAsync, useAction } from "@/hooks/useAsync";
 import api from "@/services/api";
@@ -51,39 +46,47 @@ interface BbpsForm {
   biller: unknown;
   caNumber: string;
   amount: string;
-  available: number;
-  customerMobile: string;
   pin: string;
 }
 
 /**
- * What the provider requires of a bill payment, on every BBPS service: a
- * biller, the biller's own consumer identifier, at least ₹10, a ten-digit
- * mobile number if one is given at all, and the wallet PIN. Kept out of the
+ * The website's payment check, on every BBPS service: a biller, the biller's
+ * own consumer identifier, at least ₹10 and the wallet PIN. Kept out of the
  * component so the rule that gates the money is testable on its own.
  */
-export const bbpsFormValid = ({
-  biller,
-  caNumber,
-  amount,
-  available,
-  customerMobile,
-  pin,
-}: BbpsForm) =>
-  !!biller &&
-  caNumber.trim().length >= 4 &&
-  Number(amount) >= MIN_AMOUNT &&
-  Number(amount) <= available &&
-  (customerMobile.length === 0 || customerMobile.length === 10) &&
-  pin.length === 4;
+export const bbpsFormValid = ({ biller, caNumber, amount, pin }: BbpsForm) =>
+  !!biller && caNumber.trim().length >= 4 && !!amount && Number(amount) >= MIN_AMOUNT && pin.length === 4;
+
+/** The website's BBPS receipt rows, in its order and words. */
+const bbpsReceipt = (r: any): PayReceipt => {
+  const pending = r.status === "PENDING";
+  const success = !!r.isSuccess && !pending;
+  const bill = r.billDetails || {};
+  return {
+    settled: success,
+    heading: pending ? "Payment Pending" : success ? "Payment Successful!" : "Payment Failed!",
+    amount: `₹${r.amount}`,
+    rows: [
+      { label: "Service", value: r.type || "BBPS" },
+      { label: "Biller", value: r.billerName || r.operator || "N/A" },
+      { label: "Customer name", value: r.customerName || "N/A" },
+      { label: "Customer mobile", value: r.customerMobile || "N/A" },
+      { label: "Consumer / account no.", value: r.number || bill.account || "N/A" },
+      { label: "Bill number", value: bill.billNumber || "N/A" },
+      { label: "Bill date", value: bill.billDate || "N/A" },
+      { label: "Due date", value: bill.dueDate || "N/A" },
+      { label: "Fetch reference", value: bill.fetchRefId || bill.fetchBillId || "N/A" },
+      { label: "Transaction ID", value: r.transactionId || "N/A", dashBefore: true },
+      { label: "Operator reference", value: r.operatorRef || r.txnId || "N/A" },
+      { label: "Status", value: r.status },
+      { label: "Reason for failure", value: !r.isSuccess ? r.errorReason : null },
+    ],
+  };
+};
 
 /**
  * One BBPS category: pick the biller, fetch the bill if there is one, pay it.
- *
- * The category arrives as a route param from the hub, so this screen never
- * switches categories under the retailer — which is what the old combined
- * screen did, quietly resetting the biller and the fetched bill while leaving
- * the form looking filled in.
+ * Mirrors the website's BBPS form field for field.
  */
 export const BbpsServiceScreen: React.FC = () => {
   const route = useRoute<any>();
@@ -107,120 +110,63 @@ export const BbpsServiceScreen: React.FC = () => {
   const billers = useAsync<Biller[]>(async () => {
     if (!category) return [];
     const res = await api.getRechargeOperators(category);
-    if (!res.success) throw new Error(res.message || "Could not load billers.");
+    if (!res.success) throw new Error(res.message || "Could not load billers");
     return res.data ?? [];
   }, [category]);
-
-  const history = useAsync<any[]>(
-    async () => (await api.getRechargeHistory()).data ?? [],
-    [],
-  );
-  const balances = useAsync<any>(
-    async () => (await api.getWalletBalance()).data,
-    [],
-  );
 
   // The one identifier this biller asks for, named and shaped its way.
   const field = billerField(biller);
   // When that identifier is the customer's mobile, a second mobile box only repeats it.
   const mobileForBill = field.kind === "mobile" ? caNumber : customerMobile;
+  const viewBill = biller?.viewbill === "true";
 
   // The gateway takes a date of birth only joined to the account: "policy|DD/MM/YYYY".
   const accountNumber = needsDob && dob ? `${caNumber.trim()}|${dob}` : caNumber.trim();
-  const dobInvalid = needsDob && !/^\d{2}\/\d{2}\/\d{4}$/.test(dob);
 
   const fetchBill = useAction(async () => {
-    if (dobInvalid) throw new Error("Enter the date of birth as DD/MM/YYYY.");
     const res = await api
       .fetchBill({
-      caNumber: accountNumber,
-      operator: String(biller?.id),
-      type: category,
-      customerMobile: mobileForBill || undefined,
-      // Some billers quote against an amount rather than returning one.
-      ...(Number(amount) > 0 ? { amount: Number(amount) } : {}),
-    })
+        operator: String(biller?.id),
+        caNumber: accountNumber,
+        type: category,
+        category,
+        customerMobile: mobileForBill || undefined,
+      })
       .catch((err: any) => {
         if (err?.response?.data?.requiredField === "dateofbirth") setNeedsDob(true);
+        if (!err?.response?.data?.message) throw new Error("Error fetching bill");
         throw err;
       });
-    if (!res.success) throw new Error(res.message);
+    if (!res.success) throw new Error(res.message || "Failed to fetch bill details");
     return res.data;
   });
 
+  // Never throws: the website answers every outcome, failure included, with a receipt.
   const payBill = useAction(async () => {
-    const res = await api.doRecharge({
-      number: accountNumber,
-      operator: biller?.id,
-      amount: Number(amount),
-      pin,
-      type: category,
-      customerMobile: mobileForBill || undefined,
-      // What the biller told us about this bill. Without it the payment is
-      // stored with no customer name, bill number or due date, and every
-      // receipt and report for it reads blank.
-      ...(bill
-        ? {
-            customerName: bill.customerName ?? bill.name ?? undefined,
-            billDetails: {
-              // The raw fetch rides along: the provider reads its own keys from it.
-              ...bill,
-              customerName: bill.customerName ?? bill.name ?? null,
-              billNumber: bill.billNumber ?? bill.billnumber ?? null,
-              billDate: bill.billDate ?? bill.billdate ?? null,
-              dueDate: bill.dueDate ?? bill.duedate ?? null,
-              billPeriod: bill.billPeriod ?? bill.bilperiod ?? null,
-              fetchRefId:
-                bill.fetchRefId ?? bill.fetchBillId ?? bill.fetchBillID ?? null,
-            },
-          }
-        : {}),
-    });
-    if (!res.success) throw new Error(res.message);
-    return res;
+    try {
+      const res = await api.doRecharge({
+        type: category,
+        number: accountNumber,
+        operator: biller?.id,
+        amount,
+        pin,
+        customerName: bill?.customerName || undefined,
+        customerMobile: mobileForBill || undefined,
+        billDetails: bill || undefined,
+      });
+      return { res, error: null as any };
+    } catch (error: any) {
+      return { res: null, error };
+    }
   });
 
-  const available = balances.data?.mainBalance ?? 0;
-  const overBalance = Number(amount) > available;
-  // The provider refuses a payment under ₹10 and a mobile number that is not
-  // exactly ten digits, so both are caught here rather than by a failed call.
-  const belowMinimum =
-    !!amount && Number(amount) > 0 && Number(amount) < MIN_AMOUNT;
-  const mobileInvalid =
-    customerMobile.length > 0 && customerMobile.length !== 10;
-  const optionalMobile = field.kind === "mobile" ? "" : customerMobile;
-  const identifierValid = billerInputValid(field, caNumber);
-  const valid =
-    identifierValid &&
-    bbpsFormValid({
-      biller,
-      caNumber,
-      amount,
-      available,
-      customerMobile: optionalMobile,
-      pin,
-    });
-  // Everything but the PIN, which the PIN step collects: the same rule with a
-  // stand-in PIN, so the two gates can never disagree.
-  const ready =
-    identifierValid &&
-    bbpsFormValid({
-      biller,
-      caNumber,
-      amount,
-      available,
-      customerMobile: optionalMobile,
-      pin: "0000",
-    });
-
-  // A failed fetch or payment is news, not a state: shown as a toast, then drained.
+  // A failed fetch is news, not a state: shown as a toast, then drained.
   const [toast, setToast] = useState("");
   useEffect(() => {
-    const failed = [payBill, fetchBill].find((a) => a.error);
-    if (!failed) return;
-    setToast(failed.error as string);
-    failed.setError(null);
-  }, [payBill.error, fetchBill.error]);
+    if (!fetchBill.error) return;
+    setToast(fetchBill.error);
+    fetchBill.setError(null);
+  }, [fetchBill.error]);
 
   const filteredBillers = useMemo(
     () =>
@@ -232,59 +178,84 @@ export const BbpsServiceScreen: React.FC = () => {
     [billers.data, billerQuery],
   );
 
+  const resetBillerFields = () => {
+    setCaNumber("");
+    setCustomerMobile("");
+    setNeedsDob(false);
+    setDob("");
+    setAmount("");
+    setBill(null);
+  };
+
   const onFetchBill = async () => {
+    if (!biller || !billerInputValid(field, caNumber)) return setToast(`Enter a valid ${field.label}`);
+    if (needsDob && !dob) return setToast("Please enter the date of birth");
+    if (needsDob && !/^\d{2}\/\d{2}\/\d{4}$/.test(dob)) return setToast("Enter the date of birth as DD/MM/YYYY.");
     const data = await fetchBill.run();
     if (data) {
       setBill(data);
-      // The biller quotes the payable amount under a few different keys.
-      const due =
-        data.dueAmount ?? data.amount ?? data.dueamount ?? data.billAmount;
-      if (due) setAmount(String(due));
+      const fetched = data.amount || data.Amount || data.billAmount;
+      if (fetched) setAmount(String(fetched));
     }
+  };
+
+  const onPayPress = () => {
+    if (!bbpsFormValid({ biller, caNumber, amount, pin: "0000" }) || !billerInputValid(field, caNumber))
+      return setToast("Please fill all fields");
+    if (viewBill && !bill) return setToast("Fetch the bill details before making a payment");
+    setStep("pin");
   };
 
   const onPay = async () => {
-    const res = await payBill.run();
-    if (res) {
-      // A biller can accept a payment before confirming it, so the wording
-      // must not claim it has landed.
-      const settled = !res.pending;
-      setReceipt({
-        settled,
-        heading: settled
-          ? `Paid to ${biller?.displayname || biller?.name || categoryLabel}`
-          : "Payment accepted, being processed",
-        amount: money(amount).replace(/\.00$/, ""),
-        rows: [
-          { label: "Biller", value: biller?.displayname || biller?.name },
-          { label: biller?.label || "Consumer number", value: caNumber.trim() },
-          { label: "Customer", value: bill?.customerName || bill?.name },
-          { label: "Biller ref", value: res.data?.txnId, dashBefore: true },
-          {
-            label: "Transaction ID",
-            value: res.data?.transactionId,
-            dashBefore: !res.data?.txnId,
-          },
-          { label: "Status", value: settled ? null : res.message },
-        ],
-      });
-      setPin("");
-      setStep("form");
-      setBill(null);
-      balances.reload();
-      history.reload();
+    const out = await payBill.run();
+    if (!out) return;
+    const { res, error } = out;
+    const base = {
+      amount,
+      number: caNumber,
+      operator: String(biller?.id ?? ""),
+      billerName: biller?.name,
+      customerName: bill?.customerName,
+      customerMobile: mobileForBill,
+      billDetails: bill,
+      type: category,
+      isSuccess: false,
+    };
+    if (res?.success) {
+      const d = res.data || {};
+      const pending = Boolean(res.pending || String(d.status || "").toUpperCase() === "PENDING");
+      setReceipt(
+        bbpsReceipt({
+          ...base,
+          ...d,
+          amount: d.amount ?? amount,
+          billDetails: d.billDetails || bill,
+          billerName: biller?.name,
+          customerName: d.customerName || bill?.customerName,
+          customerMobile: d.customerMobile || mobileForBill,
+          status: pending ? "PENDING" : "SUCCESS",
+          isSuccess: !pending,
+        }),
+      );
+      // The website closes the form on success: the next payment starts clean.
+      setBiller(null);
+      resetBillerFields();
+    } else {
+      const body = res ?? error?.response?.data;
+      const msg = String(body?.message ?? "").trim();
+      setReceipt(
+        bbpsReceipt({
+          ...base,
+          status: (res && body?.data?.Status) || "FAILED",
+          transactionId: body?.data?.ApiTransID || "N/A",
+          operatorRef: (res && body?.data?.OperatorRef) || "N/A",
+          errorReason: msg || "Payment Failed",
+        }),
+      );
     }
+    setPin("");
+    setStep("form");
   };
-
-  // Only this category's payments — the hub already lists everything.
-  const categoryHistory = (history.data ?? []).filter(
-    (txn: any) =>
-      !category ||
-      String(txn?.metadata?.mode ?? "").toLowerCase() ===
-        category.toLowerCase() ||
-      String(txn?.metadata?.type ?? "").toLowerCase() ===
-        category.toLowerCase(),
-  );
 
   const toastNode = <Toast message={toast} onHide={() => setToast("")} />;
 
@@ -296,7 +267,7 @@ export const BbpsServiceScreen: React.FC = () => {
         detail={`${caNumber.trim()} · from Utility Wallet`}
         pin={pin}
         onPin={setPin}
-        onSubmit={() => valid && onPay()}
+        onSubmit={() => pin.length === 4 && onPay()}
         onClose={() => {
           setPin("");
           setStep("form");
@@ -307,19 +278,14 @@ export const BbpsServiceScreen: React.FC = () => {
     );
   }
 
-  // The header already names the category; its glyph marks the history rows.
-  const icon = categoryIcon(categoryLabel);
+  const amountLocked = !!(bill?.amount || bill?.Amount || bill?.billAmount);
 
   return (
     <>
       <Screen
         overlay={toastNode}
-        refreshing={history.refreshing || billers.refreshing}
-        onRefresh={() => {
-          history.refresh();
-          balances.refresh();
-          billers.refresh();
-        }}
+        refreshing={billers.refreshing}
+        onRefresh={billers.refresh}
       >
         <View style={styles.form}>
           {!!billers.error && (
@@ -337,18 +303,16 @@ export const BbpsServiceScreen: React.FC = () => {
               <View>
                 <Banner
                   tone="warning"
-                  message="No billers are available for this category right now."
+                  message="No billers are available for this category right now"
                 />
               </View>
             )}
 
           <View>
             <Field
-              label="Biller"
+              label="Operator / Biller"
               value={biller ? biller.displayname || biller.name : ""}
-              placeholder={
-                billers.loading ? "Loading billers…" : "Select biller"
-              }
+              placeholder="Select Biller"
               open={showBillers}
               onPress={() => setShowBillers(!showBillers)}
             />
@@ -376,11 +340,8 @@ export const BbpsServiceScreen: React.FC = () => {
                         setBiller(b);
                         setShowBillers(false);
                         setBillerQuery("");
-                        // A bill belongs to the biller it was fetched from.
-                        setBill(null);
-                        setAmount("");
-                        setNeedsDob(false);
-                        setDob("");
+                        // Every field below belongs to the biller it was typed for.
+                        resetBillerFields();
                       }}
                       style={({ pressed }) => [
                         styles.pickerItem,
@@ -418,16 +379,17 @@ export const BbpsServiceScreen: React.FC = () => {
               label={field.label}
               value={caNumber}
               onChangeText={(v) => setCaNumber(cleanBillerInput(field, v))}
-              autoCapitalize="characters"
+              autoCapitalize={field.kind === "vehicle" ? "characters" : "none"}
               keyboardType={field.numeric ? "number-pad" : "default"}
               maxLength={field.maxLength}
               placeholder={field.placeholder}
+              editable={!bill}
             />
           </View>
 
           {field.kind !== "mobile" && <View>
             <Field
-              label="Customer mobile (optional)"
+              label="Customer Mobile (optional)"
               value={customerMobile}
               onChangeText={(v) =>
                 setCustomerMobile(v.replace(/\D/g, "").slice(0, 10))
@@ -435,18 +397,14 @@ export const BbpsServiceScreen: React.FC = () => {
               keyboardType="number-pad"
               placeholder="10-digit mobile number"
               maxLength={10}
-              error={
-                mobileInvalid
-                  ? "Enter a valid 10-digit mobile number"
-                  : undefined
-              }
+              editable={!bill}
             />
           </View>}
 
           {needsDob && (
             <View>
               <Field
-                label="Date of birth"
+                label="Date of Birth"
                 value={dob}
                 onChangeText={(v) => {
                   const d = v.replace(/\D/g, "").slice(0, 8);
@@ -455,55 +413,35 @@ export const BbpsServiceScreen: React.FC = () => {
                 keyboardType="number-pad"
                 placeholder="DD/MM/YYYY"
                 maxLength={10}
+                editable={!bill}
               />
             </View>
           )}
 
-          {/* A top-up has no bill to fetch, so the step is hidden rather than
-            left to fail. */}
-          {biller?.viewbill === "true" && (
-            <View>
-              <Btn
-                ghost
-                icon="file-search-outline"
-                label="Fetch bill"
-                onPress={onFetchBill}
-                loading={fetchBill.pending}
-                disabled={!biller || !identifierValid}
-              />
-            </View>
-          )}
-
+          {/* A biller with a bill to fetch shows only that step until it is fetched. */}
+          {!bill && viewBill ? (
+            <Btn
+              label="Fetch Bill Details"
+              onPress={onFetchBill}
+              loading={fetchBill.pending}
+            />
+          ) : (<>
           {!!bill && (
             <View style={styles.card}>
-              <Row label="Customer" value={bill.customerName || bill.name} />
+              <Row label="Customer" value={bill.customerName || "N/A"} />
+              <Row label="Account" value={bill.account || caNumber} />
+              <Row label="Bill number" value={bill.billNumber || "N/A"} />
+              <Row label="Bill date" value={bill.billDate || "N/A"} />
+              <Row label="Due date" value={bill.dueDate || "N/A"} />
+              <Row label="Bill period" value={bill.billPeriod || "N/A"} />
               <Row
-                label="Account"
-                value={bill.account || bill.accountNumber || caNumber}
-              />
-              <Row
-                label="Bill number"
-                value={bill.billnumber || bill.billNumber}
-              />
-              <Row label="Bill date" value={bill.billdate || bill.billDate} />
-              <Row label="Due date" value={bill.duedate || bill.dueDate} />
-              <Row
-                label="Bill period"
-                value={bill.bilperiod || bill.billPeriod}
+                label="Fetch reference"
+                value={bill.fetchRefId || bill.fetchBillId || "N/A"}
               />
               <Row
                 label="Amount due"
-                value={money(
-                  bill.amount ??
-                    bill.Amount ??
-                    bill.dueamount ??
-                    bill.billAmount,
-                )}
+                value={`₹${bill.dueAmount ?? bill.amount ?? amount}`}
                 mono
-              />
-              <Row
-                label="Fetch reference"
-                value={bill.fetchBillID || bill.fetchRefId || "—"}
                 last
               />
             </View>
@@ -511,71 +449,25 @@ export const BbpsServiceScreen: React.FC = () => {
 
           <View>
             <Field
-              label="Amount"
+              label="Amount (₹)"
               prefix="₹"
               value={amount}
               onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ""))}
               keyboardType="decimal-pad"
-              placeholder="0"
-              error={
-                overBalance
-                  ? "Amount exceeds your Utility Wallet balance"
-                  : belowMinimum
-                    ? `Minimum payment amount is ₹${MIN_AMOUNT}`
-                    : undefined
-              }
-              helper={`Auto-filled when the biller returns a due amount · Utility Wallet ${money(available)}`}
+              placeholder="0.00"
+              editable={!amountLocked}
             />
           </View>
 
           <Btn
-            label={Number(amount) > 0 ? `Pay ${money(amount)}` : "Pay bill"}
-            onPress={() => setStep("pin")}
-            disabled={!ready}
+            label={viewBill ? "Pay Bill Securely" : "Pay Securely"}
+            onPress={onPayPress}
           />
+          {!!bill && (
+            <Btn ghost small label="Fetch Different Bill" onPress={() => setBill(null)} />
+          )}
           </>)}
-        </View>
-
-        <View style={styles.form}>
-          <SectionTitle>Recent payments</SectionTitle>
-          <View style={styles.list}>
-            {history.loading ? <SkeletonRows count={3} /> : categoryHistory.length ? (
-              categoryHistory
-                .slice(0, 20)
-                .map((txn: any, i: number, all: any[]) => (
-                  <View
-                    key={txn._id || txn.transactionId}
-                    style={[
-                      styles.rowI,
-                      i === all.length - 1 && styles.rowLast,
-                    ]}
-                  >
-                    <CategoryTile icon={icon} size={44} />
-                    <View style={styles.flex}>
-                      <Text style={styles.rowTitle} numberOfLines={1}>
-                        {txn.metadata?.caNumber || txn.transactionId}
-                      </Text>
-                      <Text style={styles.rowMeta} numberOfLines={1}>
-                        {[
-                          txn.metadata?.operatorName || txn.metadata?.mode,
-                          shortDate(txn.createdAt),
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </Text>
-                    </View>
-                    <View style={styles.rowRight}>
-                      <Text style={styles.rowAmount}>{money(txn.amount)}</Text>
-                      <StatusText status={txn.status} />
-                    </View>
-                  </View>
-                ))
-            ) : (
-              <Text style={styles.empty}>
-                No {categoryLabel.toLowerCase()} payments yet
-              </Text>
-            )}
-          </View>
+          </>)}
         </View>
       </Screen>
 
@@ -598,7 +490,6 @@ export const BbpsServiceScreen: React.FC = () => {
 };
 
 const styles = themed((c) => ({
-  flex: { flex: 1, minWidth: 0 },
   form: { gap: space.lg },
   hint: { fontSize: t.small, color: c.mutedForeground },
   card: {
@@ -633,38 +524,6 @@ const styles = themed((c) => ({
     fontSize: t.caption,
     color: c.mutedForeground,
     padding: space.md,
-  },
-  list: {
-    paddingHorizontal: space.lg,
-    paddingVertical: space.xs,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: c.border,
-    backgroundColor: c.card,
-  },
-  rowI: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.md,
-    paddingVertical: space.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: c.border,
-  },
-  rowLast: { borderBottomWidth: 0 },
-  rowTitle: { fontSize: t.body, fontWeight: "500", color: c.foreground },
-  rowMeta: { fontSize: t.caption, color: c.mutedForeground, marginTop: 3 },
-  rowRight: { alignItems: "flex-end", gap: 3 },
-  rowAmount: {
-    fontSize: t.body,
-    fontWeight: "500",
-    color: c.foreground,
-    fontVariant: ["tabular-nums"],
-  },
-  empty: {
-    fontSize: t.small,
-    color: c.mutedForeground,
-    paddingVertical: space.lg,
-    textAlign: "center",
   },
 }));
 

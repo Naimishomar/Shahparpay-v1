@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, Image, ScrollView } from 'react-native';
+import { View, Text, Pressable, Image, ScrollView, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, themed, radius, space, type as t } from '../theme/colors';
@@ -12,6 +12,7 @@ import {
   Screen,
   EmptyState,
   ErrorBanner,
+  SuccessBanner,
   SectionTitle,
   Segmented,
   dateTime,
@@ -45,8 +46,8 @@ const statusColor = (status: string) =>
       : colors.mutedForeground;
 
 const RECIPIENTS = [
-  { key: 'distributor', label: 'My distributor' },
-  { key: 'admin', label: 'ShahparPay admin' },
+  { key: 'distributor', label: 'My Distributor' },
+  { key: 'admin', label: 'ShahparPay Admin' },
 ];
 
 /**
@@ -70,9 +71,15 @@ export const SupportScreen: React.FC = () => {
   const [recipient, setRecipient] = useState('distributor');
   const [attachment, setAttachment] = useState<PickedFile | null>(null);
   const [reply, setReply] = useState('');
+  const [formError, setFormError] = useState('');
+  const [notice, setNotice] = useState('');
   const [replyPhoto, setReplyPhoto] = useState<PickedFile | null>(null);
 
-  const tickets = useAsync<any[]>(async () => (await api.getSupportTickets()).data ?? [], []);
+  const tickets = useAsync<any[]>(async () => {
+    const res = await api.getSupportTickets();
+    if (!res.success) throw new Error('Could not load support requests');
+    return res.data ?? [];
+  }, []);
 
   // Read out of the list rather than held in its own state, so a reload shows
   // the new message in the open thread instead of a stale copy of it.
@@ -83,32 +90,37 @@ export const SupportScreen: React.FC = () => {
       { subject: subject.trim(), description: description.trim(), recipient },
       attachment ?? undefined
     );
-    if (!res.success) throw new Error(res.message || 'Could not create the request.');
+    if (!res.success) throw new Error(res.message || 'Could not create request');
     return res;
   });
 
   const send = useAction(async (id: string) => {
     const res = await api.addSupportMessage(id, reply.trim(), replyPhoto ?? undefined);
-    if (!res.success) throw new Error(res.message || 'Could not send the message.');
+    if (!res.success) throw new Error(res.message || 'Could not send message');
     return res;
   });
 
   const setStatus = useAction(async (id: string, status: string) => {
     const res = await api.updateSupportTicket(id, status);
-    if (!res.success) throw new Error(res.message || 'Could not update the status.');
+    if (!res.success) throw new Error(res.message || 'Could not update status');
     return res;
   });
 
   const onCreate = async () => {
-    if (!subject.trim() || (!description.trim() && !attachment)) return;
+    setFormError('');
+    if (!subject.trim() || (!description.trim() && !attachment)) {
+      setFormError('Enter a message or attach a photo');
+      return;
+    }
     const res = await create.run();
     if (!res) return;
     setSubject('');
     setDescription('');
+    setRecipient('distributor');
     setAttachment(null);
     setComposing(false);
-    await tickets.reload();
-    setSelectedId(res.data?._id ?? null);
+    setNotice('Support request created');
+    tickets.reload();
   };
 
   const onReply = async () => {
@@ -131,21 +143,19 @@ export const SupportScreen: React.FC = () => {
     >
       <View style={styles.hero}>
         <IconTile icon="headset" size={64} iconSize={28} />
-        <Text style={styles.heroTitle}>How can we help?</Text>
-        <Text style={styles.heroText}>
-          Raise an issue with a screenshot and track every reply here. Include the transaction
-          reference whenever the problem is about one.
-        </Text>
+        <Text style={styles.heroTitle}>Support Center</Text>
+        <Text style={styles.heroText}>Raise an issue, share screenshots, and track resolution.</Text>
       </View>
-      <Button onPress={() => setComposing(true)} fullWidth>
-        New request
+      <Button onPress={() => { setNotice(''); setComposing(true); }} fullWidth>
+        New Request
       </Button>
+      {!!notice && <SuccessBanner message={notice} />}
 
       {isRetailer && (
         <View style={styles.card}>
           {[
-            { route: 'PipeStatus', icon: 'git-network-outline', title: 'AEPS pipe status', sub: 'Which bank pipes are live' },
-            { route: 'BiometricSupport', icon: 'finger-print-outline', title: 'Biometric support', sub: 'Device drivers and RD service' },
+            { route: 'PipeStatus', icon: 'git-network-outline', title: 'AEPS Pipe Status' },
+            { route: 'BiometricSupport', icon: 'finger-print-outline', title: 'Biometric Support' },
           ].filter((link) => isRouteEnabled(user, link.route)).map((link) => (
             <Pressable
               key={link.route}
@@ -159,7 +169,6 @@ export const SupportScreen: React.FC = () => {
               </View>
               <View style={styles.itemText}>
                 <Text style={styles.linkTitle}>{link.title}</Text>
-                <Text style={styles.linkSub}>{link.sub}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
             </Pressable>
@@ -168,6 +177,11 @@ export const SupportScreen: React.FC = () => {
       )}
 
       <SectionTitle>My requests</SectionTitle>
+      <Text style={styles.help}>
+        {['OPEN', 'IN_PROGRESS', 'RESOLVED']
+          .map((st) => `${statusLabel(st)} · ${(tickets.data ?? []).filter((x: any) => x.status === st).length}`)
+          .join('   ')}
+      </Text>
       {tickets.data?.length ? (
         <View style={styles.card}>
           {tickets.data.map((ticket: any, index: number) => {
@@ -211,22 +225,20 @@ export const SupportScreen: React.FC = () => {
       ) : (
         <EmptyState
           icon="message-outline"
-          title="No support requests yet"
-          subtitle="Open one whenever you need help"
-          action={{ label: 'New request', onPress: () => setComposing(true) }}
+          title="No support requests yet."
         />
       )}
 
       <Sheet
         visible={composing}
         onClose={() => setComposing(false)}
-        title="New support request"
+        title="Create support request"
         dismissible={!create.pending}
       >
         <View style={styles.form}>
           {isRetailer && (
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Send to</Text>
+              <Text style={styles.fieldLabel}>Contact</Text>
               <Segmented options={RECIPIENTS} value={recipient} onChange={setRecipient} scroll={false} />
             </View>
           )}
@@ -235,33 +247,27 @@ export const SupportScreen: React.FC = () => {
             value={subject}
             onChangeText={setSubject}
             maxLength={150}
-            placeholder="What do you need help with?"
-            required
+            placeholder="Issue subject"
           />
           <Input
-            label="Describe the issue"
+            label="Details"
+            helperText={`${description.length}/2000`}
             value={description}
             onChangeText={setDescription}
             maxLength={2000}
             multiline
             numberOfLines={5}
             style={styles.textarea}
-            placeholder="Transaction reference, error message, what you expected…"
+            placeholder="Describe your issue, transaction ID, or error..."
           />
           <ImageField
-            label="Issue photo"
+            label="Attach issue photo (max 5 MB)"
             value={attachment}
             onChange={setAttachment}
-            helperText="Optional — a screenshot of the error resolves most tickets faster"
           />
-          {!!create.error && <ErrorBanner message={create.error} />}
-          <Button
-            onPress={onCreate}
-            loading={create.pending}
-            disabled={!subject.trim() || (!description.trim() && !attachment)}
-            fullWidth
-          >
-            Submit request
+          {!!(formError || create.error) && <ErrorBanner message={formError || create.error || ''} />}
+          <Button onPress={onCreate} loading={create.pending} fullWidth>
+            Submit Request
           </Button>
         </View>
       </Sheet>
@@ -305,12 +311,9 @@ export const SupportScreen: React.FC = () => {
                       {item.message}
                     </Text>
                     {(item.attachments ?? []).map((file: any) => (
-                      <Image
-                        key={file.url}
-                        source={{ uri: file.url }}
-                        style={styles.attachment}
-                        resizeMode="cover"
-                      />
+                      <Pressable key={file.url} onPress={() => Linking.openURL(file.url)} accessibilityRole="imagebutton" accessibilityLabel={file.name || 'Support attachment'}>
+                        <Image source={{ uri: file.url }} style={styles.attachment} resizeMode="cover" />
+                      </Pressable>
                     ))}
                     <Text
                       style={styles.bubbleTime}
@@ -338,7 +341,7 @@ export const SupportScreen: React.FC = () => {
                   multiline
                   numberOfLines={3}
                   style={styles.textarea}
-                  placeholder="Write a reply…"
+                  placeholder="Write a reply..."
                 />
                 <ImageField label="Attach a photo" value={replyPhoto} onChange={setReplyPhoto} />
                 {!!send.error && <ErrorBanner message={send.error} />}

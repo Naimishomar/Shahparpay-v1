@@ -8,30 +8,34 @@ import { Button } from '@/components/ui/Button';
 import { IconTile } from '@/components/ui/Gradient';
 import { BrandMark } from '@/components/ui/BrandMark';
 import Constants from 'expo-constants';
-import { Input, SelectField } from '@/components/ui/Input';
+import { Input } from '@/components/ui/Input';
 import { Sheet } from '@/components/ui/Sheet';
 import {
   Screen,
   Banner,
   ErrorBanner,
   Row,
-  StatusPill,
   SuccessBanner,
-  shortDate,
 } from '@/components/ui/Screen';
-import { MerchantKycSheet } from '@/components/aeps/MerchantKycSheet';
-import { useAsync, useAction } from '@/hooks/useAsync';
+import { useAction } from '@/hooks/useAsync';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { INDIAN_STATES } from '@/constants';
 import { useResponsive } from '@/hooks/useResponsive';
-import { pickImage, type PickedFile } from '@/services/imagePicker';
+import { pickImage } from '@/services/imagePicker';
 import api from '@/services/api';
-import { PAYSPRINT_ENABLED } from '@/constants/services';
+import { aepsKycDone } from '@/constants/services';
 
 /** distributorId comes back populated on a retailer and as a plain id elsewhere. */
 const distributorLabel = (value: unknown) =>
   typeof value === 'string' ? value : (value as any)?.distributorId || (value as any)?.name;
+
+/** Same masking as web's getMaskedEmail: last 3 of the local part, max 5 stars. */
+const maskEmail = (email: string) => {
+  if (!email) return '';
+  const [local, domain] = email.split('@');
+  if (local.length <= 3) return `***@${domain}`;
+  return `${'*'.repeat(Math.min(local.length - 3, 5))}${local.slice(-3)}@${domain}`;
+};
 
 export const ProfileScreen: React.FC = () => {
   const { user, logout, checkSession } = useAuth();
@@ -45,100 +49,81 @@ export const ProfileScreen: React.FC = () => {
   const [city, setCity] = useState(user?.address?.city ?? '');
   const [district, setDistrict] = useState(user?.address?.district ?? '');
   const [state, setState] = useState(user?.address?.state ?? '');
-  const [stateOpen, setStateOpen] = useState(false);
-  const [photo, setPhoto] = useState<PickedFile | null>(null);
 
-  // Password and PIN share one OTP-gated flow: the code request in step 1 is
-  // identical for both, only the fields in step 2 differ.
+  // Password and PIN share one OTP-gated flow (same as web): step 1 confirms
+  // the registered email and sends the code, step 2 takes OTP + new value.
   const [securityMode, setSecurityMode] = useState<'password' | 'pin'>('password');
   const [passwordStep, setPasswordStep] = useState<0 | 1 | 2>(0);
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [newPin, setNewPin] = useState('');
-  const [confirmPin, setConfirmPin] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [notice, setNotice] = useState('');
-  const [showKyc, setShowKyc] = useState(false);
   const [document, setDocument] = useState<{ title: string; uri: string } | null>(null);
   const [personalOpen, setPersonalOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
   const navigation = useNavigation<any>();
 
-  const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
   const isRetailer = user?.role === 'retailer';
-  const isAdmin = user?.role === 'admin';
-  const merchant = useAsync<any>(
-    async () => (await api.getAepsMerchantStatus({ merchantcode: user?.retailerId || user?.code })).data,
-    [user?.retailerId],
-    // PaySprint's merchant status; there is nothing to ask while it is off.
-    isRetailer && PAYSPRINT_ENABLED
-  );
-
-  const banks = useAsync<any[]>(async () => (await api.getSavedBanks()).data ?? [], [], isRetailer);
-
-  const kycDone = !isRetailer || !!merchant.data?.isMerchantKycComplete;
+  // Web: non-retailers are always verified; retailers by their AEPS KYC step.
+  const kycComplete = !isRetailer || aepsKycDone(user);
 
   const saveProfile = useAction(async () => {
-    const payload = {
-      name: name.trim(),
-      contactNumber: contactNumber.trim(),
-      businessName: businessName.trim(),
-      address: { city: city.trim(), district: district.trim(), state: state.trim() },
-    };
-    // The photo makes this multipart; without one a plain JSON PUT is cheaper.
-    const res = photo
-      ? await api.updateProfileWithPhoto(payload, photo)
-      : await api.updateProfile(payload);
-    if (!res.success) throw new Error(res.message);
+    const res = await api.updateProfile({
+      name,
+      contactNumber,
+      businessName,
+      address: { city, district, state },
+    });
+    if (!res.success) throw new Error(res.message || 'Failed to update profile');
     return res;
   });
 
+  // Web uploads the photo on its own as soon as it is picked.
   const changePhoto = useAction(async (source: 'library' | 'camera') => {
     const picked = await pickImage(source, 'profile-photo');
-    if (picked) setPhoto(picked);
-    return picked;
+    if (!picked) return null;
+    const res = await api.updateProfileWithPhoto({}, picked);
+    if (!res.success) throw new Error(res.message || 'Failed to update profile picture');
+    setNotice('Profile picture updated successfully!');
+    await checkSession();
+    return res;
   });
 
-  // Password change is OTP-gated; the code goes to the account's own email.
   const requestOtp = useAction(async () => {
     const res = await api.sendPasswordOtp();
-    if (!res.success) throw new Error(res.message);
+    if (!res.success) throw new Error(res.message || 'Failed to send OTP');
     return res;
   });
 
   const changePassword = useAction(async () => {
-    const res = await api.changePassword({
-      email: user?.email ?? '',
-      otp: otp.trim(),
-      newPassword,
-    });
-    if (!res.success) throw new Error(res.message);
+    const res = await api.changePassword({ email: user?.email ?? '', otp, newPassword });
+    if (!res.success) throw new Error(res.message || 'Failed to change password');
     return res;
   });
 
   const changePin = useAction(async () => {
-    const res = await api.changeWalletPin({ otp: otp.trim(), newPin });
-    if (!res.success) throw new Error(res.message);
+    const res = await api.changeWalletPin({ otp, newPin });
+    if (!res.success) throw new Error(res.message || 'Failed to change PIN');
     return res;
   });
 
-  const otpValid = otp.trim().length === 6;
-  const passwordValid = otpValid && newPassword.length >= 6 && newPassword === confirmPassword;
-  const pinValid = otpValid && /^\d{4}$/.test(newPin) && newPin === confirmPin;
+  const step2Valid =
+    otp.length === 6 && (securityMode === 'pin' ? newPin.length === 4 : newPassword.length >= 6);
 
   const resetSecurity = () => {
     setPasswordStep(0);
+    setEmail('');
+    setEmailError('');
     setOtp('');
     setNewPassword('');
-    setConfirmPassword('');
     setNewPin('');
-    setConfirmPin('');
   };
 
   const cancelEdit = () => {
     setEditing(false);
-    setPhoto(null);
     setName(user?.name ?? '');
     setContactNumber(user?.contactNumber ?? '');
     setBusinessName(user?.businessName ?? '');
@@ -154,14 +139,14 @@ export const ProfileScreen: React.FC = () => {
       { text: 'All devices', style: 'destructive', onPress: () => logout(true) },
     ]);
 
-  const avatarUri = photo?.uri || user?.profilePicture;
+  const avatarUri = user?.profilePicture;
+  const distributorCode = isRetailer ? distributorLabel(user?.distributorId) : undefined;
+  const addressLine = [user?.address?.city, user?.address?.district, user?.address?.state]
+    .filter(Boolean)
+    .join(', ');
 
   const userId = user?.retailerId || user?.adminId || distributorLabel(user?.distributorId) || user?.code || '—';
-  const initials = (user?.name || 'U')
-    .split(' ')
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join('');
+  const initials = user?.name?.charAt(0) || 'U';
 
   const openSecurity = (mode: 'password' | 'pin') => {
     resetSecurity();
@@ -169,11 +154,10 @@ export const ProfileScreen: React.FC = () => {
     setPasswordStep(1);
   };
 
-  const firstBank = banks.data?.[0];
   const themeLabel = theme[0].toUpperCase() + theme.slice(1);
 
   const pickPhoto = () =>
-    Alert.alert('Profile photo', 'Choose a source', [
+    Alert.alert('Update profile photo', 'Choose a source', [
       { text: 'Take a photo', onPress: () => changePhoto.run('camera') },
       { text: 'Pick from gallery', onPress: () => changePhoto.run('library') },
       { text: 'Cancel', style: 'cancel' },
@@ -181,9 +165,6 @@ export const ProfileScreen: React.FC = () => {
 
   // Mockup 16: identity centred on the band, no app bar.
   const [showId, setShowId] = useState(false);
-  // BHIM's profile header: back, avatar, name, and the masked ID that the eye
-  // reveals. Profile opens as a full-screen drawer, so this row is its only
-  // way back besides the swipe.
   const masked = userId ? (showId ? userId : `${String(userId).slice(0, 2)}••••${String(userId).slice(-2)}`) : '';
   const band = (
     <View style={[styles.band, { paddingHorizontal: padding }]}>
@@ -197,10 +178,11 @@ export const ProfileScreen: React.FC = () => {
         <Ionicons name="arrow-back" size={26} color={colors.foreground} />
       </Pressable>
       <Pressable
-        onPress={() => setPersonalOpen(true)}
+        onPress={pickPhoto}
+        disabled={changePhoto.pending}
         accessibilityRole="button"
-        accessibilityLabel="Personal details"
-        style={({ pressed }) => [styles.avatar, pressed && { opacity: 0.8 }]}
+        accessibilityLabel="Update profile photo"
+        style={({ pressed }) => [styles.avatar, (pressed || changePhoto.pending) && { opacity: 0.6 }]}
       >
         {avatarUri ? (
           <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
@@ -210,7 +192,16 @@ export const ProfileScreen: React.FC = () => {
       </Pressable>
       <View style={styles.who}>
         <Text style={styles.userName} numberOfLines={1}>
-          {user?.name || 'User'}
+          {user?.name || 'Retailer Name'}
+        </Text>
+        {!!user?.email && (
+          <Text style={styles.userMeta} numberOfLines={1}>
+            {user.email}
+          </Text>
+        )}
+        <Text style={styles.userMeta} numberOfLines={1}>
+          {(user?.role || 'Retailer').toUpperCase()}
+          {distributorCode ? ` · ${distributorCode}` : ''}
         </Text>
         {!!userId && (
           <Pressable
@@ -226,7 +217,7 @@ export const ProfileScreen: React.FC = () => {
               color={colors.mutedForeground}
             />
             <Text style={styles.userMeta} numberOfLines={1}>
-              {masked}
+              ID {masked}
             </Text>
           </Pressable>
         )}
@@ -235,67 +226,39 @@ export const ProfileScreen: React.FC = () => {
   );
 
   return (
-    <Screen
-      refreshing={balances.refreshing}
-      onRefresh={() => {
-        balances.refresh();
-        if (isRetailer) {
-          merchant.refresh();
-          banks.refresh();
-        }
-      }}
-      error={balances.error}
-      onRetry={balances.reload}
-      header={band}
-    >
+    <Screen refreshing={false} onRefresh={checkSession} header={band}>
       <View style={styles.body}>
         {!!notice && <SuccessBanner message={notice} />}
+        {!!changePhoto.error && <ErrorBanner message={changePhoto.error} />}
 
-        {isRetailer && PAYSPRINT_ENABLED && (
-          <Pressable
-            onPress={() => (kycDone ? navigation.navigate('KycStatus') : setShowKyc(true))}
-            style={({ pressed }) => [styles.card, styles.kycCard, pressed && { opacity: 0.85 }]}
-            accessibilityRole="button"
-            accessibilityLabel={kycDone ? 'KYC verified. View KYC status' : 'KYC pending. Complete merchant eKYC'}
-          >
-            <MaterialCommunityIcons
-              name={kycDone ? 'check-decagram' : 'shield-alert'}
-              size={28}
-              color={kycDone ? colors.success : colors.warning}
-            />
-            <View style={styles.kycText}>
-              <Text style={styles.kycTitle}>{kycDone ? 'KYC verified' : 'KYC pending'}</Text>
-              <Text style={styles.kycSubtitle}>
-                {kycDone ? 'Merchant eKYC complete' : 'Complete merchant eKYC to unlock AEPS'}
-              </Text>
-            </View>
-            <MaterialCommunityIcons name="chevron-right" size={22} color={colors.tabBarInactive} />
-          </Pressable>
+        <View style={[styles.card, styles.kycCard]}>
+          <MaterialCommunityIcons
+            name={kycComplete ? 'check-decagram' : 'shield-alert'}
+            size={28}
+            color={kycComplete ? colors.success : colors.warning}
+          />
+          <View style={styles.kycText}>
+            <Text style={styles.kycTitle}>
+              KYC status · <Text style={{ color: kycComplete ? colors.success : colors.warning }}>{kycComplete ? 'Verified' : 'Pending'}</Text>
+            </Text>
+            <Text style={styles.kycSubtitle}>
+              {kycComplete
+                ? 'Your account is fully verified and unrestricted.'
+                : 'Complete your KYC to unlock all features.'}
+            </Text>
+          </View>
+        </View>
+        {!kycComplete && (
+          // AEPS KYC is the Icchhamati onboarding, which runs step by step on the AEPS screen.
+          <Button onPress={() => navigation.navigate('AEPS')} fullWidth>
+            Complete now
+          </Button>
         )}
 
         <View style={[styles.card, styles.menu]}>
-          <MenuRow icon="account-outline" title="Personal details" subtitle="Name, contact and documents" onPress={() => setPersonalOpen(true)} />
-          {isRetailer && (
-            <MenuRow
-              icon="bank-outline"
-              title="Settlement bank"
-              subtitle={
-                firstBank
-                  ? `${firstBank.bankName || 'Bank'} ·· ${String(firstBank.accountNumber).slice(-4)}`
-                  : banks.data
-                    ? 'Add a bank account'
-                    : undefined
-              }
-              onPress={() => navigation.navigate('AepsSettlement')}
-            />
-          )}
-          <MenuRow
-            icon="dialpad"
-            title="Wallet PIN"
-            subtitle={balances.data && !balances.data.hasPin ? 'Not set yet' : 'Change your 4-digit PIN'}
-            onPress={() => openSecurity('pin')}
-          />
-          <MenuRow icon="lock-outline" title="Change password" subtitle="Verified by email OTP" onPress={() => openSecurity('password')} />
+          <MenuRow icon="account-outline" title="Personal details" subtitle="Personal information, business details and identity documents" onPress={() => setPersonalOpen(true)} />
+          <MenuRow icon="lock-outline" title="Change password" subtitle="Update your sign-in credentials" onPress={() => openSecurity('password')} />
+          <MenuRow icon="dialpad" title="Change wallet PIN" subtitle="4-digit PIN for DMT and settlements" onPress={() => openSecurity('pin')} />
         </View>
 
         <View style={[styles.card, styles.menu]}>
@@ -325,30 +288,27 @@ export const ProfileScreen: React.FC = () => {
         </View>
       </View>
 
-      <MerchantKycSheet visible={showKyc} onClose={() => setShowKyc(false)} onCompleted={merchant.refresh} />
-
-      {/* Personal details: view, edit and photo — hidden while a document is open over it. */}
+      {/* Personal details: view and edit — hidden while a document is open over it. */}
       <Sheet
         visible={personalOpen && !document}
         onClose={() => {
           if (editing) cancelEdit();
           setPersonalOpen(false);
         }}
-        title="Personal details"
+        title="Personal information"
         icon="account-outline"
         footer={
           editing ? (
             <View style={styles.actionRow}>
-              <Button variant="secondary" onPress={cancelEdit} style={styles.flex}>
+              <Button variant="secondary" onPress={cancelEdit} disabled={saveProfile.pending} style={styles.flex}>
                 Cancel
               </Button>
               <Button
                 onPress={async () => {
                   const res = await saveProfile.run();
                   if (res) {
-                    setNotice('Profile updated.');
+                    setNotice('Profile updated successfully!');
                     setEditing(false);
-                    setPhoto(null);
                     setPersonalOpen(false);
                     checkSession();
                   }
@@ -357,7 +317,7 @@ export const ProfileScreen: React.FC = () => {
                 icon="content-save-outline"
                 style={styles.flex}
               >
-                Save
+                Save changes
               </Button>
             </View>
           ) : (
@@ -370,23 +330,19 @@ export const ProfileScreen: React.FC = () => {
         <View style={styles.form}>
           {editing ? (
             <>
-              <Button variant="outline" icon="camera-outline" onPress={pickPhoto} fullWidth>
-                {photo ? 'Photo selected — change' : 'Change profile photo'}
-              </Button>
               <Input label="Full name" value={name} onChangeText={setName} leftIcon="account-outline" />
               <Input
-                label="Email address"
+                label="Email address (not editable)"
                 value={user?.email}
                 editable={false}
                 disabled
                 leftIcon="email-outline"
-                helperText="Email cannot be changed. Contact support if it is wrong."
               />
               <Input
                 label="Contact number"
                 value={contactNumber}
-                onChangeText={(v) => setContactNumber(v.replace(/\D/g, '').slice(0, 10))}
-                keyboardType="number-pad"
+                onChangeText={setContactNumber}
+                keyboardType="phone-pad"
                 leftIcon="phone-outline"
                 autoComplete="tel"
               />
@@ -396,73 +352,39 @@ export const ProfileScreen: React.FC = () => {
                 onChangeText={setBusinessName}
                 leftIcon="storefront-outline"
               />
-              <Input label="City" value={city} onChangeText={setCity} leftIcon="city-variant-outline" />
-              <Input label="District" value={district} onChangeText={setDistrict} leftIcon="map-outline" />
-              <SelectField
-                label="State"
-                value={state}
-                placeholder="Select your state"
-                open={stateOpen}
-                onPress={() => setStateOpen(!stateOpen)}
-              />
-              {stateOpen && (
-                <View style={styles.picker}>
-                  {INDIAN_STATES.map((option) => (
-                    <Pressable
-                      key={option}
-                      onPress={() => {
-                        setState(option);
-                        setStateOpen(false);
-                      }}
-                      style={({ pressed }) => [styles.pickerItem, pressed && styles.pickerItemPressed]}
-                      accessibilityRole="button"
-                    >
-                      <Text style={styles.pickerText}>{option}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
+              <Input label="Registered address" placeholder="City" value={city} onChangeText={setCity} leftIcon="city-variant-outline" />
+              <Input placeholder="District" value={district} onChangeText={setDistrict} leftIcon="map-outline" />
+              <Input placeholder="State" value={state} onChangeText={setState} leftIcon="map-marker-outline" />
               {!!saveProfile.error && <ErrorBanner message={saveProfile.error} />}
             </>
           ) : (
             <>
               <View>
-                <Row label="User ID" value={user?.code || user?.retailerId || user?.adminId || '—'} mono />
-                <Row label="Email" value={user?.email} />
-                <Row label="Mobile" value={user?.contactNumber} mono />
-                {isRetailer && !!distributorLabel(user?.distributorId) && (
-                  <Row label="Distributor" value={distributorLabel(user?.distributorId)} mono />
-                )}
-                <Row label="Role" value={(user?.role || 'user').toUpperCase()} />
-                <Row label="Status" value={<StatusPill status={user?.isActive === false ? 'INACTIVE' : 'ACTIVE'} />} />
-                <Row label="Member since" value={shortDate(user?.createdAt)} />
-                <Row label="Business name" value={user?.businessName || '—'} />
-                <Row label="Business address" value={user?.businessAddress || '—'} />
-                <Row label="City" value={user?.address?.city || '—'} />
-                <Row label="District" value={user?.address?.district || '—'} />
-                <Row label="State" value={user?.address?.state || '—'} last={!user?.gstNumber} />
-                {!!user?.gstNumber && <Row label="GST number" value={user.gstNumber} mono last />}
+                <Row label="Full name" value={user?.name || 'N/A'} />
+                <Row label="Email address" value={user?.email || 'N/A'} />
+                <Row label="Contact number" value={user?.contactNumber || 'N/A'} mono />
+                <Row label="Business name" value={user?.businessName || 'N/A'} />
+                <Row label="Registered address" value={addressLine || 'N/A'} last />
               </View>
-              <Banner
-                tone="info"
-                message="Identity details cannot be edited here. Contact support to correct your KYC records."
-              />
+              <Text style={styles.sectionLabel}>Identity documents</Text>
               <View style={styles.documentStack}>
                 <DocumentTile
                   title="Aadhaar"
                   number={user?.aadhaarNumber}
                   uri={user?.aadhaarPicture}
-                  onPress={() =>
-                    user?.aadhaarPicture && setDocument({ title: 'Aadhaar document', uri: user.aadhaarPicture })
-                  }
+                  onPress={() => user?.aadhaarPicture && setDocument({ title: 'Aadhaar', uri: user.aadhaarPicture })}
                 />
                 <DocumentTile
                   title="PAN"
                   number={user?.panNumber}
                   uri={user?.panPicture}
-                  onPress={() => user?.panPicture && setDocument({ title: 'PAN document', uri: user.panPicture })}
+                  onPress={() => user?.panPicture && setDocument({ title: 'PAN', uri: user.panPicture })}
                 />
               </View>
+              <Banner
+                tone="info"
+                message="Identity details can't be changed here. Contact support for help with KYC details."
+              />
             </>
           )}
         </View>
@@ -473,15 +395,28 @@ export const ProfileScreen: React.FC = () => {
         visible={passwordStep > 0}
         onClose={resetSecurity}
         dismissible={!(requestOtp.pending || changePassword.pending || changePin.pending)}
-        title={securityMode === 'pin' ? 'Wallet PIN' : 'Change password'}
+        title={securityMode === 'pin' ? 'Change wallet PIN' : 'Change password'}
+        subtitle={
+          passwordStep === 1
+            ? 'Verify your identity to proceed.'
+            : securityMode === 'pin'
+              ? 'Enter the OTP and your new 4-digit PIN.'
+              : 'Enter the OTP and your new password.'
+        }
         icon={securityMode === 'pin' ? 'form-textbox-password' : 'lock-outline'}
         footer={
           passwordStep === 1 ? (
             <Button
               onPress={async () => {
+                setEmailError('');
+                if (email !== user?.email) {
+                  setEmailError('Incorrect email address');
+                  return;
+                }
                 const res = await requestOtp.run();
                 if (res) setPasswordStep(2);
               }}
+              disabled={!email}
               loading={requestOtp.pending}
               icon="email-outline"
               fullWidth
@@ -494,16 +429,16 @@ export const ProfileScreen: React.FC = () => {
                 const isPin = securityMode === 'pin';
                 const res = isPin ? await changePin.run() : await changePassword.run();
                 if (res) {
-                  setNotice(isPin ? 'Wallet PIN updated.' : 'Password updated.');
+                  setNotice(isPin ? 'Wallet PIN changed successfully!' : 'Password changed successfully!');
                   resetSecurity();
                 }
               }}
-              disabled={securityMode === 'pin' ? !pinValid : !passwordValid}
+              disabled={!step2Valid}
               loading={changePassword.pending || changePin.pending}
               icon="shield-check-outline"
               fullWidth
             >
-              Update
+              {securityMode === 'pin' ? 'Change PIN' : 'Change password'}
             </Button>
           )
         }
@@ -511,80 +446,59 @@ export const ProfileScreen: React.FC = () => {
         <View style={styles.form}>
           {passwordStep === 1 ? (
             <>
-              <Banner
-                tone="info"
-                message={`We will email a 6-digit code to ${user?.email ?? 'your registered address'} to confirm it is you.`}
+              <Input
+                label="Registered email"
+                helperText={`Hint: ${maskEmail(user?.email || '')}`}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Full email address"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                leftIcon="email-outline"
+                error={emailError || undefined}
               />
               {!!requestOtp.error && <ErrorBanner message={requestOtp.error} />}
             </>
           ) : (
             <>
-              <SuccessBanner message="OTP sent to your email." />
+              <SuccessBanner message="OTP sent to your email" />
               <Input
-                label="Email OTP"
-                required
+                label="OTP"
                 value={otp}
                 onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))}
                 keyboardType="number-pad"
                 maxLength={6}
                 leftIcon="email-check-outline"
                 autoComplete="one-time-code"
-                placeholder="6 digits"
+                placeholder="6-digit OTP"
               />
               {securityMode === 'password' ? (
-                <>
-                  <Input
-                    label="New password"
-                    required
-                    value={newPassword}
-                    onChangeText={setNewPassword}
-                    secureTextEntry={!showPassword}
-                    leftIcon="lock-outline"
-                    rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                    onRightIconPress={() => setShowPassword(!showPassword)}
-                    rightIconLabel={showPassword ? 'Hide password' : 'Show password'}
-                    helperText="At least 6 characters"
-                  />
-                  <Input
-                    label="Confirm new password"
-                    required
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry={!showPassword}
-                    leftIcon="lock-check-outline"
-                    error={
-                      confirmPassword && confirmPassword !== newPassword ? 'Passwords do not match' : undefined
-                    }
-                  />
-                </>
+                <Input
+                  label="New password"
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholder="Enter new password"
+                  secureTextEntry={!showPassword}
+                  leftIcon="lock-outline"
+                  rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  onRightIconPress={() => setShowPassword(!showPassword)}
+                  rightIconLabel={showPassword ? 'Hide password' : 'Show password'}
+                />
               ) : (
-                <>
-                  <Input
-                    label="New wallet PIN"
-                    required
-                    value={newPin}
-                    onChangeText={(v) => setNewPin(v.replace(/\D/g, '').slice(0, 4))}
-                    secureTextEntry={!showPassword}
-                    keyboardType="number-pad"
-                    maxLength={4}
-                    leftIcon="dialpad"
-                    rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                    onRightIconPress={() => setShowPassword(!showPassword)}
-                    rightIconLabel={showPassword ? 'Hide PIN' : 'Show PIN'}
-                    helperText="4 digits — approves wallet transfers, DMT and settlements"
-                  />
-                  <Input
-                    label="Confirm new PIN"
-                    required
-                    value={confirmPin}
-                    onChangeText={(v) => setConfirmPin(v.replace(/\D/g, '').slice(0, 4))}
-                    secureTextEntry={!showPassword}
-                    keyboardType="number-pad"
-                    maxLength={4}
-                    leftIcon="dialpad"
-                    error={confirmPin && confirmPin !== newPin ? 'PINs do not match' : undefined}
-                  />
-                </>
+                <Input
+                  label="New wallet PIN"
+                  value={newPin}
+                  onChangeText={(v) => setNewPin(v.replace(/\D/g, '').slice(0, 4))}
+                  placeholder="4 digits"
+                  secureTextEntry={!showPassword}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  leftIcon="dialpad"
+                  rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  onRightIconPress={() => setShowPassword(!showPassword)}
+                  rightIconLabel={showPassword ? 'Hide PIN' : 'Show PIN'}
+                />
               )}
               {!!changePassword.error && <ErrorBanner message={changePassword.error} />}
               {!!changePin.error && <ErrorBanner message={changePin.error} />}
@@ -771,6 +685,7 @@ const styles = themed((c) => ({
   pickerItemPressed: { backgroundColor: c.surfaceAlt },
   pickerText: { fontSize: t.small, color: c.foreground },
   documentStack: { gap: space.sm },
+  sectionLabel: { fontSize: t.small, fontWeight: '500', color: c.mutedForeground },
   document: {
     flexDirection: 'row',
     alignItems: 'center',

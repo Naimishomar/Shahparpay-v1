@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Alert, Pressable } from 'react-native';
+import { View, Text, Alert, Pressable, Linking } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, themed, space, type as t } from '../../theme/colors';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -15,7 +15,6 @@ import {
   Segmented,
   money,
   shortDate,
-  isoDate,
   SkeletonRows,
 } from '@/components/ui/Screen';
 import { ImageField } from '@/components/ui/ImageField';
@@ -24,28 +23,22 @@ import { useAsync, useAction } from '@/hooks/useAsync';
 import type { PickedFile } from '@/services/imagePicker';
 import api from '@/services/api';
 
-const MODES = [
-  { key: 'NEFT', label: 'NEFT' },
-  { key: 'IMPS', label: 'IMPS' },
-  { key: 'RTGS', label: 'RTGS' },
-  { key: 'UPI', label: 'UPI' },
-  { key: 'CASH_DEPOSIT', label: 'Cash deposit' },
-  { key: 'CHEQUE', label: 'Cheque' },
-] as const;
+// Values are the backend enum verbatim (fundRequest.model.js), same as web.
+const MODES = ['IMPS', 'NEFT', 'RTGS', 'UPI', 'Cash Deposit', 'Cheque'].map((m) => ({ key: m, label: m }));
+const FILTERS = ['ALL', 'PENDING', 'APPROVED', 'REJECTED'];
 
-/** Local date, not UTC: before 05:30 IST toISOString() is still on yesterday,
- *  so the deposit date defaulted to the wrong day every early morning. */
-const today = () => isoDate(new Date());
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export const FundRequestScreen: React.FC = () => {
-  const [mode, setMode] = useState<string>('NEFT');
+  const [mode, setMode] = useState<string>('');
   const [amount, setAmount] = useState('');
   const [bankUtr, setBankUtr] = useState('');
-  const [depositDate, setDepositDate] = useState(today());
+  const [depositDate, setDepositDate] = useState('');
   const [remarks, setRemarks] = useState('');
   const [depositSlip, setDepositSlip] = useState<PickedFile | null>(null);
   const [notice, setNotice] = useState('');
+  const [formError, setFormError] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
 
   const requests = useAsync<any[]>(async () => (await api.getRetailerFundRequests()).data ?? [], []);
 
@@ -60,24 +53,45 @@ export const FundRequestScreen: React.FC = () => {
       },
       depositSlip ?? undefined
     );
-    if (!res.success) throw new Error(res.message);
+    if (!res.success) throw new Error(res.message || 'Failed to submit fund request');
     return res;
   });
 
   const remove = useAction(async (id: string) => {
     const res = await api.deleteFundRequest(id);
-    if (!res.success) throw new Error(res.message);
+    if (!res.success) throw new Error(res.message || 'Failed to delete fund request');
     return res;
   });
 
   const dateValid = DATE_RE.test(depositDate) && !Number.isNaN(Date.parse(depositDate));
-  const valid = Number(amount) > 0 && bankUtr.trim().length >= 4 && dateValid;
+  const all = requests.data ?? [];
+  const countOf = (st: string) => all.filter((r) => st === 'ALL' || r.status === st).length;
+  const shown = all.filter((r) => statusFilter === 'ALL' || r.status === statusFilter);
+  const approvedTotal = all
+    .filter((r) => r.status === 'APPROVED')
+    .reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
 
   const onSubmit = async () => {
     setNotice('');
+    setFormError('');
+    if (!mode || !amount || !bankUtr.trim() || !depositDate) {
+      setFormError('Please fill all required fields');
+      return;
+    }
+    // Web's <input type="number" min="1"> / <input type="date"> enforce these.
+    if (!(Number(amount) >= 1)) {
+      setFormError('Amount must be at least ₹1');
+      return;
+    }
+    if (!dateValid) {
+      setFormError('Use the format YYYY-MM-DD');
+      return;
+    }
     const res = await submit.run();
     if (res) {
-      setNotice(res.message || 'Fund request submitted for approval.');
+      setNotice('Fund request submitted successfully');
+      setMode('');
+      setDepositDate('');
       setAmount('');
       setBankUtr('');
       setRemarks('');
@@ -90,16 +104,16 @@ export const FundRequestScreen: React.FC = () => {
   const confirmDelete = (item: any) =>
     Alert.alert(
       'Delete request?',
-      `This permanently removes the ${money(item.amount)} request. It cannot be undone.`,
+      'Are you sure you want to delete this fund request?',
       [
-        { text: 'Keep it', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             const res = await remove.run(item._id);
             if (res) {
-              setNotice('Fund request deleted.');
+              setNotice('Fund request deleted successfully');
               requests.reload();
             }
           },
@@ -114,39 +128,39 @@ export const FundRequestScreen: React.FC = () => {
       error={requests.error}
       onRetry={requests.reload}
     >
-      <SectionTitle>New fund request</SectionTitle>
+      <SectionTitle>Add Fund Request</SectionTitle>
       <Card>
         <CardContent style={styles.form}>
+          <Text style={styles.label}>Request Trade Wallet funds from your distributor against a bank deposit.</Text>
           <View style={styles.field}>
-            <Text style={styles.label}>How did you pay?</Text>
+            <Text style={styles.label}>Transaction Mode *</Text>
             <Segmented
-              options={MODES.map((m) => ({ key: m.key as string, label: m.label }))}
+              options={MODES}
               value={mode}
               onChange={setMode}
             />
           </View>
 
           <Input
-            label="Amount"
+            label="Deposit Amount"
             required
             value={amount}
             onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))}
             keyboardType="decimal-pad"
-            placeholder="0.00"
+            placeholder="Enter amount"
             leftIcon="currency-inr"
           />
           <Input
-            label="Bank UTR / reference"
+            label="Bank UTR / Ref ID"
             required
             value={bankUtr}
             onChangeText={setBankUtr}
             autoCapitalize="characters"
-            placeholder="From your bank receipt"
+            placeholder="Enter UTR"
             leftIcon="pound"
-            helperText="Your distributor uses this to match the deposit"
           />
           <Input
-            label="Deposit date"
+            label="Deposit Date"
             required
             value={depositDate}
             onChangeText={setDepositDate}
@@ -156,41 +170,56 @@ export const FundRequestScreen: React.FC = () => {
             error={depositDate && !dateValid ? 'Use the format YYYY-MM-DD' : undefined}
           />
           <ImageField
-            label="Deposit slip"
+            label="Deposit Slip"
             value={depositSlip}
             onChange={setDepositSlip}
-            helperText="A photo of the receipt or transfer screenshot gets your request approved faster"
           />
           <Input
-            label="Remarks"
+            label="Remark"
             value={remarks}
             onChangeText={setRemarks}
-            placeholder="Optional note for your distributor"
+            placeholder="Optional remarks..."
             multiline
             leftIcon="note-text-outline"
           />
 
-          {!!submit.error && <ErrorBanner message={submit.error} />}
+          {!!(formError || submit.error) && <ErrorBanner message={formError || submit.error || ''} />}
           {!!notice && <SuccessBanner message={notice} />}
 
           <Button
             onPress={onSubmit}
-            disabled={!valid}
             loading={submit.pending}
             size="lg"
             fullWidth
           >
-            Submit request
+            Submit Request
           </Button>
         </CardContent>
       </Card>
 
-      <SectionTitle>Request history</SectionTitle>
+      <Card>
+        <CardContent>
+          <Row label="Total requests" value={String(all.length)} />
+          <Row label="Pending" value={String(countOf('PENDING'))} />
+          <Row label="Approved" value={String(countOf('APPROVED'))} />
+          <Row label="Approved amount" value={`₹${approvedTotal.toLocaleString('en-IN')}`} last />
+        </CardContent>
+      </Card>
+
+      <SectionTitle>Your requests</SectionTitle>
+      <Segmented
+        options={FILTERS.map((st) => ({
+          key: st,
+          label: `${st.charAt(0) + st.slice(1).toLowerCase()} ${countOf(st)}`,
+        }))}
+        value={statusFilter}
+        onChange={setStatusFilter}
+      />
       <Card>
         <CardContent>
           {!!remove.error && <ErrorBanner message={remove.error} />}
-          {requests.loading ? <SkeletonRows count={3} /> : requests.data?.length ? (
-            requests.data.map((req: any, index: number, shown: any[]) => (
+          {requests.loading ? <SkeletonRows count={3} /> : shown.length ? (
+            shown.map((req: any, index: number, shown: any[]) => (
               <View key={req._id} style={[styles.item, index === shown.length - 1 && styles.itemLast]}>
                 <View style={styles.itemTop}>
                   <IconTile icon="hand-coin-outline" size={44} iconSize={20} />
@@ -199,11 +228,23 @@ export const FundRequestScreen: React.FC = () => {
                   </Text>
                   <StatusText status={req.status} />
                 </View>
-                <Row label="Mode" value={String(req.transactionMode || '').replace(/_/g, ' ')} />
-                <Row label="UTR" value={req.bankUtr} />
-                <Row label="Deposited" value={shortDate(req.depositDate)} />
-                <Row label="Requested" value={shortDate(req.createdAt)} last={!req.adminRemarks} />
-                {!!req.adminRemarks && <Row label="Remarks" value={req.adminRemarks} last />}
+                <Row label="Txn Mode" value={req.transactionMode} />
+                <Row label="Bank UTR" value={req.bankUtr} mono />
+                <Row label="Deposit Date" value={shortDate(req.depositDate)} />
+                <Row
+                  label="Deposit Slip"
+                  value={
+                    req.depositSlipUrl ? (
+                      <Pressable onPress={() => Linking.openURL(req.depositSlipUrl)} hitSlop={8} accessibilityRole="link">
+                        <Text style={styles.link}>View</Text>
+                      </Pressable>
+                    ) : (
+                      '—'
+                    )
+                  }
+                />
+                <Row label="Remarks" value={req.remarks || '—'} last={!req.adminRemarks} />
+                {!!req.adminRemarks && <Row label="Admin remarks" value={req.adminRemarks} last />}
                 {String(req.status).toUpperCase() === 'PENDING' && (
                   <Pressable
                     onPress={() => confirmDelete(req)}
@@ -221,8 +262,7 @@ export const FundRequestScreen: React.FC = () => {
           ) : (
             <EmptyState
               icon="clipboard-text-outline"
-              title="No fund requests yet"
-              subtitle="Submitted requests and their approval status show up here"
+              title="No fund requests found."
             />
           )}
         </CardContent>
@@ -273,6 +313,7 @@ const styles = themed((c) => ({
     minHeight: 44,
     marginTop: space.xs,
   },
+  link: { fontSize: t.body, fontWeight: '500', color: c.primary },
   deleteText: { fontSize: t.body, fontWeight: '500', color: c.destructive },
 }));
 

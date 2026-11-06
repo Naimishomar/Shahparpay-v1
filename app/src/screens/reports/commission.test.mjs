@@ -36,17 +36,17 @@ for (const [name, src] of [['retailerNetCommission', walletUtil], ['getCommissio
   );
 }
 
-// --- the app reconciles them instead of showing gross alone ---------------
+// --- the app shows the web ledger's footer, gross commission and TDS apart --
+// (frontend/src/pages/WalletLedger.tsx): Commission is the gross column and
+// TDS sits beside it, so gross - TDS is the net Home reports.
 const summary = reports.slice(
   reports.indexOf('const ledgerTiles'),
   reports.indexOf('const LEDGER_STATUSES')
 );
-assert.ok(/money\(gross - tds\)/.test(summary), 'the earned tile must be net of TDS');
-assert.ok(/Commission earned/.test(summary) && /Commission \(gross\)/.test(summary),
-  'both the net and the gross must be labelled as such');
-assert.ok(
-  !/label: 'Commission',/.test(summary),
-  'a bare "Commission" label is the ambiguity this fixes'
-);
+for (const label of ['Net Amount', 'Commission', 'TDS', 'GST (18%)']) {
+  assert.ok(summary.includes(`label: '${label}'`), `the ledger must show the web's ${label} total`);
+}
+const web = here('../../../../frontend/src/pages/WalletLedger.tsx');
+assert.ok(/GST \(18%\)/.test(web) && />Commission</.test(web), 'the web footer labels changed — follow them');
 
-console.log('commission: ledger gross - TDS reconciles with Home net earnings OK');
+console.log('commission: ledger shows gross commission and TDS as the web does OK');

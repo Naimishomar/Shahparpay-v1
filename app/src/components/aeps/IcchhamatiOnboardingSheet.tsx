@@ -9,7 +9,7 @@ import { Banner, Row, SuccessBanner } from '@/components/ui/Screen';
 import { BiometricCapture, useBiometricDevice } from './BiometricCapture';
 import { useAction } from '@/hooks/useAsync';
 import { coordsPayload } from '@/services/location';
-import { pickImage, recordVideo, type PickedFile } from '@/services/imagePicker';
+import { pickImage, pickVideo, recordVideo, type PickedFile } from '@/services/imagePicker';
 import type { DeviceBrand } from '@/services/rdService';
 import api from '@/services/api';
 
@@ -43,8 +43,8 @@ export interface IcchStatus {
 const EKYC_WADH = 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=';
 
 const SHOP_PHOTOS = [
-  { key: 'shop_inner', label: 'Photo inside the shop' },
-  { key: 'shop_outer', label: 'Photo of the shop front' },
+  { key: 'shop_inner', label: 'Inside the shop' },
+  { key: 'shop_outer', label: 'Shop front' },
 ];
 
 /** The scanner model name the provider registers: "Mantra", "Morpho"… */
@@ -100,7 +100,7 @@ export const IcchhamatiOnboardingSheet: React.FC<{
         <>
           {canEdit && (
             <Button variant="ghost" icon="pencil-outline" fullWidth onPress={() => setEditing(true)}>
-              Wrong mobile, address or bank? Edit details
+              Entered a wrong mobile, email, address or bank detail? Edit details
             </Button>
           )}
           {/* Keyed so each step starts with an empty form. */}
@@ -198,6 +198,7 @@ const StepBody: React.FC<{
               keyboardType="number-pad"
               autoComplete="one-time-code"
               maxLength={6}
+              placeholder="6-digit OTP"
             />
           )}
           {error}
@@ -229,7 +230,7 @@ const StepBody: React.FC<{
       return (
         <>
           {!!status.remarks && <Banner tone="error" message={`Sent back by the provider: ${status.remarks}`} />}
-          <Text style={styles.body}>Two photos of your shop, then a short video (up to 30 seconds) of yourself holding your PAN card inside it.</Text>
+          <Text style={styles.body}>Two photos of your shop, then a short video of yourself holding your PAN card inside it.</Text>
           {SHOP_PHOTOS.map(({ key, label }) => (
             <Button
               key={key}
@@ -264,6 +265,22 @@ const StepBody: React.FC<{
             }}
           >
             {video ? 'Record again' : 'Record video'}
+          </Button>
+          <Button
+            variant="outline"
+            icon="folder-outline"
+            fullWidth
+            onPress={async () => {
+              action.setError(null);
+              try {
+                const clip = await pickVideo();
+                if (clip) setVideo(clip);
+              } catch (err: any) {
+                action.setError(err?.message || 'Could not open the video.');
+              }
+            }}
+          >
+            Choose a video
           </Button>
           <Button
             icon="upload"
@@ -301,10 +318,10 @@ const StepBody: React.FC<{
     case 'ekyc':
       return (
         <>
-          <Text style={styles.body}>One time: confirm your identity with an OTP and your own fingerprint.</Text>
+          <Text style={styles.body}>One time: confirm your identity with an OTP and your fingerprint.</Text>
           {deviceFields}
           {fpIds && !otpVerified && (
-            <Input label="OTP" required value={otp} onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" maxLength={6} />
+            <Input label="OTP" required value={otp} onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" maxLength={6} placeholder="6-digit OTP" />
           )}
           {otpVerified && (
             <BiometricCapture
@@ -345,10 +362,10 @@ const StepBody: React.FC<{
                   if (res) setOtpVerified(true);
                 }}
               >
-                Verify OTP
+                Verify
               </Button>
               <Button icon="refresh" variant="ghost" disabled={action.pending} fullWidth onPress={() => { setFpIds(null); setOtp(''); }}>
-                OTP not received? Send again
+                Resend
               </Button>
             </>
           ) : (
@@ -363,7 +380,7 @@ const StepBody: React.FC<{
       return (
         <>
           <Text style={styles.body}>
-            {serviceType === 'AP' ? 'Aadhaar Pay needs its own daily login.' : 'Scan your own fingerprint once a day before serving customers.'}
+            Scan your own fingerprint once a day before serving customers.
           </Text>
           {deviceFields}
           <BiometricCapture
@@ -459,11 +476,14 @@ const RegisterStep: React.FC<{ status: IcchStatus; onChanged: () => void }> = ({
 
   return (
     <>
+      <Text style={styles.body}>Your name, PAN, Aadhaar, mobile and email are taken from your KYC profile.</Text>
       <View style={styles.summary}>
-        <Row label="Name" value={status.profile.name} />
-        <Row label="PAN" value={status.profile.pan} mono />
-        <Row label="Aadhaar" value={status.profile.aadhaar} mono />
-        <Row label="Shop" value={status.profile.shopName} last />
+        <Row label="Name" value={status.profile.name || '—'} />
+        <Row label="PAN" value={status.profile.pan || '—'} mono />
+        <Row label="Aadhaar" value={status.profile.aadhaar || '—'} mono />
+        <Row label="Mobile" value={status.profile.phone || '—'} mono />
+        <Row label="Email" value={status.profile.email || '—'} />
+        <Row label="Shop" value={status.profile.shopName || '—'} last />
       </View>
       <Input label="Shop address" required value={form.shop_address} onChangeText={set('shop_address')} />
       <Input label="City" required value={form.shop_city} onChangeText={set('shop_city')} />
@@ -525,12 +545,16 @@ const DetailsEditor: React.FC<{ status: IcchStatus; onDone: (saved: boolean) => 
   const [form, setForm] = useState<Record<string, string>>({ ...original });
   const [states, setStates] = useState<{ stateId: string; stateName: string }[]>([]);
   const [showStates, setShowStates] = useState(false);
+  const [bankNames, setBankNames] = useState<string[]>([]);
   useEffect(() => {
     api.icchAepsStates().then((res) => res?.success && setStates(res.data || [])).catch(() => {});
+    api.icchAepsSettlementBanks().then((res) => res?.success && setBankNames(res.data || [])).catch(() => {});
   }, []);
 
   const changed = Object.fromEntries(Object.entries(form).filter(([k, v]) => v !== (original[k] ?? '')));
   const save = useAction(async () => {
+    // Nothing changed: close, as the web does, without a call.
+    if (!Object.keys(changed).length) return onDone(false);
     const res = ok(await api.icchAepsStep('details', changed), 'The details were not saved.');
     onDone(true);
     return res;
@@ -546,10 +570,16 @@ const DetailsEditor: React.FC<{ status: IcchStatus; onDone: (saved: boolean) => 
     /^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.ifsc_code || '') &&
     ['shop_city', 'shop_district', 'state_id', 'bank_name', 'bank_branch'].every((k) => (form[k] || '').trim());
   const stateName = states.find((st) => String(st.stateId) === form.state_id)?.stateName;
+  const bankQuery = (form.bank_name || '').trim().toLowerCase();
+  const bankMatches = bankQuery && !bankNames.some((n) => n.toLowerCase() === bankQuery)
+    ? bankNames.filter((n) => n.toLowerCase().includes(bankQuery)).slice(0, 6)
+    : [];
 
   return (
     <>
-      <Text style={styles.body}>Changes go to your existing registration; no new registration is created.</Text>
+      <Text style={styles.body}>
+        {`Changes go to your existing registration${status.outletId ? ` (outlet ${status.outletId})` : ''}; no new registration is created. Name, PAN and Aadhaar come from your KYC profile.`}
+      </Text>
       <Input label="Mobile" required value={form.phone} onChangeText={set('phone', digits(10))} keyboardType="number-pad" />
       <Input label="Email" required value={form.email} onChangeText={set('email', (v) => v.trim())} keyboardType="email-address" autoCapitalize="none" />
       <Input label="Shop address" required value={form.shop_address} onChangeText={set('shop_address')} placeholder="Shop number, street, area" />
@@ -573,11 +603,25 @@ const DetailsEditor: React.FC<{ status: IcchStatus; onDone: (saved: boolean) => 
       )}
       <Input label="Pincode" required value={form.shop_pin_code} onChangeText={set('shop_pin_code', digits(6))} keyboardType="number-pad" />
       <Input label="Bank name" required value={form.bank_name} onChangeText={set('bank_name')} />
+      {bankMatches.length > 0 && (
+        <View style={styles.list}>
+          {bankMatches.map((n) => (
+            <Pressable
+              key={n}
+              onPress={() => setForm((f) => ({ ...f, bank_name: n }))}
+              style={({ pressed }) => [styles.listItem, pressed && { opacity: 0.7 }]}
+              accessibilityRole="button"
+            >
+              <Text style={styles.listText}>{n}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
       <Input label="Account number" required value={form.account_number} onChangeText={set('account_number', digits(18))} keyboardType="number-pad" />
       <Input label="IFSC" required value={form.ifsc_code} onChangeText={set('ifsc_code', (v) => v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11))} autoCapitalize="characters" />
       <Input label="Branch" required value={form.bank_branch} onChangeText={set('bank_branch')} />
       {!!save.error && <Banner tone="error" message={save.error} />}
-      <Button icon="content-save-outline" onPress={save.run} loading={save.pending} disabled={!valid || !Object.keys(changed).length} fullWidth>
+      <Button icon="content-save-outline" onPress={save.run} loading={save.pending} disabled={!valid} fullWidth>
         Save details
       </Button>
       <Button variant="ghost" disabled={save.pending} fullWidth onPress={() => onDone(false)}>

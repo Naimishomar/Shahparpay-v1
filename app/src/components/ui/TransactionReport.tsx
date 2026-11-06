@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, FlatList, Modal, TextInput, ActivityIndicator, Platform, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, Pressable, FlatList, Modal, TextInput, ActivityIndicator, Platform, StyleSheet, ScrollView, Share } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, themed, radius, space, type as t, TOUCH } from '../../theme/colors';
 import { Button } from './Button';
 import { Sheet } from './Sheet';
+import { Input } from './Input';
 import { IconTile } from './Gradient';
 import {
   Banner,
@@ -54,8 +55,24 @@ interface Props {
    * Defaults to the row status when that is CREDIT/DEBIT (the ledgers).
    */
   flowOf?: (item: any) => 'in' | 'out' | undefined;
-  /** Extra rows shown when a row is expanded into the detail sheet. */
-  details: ReportColumn[];
+  /** Extra rows shown when a row is expanded into the detail sheet; a function for per-row rows. */
+  details: ReportColumn[] | ((item: any) => ReportColumn[]);
+  /** Buttons above Close in the detail sheet (share receipt, check status…). */
+  detailActions?: (item: any, close: () => void) => React.ReactNode;
+  /** False hides the date filter, for reports whose web page has none. */
+  dateFilter?: boolean;
+  /** Changing it refetches a whole-range report (a server-side filter it owns). */
+  fetchKey?: string;
+  /** A report-owned client filter (e.g. the ledger's txn type), set in filterExtra. */
+  rowFilter?: (item: any) => boolean;
+  /** How many report-owned filters are on, and how to clear them. */
+  extraActive?: number;
+  onClearFilters?: () => void;
+  /** Labels for the status values, and the filter's heading. */
+  statusLabels?: Record<string, string>;
+  statusTitle?: string;
+  /** CSV of the filtered rows, shared from the phone (the web's Export CSV). */
+  exportCsv?: { filename: string; headers: string[]; row: (item: any, index: number) => any[] };
   /**
    * Summary tiles above the list. Defaults to count/volume/success/failed,
    * which suits transaction reports; a ledger overrides it with the money
@@ -75,8 +92,8 @@ interface Props {
    */
   chips?: { key: string; label: string; match: (item: any) => boolean }[];
   searchPlaceholder?: string;
-  /** Extra sheet content under the filters; `close` dismisses the sheet. */
-  filterExtra?: (close: () => void) => React.ReactNode;
+  /** Extra sheet content under the filters; `close` dismisses the sheet, `rows` is everything loaded. */
+  filterExtra?: (close: () => void, rows: any[]) => React.ReactNode;
   /** Scrolls above the rows, e.g. History's summary and report links. */
   header?: React.ReactNode;
 }
@@ -136,6 +153,13 @@ function rangeToDates(key: RangeKey): { startDate?: string; endDate?: string } {
 }
 
 const STATUSES = ['ALL', 'SUCCESS', 'PENDING', 'FAILED'] as const;
+
+/** A complete YYYY-MM-DD, the only form the API's date filters take. */
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** RFC 4180 quoting, the same as the web's CSV export. */
+export const toCsv = (headers: string[], rows: any[][]) =>
+  [headers.join(','), ...rows.map((r) => r.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))].join('\n');
 
 /** BHIM's day separator: "Today | Tuesday", "Yesterday | Monday", "04 Sep | Thursday". */
 const dayHeading = (key: string) => {
@@ -206,11 +230,38 @@ export const TransactionReport: React.FC<Props> = ({
   searchPlaceholder = 'Search reference, name, number',
   filterExtra,
   header,
+  detailActions,
+  dateFilter = true,
+  fetchKey,
+  rowFilter,
+  extraActive = 0,
+  onClearFilters,
+  statusLabels,
+  statusTitle = 'Status',
+  exportCsv,
 }) => {
   const { padding, gap } = useResponsive();
   const insets = useSafeAreaInsets();
-  // The History list (chips) opens on everything; a report on the last month.
-  const [range, setRange] = useState<RangeKey>(chips ? 'all' : '30d');
+  // Every list opens on everything, as the web reports do.
+  const [range, setRange] = useState<RangeKey>('all');
+  // A typed From / To overrides the preset, like the web's two date inputs.
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const custom = DATE_RE.test(from) || DATE_RE.test(to);
+  const datesKey = custom ? `${from}|${to}` : range;
+  const dates = useMemo(
+    () =>
+      custom
+        ? { startDate: DATE_RE.test(from) ? from : undefined, endDate: DATE_RE.test(to) ? to : undefined }
+        : rangeToDates(range),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [datesKey]
+  );
+  const pickRange = useCallback((key: RangeKey) => {
+    setFrom('');
+    setTo('');
+    setRange(key);
+  }, []);
   const [status, setStatus] = useState<string>('ALL');
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<any>(null);
@@ -225,8 +276,8 @@ export const TransactionReport: React.FC<Props> = ({
   // list over from the server; later pages are appended as the list scrolls.
   const firstPage = useAsync<PageResult>(
     () =>
-      pageFetcher!({ range: rangeToDates(range), page: 1, search: debouncedQuery.trim(), status, chip }),
-    [range, debouncedQuery, status, chip],
+      pageFetcher!({ range: dates, page: 1, search: debouncedQuery.trim(), status, chip }),
+    [dates, debouncedQuery, status, chip],
     paged
   );
   const [more, setMore] = useState<{ rows: any[]; page: number; hasMore: boolean; loading: boolean }>({
@@ -243,7 +294,7 @@ export const TransactionReport: React.FC<Props> = ({
     setMore((m) => ({ ...m, loading: true }));
     try {
       const next = await pageFetcher!({
-        range: rangeToDates(range),
+        range: dates,
         page: more.page + 1,
         search: debouncedQuery.trim(),
         status,
@@ -254,9 +305,9 @@ export const TransactionReport: React.FC<Props> = ({
       // A failed page leaves the list as it is; scrolling again retries.
       setMore((m) => ({ ...m, loading: false }));
     }
-  }, [paged, more, pageFetcher, range, debouncedQuery, status, chip]);
+  }, [paged, more, pageFetcher, dates, debouncedQuery, status, chip]);
 
-  const whole = useAsync<any[]>(() => fetcher!(rangeToDates(range)), [range], !paged);
+  const whole = useAsync<any[]>(() => fetcher!(dates), [dates, fetchKey], !paged);
   const report = paged ? firstPage : whole;
   const loaded = useMemo(
     () => (paged ? [...(firstPage.data?.rows ?? []), ...more.rows] : (whole.data ?? [])),
@@ -270,11 +321,12 @@ export const TransactionReport: React.FC<Props> = ({
     const match = chips?.find((c) => c.key === chip)?.match;
     return loaded.filter((item) => {
       if (match && !match(item)) return false;
+      if (rowFilter && !rowFilter(item)) return false;
       if (status !== 'ALL' && String(statusOf(item) ?? '').toUpperCase() !== status) return false;
       if (!term) return true;
       return searchFields(item).toLowerCase().includes(term);
     });
-  }, [paged, loaded, debouncedQuery, status, statusOf, searchFields, chips, chip]);
+  }, [paged, loaded, debouncedQuery, status, statusOf, searchFields, chips, chip, rowFilter]);
 
   const totals = useMemo(
     () =>
@@ -363,12 +415,19 @@ export const TransactionReport: React.FC<Props> = ({
 
   // Anything narrowing the list, so the filter button can show a count and the
   // empty state can offer to clear them.
-  const activeFilters = (range !== 'all' ? 1 : 0) + (status !== 'ALL' ? 1 : 0);
+  const activeFilters = (range !== 'all' || custom ? 1 : 0) + (status !== 'ALL' ? 1 : 0) + extraActive;
   const clearFilters = useCallback(() => {
     setQuery('');
     setStatus('ALL');
-    setRange('all');
-  }, []);
+    pickRange('all');
+    onClearFilters?.();
+  }, [pickRange, onClearFilters]);
+
+  const shareCsv = useCallback(() => {
+    if (!exportCsv) return;
+    const csv = toCsv(exportCsv.headers, rows.map((item, i) => exportCsv.row(item, i)));
+    Share.share({ title: exportCsv.filename, message: csv }).catch(() => {});
+  }, [exportCsv, rows]);
 
   // Memoised alongside renderItem: a fresh element here re-renders the header
   // (and its four summary tiles) on every keystroke.
@@ -387,6 +446,7 @@ export const TransactionReport: React.FC<Props> = ({
         </View>
       ) : (
       <View style={{ gap, marginBottom: space.xs }}>
+        {header}
         {!!report.error && (
           <Banner
             tone="error"
@@ -397,24 +457,34 @@ export const TransactionReport: React.FC<Props> = ({
         {/* Two across, not four. Every tile here carries a full money string
             (money() renders ₹1,23,456.78, not an abbreviated ₹1.2L), and four
             to a row left each one shrinking to fit at a different size. */}
+        {tiles.length > 0 && (
         <Grid columns={2}>
           {tiles.map((tile) => (
             <Tile key={tile.label} label={tile.label} value={tile.value} tone={tile.tone} />
           ))}
         </Grid>
+        )}
         {/* Range is the filter people actually change, so it sits in the open;
             status stays in the sheet with the rest. */}
+        {dateFilter && (
         <Segmented
           options={RANGES.map((r) => ({ key: r.key, label: r.label }))}
-          value={range}
-          onChange={setRange}
+          value={custom ? ('' as RangeKey) : range}
+          onChange={pickRange}
         />
+        )}
+        {!!exportCsv && (
+          <Button variant="outline" size="sm" icon="download" onPress={shareCsv} disabled={!rows.length}>
+            Export CSV
+          </Button>
+        )}
       </View>
     ),
-    [gap, report.error, report.reload, tiles, range, chips, header]
+    [gap, report.error, report.reload, tiles, range, custom, chips, header, dateFilter, pickRange, exportCsv, shareCsv, rows.length]
   );
 
   const hasFilters = !!query || activeFilters > 0;
+  const selectedDetails = selected ? (typeof details === 'function' ? details(selected) : details) : [];
   const listEmpty = useMemo(
     () => (
       <EmptyState
@@ -479,7 +549,7 @@ export const TransactionReport: React.FC<Props> = ({
       ) : (
         <View style={[styles.filters, { paddingHorizontal: padding }]}>
           <View style={styles.flex}>
-            <SearchPill value={query} onChange={setQuery} placeholder="Search reference, name, number" />
+            <SearchPill value={query} onChange={setQuery} placeholder={searchPlaceholder} />
           </View>
           <Pressable
             onPress={() => setFiltersOpen(true)}
@@ -601,17 +671,20 @@ export const TransactionReport: React.FC<Props> = ({
                   </Text>
                   <StatusText status={statusOf(selected)} />
                 </View>
-                <View style={styles.sheetCard}>
+                {/* A receipt runs to a dozen rows or more; it scrolls rather than
+                    pushing Close off the screen. */}
+                <ScrollView style={styles.sheetScroll} contentContainerStyle={styles.sheetCard}>
                   <Row label="Date" value={dateTime(dateOf(selected))} />
-                  {details.map((col, i) => (
+                  {selectedDetails.map((col, i) => (
                     <Row
                       key={col.label}
                       label={col.label}
                       value={col.value(selected)}
-                      last={i === details.length - 1}
+                      last={i === selectedDetails.length - 1}
                     />
                   ))}
-                </View>
+                </ScrollView>
+                {detailActions?.(selected, () => setSelected(null))}
               </>
             )}
             <Button variant="outline" onPress={() => setSelected(null)} fullWidth>
@@ -645,33 +718,63 @@ export const TransactionReport: React.FC<Props> = ({
           </View>
         }
       >
+        {dateFilter && (
         <View style={styles.filterGroup}>
           <Text style={styles.filterLabel}>Date range</Text>
           <Segmented
             options={RANGES.map((r) => ({ key: r.key, label: r.label }))}
-            value={range}
-            onChange={setRange}
+            value={custom ? ('' as RangeKey) : range}
+            onChange={pickRange}
           />
+          <View style={styles.sheetActions}>
+            <Input
+              label="From"
+              placeholder="YYYY-MM-DD"
+              value={from}
+              onChangeText={setFrom}
+              keyboardType="numbers-and-punctuation"
+              maxLength={10}
+              containerStyle={styles.flex}
+            />
+            <Input
+              label="To"
+              placeholder="YYYY-MM-DD"
+              value={to}
+              onChangeText={setTo}
+              keyboardType="numbers-and-punctuation"
+              maxLength={10}
+              containerStyle={styles.flex}
+            />
+          </View>
         </View>
+        )}
 
         {statuses.length > 1 && (
           <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Status</Text>
+            <Text style={styles.filterLabel}>{statusTitle}</Text>
             <Segmented
               options={statuses.map((value) => ({
                 key: value,
-                label: value === 'ALL' ? 'All status' : value,
+                label: statusLabels?.[value] ?? (value === 'ALL' ? 'All status' : value),
               }))}
               value={status}
               onChange={setStatus}
             />
           </View>
         )}
-        {filterExtra?.(() => setFiltersOpen(false))}
+        {filterExtra?.(() => setFiltersOpen(false), loaded)}
       </Sheet>
     </View>
   );
 };
+
+/** A labelled group in the filter sheet, for a report's own filters (filterExtra). */
+export const FilterGroup: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <View style={styles.filterGroup}>
+    <Text style={styles.filterLabel}>{label}</Text>
+    {children}
+  </View>
+);
 
 interface ReportItem {
   item: any;
@@ -968,6 +1071,7 @@ const styles = themed((c) => ({
   // BHIM sets an amount big and light.
   sheetAmountWrap: { alignItems: 'center', gap: space.xs },
   sheetAmount: { fontSize: 44, fontWeight: '300', color: c.foreground, fontVariant: ['tabular-nums'] },
+  sheetScroll: { maxHeight: 420, flexGrow: 0 },
   sheetCard: {
     backgroundColor: c.card,
     borderWidth: 1,

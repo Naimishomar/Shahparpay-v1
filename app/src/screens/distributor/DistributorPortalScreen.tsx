@@ -268,13 +268,13 @@ export const DistributorPortalScreen: React.FC = () => {
                   <Row label="Mode" value={String(req.transactionMode || '').replace(/_/g, ' ')} />
                   <Row label="UTR" value={req.bankUtr} />
                   <Row label="Deposited" value={shortDate(req.depositDate)} />
-                  <Row label="Requested" value={shortDate(req.createdAt)} last={!req.depositSlip} />
-                  {!!req.depositSlip && (
+                  <Row label="Requested" value={shortDate(req.createdAt)} last={!req.depositSlipUrl} />
+                  {!!req.depositSlipUrl && (
                     <Row
                       label="Deposit slip"
                       value={
                         <Pressable
-                          onPress={() => Linking.openURL(req.depositSlip)}
+                          onPress={() => Linking.openURL(req.depositSlipUrl)}
                           hitSlop={8}
                           accessibilityRole="button"
                         >

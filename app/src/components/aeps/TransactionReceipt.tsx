@@ -24,6 +24,9 @@ export interface ReceiptData {
   balanceAmount?: number | string;
   rrn?: string;
   stan?: string;
+  /** Icchhamati's ids, printed as its web receipt words them. */
+  txnId?: string;
+  reference?: string;
   dateTime: string;
   miniStatement?: { date?: string; narration?: string; amount?: string | number; txnType?: string }[];
 }
@@ -63,6 +66,8 @@ const asText = (data: ReceiptData) =>
     data.balanceAmount !== undefined && `Balance      : ${money(data.balanceAmount)}`,
     data.rrn && `RRN          : ${data.rrn}`,
     data.stan && `STAN         : ${data.stan}`,
+    data.txnId && `Txn ID       : ${data.txnId}`,
+    data.reference && `Reference    : ${data.reference}`,
     data.agentName && `Agent        : ${data.agentName}`,
     '',
     'System generated receipt.',
@@ -132,6 +137,8 @@ export const TransactionReceipt: React.FC<{
             {kv('Available balance', data.balanceAmount !== undefined ? money(data.balanceAmount) : undefined)}
             {kv('Bank ref (RRN)', data.rrn)}
             {kv('STAN', data.stan)}
+            {kv('Transaction ID', data.txnId)}
+            {kv('Reference', data.reference)}
             {kv('Agent', data.agentName)}
             {kv('Agent mobile', data.agentMobile)}
           </View>

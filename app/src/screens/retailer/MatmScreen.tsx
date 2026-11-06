@@ -82,86 +82,98 @@ export const matmRequestData = (extra: Record<string, any>, txnType: TxnType, tx
 const IcchhamatiMatmScreen: React.FC = () => {
   const [mobile, setMobile] = useState('');
   const [amount, setAmount] = useState('');
+  const [remarks, setRemarks] = useState('');
   const [txnType, setTxnType] = useState<TxnType>('ATMCW');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [launchError, setLaunchError] = useState('');
-  const [receipt, setReceipt] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const [receipt, setReceipt] = useState<{ message: string; data: Record<string, any> } | null>(null);
   const history = useAsync<any[]>(async () => (await api.getMatmHistory()).data ?? [], []);
 
-  const submit = useAction(async (data: Record<string, any>) => {
-    const res = await api.processMatm({ mobile, data });
-    // PROCESSING (202) is not a failure: the withdrawal waits for verification.
-    if (!res.success && res.status !== 'PROCESSING') throw new Error(res.message || 'Micro ATM transaction failed.');
-    return res;
-  });
-
+  // Same rules and messages as the web portal and the backend.
   const validate = () => {
     const next: Record<string, string> = {};
-    if (!/^[6-9]\d{9}$/.test(mobile)) next.mobile = 'Enter the customer’s 10-digit mobile number';
+    if (!/^[6-9]\d{9}$/.test(mobile)) next.mobile = 'Enter the customer’s 10-digit mobile number.';
     const value = Number(amount);
-    // The SDK refuses anything else.
-    if (txnType === 'ATMCW' && !(value >= 100 && value <= 10000 && value % 10 === 0)) {
-      next.amount = 'Amount must be ₹100 to ₹10,000, in multiples of ₹10';
-    }
+    if (txnType === 'ATMCW' && !(value >= 1 && value <= 10000)) next.amount = 'Amount must be between ₹1 and ₹10,000.';
     setErrors(next);
     return !Object.keys(next).length;
   };
 
   const launch = async () => {
     setLaunchError('');
-    submit.setError(null);
     if (!validate()) return;
     if (Platform.OS !== 'android') return setLaunchError('Micro ATM works only in the Android app with a paired device.');
-
-    let result: IntentLauncher.IntentLauncherResult;
-    let txnId = '';
+    setBusy(true);
+    setReceipt(null);
     try {
-      await ensureBluetooth();
-      const coords = await coordsPayload();
-      const sdk = await api.getMatmSdk();
-      if (!sdk?.success || !sdk.data?.merchantUserId) throw new Error(sdk?.message || 'Could not start Micro ATM.');
-      txnId = sdk.data.txnId;
-      result = await IntentLauncher.startActivityAsync('android.intent.action.MAIN', {
-        className: FINGPAY_ACTIVITY,
-        packageName: 'com.shahparpay.app',
-        extra: {
-          MERCHANT_USERID: sdk.data.merchantUserId,
-          MERCHANT_PASSWORD: sdk.data.merchantPassword,
-          SUPER_MERCHANTID: sdk.data.superMerchantId,
-          MOBILE_NUMBER: mobile,
-          AMOUNT: txnType === 'ATMCW' ? amount : '0',
-          REMARKS: txnType === 'ATMCW' ? 'Cash withdrawal' : 'Balance enquiry',
-          TXN_ID: txnId,
-          LATITUDE: String(coords.latitude),
-          LONGITUDE: String(coords.longitude),
-          TYPE: String(FINGPAY_TYPE[txnType]),
-        },
-      });
-    } catch (err: any) {
-      const msg = String(err?.message || '');
-      return setLaunchError(
-        /no activity|resolve|not found|unable to find explicit activity/i.test(msg)
-          ? 'The Micro ATM SDK is not in this app build. Install the latest app and try again.'
-          : msg || 'Could not start the Micro ATM device.'
-      );
+      let result: IntentLauncher.IntentLauncherResult;
+      let txnId = '';
+      try {
+        await ensureBluetooth();
+        const coords = await coordsPayload();
+        const sdk = await api.getMatmSdk().catch((e: any) => e?.response?.data);
+        if (!sdk?.success || !sdk.data?.merchantUserId) throw new Error(sdk?.message || 'Could not start Micro ATM.');
+        txnId = sdk.data.txnId;
+        result = await IntentLauncher.startActivityAsync('android.intent.action.MAIN', {
+          className: FINGPAY_ACTIVITY,
+          packageName: 'com.shahparpay.app',
+          extra: {
+            MERCHANT_USERID: sdk.data.merchantUserId,
+            MERCHANT_PASSWORD: sdk.data.merchantPassword,
+            SUPER_MERCHANTID: sdk.data.superMerchantId,
+            MOBILE_NUMBER: mobile,
+            AMOUNT: txnType === 'ATMCW' ? amount : '0',
+            REMARKS: remarks || (txnType === 'ATMCW' ? 'Cash withdrawal' : 'Balance enquiry'),
+            TXN_ID: txnId,
+            LATITUDE: String(coords.latitude),
+            LONGITUDE: String(coords.longitude),
+            TYPE: String(FINGPAY_TYPE[txnType]),
+          },
+        });
+      } catch (err: any) {
+        const msg = String(err?.message || '');
+        return setLaunchError(
+          /no activity|resolve|not found|unable to find explicit activity/i.test(msg)
+            ? 'The Micro ATM SDK is not in this app build. Install the latest app and try again.'
+            : msg || 'Could not start the Micro ATM device.'
+        );
+      }
+
+      const extra = (result.extra ?? {}) as Record<string, any>;
+      if (!Object.keys(extra).length) return setLaunchError('Micro ATM transaction cancelled.');
+      const data = matmRequestData(extra, txnType, txnId);
+      // Nothing reached the bank (login or device failed): nothing to record.
+      if (!data.fpTransactionId) {
+        return setReceipt({ message: data.errorMessage || 'Transaction failed on the device.', data });
+      }
+
+      // Whatever the card said, the result is recorded; only the backend decides about money.
+      const recorded = await api
+        .processMatm({ mobile, data })
+        .catch((e: any) => e?.response?.data || { success: false, message: 'Network error. Please try again.' });
+      setReceipt({ message: recorded.message || data.errorMessage, data });
+      if (recorded.success) {
+        setMobile('');
+        setAmount('');
+        setRemarks('');
+      }
+      history.reload();
+    } finally {
+      setBusy(false);
     }
-
-    const extra = (result.extra ?? {}) as Record<string, any>;
-    if (!Object.keys(extra).length) return setLaunchError('Micro ATM transaction cancelled.');
-    const data = matmRequestData(extra, txnType, txnId);
-    // Nothing reached the bank (login or device failed): nothing to record.
-    if (!data.fpTransactionId) return setLaunchError(data.errorMessage || 'Micro ATM transaction failed.');
-
-    const res = await submit.run(data);
-    history.reload();
-    setReceipt({
-      status: res?.status || 'FAILED',
-      message: res?.message || data.errorMessage,
-      type: txnType,
-      ...data,
-    });
-    if (res) setAmount('');
   };
+
+  const rows = receipt
+    ? ([
+        ['Amount', receipt.data.transactionAmount ? money(receipt.data.transactionAmount) : null],
+        ['Account balance', receipt.data.balanceAmount !== undefined ? money(receipt.data.balanceAmount) : null],
+        ['Card', [receipt.data.cardType, receipt.data.cardNumber].filter(Boolean).join(' ')],
+        ['Bank', receipt.data.bankName],
+        ['Bank RRN', receipt.data.bankRRN],
+        ['Transaction ID', receipt.data.fpTransactionId],
+      ].filter(([, v]) => v) as [string, string][])
+    : [];
 
   return (
     <Screen refreshing={history.refreshing} onRefresh={history.refresh}>
@@ -170,7 +182,7 @@ const IcchhamatiMatmScreen: React.FC = () => {
           <IconTile icon="credit-card-outline" size={48} iconSize={22} />
           <View style={styles.info}>
             <Text style={styles.title}>Micro ATM</Text>
-            <Text style={styles.meta}>Morefun device over Bluetooth</Text>
+            <Text style={styles.meta}>Card cash withdrawal and balance enquiry</Text>
           </View>
         </View>
         <Text style={[styles.help, styles.gapTop]}>
@@ -186,66 +198,56 @@ const IcchhamatiMatmScreen: React.FC = () => {
           onChangeText={(v) => setMobile(v.replace(/\D/g, '').slice(0, 10))}
           keyboardType="number-pad"
           maxLength={10}
-          required
           error={errors.mobile}
         />
         {txnType === 'ATMCW' && (
           <Input
-            label="Withdrawal amount"
+            label="Amount"
             value={amount}
             onChangeText={(v) => setAmount(v.replace(/\D/g, '').slice(0, 5))}
             keyboardType="number-pad"
             leftIcon="currency-inr"
-            placeholder="₹100 to ₹10,000"
-            required
+            placeholder="Up to ₹10,000"
             error={errors.amount}
           />
         )}
+        <Input label="Remarks (optional)" value={remarks} onChangeText={setRemarks} />
         {!!launchError && <ErrorBanner message={launchError} />}
-        {!!submit.error && <ErrorBanner message={submit.error} />}
-        <Button onPress={launch} loading={submit.pending} icon="bluetooth-connect" haptic="medium" fullWidth>
-          {txnType === 'ATMCW' ? 'Start cash withdrawal' : 'Check balance'}
+        <Button onPress={launch} loading={busy} icon="credit-card-outline" haptic="medium" fullWidth>
+          {busy ? 'Follow the device…' : 'Start — insert or swipe the card'}
         </Button>
       </View>
 
       <View>
-        <SectionTitle>Micro ATM history</SectionTitle>
+        <SectionTitle>Recent Micro ATM transactions</SectionTitle>
         {history.loading ? <SkeletonRows count={3} /> : history.data?.length ? (
           <View style={styles.list}>
-            {history.data.slice(0, 20).map((txn: any, index: number, rows: any[]) => (
-              <View key={txn._id || txn.transactionId} style={[styles.txn, index === rows.length - 1 && styles.txnLast]}>
+            {history.data.map((txn: any, index: number, all: any[]) => (
+              <View key={txn._id || txn.transactionId} style={[styles.txn, index === all.length - 1 && styles.txnLast]}>
                 <IconTile icon="credit-card-outline" size={44} iconSize={20} />
                 <View style={styles.info}>
-                  <Text style={styles.title} numberOfLines={1}>{Number(txn.amount) > 0 ? 'Cash withdrawal' : 'Balance enquiry'}</Text>
+                  <Text style={styles.title} numberOfLines={1}>{txn.metadata?.transactionType || '—'}</Text>
                   <Text style={styles.meta} numberOfLines={1}>{dateTime(txn.createdAt)}</Text>
-                  <Text style={styles.meta} numberOfLines={1} selectable>
-                    {[txn.transactionId, txn.metadata?.bankRRN && `RRN ${txn.metadata.bankRRN}`].filter(Boolean).join(' · ')}
-                  </Text>
                 </View>
                 <View style={styles.right}>
-                  <Text style={styles.amount}>{money(txn.amount)}</Text>
+                  <Text style={styles.amount}>{money(txn.amount || 0)}</Text>
                   <StatusText status={txn.status} />
                 </View>
               </View>
             ))}
           </View>
         ) : (
-          <EmptyState icon="credit-card-outline" title="No Micro ATM transactions yet" subtitle="Every card transaction appears here" />
+          <EmptyState icon="credit-card-outline" title="No Micro ATM transactions yet." />
         )}
       </View>
 
-      <Sheet visible={!!receipt} onClose={() => setReceipt(null)} title="Micro ATM receipt" icon="receipt">
+      <Sheet visible={!!receipt} onClose={() => setReceipt(null)} title="Result" icon="receipt">
         {!!receipt && (
           <View>
-            <Row label="Status" value={<StatusText status={receipt.status} />} />
-            {!!receipt.message && <Row label="Message" value={receipt.message} />}
-            <Row label="Type" value={receipt.type === 'ATMCW' ? 'Cash withdrawal' : 'Balance enquiry'} />
-            {receipt.type === 'ATMCW' && <Row label="Amount" value={money(receipt.transactionAmount)} mono />}
-            <Row label="Account balance" value={money(receipt.balanceAmount)} mono />
-            <Row label="Bank" value={receipt.bankName || '—'} />
-            <Row label="Card" value={receipt.cardNumber || '—'} mono />
-            <Row label="Bank RRN" value={receipt.bankRRN || '—'} mono />
-            <Row label="Transaction ID" value={receipt.fpTransactionId || '—'} mono last />
+            <Text style={[styles.title, styles.resultMessage]}>{receipt.message}</Text>
+            {rows.map(([label, value], i) => (
+              <Row key={label} label={label} value={value} mono={label !== 'Bank'} last={i === rows.length - 1} />
+            ))}
           </View>
         )}
       </Sheet>
@@ -573,6 +575,7 @@ const styles = themed((c) => ({
   txnLast: { borderBottomWidth: 0 },
   right: { alignItems: 'flex-end', gap: 3 },
   amount: { fontSize: t.body, fontWeight: '500', color: c.foreground, fontVariant: ['tabular-nums'] },
+  resultMessage: { fontWeight: '600', marginBottom: space.md },
   link: { fontSize: t.small, fontWeight: '500', color: c.accent, textDecorationLine: 'underline' },
 }));
 

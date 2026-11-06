@@ -45,6 +45,7 @@ import {
   PayoutReport,
   LeadReport,
   WalletLedgerReport,
+  LedgerReport,
 } from '@/screens/reports';
 
 const Stack = createStackNavigator();
@@ -82,6 +83,7 @@ const COMMON_SCREENS: [string, React.ComponentType<any>][] = [
 const REPORT_SCREENS: [string, React.ComponentType<any>][] = [
   ['Reports', ReportsScreen],
   ['WalletLedgerReport', WalletLedgerReport],
+  ['LedgerReport', LedgerReport],
   ['AepsReport', AepsReport],
   ['DmtReport', DmtReport],
   ['PayoutReport', PayoutReport],

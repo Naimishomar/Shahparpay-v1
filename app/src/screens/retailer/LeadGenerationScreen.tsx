@@ -1,110 +1,95 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable, Linking } from 'react-native';
 import { themed, space, type as t, radius, colors } from '../../theme/colors';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { IconTile } from '@/components/ui/Gradient';
 import { Input, SelectField } from '@/components/ui/Input';
-import {
-  Screen,
-  SectionTitle,
-  EmptyState,
-  ErrorBanner,
-  SuccessBanner,
-  Grid,
-  Row,
-  Segmented,
-  shortDate,
-  SkeletonRows,
-} from '@/components/ui/Screen';
-import { useAsync, useAction } from '@/hooks/useAsync';
+import { Screen, SectionTitle, Grid, Segmented, Toast } from '@/components/ui/Screen';
+import { useAsync } from '@/hooks/useAsync';
 import { INDIAN_STATES } from '@/constants';
 import api from '@/services/api';
 
+// Product codes the backend forwards to PaySprint; same list as the web.
 const PRODUCTS = [
-  { key: 'Credit Card', label: 'Credit Card' },
-  { key: 'Personal Loan', label: 'Personal Loan' },
-  { key: 'Business Loan', label: 'Business Loan' },
-  { key: 'Home Loan', label: 'Home Loan' },
-  { key: 'Loan Against Property', label: 'Loan Against Property' },
-  { key: 'Insurance', label: 'Insurance' },
+  { key: 'CC', label: 'Credit Card' },
+  { key: 'PL', label: 'Personal Loan' },
+  { key: 'BL', label: 'Business Loan' },
+  { key: 'IL', label: 'Instant Loan' },
+  { key: 'SA', label: 'Savings Account' },
 ];
 
+const EMPTY = { name: '', mobile_no: '', email: '', product: 'CC', pincode: '', state: '' };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Same buckets as the web's status pill, keyed on executive_status. */
+const bucket = (status?: string) => {
+  const s = String(status || 'PENDING').toUpperCase();
+  if (s.includes('APPROV') || s.includes('SUCCESS') || s.includes('DISBURS')) return 'approved';
+  if (s.includes('REJECT') || s.includes('NOT_INTERESTED') || s.includes('FAIL')) return 'rejected';
+  return 'pending';
+};
+
 export const LeadGenerationScreen: React.FC = () => {
-  const [name, setName] = useState('');
-  const [mobile, setMobile] = useState('');
-  const [email, setEmail] = useState('');
-  const [product, setProduct] = useState(PRODUCTS[0].key);
-  const [pincode, setPincode] = useState('');
-  const [state, setState] = useState('');
+  const [form, setForm] = useState(EMPTY);
+  const [submitting, setSubmitting] = useState(false);
   const [showStates, setShowStates] = useState(false);
   const [stateQuery, setStateQuery] = useState('');
-  const [notice, setNotice] = useState('');
+  const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' }>({ message: '', tone: 'error' });
+  const set = (patch: Partial<typeof EMPTY>) => setForm((f) => ({ ...f, ...patch }));
 
-  const leads = useAsync<any[]>(async () => (await api.getLeadHistory()).data ?? [], []);
+  // The web only reads history for the three counters; a failure is a toast,
+  // not a blocked page.
+  const leads = useAsync<any[]>(async () => {
+    try {
+      const res = await api.getLeadHistory();
+      return res.success ? res.data ?? [] : [];
+    } catch {
+      setToast({ message: 'Failed to load leads history.', tone: 'error' });
+      return [];
+    }
+  }, []);
 
-  const submit = useAction(async () => {
-    const res = await api.generateLead({
-      name: name.trim(),
-      mobile_no: mobile.trim(),
-      email: email.trim() || undefined,
-      product,
-      pincode: pincode.trim(),
-      state,
-    });
-    if (!res.success) throw new Error(res.message);
-    return res;
-  });
-
-  const refreshStatus = useAction(async (refid: string) => {
-    const res = await api.getLeadStatus(refid);
-    if (!res.success) throw new Error(res.message);
-    return res;
-  });
-
-  const emailInvalid = !!email && !EMAIL_RE.test(email.trim());
-  const valid =
-    name.trim().length > 2 && mobile.length === 10 && pincode.length === 6 && !!state && !emailInvalid;
+  const list = leads.data ?? [];
+  const approvedCount = list.filter((l) => bucket(l.executive_status) === 'approved').length;
+  const pendingCount = list.filter((l) => bucket(l.executive_status) === 'pending').length;
+  const productName = PRODUCTS.find((p) => p.key === form.product)?.label || form.product;
 
   const filteredStates = useMemo(
-    () =>
-      INDIAN_STATES.filter((s) => s.toLowerCase().includes(stateQuery.trim().toLowerCase())),
+    () => INDIAN_STATES.filter((s) => s.toLowerCase().includes(stateQuery.trim().toLowerCase())),
     [stateQuery]
   );
 
-  const stats = (leads.data ?? []).reduce(
-    (acc: any, lead: any) => {
-      const s = String(lead.status || 'PENDING').toUpperCase();
-      acc.total += 1;
-      if (['APPROVED', 'CONVERTED', 'SUCCESS'].includes(s)) acc.converted += 1;
-      else if (['REJECTED', 'FAILED'].includes(s)) acc.rejected += 1;
-      else acc.pending += 1;
-      return acc;
-    },
-    { total: 0, converted: 0, pending: 0, rejected: 0 }
-  );
-
   const onSubmit = async () => {
-    setNotice('');
-    const res = await submit.run();
-    if (res) {
-      setNotice(res.message || 'Lead submitted.');
-      setName('');
-      setMobile('');
-      setEmail('');
-      setPincode('');
-      leads.reload();
+    if (!form.name || !form.mobile_no || !form.email || !form.product) {
+      setToast({ message: 'Please fill in all required fields.', tone: 'error' });
+      return;
     }
-  };
-
-  const onCheckStatus = async (refid: string) => {
-    setNotice('');
-    const res = await refreshStatus.run(refid);
-    if (res) {
-      setNotice(`Status: ${res.data?.executive_status || res.data?.status || 'Pending'}`);
-      leads.reload();
+    // The web's type="email" field blocks the submit on a malformed address.
+    if (!EMAIL_RE.test(form.email)) {
+      setToast({ message: 'Please enter a valid email address.', tone: 'error' });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const data = await api.generateLead(form);
+      if (data.success) {
+        setToast({ message: 'Lead generated successfully!', tone: 'success' });
+        setForm(EMPTY);
+        leads.reload();
+        // ponytail: web POSTs `encdata` in a hidden form; the app can only GET the URL.
+        if (data.data?.url) Linking.openURL(data.data.url).catch(() => {});
+      } else {
+        setToast({ message: data.message || 'Failed to generate lead.', tone: 'error' });
+      }
+    } catch (error: any) {
+      const body = error?.response?.data;
+      setToast({
+        message: body ? body.message || 'Failed to generate lead.' : 'An error occurred during submission.',
+        tone: 'error',
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -112,69 +97,72 @@ export const LeadGenerationScreen: React.FC = () => {
     <Screen
       refreshing={leads.refreshing}
       onRefresh={leads.refresh}
-      error={leads.error}
-      onRetry={leads.reload}
+      overlay={<Toast message={toast.message} tone={toast.tone} onHide={() => setToast((s) => ({ ...s, message: '' }))} />}
     >
-      <Grid columns={2}>
-        <Tile icon="account-group-outline" label="Total leads" value={String(stats.total)} />
-        <Tile icon="check-circle-outline" label="Converted" value={String(stats.converted)} tone="success" />
-        <Tile icon="clock-outline" label="Pending" value={String(stats.pending)} tone="warning" />
-        <Tile icon="close-circle-outline" label="Rejected" value={String(stats.rejected)} tone="error" />
+      <Text style={styles.help}>Generate leads for credit cards, loans and accounts, and track their status.</Text>
+      <Grid columns={3}>
+        <Tile icon="account-group-outline" label="Total leads" value={leads.loading ? '…' : String(list.length)} />
+        <Tile icon="check-circle-outline" label="Approved" value={leads.loading ? '…' : String(approvedCount)} tone="success" />
+        <Tile icon="clock-outline" label="In progress" value={leads.loading ? '…' : String(pendingCount)} tone="warning" />
       </Grid>
 
-      <SectionTitle>New lead</SectionTitle>
       <Card>
         <CardContent style={styles.form}>
           <View style={styles.field}>
             <Text style={styles.label}>
-              Product<Text style={styles.required}> *</Text>
+              Choose a product<Text style={styles.required}> *</Text>
             </Text>
-            <Segmented options={PRODUCTS} value={product} onChange={setProduct} />
+            <Segmented options={PRODUCTS} value={form.product} onChange={(product) => set({ product })} />
           </View>
+        </CardContent>
+      </Card>
 
+      <SectionTitle>Customer details</SectionTitle>
+      <Card>
+        <CardContent style={styles.form}>
           <Input
-            label="Customer name"
+            label="Customer Name"
             required
-            value={name}
-            onChangeText={setName}
+            value={form.name}
+            onChangeText={(name) => set({ name })}
             leftIcon="account-outline"
             autoComplete="name"
+            placeholder="Enter full name"
           />
           <Input
-            label="Mobile number"
+            label="Mobile Number"
             required
-            value={mobile}
-            onChangeText={(v) => setMobile(v.replace(/\D/g, '').slice(0, 10))}
-            keyboardType="number-pad"
+            value={form.mobile_no}
+            onChangeText={(v) => set({ mobile_no: v.replace(/\D/g, '').slice(0, 10) })}
+            keyboardType="phone-pad"
             leftIcon="phone-outline"
             autoComplete="tel"
-            placeholder="10 digits"
+            placeholder="Enter 10 digit mobile"
           />
           <Input
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
+            label="Email ID"
+            required
+            value={form.email}
+            onChangeText={(email) => set({ email })}
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
             leftIcon="email-outline"
-            error={emailInvalid ? 'Enter a valid email address' : undefined}
+            placeholder="Enter email address"
           />
           <Input
             label="Pincode"
-            required
-            value={pincode}
-            onChangeText={(v) => setPincode(v.replace(/\D/g, '').slice(0, 6))}
+            value={form.pincode}
+            onChangeText={(v) => set({ pincode: v.replace(/\D/g, '').slice(0, 6) })}
             keyboardType="number-pad"
             leftIcon="map-marker-outline"
-            placeholder="6 digits"
+            placeholder="6 digit pincode"
           />
 
           <SelectField
             label="State"
-            required
-            value={state}
-            placeholder="Select state"
+            value={form.state}
+            placeholder="Select State"
             open={showStates}
             onPress={() => setShowStates(!showStates)}
           />
@@ -192,7 +180,7 @@ export const LeadGenerationScreen: React.FC = () => {
                   <Pressable
                     key={s}
                     onPress={() => {
-                      setState(s);
+                      set({ state: s });
                       setShowStates(false);
                       setStateQuery('');
                     }}
@@ -207,58 +195,9 @@ export const LeadGenerationScreen: React.FC = () => {
             </View>
           )}
 
-          {!!submit.error && <ErrorBanner message={submit.error} />}
-          {!!notice && <SuccessBanner message={notice} />}
-          <Button
-            onPress={onSubmit}
-            disabled={!valid}
-            loading={submit.pending}
-            size="lg"
-            fullWidth
-          >
-            Generate lead
+          <Button onPress={onSubmit} loading={submitting} size="lg" fullWidth icon="link-variant">
+            {`Generate ${productName} Link`}
           </Button>
-        </CardContent>
-      </Card>
-
-      <SectionTitle>Lead history</SectionTitle>
-      <Card>
-        <CardContent>
-          {!!refreshStatus.error && <ErrorBanner message={refreshStatus.error} />}
-          {leads.loading ? <SkeletonRows count={3} /> : leads.data?.length ? (
-            leads.data.slice(0, 25).map((lead: any, index: number, shown: any[]) => (
-              <View
-                key={lead._id || lead.refid}
-                style={[styles.item, index === shown.length - 1 && styles.itemLast]}
-              >
-                <View style={styles.itemTop}>
-                  <IconTile icon="account-outline" size={44} iconSize={20} />
-                  <Text style={styles.itemName} numberOfLines={1}>
-                    {lead.name}
-                  </Text>
-                  <StatusText status={lead.executive_status || lead.status} />
-                </View>
-                <Row label="Product" value={lead.product} />
-                <Row label="Mobile" value={lead.mobile_no || lead.mobile} />
-                <Row label="Reference" value={lead.refid} />
-                <Row label="Created" value={shortDate(lead.createdAt)} last />
-                {!!lead.refid && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon="refresh"
-                    onPress={() => onCheckStatus(lead.refid)}
-                    loading={refreshStatus.pending}
-                    style={styles.statusButton}
-                  >
-                    Check status
-                  </Button>
-                )}
-              </View>
-            ))
-          ) : (
-            <EmptyState icon="account-group-outline" title="No leads generated yet" />
-          )}
         </CardContent>
       </Card>
     </Screen>
@@ -288,21 +227,6 @@ const Tile: React.FC<{
     </Text>
   </View>
 );
-
-/** BHIM status: small coloured text, never a filled pill. */
-const StatusText: React.FC<{ status?: string | null }> = ({ status }) => {
-  const s = String(status || 'PENDING').toUpperCase();
-  const color = /SUCCESS|COMPLETE|APPROVED|ACTIVE|ACCEPTED|CONVERTED/.test(s)
-    ? colors.success
-    : /FAIL|REJECT/.test(s)
-      ? colors.destructive
-      : colors.warning;
-  return (
-    <Text style={{ fontSize: t.small, fontWeight: '500', color }}>
-      {s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, ' ')}
-    </Text>
-  );
-};
 
 const styles = themed((c) => ({
   tile: {
@@ -342,16 +266,7 @@ const styles = themed((c) => ({
   pickerItemPressed: { backgroundColor: c.surfaceAlt },
   pickerText: { fontSize: t.small, color: c.foreground },
   pickerEmpty: { fontSize: t.caption, color: c.mutedForeground, padding: space.md },
-  item: { paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
-  itemLast: { borderBottomWidth: 0 },
-  itemTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    marginBottom: 2,
-  },
-  itemName: { flex: 1, minWidth: 0, fontSize: t.bodyLg, fontWeight: '500', color: c.foreground },
-  statusButton: { alignSelf: 'flex-start', marginTop: space.xs },
+  help: { fontSize: t.small, color: c.mutedForeground, lineHeight: 19 },
 }));
 
 export default LeadGenerationScreen;

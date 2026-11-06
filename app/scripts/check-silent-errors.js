@@ -14,6 +14,8 @@ const assert = require('assert');
 const ALLOWED = {
   'src/screens/retailer/ProfileScreen.tsx:changePhoto':
     'pickImage resolves to null when the picker is cancelled or the permission is denied; it never rejects',
+  'src/screens/retailer/BbpsServiceScreen.tsx:payBill':
+    'catches every failure itself and returns it, so onPay shows it as a FAILED receipt, as the website does',
 };
 
 const walk = (dir, out = []) => {

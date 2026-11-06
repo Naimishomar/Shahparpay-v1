@@ -58,12 +58,24 @@ export const recordVideo = async (fallbackName = 'video-kyc'): Promise<PickedFil
     videoMaxDuration: 30,
     videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium,
   });
+  return videoFile(result, fallbackName);
+};
+
+/** An existing recording from the gallery, as the web lets the retailer choose a file. */
+export const pickVideo = async (fallbackName = 'video-kyc'): Promise<PickedFile | null> => {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) return null;
+  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Videos });
+  return videoFile(result, fallbackName);
+};
+
+const videoFile = (result: ImagePicker.ImagePickerResult, fallbackName: string): PickedFile | null => {
   if (result.canceled || !result.assets?.length) return null;
   const asset = result.assets[0];
   // The server takes 100 MB; Android cameras ignore videoQuality, so a
   // 30-second clip there is often 30-60 MB.
   if (asset.fileSize && asset.fileSize > 100 * 1024 * 1024) {
-    throw new Error('The video is larger than 100 MB. Record a shorter clip.');
+    throw new Error('The video must be 100 MB or smaller.');
   }
   return {
     uri: asset.uri,

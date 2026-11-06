@@ -59,18 +59,8 @@ interface ServiceSpec {
 
 const SERVICES: ServiceSpec[] = [
   {
-    key: 'withdrawal',
-    label: 'Cash withdrawal',
-    short: 'Withdraw',
-    icon: 'cash-multiple',
-    amount: true,
-    mobile: true,
-    guarded: true,
-    call: (payload) => api.aepsCashWithdrawal(payload),
-  },
-  {
     key: 'balance',
-    label: 'Balance enquiry',
+    label: 'Balance Enquiry',
     short: 'Balance',
     icon: 'bank-outline',
     amount: false,
@@ -79,8 +69,18 @@ const SERVICES: ServiceSpec[] = [
     call: (payload) => api.aepsBalanceEnquiry(payload),
   },
   {
+    key: 'withdrawal',
+    label: 'Cash Withdrawal',
+    short: 'Withdraw',
+    icon: 'cash-multiple',
+    amount: true,
+    mobile: true,
+    guarded: true,
+    call: (payload) => api.aepsCashWithdrawal(payload),
+  },
+  {
     key: 'statement',
-    label: 'Mini statement',
+    label: 'Mini Statement',
     short: 'Mini statement',
     icon: 'text-box-outline',
     amount: false,
@@ -100,7 +100,7 @@ const SERVICES: ServiceSpec[] = [
   },
   {
     key: 'deposit',
-    label: 'Cash deposit',
+    label: 'Cash Deposit',
     short: 'Deposit',
     icon: 'wallet-plus-outline',
     amount: true,
@@ -250,6 +250,13 @@ const icchStatement = (rows: any) =>
       }))
     : undefined;
 
+/** Icchhamati's references, labelled as the web receipt labels them. */
+const icchRefs = (data: any) => ({
+  rrn: data?.bankRRN,
+  txnId: data?.fpTransactionId,
+  reference: data?.referenceNo,
+});
+
 /** Balance sits under a different key per pipe and per service. */
 const readBalance = (data: any) =>
   data?.balanceamount ??
@@ -263,7 +270,7 @@ export const AepsScreen: React.FC = () => {
   const { user } = useAuth();
   const { device, setDevice } = useBiometricDevice();
 
-  const [service, setService] = useState<ServiceKey>('withdrawal');
+  const [service, setService] = useState<ServiceKey>('balance');
   const [pipe, setPipe] = useState<string | null>(null);
 
   const [customerName, setCustomerName] = useState('');
@@ -286,6 +293,8 @@ export const AepsScreen: React.FC = () => {
   const [otpRefId, setOtpRefId] = useState('');
   const [otpReference, setOtpReference] = useState('');
   const [otpSent, setOtpSent] = useState(false);
+  // Icchhamati ties transactions to a registered scanner serial, as on the web.
+  const [serial, setSerial] = useState('');
 
   const [showKyc, setShowKyc] = useState(false);
   const [kycPipe, setKycPipe] = useState<string | undefined>();
@@ -321,6 +330,16 @@ export const AepsScreen: React.FC = () => {
   // Only an Icchhamati answer counts: right after a switch, or when the new
   // provider's status failed to load, `status.data` can still be PaySprint's.
   const icchStatus: IcchStatus | null = icch && status.data?.step ? status.data : null;
+
+  // Prefill the scanner the provider has on record, as the web does.
+  useEffect(() => {
+    if (!icchStatus) return;
+    if (icchStatus.deviceIMEI) setSerial((s) => s || String(icchStatus.deviceIMEI));
+    const known = (['mantra', 'morpho', 'startek'] as const).find((b) =>
+      String(icchStatus.deviceName || '').toLowerCase().includes(b)
+    );
+    if (known) setDevice(known);
+  }, [icchStatus?.deviceIMEI, icchStatus?.deviceName]);
   const activePipes: string[] = icch ? [] : status.data?.activePipes ?? [];
   const kycDone = !!status.data?.isMerchantKycComplete;
   const dailyAuthDone = !!status.data?.isDailyAuthDoneToday;
@@ -340,7 +359,10 @@ export const AepsScreen: React.FC = () => {
     <Input
       label={copy.mobile[0]}
       value={group(mobileNumber, 5)}
-      onChangeText={(v) => setMobileNumber(v.replace(/\D/g, '').slice(0, 10))}
+      onChangeText={(v) => {
+        setMobileNumber(v.replace(/\D/g, '').slice(0, 10));
+        if (otpSent) invalidateOtp();
+      }}
       keyboardType="number-pad"
       autoComplete="tel"
       placeholder={copy.mobile[1]}
@@ -349,7 +371,7 @@ export const AepsScreen: React.FC = () => {
   );
   const amountValue = Number(amount) || 0;
   // Icchhamati asks the customer's OTP for Aadhaar Pay above the threshold too.
-  const needsOtp =
+  const needsOtp: boolean =
     (service === 'withdrawal' || (icch && service === 'aadhaarpay')) && amountValue > AEPS_OTP_THRESHOLD;
 
   /** Any change to what the OTP was issued against invalidates it. */
@@ -382,6 +404,18 @@ export const AepsScreen: React.FC = () => {
     setPidData(null);
     invalidateOtp();
   };
+
+  /** The web's validate() for Icchhamati, in its order and words. */
+  const icchInvalid = () =>
+    !/^\d{12}$/.test(aadhaarNumber)
+      ? 'Aadhaar number must be 12 digits.'
+      : !/^[6-9]\d{9}$/.test(mobileNumber)
+        ? 'Enter the customer’s 10-digit mobile number.'
+        : !bank
+          ? 'Select the customer’s bank.'
+          : spec.amount && !(amountValue >= 1 && amountValue <= AEPS_MAX_WITHDRAWAL)
+            ? 'Amount must be between ₹1 and ₹10,000.'
+            : null;
 
   const sortedBanks = useMemo(() => {
     // PaySprint's list ships genuine duplicates — the same IIN appears more
@@ -438,8 +472,11 @@ export const AepsScreen: React.FC = () => {
           ? 'Daily 2FA is pending. Authenticate once to unlock transactions for today.'
           : null;
 
-  const missingField =
-    aadhaarNumber.length !== 12
+  const missingField = icch
+    ? icchInvalid() ||
+      (needsOtp && (!otpRefId || otp.length < 4) ? 'Enter the OTP the customer received.' : null) ||
+      (!serial ? 'Enter the scanner serial number.' : null)
+    : aadhaarNumber.length !== 12
       ? 'Enter the customer\'s 12-digit Aadhaar number.'
       : !bank
         ? 'Select the customer\'s bank.'
@@ -470,8 +507,10 @@ export const AepsScreen: React.FC = () => {
 
   const sendOtp = useAction(async () => {
     if (icch) {
+      const problem = icchInvalid();
+      if (problem) throw new Error(problem);
       const response = await api.icchAepsTxnOtp(icchPayload());
-      if (!response?.success || !response.data?.txnOtpRequestId) throw new Error(paysprintError(response));
+      if (!response?.success || !response.data?.txnOtpRequestId) throw new Error(response?.message || 'Could not send the OTP');
       setOtpRefId(response.data.txnOtpRequestId);
       setOtpSent(true);
       setOtp('');
@@ -549,6 +588,13 @@ export const AepsScreen: React.FC = () => {
       amount: spec.amount ? amountValue : undefined,
     };
 
+    // The provider ties the transaction to the registered scanner; register it when it changed.
+    if (icch && (serial !== icchStatus?.deviceIMEI || providerDeviceName(device) !== icchStatus?.deviceName)) {
+      const registered = await api.icchAepsStep('device', { deviceIMEI: serial, deviceName: providerDeviceName(device) });
+      if (!registered?.success) throw new Error(registered?.message || 'Request failed');
+      status.setData({ ...icchStatus, deviceIMEI: serial, deviceName: providerDeviceName(device) });
+    }
+
     let response: any;
     try {
       response = icch
@@ -580,9 +626,25 @@ export const AepsScreen: React.FC = () => {
     // Icchhamati could not confirm either way: the customer may have been
     // debited, so this is not a failure and must not be retried.
     if (icch && response?.data?.verification === 'PENDING') {
-      setReceipt({ ...base, status: 'PENDING', message: response.message, stan: response.data?.referenceNo });
-      resetForm();
+      setReceipt({ ...base, ...icchRefs(response.data), status: 'PENDING', message: response.message });
+      // The web keeps the customer's details after any outcome; only the OTP is spent.
+      invalidateOtp();
       return null;
+    }
+
+    if (icch) {
+      if (!response?.success && /\b2fa\b/i.test(String(response?.message ?? ''))) setRedo2fa(true);
+      setReceipt({
+        ...base,
+        ...icchRefs(response?.data),
+        status: response?.success ? 'SUCCESS' : 'FAILED',
+        message: response?.message,
+        balanceAmount: response?.success ? readBalance(response.data) : undefined,
+        miniStatement: response?.success ? icchStatement(response.data?.miniStatementStructureModel) : undefined,
+      });
+      invalidateOtp();
+      if (response?.success) status.refresh();
+      return response?.success ? response : null;
     }
 
     if (!response?.success) {
@@ -630,6 +692,8 @@ export const AepsScreen: React.FC = () => {
     submit.setError(null);
     setCapturing(true);
   };
+
+  const amountLabel = icch && service === 'deposit' ? 'Amount (paid from your Trade Wallet)' : 'Amount';
 
   const gateNote = icch
     ? icchBlocker && !icchStatus
@@ -688,7 +752,7 @@ export const AepsScreen: React.FC = () => {
               status.setData(null);
               banks.setData(null);
               resetForm();
-              setService('withdrawal');
+              setService('balance');
               setPipe(null);
             }}
           />
@@ -713,7 +777,7 @@ export const AepsScreen: React.FC = () => {
                   <IconTile icon={s.icon} size={50} iconSize={22} />
                 </View>
                 <Text style={[styles.actLabel, active && styles.actLabelOn]} numberOfLines={2}>
-                  {s.short}
+                  {s.label}
                 </Text>
               </Pressable>
             );
@@ -758,6 +822,7 @@ export const AepsScreen: React.FC = () => {
           onChangeText={(v) => {
             setAadhaarNumber(aadhaarFromDisplay(v, aadhaarNumber));
             setPidData(null);
+            if (otpSent) invalidateOtp();
           }}
           keyboardType="number-pad"
           placeholder={copy.aadhaar[1]}
@@ -812,6 +877,7 @@ export const AepsScreen: React.FC = () => {
                   key={bankIin(b) || bankName(b).toLowerCase()}
                   onPress={() => {
                     setBank(b);
+                    if (otpSent) invalidateOtp();
                     setShowBanks(false);
                     setBankQuery('');
                     setPidData(null);
@@ -847,21 +913,27 @@ export const AepsScreen: React.FC = () => {
         {spec.amount && (
           <>
             <Input
-              label="Amount"
+              label={amountLabel}
               value={amountDisplay(amount)}
-              onChangeText={(v) => changeAmount(v.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
-              keyboardType="decimal-pad"
+              onChangeText={(v) =>
+                changeAmount(
+                  icch
+                    ? v.replace(/\D/g, '').slice(0, 5) // whole rupees, as the web field takes them
+                    : v.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1')
+                )
+              }
+              keyboardType={icch ? 'number-pad' : 'decimal-pad'}
               placeholder={copy.amount}
               // BHIM prints the amount in words under the figure.
-              helperText={amountInWords(amount) || undefined}
+              helperText={(!icch && amountInWords(amount)) || undefined}
               containerStyle={styles.field}
               error={
-                service === 'withdrawal' && amountValue > AEPS_MAX_WITHDRAWAL
+                !icch && service === 'withdrawal' && amountValue > AEPS_MAX_WITHDRAWAL
                   ? `Maximum ${money(AEPS_MAX_WITHDRAWAL)} per withdrawal`
                   : undefined
               }
             />
-            <View style={styles.chips}>
+            {!icch && <View style={styles.chips}>
               {QUICK_AMOUNTS.map((value) => {
                 const picked = amountValue === value;
                 return (
@@ -879,29 +951,38 @@ export const AepsScreen: React.FC = () => {
                   </Pressable>
                 );
               })}
-            </View>
+            </View>}
           </>
         )}
 
         {needsOtp && (
           <View style={styles.gap}>
             <Note icon="message-lock-outline" style={styles.gap}>
-              {`Withdrawals above ${money(AEPS_OTP_THRESHOLD)} need the customer's OTP. It is signed into the fingerprint capture, so send it before scanning.`}
+              {icch
+                ? `Above ₹${AEPS_OTP_THRESHOLD.toLocaleString('en-IN')} the customer confirms with an OTP.`
+                : `Withdrawals above ${money(AEPS_OTP_THRESHOLD)} need the customer's OTP. It is signed into the fingerprint capture, so send it before scanning.`}
             </Note>
             {!!sendOtp.error && (
               <View style={styles.gap}>
                 <Banner tone="error" message={sendOtp.error} />
               </View>
             )}
-            <ActionButton
-              ghost
-              icon="send-outline"
-              label={otpSent ? 'Resend OTP' : 'Send OTP'}
-              onPress={sendOtp.run}
-              loading={sendOtp.pending}
-              disabled={aadhaarNumber.length !== 12 || !bank || mobileNumber.length !== 10 || amountValue <= 0}
-              style={otpSent ? styles.gap : undefined}
-            />
+            {icch && otpSent && (
+              <View style={styles.gap}>
+                <Banner tone="success" message="OTP sent to the customer" />
+              </View>
+            )}
+            {!(icch && otpSent) && (
+              <ActionButton
+                ghost
+                icon="send-outline"
+                label={icch ? 'Send OTP to customer' : otpSent ? 'Resend OTP' : 'Send OTP'}
+                onPress={sendOtp.run}
+                loading={sendOtp.pending}
+                disabled={!icch && (aadhaarNumber.length !== 12 || !bank || mobileNumber.length !== 10 || amountValue <= 0)}
+                style={otpSent ? styles.gap : undefined}
+              />
+            )}
             {otpSent && (
               <Input
                 label="Transaction OTP"
@@ -913,14 +994,14 @@ export const AepsScreen: React.FC = () => {
                 keyboardType="number-pad"
                 maxLength={6}
                 autoComplete="one-time-code"
-                placeholder="6 digits the customer received"
+                placeholder={icch ? 'Customer OTP' : '6 digits the customer received'}
                 containerStyle={styles.field}
               />
             )}
           </View>
         )}
 
-        <Pressable
+        {!icch && <Pressable
           onPress={() => {
             setConsent(!consent);
             setPidData(null);
@@ -938,7 +1019,7 @@ export const AepsScreen: React.FC = () => {
           <Text style={styles.consentText}>
             Customer agrees to use their Aadhaar and fingerprint for this transaction.
           </Text>
-        </Pressable>
+        </Pressable>}
 
         <Note
           icon="usb"
@@ -947,6 +1028,19 @@ export const AepsScreen: React.FC = () => {
         >
           {`Device: ${DEVICE_LABELS[device]}`}
         </Note>
+        {icch && (
+          <Input
+            label="Scanner serial number"
+            value={serial}
+            onChangeText={(v) => {
+              setSerial(v.trim());
+              setPidData(null);
+            }}
+            autoCapitalize="characters"
+            placeholder="Printed under the scanner"
+            containerStyle={styles.devices}
+          />
+        )}
         {showDevices && (
           <View style={styles.devices}>
             <DevicePicker
@@ -961,7 +1055,8 @@ export const AepsScreen: React.FC = () => {
         )}
       </View>
 
-      <View>
+      {/* PaySprint only: the web's Icchhamati page has no recent list. */}
+      {!icch && <View>
         <SectionTitle>Recent AEPS activity</SectionTitle>
         {!!checkTxnStatus.error && (
           <View style={styles.gap}>
@@ -1005,7 +1100,7 @@ export const AepsScreen: React.FC = () => {
             <EmptyState icon="fingerprint" title="No AEPS transactions yet" />
           )}
         </View>
-      </View>
+      </View>}
 
       <CaptureStep
         visible={capturing}

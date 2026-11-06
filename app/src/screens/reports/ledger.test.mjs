@@ -50,12 +50,13 @@ const helperSource = reports
   .replace('(i: any)', '(i)')
   .replace(/\(s: \{[^}]*\}\)/, '(s)')
   .replace(/\(key: string\)/g, '(key)')
+  .replace('(rows: any[])', '(rows)')
   .replace(/ as const/g, '');
 
-const { ledgerAmount, ledgerTiles } = new Function(
+const { ledgerAmount, ledgerTotals, ledgerTiles } = new Function(
   `const money = (v) => 'INR' + Number(v ?? 0).toFixed(2);
    ${helperSource}
-   return { ledgerAmount, ledgerTiles };`
+   return { ledgerAmount, ledgerTotals, ledgerTiles };`
 )();
 
 // Credits add, debits subtract — otherwise the net total counts money leaving
@@ -66,32 +67,30 @@ assert.strictEqual(ledgerAmount({ TYPE: 'DEBIT', AMOUNT: 500 }), -500, 'case-ins
 assert.strictEqual(ledgerAmount({ AMOUNT: 500 }), 500, 'missing TYPE is not a debit');
 assert.strictEqual(ledgerAmount({}), 0, 'a malformed row must not produce NaN');
 
-// The tiles the ledger shows: net movement, what was earned, and what was
-// withheld — never a "failed" count, which is meaningless in a ledger of money
-// that moved. Commission appears as BOTH net and gross: the COMMISSION column
-// is gross, while Home's Earnings tile reports net of TDS, and showing only
-// the gross here made the two screens look like they disagreed.
-// The totals come from the server now (paged ledger); these are the sums of
-// { credit 1000, comm 12, tds 1.2, gst 2.16 }, { debit 400 }, { credit 250, comm 3 }.
-const tiles = ledgerTiles({ net: 850, commission: 15, tds: 1.2 });
+// The web ledger's footer (WalletLedger.tsx), summed over the filtered rows.
+const totals = ledgerTotals([
+  { TYPE: 'credit', AMOUNT: 1000, COMMISSION: 12, TDS: 1.2, GST: 2.16 },
+  { TYPE: 'debit', AMOUNT: 400 },
+  { TYPE: 'transfer', AMOUNT: 50 },
+  { TYPE: 'credit', AMOUNT: '250', COMMISSION: 3 },
+]);
+assert.strictEqual(totals.net, 900, '1000 - 400 + 50 + 250: only debits subtract, as on the web');
+assert.strictEqual(totals.commission, 15);
+assert.strictEqual(totals.tds, 1.2);
+assert.strictEqual(Number(totals.gst.toFixed(2)), 2.16);
+const tiles = ledgerTiles(totals);
 assert.deepStrictEqual(
   tiles.map((tile) => tile.label),
-  ['Net amount', 'Commission earned', 'Commission (gross)', 'TDS withheld', 'GST']
+  ['Net Amount', 'Commission', 'TDS', 'GST (18%)'],
+  'the same four totals the web footer shows'
 );
-assert.strictEqual(tiles[0].value, 'INR850.00', '1000 - 400 + 250');
-// 15 gross - 1.20 TDS: the figure that actually reached the wallet, and the
-// one Home sums. These two must stay reconcilable.
-assert.strictEqual(tiles[1].value, 'INR13.80');
-assert.strictEqual(tiles[2].value, 'INR15.00');
-assert.strictEqual(tiles[3].value, 'INR1.20');
-assert.strictEqual(tiles[4].value, 'INR0.00', 'a missing GST total counts as zero, not NaN');
+assert.strictEqual(tiles[0].value, 'INR900.00');
 assert.strictEqual(tiles[0].tone, 'success');
-
 // A net outflow reads as negative, not as a failure-free green.
 assert.strictEqual(ledgerTiles({ net: -100 })[0].tone, 'error');
-
 // Empty range must not divide by zero or render NaN.
 assert.strictEqual(ledgerTiles({})[0].value, 'INR0.00');
+assert.strictEqual(ledgerTiles(ledgerTotals([{}]))[0].value, 'INR0.00', 'a malformed row must not produce NaN');
 
 // The camelCase keys that were silently returning undefined must not return.
 for (const [name, source] of [['WalletLedgerReport', wallet]]) {
@@ -112,7 +111,7 @@ for (const [name, source] of [['WalletLedgerReport', wallet]]) {
 // The ledger must use the shared signed-amount and summary helpers.
 for (const [name, source] of [['WalletLedgerReport', wallet]]) {
   assert.ok(source.includes('amountOf={ledgerAmount}'), `${name} must sign debits negative`);
-  assert.ok(source.includes('summaryFrom={ledgerTiles}'), `${name} needs the ledger money tiles`);
+  assert.ok(source.includes('ledgerTiles(ledgerTotals(rows))'), `${name} needs the ledger money tiles`);
   assert.ok(source.includes('statuses={LEDGER_STATUSES}'), `${name} filters by CREDIT/DEBIT`);
 }
 
@@ -150,8 +149,8 @@ assert.strictEqual(txnReason({ metadata: {} }), '', 'no message is empty, never 
 assert.strictEqual(txnReason(undefined), '', 'a missing row must not throw');
 assert.ok(!reports.includes('apiResponse?.message'), 'the stale apiResponse accessor is gone');
 assert.ok(
-  /{ label: 'Reason', value: \(i: any\) => txnReason\(i\)/.test(reports),
-  'the shared transaction details must carry the reason'
+  /\['Message', txnReason\(tx\)\]/.test(reports),
+  'the shared receipt (the web TransactionDetailModal) must carry the reason'
 );
 
 // --- AEPS detail sheet: who, which Aadhaar, what the bank had left ---------
@@ -175,8 +174,9 @@ assert.strictEqual(maskAadhaar('1234 5678 9012'), 'XXXX XXXX 9012', 'spaces are 
 assert.strictEqual(maskAadhaar(undefined), '—');
 assert.strictEqual(maskAadhaar('12'), '—', 'too short to mask is shown as nothing');
 const aeps = componentSource('AepsReport');
-for (const label of ['Customer', 'Aadhaar', 'Bank balance after']) {
-  assert.ok(aeps.includes(`label: '${label}'`), `AepsReport must show ${label}`);
+assert.ok(aeps.includes('details={receiptDetails}'), 'AepsReport opens the shared receipt, as the web row does');
+for (const label of ['Customer', 'Aadhaar', 'Bank Balance']) {
+  assert.ok(reports.includes(`['${label}', `), `the receipt must show ${label}`);
 }
 assert.ok(!aeps.includes('metadata?.aadhaar }'), 'the AEPS report must never print a raw Aadhaar');
 
