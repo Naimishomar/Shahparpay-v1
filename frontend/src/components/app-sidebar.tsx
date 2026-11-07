@@ -129,15 +129,15 @@ const NavLink = ({ item, active }: { item: NavItem; active: boolean }) => {
     <Link
       to={item.url}
       aria-current={active ? 'page' : undefined}
-      className={`relative flex min-h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] transition-colors focus-visible:outline-2 focus-visible:outline-violet-500 ${
+      className={`relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-[15px] transition-colors focus-visible:outline-2 focus-visible:outline-violet-500 ${
         active
           ? 'bg-black/[0.05] font-semibold text-foreground dark:bg-white/[0.08]'
           : 'text-foreground/70 hover:bg-black/[0.04] hover:text-foreground dark:hover:bg-white/[0.05]'
       }`}
     >
       {/* The active page: colour, weight and a bar, so it never rests on colour alone. */}
-      {active && <span aria-hidden="true" className="absolute -left-2.5 top-2 bottom-2 w-[3px] rounded-r bg-violet-600 dark:bg-violet-400" />}
-      <Icon aria-hidden="true" className={`h-[18px] w-[18px] shrink-0 ${active ? 'text-violet-600 dark:text-violet-400' : ''}`} strokeWidth={1.8} />
+      {active && <span aria-hidden="true" className="absolute -left-3 top-2.5 bottom-2.5 w-[3px] rounded-r bg-violet-600 dark:bg-violet-400" />}
+      <Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${active ? 'text-violet-600 dark:text-violet-400' : ''}`} strokeWidth={1.8} />
       <span className="truncate">{item.name}</span>
     </Link>
   );
@@ -157,13 +157,13 @@ const Group = ({ group, isActive }: { group: NavGroup; isActive: (url: string) =
             type="button"
             onClick={() => setOpen(!shown)}
             aria-expanded={shown}
-            className="flex w-full items-center justify-between rounded-md px-2.5 pt-4 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground/80 hover:text-foreground"
+            className="flex w-full items-center justify-between rounded-md px-3 pt-5 pb-2 text-[11.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground/80 hover:text-foreground"
           >
             {group.label}
-            <ChevronDown aria-hidden="true" className={`h-3.5 w-3.5 transition-transform ${shown ? '' : '-rotate-90'}`} />
+            <ChevronDown aria-hidden="true" className={`h-4 w-4 transition-transform ${shown ? '' : '-rotate-90'}`} />
           </button>
         ) : (
-          <p className="px-2.5 pt-4 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground/80">{group.label}</p>
+          <p className="px-3 pt-5 pb-2 text-[11.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground/80">{group.label}</p>
         )
       )}
       {shown && (
@@ -185,17 +185,17 @@ export function AppSidebar() {
 
   return (
     <Sidebar className="border-r border-border">
-      <SidebarHeader className="bg-card px-5 pt-5 pb-3">
+      <SidebarHeader className="bg-card px-6 pt-6 pb-4">
         <Link to={groups[0]?.items[0]?.url || '/'} className="block rounded-lg focus-visible:outline-2 focus-visible:outline-violet-500" aria-label="Shahparpay home">
-          <img src={logo} alt="Shahparpay" className="h-9 w-auto max-w-full object-contain object-left dark:brightness-0 dark:invert dark:opacity-90" />
+          <img src={logo} alt="Shahparpay" className="h-auto w-full max-w-[250px] object-contain object-left dark:brightness-0 dark:invert dark:opacity-90" />
         </Link>
       </SidebarHeader>
-      <SidebarContent className="bg-card px-2.5 pb-3 no-scrollbar">
+      <SidebarContent className="bg-card px-3 pb-3 no-scrollbar">
         <nav aria-label="Main" className="flex flex-col">
           {groups.map((g, i) => <Group key={g.label || i} group={g} isActive={isActive} />)}
         </nav>
       </SidebarContent>
-      <SidebarFooter className="border-t border-border bg-card px-2.5 py-2.5">
+      <SidebarFooter className="border-t border-border bg-card px-3 py-3">
         <NavLink item={support} active={isActive(support.url)} />
       </SidebarFooter>
     </Sidebar>
