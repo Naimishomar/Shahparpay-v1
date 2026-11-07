@@ -228,6 +228,10 @@ const Header = ({ trigger }: { trigger?: React.ReactNode }) => {
             { label: 'Utility Wallet', value: balances.mainBalance, tone: TONES.utility, Icon: Zap, link: isRetailer ? { to: '/fund-request', text: 'Add money', plus: true } : null },
         ];
     const firstName = String(user?.name || '').split(' ')[0];
+    // A retailer's distributorId is their parent (an object once populated), so only a distributor's own counts.
+    const userCode = user?.role === 'retailer' ? user.retailerId
+        : user?.role === 'distributor' ? (typeof user.distributorId === 'string' ? user.distributorId : '')
+        : user?.adminId;
 
     const avatar = (size: string) => (
         <div className={`${size} shrink-0 rounded-full bg-gradient-to-br from-[#F47920] to-[#12A65A] p-[2px] shadow-sm`}>
@@ -286,9 +290,9 @@ const Header = ({ trigger }: { trigger?: React.ReactNode }) => {
                     </div>
                 )}
 
-                {user && <div className="order-5 w-full xl:order-3 xl:w-auto xl:min-w-0 xl:flex-1"><HeaderSearch /></div>}
+                {user && <div className="order-5 w-full xl:order-3 xl:w-72 xl:shrink 2xl:w-96"><HeaderSearch /></div>}
 
-                <div className="order-3 flex shrink-0 items-center gap-2 md:gap-3 xl:order-4">
+                <div className="order-3 flex shrink-0 items-center gap-2 md:gap-3 xl:order-4 xl:ml-auto">
                 {user && <NotificationCenter />}
 
                 <button
@@ -304,9 +308,11 @@ const Header = ({ trigger }: { trigger?: React.ReactNode }) => {
                     <PopoverTrigger asChild>
                         <button className="flex shrink-0 items-center gap-3 rounded-full border bg-card/70 py-1 pl-1 pr-3 shadow-sm hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
                             {avatar('w-9 h-9')}
-                            <div className="hidden md:block xl:hidden 2xl:block text-left">
-                                <p className="text-sm font-semibold text-foreground leading-none">{user?.name || "Admin User"}</p>
-                                <p className="text-xs text-muted-foreground mt-1 capitalize">{user?.role || "Superadmin"} Portal</p>
+                            <div className="hidden md:block max-w-[170px] text-left">
+                                <p className="truncate text-sm font-semibold text-foreground leading-none">{user?.name || "Admin User"}</p>
+                                <p className="mt-1 truncate text-xs text-muted-foreground">
+                                    {userCode ? <>ID <span className="font-mono font-semibold text-foreground/80">{userCode}</span></> : <span className="capitalize">{user?.role || "Superadmin"} Portal</span>}
+                                </p>
                             </div>
                             <ChevronDown className="hidden md:block h-4 w-4 text-muted-foreground" />
                         </button>
@@ -317,7 +323,7 @@ const Header = ({ trigger }: { trigger?: React.ReactNode }) => {
                             <div className="min-w-0">
                                 <p className="truncate text-sm font-semibold text-foreground">{user?.name || "Admin User"}</p>
                                 {user?.email && <p className="truncate text-xs text-muted-foreground">{user.email}</p>}
-                                <p className="text-[11px] text-muted-foreground capitalize">{user?.role || "Superadmin"} Portal</p>
+                                <p className="text-[11px] text-muted-foreground"><span className="capitalize">{user?.role || "Superadmin"} Portal</span>{userCode ? ` · ${userCode}` : ''}</p>
                             </div>
                         </div>
                         <div className="mt-2 space-y-0.5">
