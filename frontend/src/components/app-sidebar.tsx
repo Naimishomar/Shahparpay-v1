@@ -1,169 +1,203 @@
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar"
-
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar"
 import { Link, useLocation } from "react-router-dom"
-import { History, BarChart3, Send, Zap, ScanFace, Landmark, ArrowRightLeft, LayoutDashboard, Users, Store, UserPlus, UserCircle, FileText, QrCode, CreditCard, Bell, Headset, UserCheck } from "lucide-react"
+import { useState } from "react"
+import {
+  History, BookOpen, BarChart3, Send, Smartphone, Receipt, Fingerprint, Landmark, ArrowRightLeft, LayoutDashboard, Users,
+  Store, UserPlus, UserCircle, FileText, IdCard, CreditCard, Bell, Headset, UserCheck, Wallet, ChevronDown,
+  type LucideIcon,
+} from "lucide-react"
 import logo from "../assets/logo.png"
 import { useAuth } from "../context/AuthContext"
-import { isServiceEnabled } from "../lib/services"
+import { isServiceEnabled, type ServiceKey } from "../lib/services"
 
-const retailerProjects = [
-  { name: "Dashboard", url: "/dashboard", icon: BarChart3 },
-  { name: "ITR Filing", url: "/itr", service: "itr", icon: FileText },
-  { name: "AEPS", url: "/aeps", service: "aeps", icon: ScanFace },
-  { name: "Trade Wallet Settlement", url: "/aeps-settlement", icon: Landmark },
-  { name: "Micro ATM", url: "/matm", service: "matm", icon: CreditCard },
-  { name: "PAN Card", url: "/pan", service: "pan", icon: FileText },
-  { name: "Lead Generation", url: "/lead-generation", service: "lead", icon: UserPlus },
-  { name: "DMT", url: "/dmt", service: "dmt", icon: Send },
-  { name: "Recharge", url: "/recharge", service: "recharge", icon: Zap },
-  { name: "BBPS", url: "/bbps", service: "bbps", icon: Zap },
+type NavItem = { name: string; url: string; icon: LucideIcon; service?: ServiceKey };
+type NavGroup = { label?: string; items: NavItem[]; collapsible?: boolean };
+
+/** The retailer's pages, grouped by task. Support Center is pinned to the bottom instead. */
+const retailerGroups: NavGroup[] = [
+  { items: [{ name: "Dashboard", url: "/dashboard", icon: LayoutDashboard }] },
   {
-    name: "Reports",
-    icon: BarChart3,
-    subItems: [
-      { name: "Ledgar", url: "/reports/wallet-ledger" },
-      { name: "All Reports", url: "/reports/ledger" },
-      { name: "AEPS Reports", url: "/reports/aeps" },
-      { name: "DMT Reports", url: "/reports/dmt" },
-      { name: "Payout Reports", url: "/reports/payout" },
-      { name: "UPI Reports", url: "/reports/upi" },
-      { name: "PAN Reports", url: "/reports/pan" },
-      { name: "ITR Reports", url: "/reports/itr" },
-      { name: "Lead Generation Reports", url: "/reports/lead-generation" },
-      { name: "Recharge Reports", url: "/reports/recharge" },
-      { name: "BBPS Reports", url: "/reports/bbps" },
-      { name: "Collect Payment Reports", url: "/reports/collect" },
-    ]
+    label: "Banking",
+    items: [
+      { name: "AEPS", url: "/aeps", service: "aeps", icon: Fingerprint },
+      { name: "Micro ATM", url: "/matm", service: "matm", icon: CreditCard },
+      { name: "DMT", url: "/dmt", service: "dmt", icon: Send },
+      { name: "Trade Wallet Settlement", url: "/aeps-settlement", icon: Landmark },
+    ],
   },
-  // Add Money (Razorpay) hidden for now; uncomment to bring it back.
-  // { name: "Add Money", url: "/add-money", icon: QrCode },
-  { name: "Fund Request", url: "/fund-request", icon: Send },
-  { name: "Support Center", url: "/support", icon: Headset },
+  {
+    label: "Payments",
+    items: [
+      { name: "Recharge", url: "/recharge", service: "recharge", icon: Smartphone },
+      { name: "BBPS", url: "/bbps", service: "bbps", icon: Receipt },
+      // Add Money (Razorpay) hidden for now; add { name: "Add Money", url: "/add-money", icon: QrCode } to bring it back.
+      { name: "Fund Request", url: "/fund-request", icon: Wallet },
+    ],
+  },
+  {
+    label: "Services",
+    items: [
+      { name: "PAN Card", url: "/pan", service: "pan", icon: IdCard },
+      { name: "ITR Filing", url: "/itr", service: "itr", icon: FileText },
+      { name: "Lead Generation", url: "/lead-generation", service: "lead", icon: UserPlus },
+    ],
+  },
+  {
+    label: "Reports",
+    collapsible: true,
+    items: [
+      { name: "Ledgar", url: "/reports/wallet-ledger", icon: BookOpen },
+      { name: "All Reports", url: "/reports/ledger", icon: BarChart3 },
+      { name: "AEPS Reports", url: "/reports/aeps", icon: Fingerprint },
+      { name: "DMT Reports", url: "/reports/dmt", icon: Send },
+      { name: "Payout Reports", url: "/reports/payout", icon: Landmark },
+      { name: "UPI Reports", url: "/reports/upi", icon: Wallet },
+      { name: "PAN Reports", url: "/reports/pan", icon: IdCard },
+      { name: "ITR Reports", url: "/reports/itr", icon: FileText },
+      { name: "Lead Generation Reports", url: "/reports/lead-generation", icon: UserPlus },
+      { name: "Recharge Reports", url: "/reports/recharge", icon: Smartphone },
+      { name: "BBPS Reports", url: "/reports/bbps", icon: Receipt },
+      { name: "Collect Payment Reports", url: "/reports/collect", icon: Wallet },
+    ],
+  },
 ]
 
-const adminProjects = [
-  { name: "Overview", url: "/admin", icon: LayoutDashboard },
-  { name: "Transactions", url: "/admin/transactions", icon: ArrowRightLeft },
-  { name: "Users", url: "/admin/users", icon: Users },
-  { name: "Retailer Signups", url: "/admin/signups", icon: UserCheck },
-  { name: "Activity Log", url: "/admin/activity", icon: History },
-  { name: "Fund Requests", url: "/admin/fund-requests", icon: Store },
-  { name: "Icchhamati Account", url: "/admin/icchhamati", icon: Landmark },
-  { name: "Add New", url: "/admin/create", icon: UserPlus },
-  { name: "Notifications", url: "/admin/notifications", icon: Bell },
-  { name: "Customer Support", url: "/admin/support", icon: Headset },
-  { name: "Ledger", url: "/reports/ledger", icon: FileText },
+const adminGroups: NavGroup[] = [
+  { items: [{ name: "Overview", url: "/admin", icon: LayoutDashboard }] },
+  {
+    label: "Operations",
+    items: [
+      { name: "Transactions", url: "/admin/transactions", icon: ArrowRightLeft },
+      { name: "Fund Requests", url: "/admin/fund-requests", icon: Store },
+      { name: "Icchhamati Account", url: "/admin/icchhamati", icon: Landmark },
+      { name: "Ledger", url: "/reports/ledger", icon: BookOpen },
+    ],
+  },
+  {
+    label: "People",
+    items: [
+      { name: "Users", url: "/admin/users", icon: Users },
+      { name: "Retailer Signups", url: "/admin/signups", icon: UserCheck },
+      { name: "Add New", url: "/admin/create", icon: UserPlus },
+    ],
+  },
+  {
+    label: "Platform",
+    items: [
+      { name: "Notifications", url: "/admin/notifications", icon: Bell },
+      { name: "Activity Log", url: "/admin/activity", icon: History },
+    ],
+  },
 ]
 
-const distributorProjects = [
-  { name: "Overview", url: "/distributor", icon: LayoutDashboard },
-  { name: "Retailers", url: "/distributor/retailers", icon: Users },
-  { name: "Fund Requests", url: "/distributor/fund-requests", icon: Store },
-  { name: "Add New", url: "/distributor/create", icon: UserPlus },
-  { name: "My Profile", url: "/distributor/profile", icon: UserCircle },
-  { name: "Support Center", url: "/support", icon: Headset },
+const distributorGroups: NavGroup[] = [
+  { items: [{ name: "Overview", url: "/distributor", icon: LayoutDashboard }] },
+  {
+    label: "Network",
+    items: [
+      { name: "Retailers", url: "/distributor/retailers", icon: Users },
+      { name: "Fund Requests", url: "/distributor/fund-requests", icon: Store },
+      { name: "Add New", url: "/distributor/create", icon: UserPlus },
+    ],
+  },
+  { label: "Account", items: [{ name: "My Profile", url: "/distributor/profile", icon: UserCircle }] },
 ]
-
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
-import { ChevronRight } from "lucide-react"
-import { SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton } from "@/components/ui/sidebar"
 
 type NavUser = Parameters<typeof isServiceEnabled>[0];
 
-const projectsFor = (user: NavUser): any[] =>
-  user?.role === 'admin' ? adminProjects :
-  user?.role === 'distributor' ? distributorProjects :
-  retailerProjects.filter((item: any) => isServiceEnabled(user, item.service));
+const groupsFor = (user: NavUser): NavGroup[] => {
+  const groups = user?.role === 'admin' ? adminGroups : user?.role === 'distributor' ? distributorGroups : retailerGroups;
+  return groups
+    .map((g) => ({ ...g, items: g.items.filter((i) => isServiceEnabled(user, i.service)) }))
+    .filter((g) => g.items.length > 0);
+};
+
+/** Pinned under the list: help is in the same place on every page. */
+const supportFor = (user: NavUser): NavItem =>
+  user?.role === 'admin'
+    ? { name: "Customer Support", url: "/admin/support", icon: Headset }
+    : { name: "Support Center", url: "/support", icon: Headset };
 
 /** Every page this user's sidebar links to, flat, for the header search. */
 // eslint-disable-next-line react-refresh/only-export-components
 export const navLinksFor = (user: NavUser): { name: string; url: string }[] =>
-  projectsFor(user).flatMap((p: any) => (p.subItems ? p.subItems : [p]).map((i: any) => ({ name: i.name, url: i.url })));
+  [...groupsFor(user).flatMap((g) => g.items), supportFor(user)].map(({ name, url }) => ({ name, url }));
+
+const NavLink = ({ item, active }: { item: NavItem; active: boolean }) => {
+  const Icon = item.icon;
+  return (
+    <Link
+      to={item.url}
+      aria-current={active ? 'page' : undefined}
+      className={`relative flex min-h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] transition-colors focus-visible:outline-2 focus-visible:outline-violet-500 ${
+        active
+          ? 'bg-black/[0.05] font-semibold text-foreground dark:bg-white/[0.08]'
+          : 'text-foreground/70 hover:bg-black/[0.04] hover:text-foreground dark:hover:bg-white/[0.05]'
+      }`}
+    >
+      {/* The active page: colour, weight and a bar, so it never rests on colour alone. */}
+      {active && <span aria-hidden="true" className="absolute -left-2.5 top-2 bottom-2 w-[3px] rounded-r bg-violet-600 dark:bg-violet-400" />}
+      <Icon aria-hidden="true" className={`h-[18px] w-[18px] shrink-0 ${active ? 'text-violet-600 dark:text-violet-400' : ''}`} strokeWidth={1.8} />
+      <span className="truncate">{item.name}</span>
+    </Link>
+  );
+};
+
+const Group = ({ group, isActive }: { group: NavGroup; isActive: (url: string) => boolean }) => {
+  const hasActive = group.items.some((i) => isActive(i.url));
+  // A collapsible group starts open only when the current page is in it.
+  const [open, setOpen] = useState(!group.collapsible || hasActive);
+  const shown = open || hasActive;
+
+  return (
+    <div>
+      {group.label && (
+        group.collapsible ? (
+          <button
+            type="button"
+            onClick={() => setOpen(!shown)}
+            aria-expanded={shown}
+            className="flex w-full items-center justify-between rounded-md px-2.5 pt-4 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground/80 hover:text-foreground"
+          >
+            {group.label}
+            <ChevronDown aria-hidden="true" className={`h-3.5 w-3.5 transition-transform ${shown ? '' : '-rotate-90'}`} />
+          </button>
+        ) : (
+          <p className="px-2.5 pt-4 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground/80">{group.label}</p>
+        )
+      )}
+      {shown && (
+        <div className="flex flex-col gap-0.5">
+          {group.items.map((item) => <NavLink key={item.url} item={item} active={isActive(item.url)} />)}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export function AppSidebar() {
-  const location = useLocation();
+  const { pathname } = useLocation();
   const { user } = useAuth();
-
-  const projects = projectsFor(user);
+  const groups = groupsFor(user);
+  const support = supportFor(user);
+  // "/admin" must not light up on every admin page.
+  const isActive = (url: string) => pathname === url || (url.split('/').length > 2 && pathname.startsWith(`${url}/`));
 
   return (
     <Sidebar className="border-r border-border">
-      <SidebarContent className="bg-transparent text-foreground">
-        <div className="p-6 pb-2 flex flex-col items-center justify-center relative">
-                        <img src={logo} alt="logo" className="w-[80%] object-contain dark:brightness-0 dark:invert dark:opacity-90" />
-        </div>
-        <SidebarMenu className="px-4 py-6 gap-3 mt-2">
-          {projects.map((project: any) => {
-            const Icon = project.icon
-            
-            if (project.subItems) {
-              const isSubActive = project.subItems.some((item: any) => location.pathname.startsWith(item.url));
-              return (
-                  <SidebarMenuItem key={project.name}>
-                      <Collapsible defaultOpen={isSubActive} className="group/collapsible w-full">
-                          <CollapsibleTrigger asChild>
-                              <SidebarMenuButton className={`p-0 h-auto hover:bg-transparent ${isSubActive ? 'text-foreground border border-transparent rounded-xl' : 'text-muted-foreground hover:bg-accent hover:text-foreground border border-transparent rounded-xl'}`}>
-                                  <div className="flex items-center justify-between w-full py-2.5 px-3 transition-all duration-300">
-                                      <div className="flex items-center gap-3">
-                                          <span className="p-2 rounded-full icon-chip"><Icon className="w-4 h-4" /></span>
-                                          <span className="font-semibold text-sm">{project.name}</span>
-                                      </div>
-                                      <ChevronRight className="w-4 h-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                                  </div>
-                              </SidebarMenuButton>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                              <SidebarMenuSub className="mt-2 pr-0 mr-0 border-l border-border ml-6 pl-4 space-y-1">
-                                  {project.subItems.map((subItem: any) => {
-                                      const isItemActive = location.pathname === subItem.url;
-                                      return (
-                                          <SidebarMenuSubItem key={subItem.name}>
-                                              <SidebarMenuSubButton asChild className="p-0 h-auto hover:bg-transparent">
-                                                  <Link
-                                                      to={subItem.url}
-                                                      className={`block py-2 px-3 w-full rounded-lg transition-all duration-300 text-sm font-semibold ${isItemActive ? 'bg-primary/10 text-brand' : 'text-foreground/75 hover:text-foreground hover:bg-accent'}`}
-                                                  >
-                                                      {subItem.name}
-                                                  </Link>
-                                              </SidebarMenuSubButton>
-                                          </SidebarMenuSubItem>
-                                      )
-                                  })}
-                              </SidebarMenuSub>
-                          </CollapsibleContent>
-                      </Collapsible>
-                  </SidebarMenuItem>
-              )
-            }
-
-            const isActive = location.pathname === project.url;
-
-            return (
-              <SidebarMenuItem key={project.name}>
-                <SidebarMenuButton asChild className="p-0 h-auto hover:bg-transparent">
-                  <Link 
-                    to={project.url!} 
-                    className={`flex items-center gap-3 py-2.5 px-3 w-full rounded-xl transition-all duration-300 ${
-                        isActive 
-                        ? 'bg-primary/10 text-brand font-semibold border border-transparent'
-                        : 'text-muted-foreground hover:bg-accent hover:text-foreground border border-transparent'
-                    }`}
-                  >
-                    <span className="p-2 rounded-full icon-chip"><Icon className="w-4 h-4" /></span>
-                    <span className="font-semibold text-sm">{project.name}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )
-          })}
-        </SidebarMenu>
+      <SidebarHeader className="bg-card px-5 pt-5 pb-3">
+        <Link to={groups[0]?.items[0]?.url || '/'} className="block rounded-lg focus-visible:outline-2 focus-visible:outline-violet-500" aria-label="Shahparpay home">
+          <img src={logo} alt="Shahparpay" className="h-9 w-auto max-w-full object-contain object-left dark:brightness-0 dark:invert dark:opacity-90" />
+        </Link>
+      </SidebarHeader>
+      <SidebarContent className="bg-card px-2.5 pb-3 no-scrollbar">
+        <nav aria-label="Main" className="flex flex-col">
+          {groups.map((g, i) => <Group key={g.label || i} group={g} isActive={isActive} />)}
+        </nav>
       </SidebarContent>
+      <SidebarFooter className="border-t border-border bg-card px-2.5 py-2.5">
+        <NavLink item={support} active={isActive(support.url)} />
+      </SidebarFooter>
     </Sidebar>
-  )
+  );
 }
