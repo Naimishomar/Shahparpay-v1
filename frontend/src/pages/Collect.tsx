@@ -20,8 +20,11 @@ const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm text
  * which is why nothing here trusts the customer's own "I paid" and every order
  * is verified against the gateway before anything is shown as received.
  */
-/** `embedded`: shown inside Fund Request, which supplies the page heading. */
-const Collect = ({ embedded = false }: { embedded?: boolean }) => {
+/**
+ * `embedded`: shown inside Fund Request, which supplies the page heading.
+ * `left` sits beside the payment link form; `between` goes under them, above the collections.
+ */
+const Collect = ({ embedded = false, left, between }: { embedded?: boolean; left?: React.ReactNode; between?: React.ReactNode }) => {
     const { token } = useAuth();
     const [searchParams] = useSearchParams();
 
@@ -190,6 +193,7 @@ const Collect = ({ embedded = false }: { embedded?: boolean }) => {
             </section>}
 
             <div className="grid gap-6 lg:grid-cols-2">
+                {left}
                 {/* New request: the form, and beside it the link's QR once created */}
                 <section id="payment-request" className="scroll-mt-24 rounded-2xl border bg-card p-6 shadow-sm">
                     <h2 className="mb-4 text-lg font-semibold">New Payment Request</h2>
@@ -271,6 +275,8 @@ const Collect = ({ embedded = false }: { embedded?: boolean }) => {
                 </section>
 
             </div>
+
+            {between}
 
             {/* Collections */}
             <section className="rounded-2xl border bg-card p-6 shadow-sm">

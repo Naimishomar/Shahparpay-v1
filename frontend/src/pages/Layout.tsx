@@ -1,6 +1,5 @@
 import { AppSidebar } from "@/components/app-sidebar"
 import Header from "@/components/Header"
-import News from "@/components/News"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Suspense, useState } from "react"
 import { Clock, Loader2, LogOut, RefreshCcw, XCircle } from "lucide-react"
@@ -33,7 +32,6 @@ const Layout = () => {
                 <div className="sticky top-0 z-50 bg-background/70 backdrop-blur-md border-b border-border">
                     <Header trigger={<SidebarTrigger className="shrink-0 text-foreground transition-transform hover:scale-105"/>}/>
                 </div>
-                <News/>
                 <div className="w-full p-8 flex-1 min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain no-scrollbar relative">
                     <Suspense fallback={null}>
                         <Outlet />

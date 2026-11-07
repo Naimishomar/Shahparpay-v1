@@ -58,7 +58,7 @@ const AdminNotifications = () => {
                     <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><Bell className="h-7 w-7" /></div>
                     <div>
                         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Notifications</h1>
-                        <p className="text-sm text-muted-foreground">Announcements every retailer and distributor sees in their bell and Latest Updates ticker.</p>
+                        <p className="text-sm text-muted-foreground">Announcements every retailer and distributor sees in their bell, and in the app's Latest Updates ticker.</p>
                     </div>
                 </div>
             </section>

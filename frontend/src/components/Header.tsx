@@ -91,6 +91,8 @@ const HeaderSearch = () => {
     const { user, token } = useAuth();
     const [txns, setTxns] = useState<any[]>([]);
     const [finding, setFinding] = useState(false);
+    // The term the last finished search was for; while typing it differs, so nothing stale shows.
+    const [searched, setSearched] = useState('');
     const [selected, setSelected] = useState<any>(null);
     const navigate = useNavigate();
     const input = useRef<HTMLInputElement>(null);
@@ -100,18 +102,19 @@ const HeaderSearch = () => {
     const term = q.trim();
     const matches = term ? links.filter((l) => l.name.toLowerCase().includes(term.toLowerCase())).slice(0, 6) : links.slice(0, 8);
 
-    // Transactions are asked for once the user stops typing; 4 characters keeps a
+    // Transactions are asked for after 1 s without typing; 4 characters keeps a
     // single letter from scanning the whole history.
     useEffect(() => {
-        if (term.length < 4 || !token) { setTxns([]); setFinding(false); return; }
-        setFinding(true);
+        setTxns([]);
+        if (term.length < 4 || !token) { setFinding(false); return; }
         const timer = setTimeout(() => {
+            setFinding(true);
             const params = new URLSearchParams({ page: '1', limit: '5', search: term });
             axios.get(`${API}/api/dashboard/recent-transactions?${params}`, { headers: { Authorization: `Bearer ${token}` } })
                 .then((res) => setTxns(res.data?.success ? res.data.data || [] : []))
                 .catch(() => setTxns([]))
-                .finally(() => setFinding(false));
-        }, 350);
+                .finally(() => { setFinding(false); setSearched(term); });
+        }, 1000);
         return () => clearTimeout(timer);
     }, [term, token]);
 
@@ -147,9 +150,9 @@ const HeaderSearch = () => {
                 />
                 <kbd className="hidden lg:inline rounded-md border bg-background px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">{isMac ? '⌘K' : 'Ctrl K'}</kbd>
             </div>
-            {open && (matches.length > 0 || term.length >= 4) && (
+            {open && (matches.length > 0 || (term.length >= 4 && (finding || searched === term))) && (
                 <div className="absolute left-0 right-0 top-12 z-50 max-h-[70vh] overflow-y-auto rounded-xl border bg-popover p-1 shadow-xl">
-                    {term.length >= 4 && (
+                    {term.length >= 4 && (finding || searched === term) && (
                         <>
                             <p className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Transactions</p>
                             {finding ? (

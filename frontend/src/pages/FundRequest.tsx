@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Send, Plus, X, FileText, Trash2, Inbox, Landmark, Hash, Paperclip, Link2 } from 'lucide-react';
+import { Send, Plus, X, FileText, Trash2, Inbox, Landmark, Hash, Paperclip } from 'lucide-react';
 import Collect from './Collect';
 import { isServiceEnabled } from '../lib/services';
 import axios from 'axios';
@@ -14,11 +13,7 @@ const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm text
 
 const FundRequest = () => {
     const { token, user } = useAuth();
-    // Two ways to add funds: a bank deposit the distributor approves, or a payment link paid online.
-    const [searchParams, setSearchParams] = useSearchParams();
     const canCollect = isServiceEnabled(user, 'collect');
-    const tab = canCollect && searchParams.get('tab') === 'online' ? 'online' : 'bank';
-    const setTab = (t: 'bank' | 'online') => setSearchParams(t === 'online' ? { tab: 'online' } : {}, { replace: true });
     const [requests, setRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
@@ -115,63 +110,44 @@ const FundRequest = () => {
     const shown = requests.filter((r) => statusFilter === 'ALL' || r.status === statusFilter);
     const approvedTotal = requests.filter((r) => r.status === 'APPROVED').reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
 
-    return (
-        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-                    <div className="flex items-center gap-4">
-                        <div className={`rounded-2xl p-3 ${SILVER_TILE}`}>
-                            <Send className="h-7 w-7" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Fund Request</h1>
-                            <p className="text-sm text-muted-foreground">
-                                {tab === 'online' ? 'Send a payment link the customer can pay by UPI, card or netbanking; it credits your Utility Wallet.' : 'Request Trade Wallet funds from your distributor against a bank deposit.'}
-                            </p>
-                        </div>
-                    </div>
-                    {tab === 'bank' && <button
-                        onClick={() => setShowAddModal(true)}
-                        className={`flex items-center justify-center gap-2 self-start lg:self-auto rounded-xl px-6 py-3 font-semibold ${ACTIVE_BUTTON}`}
-                    >
-                        <Plus className="w-5 h-5" />
-                        Create Request
-                    </button>}
+    const stats = [
+        { label: 'Total requests', value: requests.length, dot: 'bg-zinc-400' },
+        { label: 'Pending', value: countOf('PENDING'), dot: 'bg-amber-500' },
+        { label: 'Approved', value: countOf('APPROVED'), dot: 'bg-emerald-500' },
+        { label: 'Approved amount', value: `₹${approvedTotal.toLocaleString('en-IN')}`, dot: 'bg-emerald-500' },
+    ];
+
+    // The two ways to add funds sit side by side: a bank deposit the distributor approves, and a payment link.
+    const bankCard = (
+        <section className="flex flex-col rounded-2xl border bg-card p-6 shadow-sm">
+            <div className="mb-5 flex items-start gap-3">
+                <div className={`rounded-xl p-2.5 ${SILVER_TILE}`}><Landmark className="h-5 w-5" /></div>
+                <div>
+                    <h2 className="text-lg font-semibold">Bank Deposit Request</h2>
+                    <p className="text-sm text-muted-foreground">Deposited money in the bank? Ask your distributor to add it to your Trade Wallet.</p>
                 </div>
-                {canCollect && (
-                    <div className="relative mt-5 inline-flex gap-1 rounded-xl border bg-background/60 p-1">
-                        {([['bank', 'Bank deposit', Landmark], ['online', 'Payment link', Link2]] as const).map(([key, label, Icon]) => (
-                            <button
-                                key={key}
-                                onClick={() => setTab(key)}
-                                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all ${tab === key ? ACTIVE_BUTTON : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
-                            >
-                                <Icon className="h-4 w-4" />{label}
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </section>
-
-            {tab === 'online' && <Collect embedded />}
-            {tab === 'bank' && <>
-
-            <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                    { label: 'Total requests', value: requests.length, dot: 'bg-zinc-400' },
-                    { label: 'Pending', value: countOf('PENDING'), dot: 'bg-amber-500' },
-                    { label: 'Approved', value: countOf('APPROVED'), dot: 'bg-emerald-500' },
-                    { label: 'Approved amount', value: `₹${approvedTotal.toLocaleString('en-IN')}`, dot: 'bg-emerald-500' },
-                ].map((stat) => (
-                    <div key={stat.label} className="rounded-2xl border bg-card p-5 shadow-sm">
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+                {stats.map((stat) => (
+                    <div key={stat.label} className="rounded-xl border bg-background/60 p-4">
                         <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                             <span className={`h-1.5 w-1.5 rounded-full ${stat.dot}`} />{stat.label}
                         </p>
-                        <p className="mt-1 text-2xl font-bold tabular-nums">{stat.value}</p>
+                        <p className="mt-1 text-xl font-bold tabular-nums">{stat.value}</p>
                     </div>
                 ))}
-            </section>
+            </div>
+            <button
+                onClick={() => setShowAddModal(true)}
+                className={`mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold lg:mt-auto ${ACTIVE_BUTTON}`}
+            >
+                <Plus className="w-5 h-5" />
+                Create Bank Deposit Request
+            </button>
+        </section>
+    );
 
+    const requestsList = (
             <section className="rounded-2xl border bg-card p-6 shadow-sm">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <h2 className="text-lg font-semibold">Your requests</h2>
@@ -245,7 +221,32 @@ const FundRequest = () => {
                     </table>
                 </div>
             </section>
-            </>}
+    );
+
+    return (
+        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
+                <div className="relative flex items-center gap-4">
+                    <div className={`rounded-2xl p-3 ${SILVER_TILE}`}>
+                        <Send className="h-7 w-7" />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Fund Request</h1>
+                        <p className="text-sm text-muted-foreground">
+                            {canCollect ? 'Add funds by a bank deposit request or a payment link the customer pays online.' : 'Request Trade Wallet funds from your distributor against a bank deposit.'}
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            {canCollect ? (
+                <Collect embedded left={bankCard} between={requestsList} />
+            ) : (
+                <>
+                    <div className="grid gap-6 lg:grid-cols-2">{bankCard}</div>
+                    {requestsList}
+                </>
+            )}
 
             {/* Add Fund Request Modal */}
             {showAddModal && (
