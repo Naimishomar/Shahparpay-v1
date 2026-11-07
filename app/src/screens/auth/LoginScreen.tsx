@@ -28,6 +28,17 @@ const FORM_MAX_WIDTH = 440;
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'back'];
 
 /** "rahul@gmail.com" -> "r***@gmail.com", as on the verify screen. */
+/**
+ * The server's own message, or why no answer came: a timeout, a dropped
+ * connection or a certificate the phone refused all look alike to the user,
+ * so the cause is named in brackets for support to read off a screenshot.
+ */
+const unreachable = (err: any) => {
+  if (err?.response?.data?.message) return err.response.data.message;
+  const cause = err?.code === 'ECONNABORTED' ? 'timed out' : err?.code || err?.message || 'no response';
+  return `Could not reach the server (${cause}). Check your connection.`;
+};
+
 const maskEmail = (email?: string) => {
   if (!email || !email.includes('@')) return '';
   const [user, domain] = email.split('@');
@@ -145,7 +156,7 @@ export const LoginScreen: React.FC = () => {
         setError(response.message || 'Invalid credentials. Please try again.');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Could not reach the server. Check your connection.');
+      setError(unreachable(err));
     } finally {
       setIsLoading(false);
     }
@@ -163,7 +174,7 @@ export const LoginScreen: React.FC = () => {
         setError(response.message || 'Invalid OTP.');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Could not reach the server. Check your connection.');
+      setError(unreachable(err));
     } finally {
       setIsLoading(false);
     }
@@ -199,7 +210,7 @@ export const LoginScreen: React.FC = () => {
         setMessage('');
       }
     } catch (err: any) {
-      setForgotError(err.response?.data?.message || 'Could not reach the server. Check your connection.');
+      setForgotError(unreachable(err));
     } finally {
       setForgotBusy(false);
     }
