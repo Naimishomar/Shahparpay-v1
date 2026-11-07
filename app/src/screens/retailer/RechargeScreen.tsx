@@ -26,7 +26,6 @@ import {
   Screen,
   ErrorBanner,
   SkeletonRows,
-  Row,
   SectionTitle,
   Segmented,
   Toast,
@@ -35,7 +34,6 @@ import {
 } from '@/components/ui/Screen';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
-import { PAYSPRINT_ENABLED } from '@/constants/services';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -444,7 +442,6 @@ export const RechargeScreen: React.FC = () => {
   const [showOperators, setShowOperators] = useState(false);
   const [operatorQuery, setOperatorQuery] = useState('');
   const [dthAmount, setDthAmount] = useState('');
-  const [dthDetails, setDthDetails] = useState<any>(null);
 
   const [pin, setPin] = useState('');
   const [step, setStep] = useState<'form' | 'pin'>('form');
@@ -470,12 +467,6 @@ export const RechargeScreen: React.FC = () => {
     return res?.success ? res : null;
   });
 
-  const dthInfo = useAction(async () => {
-    const res = await api.getDthInfo({ dthNumber, operator: String(dthOperator?.id) });
-    if (!res.success) return null;
-    return Array.isArray(res.data) ? res.data[0] : res.data;
-  });
-
   const recharge = useAction(async () => {
     const res = await api.doRecharge(
       isDth
@@ -493,13 +484,13 @@ export const RechargeScreen: React.FC = () => {
    */
   const [toast, setToast] = useState<{ message: string; tone?: 'error' | 'info' }>({ message: '' });
   const say = (message: string, tone: 'error' | 'info' = 'error') => setToast({ message, tone });
-  const failures = [recharge, plans, dthInfo];
+  const failures = [recharge, plans];
   useEffect(() => {
     const failed = failures.find((a) => a.error);
     if (!failed) return;
     say(failed.error || 'Failed to connect to server');
     failed.setError(null);
-  }, [recharge.error, plans.error, dthInfo.error]);
+  }, [recharge.error, plans.error]);
 
   const filteredOperators = useMemo(
     () =>
@@ -543,12 +534,6 @@ export const RechargeScreen: React.FC = () => {
     if (!flat.length) say('No active plans were returned. You can enter the recharge amount manually.', 'info');
   };
 
-  const onFetchDthInfo = async () => {
-    if (!dthNumber || !dthOperator) return say('Please enter DTH number and select operator first.');
-    const info = await dthInfo.run();
-    if (info) setDthDetails(info);
-  };
-
   // The website's checks, in its words. The PIN is collected by the PIN step.
   const onRechargePress = () => {
     if (isDth) {
@@ -584,7 +569,6 @@ export const RechargeScreen: React.FC = () => {
     if (isDth) {
       setDthNumber('');
       setDthAmount('');
-      setDthDetails(null);
     } else {
       setMobile('');
       setPrepaidAmount('');
@@ -854,21 +838,6 @@ export const RechargeScreen: React.FC = () => {
                     {!filteredOperators.length && <Text style={styles.pickerEmpty}>No operators in this category</Text>}
                   </ScrollView>
                 )}
-              </View>
-            )}
-
-            {/* DTH customer details are PaySprint's (HLR lookup); Icchhamati has no equivalent. */}
-            {PAYSPRINT_ENABLED && (
-              <Btn ghost icon="magnify" label="Fetch Details" onPress={onFetchDthInfo} loading={dthInfo.pending} />
-            )}
-            {!!dthDetails && (
-              <View style={styles.card}>
-                <Row label="Name" value={dthDetails.customerName || '-'} />
-                <Row label="Balance" value={`₹ ${dthDetails.Balance || 0}`} />
-                <Row label="Plan" value={dthDetails.planName || '-'} />
-                <Row label="Next Recharge" value={dthDetails.NextRechargeDate || '-'} />
-                <Row label="Status" value={dthDetails.status || 'Active'} />
-                <Row label="Monthly" value={`₹ ${dthDetails.MonthlyRecharge || 0}`} last />
               </View>
             )}
 

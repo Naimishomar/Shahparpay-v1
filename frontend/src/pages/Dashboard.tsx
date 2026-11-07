@@ -1,6 +1,6 @@
 import {
     Banknote, Smartphone, Fingerprint, Building2, Receipt, Wallet, IndianRupee, Users, CreditCard, FileText,
-    CalendarDays, ChevronDown, ArrowUpRight, ShieldAlert, Inbox,
+    CalendarDays, ChevronDown, ArrowUpRight, Inbox,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState, useEffect, useRef } from 'react';
@@ -8,8 +8,6 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { isServiceEnabled } from '../lib/services';
 import { useNavigate } from 'react-router-dom';
-import MerchantKycModal from '../components/MerchantKycModal';
-import { usesAepsProvider } from '../lib/services';
 import { toast } from "sonner";
 
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
@@ -159,8 +157,6 @@ const Dashboard = () => {
     const [tempDateType, setTempDateType] = useState('Today');
     const [customStart, setCustomStart] = useState('');
     const [customEnd, setCustomEnd] = useState('');
-    const [kycLoading, setKycLoading] = useState(false);
-    const [showMerchantKycModal, setShowMerchantKycModal] = useState(false);
 
     const [range, setRange] = useState(() => ({ start: ymd(new Date()), end: ymd(new Date()) }));
 
@@ -244,36 +240,6 @@ const Dashboard = () => {
         setPopoverOpen(false);
     };
 
-    const handleCompleteKyc = async () => {
-        if (!token || !user) return;
-        try {
-            setKycLoading(true);
-            const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/paysprint/get-onboard-url`, {
-                merchantId: user.id || user._id,
-                isNew: "1",
-                callbackUrl: window.location.origin + "/dashboard"
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.data.success) {
-                if (res.data.alreadyOnboarded) {
-                    setShowMerchantKycModal(true);
-                } else if (res.data.url) {
-                    window.open(res.data.url, '_blank');
-                } else {
-                    toast.error("Invalid KYC URL returned.");
-                }
-            } else {
-                toast.error(res.data.message || "Failed to fetch KYC URL");
-            }
-        } catch (error: any) {
-            console.error(error);
-            toast.error(error.response?.data?.message || "Failed to fetch KYC URL");
-        } finally {
-            setKycLoading(false);
-        }
-    };
-
     const volume = Number(stats?.TotalTransactionsAmount) || 0;
     const rangeLabel = dateRangeText === 'Custom Range' && customStart && customEnd
         ? `${customStart} → ${customEnd}`
@@ -282,27 +248,6 @@ const Dashboard = () => {
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-200">
-            {user && user.isMerchantKycComplete === false && usesAepsProvider(user, 'paysprint') && (
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between rounded-2xl border border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-4 text-amber-900 dark:text-amber-100">
-                    <div className="flex items-start gap-3">
-                        <div className="rounded-xl bg-amber-500/15 p-2 text-amber-600 dark:text-amber-400">
-                            <ShieldAlert className="h-5 w-5" />
-                        </div>
-                        <div>
-                            <p className="font-semibold">KYC pending</p>
-                            <p className="text-sm opacity-80">Complete your KYC via PaySprint to activate all services.</p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={handleCompleteKyc}
-                        disabled={kycLoading}
-                        className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-amber-500/30 hover:bg-amber-600 disabled:opacity-50"
-                    >
-                        {kycLoading ? 'Loading...' : 'Complete KYC'}
-                    </button>
-                </div>
-            )}
-
             {/* Hero */}
             <section className="relative overflow-hidden rounded-3xl hero-panel p-6 md:p-8">
 
@@ -509,10 +454,6 @@ const Dashboard = () => {
                 </section>
             </div>
 
-            {/* Bank 3 Aeps / Biometric KYC Modal */}
-            {showMerchantKycModal && (
-                <MerchantKycModal onClose={() => setShowMerchantKycModal(false)} />
-            )}
         </div>
     );
 };

@@ -25,6 +25,8 @@ const HIDDEN = new Set([
     "aadhaar", "aadhar", "aadhaarLast4", "bankBalance", "charges",
     "gatewayMessage", "apiMessage", "message", "note",
     "latitude", "longitude", "qrImageUrl", "paymentUrl",
+    // Old PaySprint-era records; the ref duplicates Fp Transaction Id.
+    "paysprintRef", "paysprintCallback",
 ]);
 
 const statusTone = (s: string) =>

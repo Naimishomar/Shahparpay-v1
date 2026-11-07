@@ -5,7 +5,6 @@ import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
 import { toast } from 'sonner';
-import { PAYSPRINT_ENABLED } from '../lib/services';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -41,7 +40,6 @@ const Recharge = () => {
     const [dthOperator, setDthOperator] = useState("");
     const [dthAmount, setDthAmount] = useState("");
     const [dthPin, setDthPin] = useState("");
-    const [dthInfo, setDthInfo] = useState<any>(null);
 
     // Initial Data Fetch
     useEffect(() => {
@@ -153,31 +151,6 @@ const Recharge = () => {
         }
     };
 
-    const handleFetchDthInfo = async () => {
-        if (!dthNumber || !dthOperator) {
-            toast.error("Please enter DTH number and select operator first.");
-            return;
-        }
-        setLoading(true);
-        try {
-            const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/recharge/dth-info`, {
-                dthNumber,
-                operator: dthOperator
-            });
-            if (response.data && response.data.success) {
-                // If it's an array with 1 item, extract the first item
-                let info = response.data.data;
-                if (Array.isArray(info) && info.length > 0) info = info[0];
-                setDthInfo(info);
-            }
-        } catch (error: any) {
-            console.error(error);
-            toast.error(error.response?.data?.message || "Failed to connect to server");
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleRechargeSubmit = async (type: string) => {
         let payload: any = { type };
         
@@ -232,7 +205,7 @@ const Recharge = () => {
                 if (type === 'prepaid') {
                     setMobileNumber(""); setPrepaidAmount(""); setPrepaidPin("");
                 } else {
-                    setDthNumber(""); setDthAmount(""); setDthPin(""); setDthInfo(null);
+                    setDthNumber(""); setDthAmount(""); setDthPin("");
                 }
                 // Refresh history after recharge
                 fetchHistory();
@@ -260,7 +233,7 @@ const Recharge = () => {
         return (
             <section className="rounded-2xl border bg-card p-6 shadow-sm">
                 <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Payment</h3>
-                <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                <div className="grid gap-4 md:grid-cols-2 md:items-end">
                     <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-medium text-foreground">Amount</label>
                         <div className="relative">
@@ -405,7 +378,7 @@ const Recharge = () => {
                 <div className="flex flex-col gap-6 animate-in fade-in duration-300">
                     <section className="rounded-2xl border bg-card p-6 shadow-sm">
                         <h3 className="mb-4 text-lg font-semibold">DTH Recharge</h3>
-                        <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                        <div className="grid gap-4 md:grid-cols-2 md:items-end">
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-sm font-medium text-foreground">DTH Number</label>
                                 <div className="relative">
@@ -437,34 +410,8 @@ const Recharge = () => {
                                     </select>
                                 </div>
                             </div>
-                            {/* DTH customer details are PaySprint's (HLR lookup); Icchhamati has no equivalent. */}
-                            {PAYSPRINT_ENABLED && <button
-                                onClick={handleFetchDthInfo}
-                                disabled={loading}
-                                className="flex items-center justify-center gap-2 rounded-xl border bg-background px-6 py-3 font-semibold hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50"
-                            >
-                                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                                Fetch Details
-                            </button>}
                         </div>
 
-                        {dthInfo && (
-                            <div className="mt-5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                                {[
-                                    ['Name', dthInfo.customerName || '-'],
-                                    ['Balance', `₹ ${dthInfo.Balance || 0}`],
-                                    ['Plan', dthInfo.planName || '-'],
-                                    ['Next Recharge', dthInfo.NextRechargeDate || '-'],
-                                    ['Status', dthInfo.status || 'Active'],
-                                    ['Monthly', `₹ ${dthInfo.MonthlyRecharge || 0}`],
-                                ].map(([label, value]) => (
-                                    <div key={label} className="rounded-xl border bg-background/50 p-3">
-                                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</p>
-                                        <p className={`truncate text-sm font-semibold ${label === 'Status' ? 'text-emerald-600 dark:text-emerald-400' : ''}`}>{value}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
                     </section>
                     {amountAndPin('dth')}
                 </div>

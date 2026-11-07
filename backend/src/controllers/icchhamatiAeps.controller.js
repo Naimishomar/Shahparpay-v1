@@ -25,7 +25,9 @@ import { recordAepsEnquiry } from '../utils/aepsEnquiry.js';
 import { aepsKycDone } from '../utils/services.js';
 import { uploadOnR2 } from '../utils/r2.js';
 import { loggableResponse } from '../utils/integrationLogger.js';
-import { AEPS_OTP_THRESHOLD } from './aepsPayment.controller.js';
+
+// Customer OTP is required for withdrawals above this amount; at or below it, none.
+const AEPS_OTP_THRESHOLD = 5000;
 
 /**
  * Icchhamati AEPS — Fingpay behind Icchhamati's /api/v2/aeps gateway.
@@ -981,7 +983,7 @@ export const sendTxnOtp = async (req, res) => {
   }
 };
 
-/** Credits an Aadhaar Pay once, like PaySprint's: the full amount to the AEPS wallet. */
+/** Credits an Aadhaar Pay once: the full amount to the AEPS wallet. */
 const applyAadhaarPaySuccess = async ({ transactionId, userId, amount, providerRef, message }) => {
   const session = await mongoose.startSession();
   try {
@@ -1184,7 +1186,7 @@ export const doTransaction = async (req, res) => {
               transactionId: record._id,
               userId: retailer._id,
               amount: txn.amount,
-              paysprintRef: providerRef,
+              providerRef,
               message,
             });
       if (!credited)

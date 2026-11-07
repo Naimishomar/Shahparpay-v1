@@ -19,13 +19,10 @@ import { MatmScreen } from '@/screens/retailer/MatmScreen';
 import { RechargeScreen } from '@/screens/retailer/RechargeScreen';
 import { BbpsScreen } from '@/screens/retailer/BbpsScreen';
 import { BbpsServiceScreen } from '@/screens/retailer/BbpsServiceScreen';
-import { CollectScreen } from '@/screens/retailer/CollectScreen';
 import { FundRequestScreen } from '@/screens/retailer/FundRequestScreen';
 import { AddMoneyScreen } from '@/screens/retailer/AddMoneyScreen';
 import { BiometricSupportScreen } from '@/screens/retailer/BiometricSupportScreen';
-import { PipeStatusScreen } from '@/screens/retailer/PipeStatusScreen';
 import { ProfileScreen } from '@/screens/retailer/ProfileScreen';
-import { KycStatusScreen } from '@/screens/retailer/KycStatusScreen';
 import { AdminPortalScreen } from '@/screens/admin/AdminPortalScreen';
 import { DistributorPortalScreen } from '@/screens/distributor/DistributorPortalScreen';
 import { RetailersScreen } from '@/screens/distributor/RetailersScreen';
@@ -40,6 +37,7 @@ import {
   DmtReport,
   RechargeReport,
   BbpsReport,
+  CollectReport,
   UpiReport,
   ItrReport,
   PanReport,
@@ -90,6 +88,7 @@ const REPORT_SCREENS: [string, React.ComponentType<any>][] = [
   ['PayoutReport', PayoutReport],
   ['RechargeReport', RechargeReport],
   ['BbpsReport', BbpsReport],
+  ['CollectReport', CollectReport],
   ['UpiReport', UpiReport],
   ['PanReport', PanReport],
   ['ItrReport', ItrReport],
@@ -111,13 +110,10 @@ const RETAILER_SCREENS: [string, React.ComponentType<any>][] = ([
   ['Recharge', RechargeScreen],
   ['BBPS', BbpsScreen],
   ['BbpsService', BbpsServiceScreen],
-  ['Collect', CollectScreen],
   ['FundRequest', FundRequestScreen],
   ['AddMoney', AddMoneyScreen],
   ['BiometricSupport', BiometricSupportScreen],
-  ['PipeStatus', PipeStatusScreen],
   ['Profile', ProfileScreen],
-  ['KycStatus', KycStatusScreen],
   ...COMMON_SCREENS,
 ] as [string, React.ComponentType<any>][]).map(([name, Screen]): [string, React.ComponentType<any>] => [name, withServiceGate(name, Screen)]);
 

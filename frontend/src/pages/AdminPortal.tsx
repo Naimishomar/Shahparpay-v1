@@ -385,9 +385,6 @@ const AdminPortal = () => {
                         setFormData={(f) => setFormData(f as typeof formData)}
                         parentName="Admin"
                         merchantCode={merchantCode}
-                        setMerchantCode={setMerchantCode}
-                        isExistingMerchant={false}
-                        setIsExistingMerchant={() => {}}
                         aadhaarPicture={aadhaarPicture} setAadhaarPicture={setAadhaarPicture}
                         panPicture={panPicture} setPanPicture={setPanPicture}
                         profilePicture={profilePicture} setProfilePicture={setProfilePicture}

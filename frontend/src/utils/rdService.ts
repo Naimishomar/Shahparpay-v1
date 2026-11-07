@@ -1,5 +1,4 @@
-// Shared UIDAI RD Service helper used by AEPS, DMT, Merchant eKYC and Pipe
-// onboarding. All three supported scanner brands (Mantra, Morpho, Startek)
+// Shared UIDAI RD Service helper used by AEPS (transactions and eKYC). All three supported scanner brands (Mantra, Morpho, Startek)
 // expose the SAME UIDAI RD Service HTTP API — the brand only changes which
 // vendor RD Service software is installed, never the capture protocol.
 
@@ -32,8 +31,7 @@ const BRAND_PREFERRED_PORTS: Record<DeviceBrand, number[]> = {
 };
 
 export interface CaptureOptions {
-  // Optional per-pipe WADH (eKYC capture flows). Omit for AEPS/DMT
-  // transaction captures where PaySprint expects an empty wadh.
+  // Optional WADH for eKYC captures. Omit for transaction captures.
   wadh?: string;
   // Optional AEPS transaction OTP, bound into the captured PID block.
   otp?: string;

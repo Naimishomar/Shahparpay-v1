@@ -133,7 +133,7 @@ assert.ok(
 // `apiResponse.message` was the old accessor and no transaction document has
 // that field, so a failed AEPS withdrawal showed FAILED and nothing else.
 const aepsController = readFileSync(
-  new URL('../../../../backend/src/controllers/aepsPayment.controller.js', import.meta.url),
+  new URL('../../../../backend/src/controllers/icchhamatiAeps.controller.js', import.meta.url),
   'utf8'
 );
 assert.ok(/gatewayMessage:/.test(aepsController), 'AEPS failures still record gatewayMessage');
@@ -157,14 +157,8 @@ assert.ok(
 // The bank balance is only in the gateway response, seen once at the counter,
 // so the controller has to persist it or the report can never show it.
 assert.ok(
-  /metadata = \{ \.\.\.txn\.metadata, bankBalance: balance \}/.test(aepsController),
+  /record\.metadata = \{ \.\.\.record\.metadata, bankBalance: Number\(result\.balanceAmount\) \}/.test(aepsController),
   'AEPS success must persist bankBalance on the transaction'
-);
-assert.ok(
-  /await saveBankBalance\(newTxn, responseData\);\n\s+const credited = await applyAeps/.test(
-    aepsController
-  ),
-  'bankBalance must be saved BEFORE apply*Success re-reads the document'
 );
 const maskAadhaar = new Function(
   `return ${/const maskAadhaar = (\(v: any\) => \{[\s\S]*?\n\};)/.exec(reports)[1].replace('(v: any)', '(v)').replace(/;$/, '')};`
@@ -186,3 +180,14 @@ assert.ok(/CREDIT: \{ tone: 'success'/.test(screen), 'CREDIT needs a StatusPill 
 assert.ok(/DEBIT: \{ tone: 'info'/.test(screen), 'DEBIT needs a StatusPill mapping');
 
 console.log('reports: ledger field mapping matches the backend OK');
+
+// --- receipt details never show PaySprint-era metadata ---------------------
+// Old records carry metadata.paysprintRef, a duplicate of the Fp Transaction Id.
+{
+  const start = reports.indexOf('const HIDDEN = new Set([');
+  const end = reports.indexOf('export const receiptRows');
+  assert.ok(start > -1 && end > start, 'HIDDEN / isHidden not found');
+  const isHidden = new Function(`${reports.slice(start, end).replace('(key: string)', '(key)')}; return isHidden;`)();
+  assert.strictEqual(isHidden('paysprintRef'), true, 'paysprintRef must stay hidden');
+  assert.strictEqual(isHidden('fpTransactionId'), false, 'fpTransactionId must still show');
+}

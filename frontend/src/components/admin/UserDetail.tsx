@@ -3,8 +3,7 @@ import { ArrowRight, Banknote, ChevronLeft, Clock, History, Loader2, Mail, MapPi
 import { toast } from 'sonner';
 import { CARD, INPUT, LABEL, PENDING_PILL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, STATUS_PILL, ago, inr, inrShort, serviceLabel, useApiGet } from '../distributor/shared';
 import { Avatar, Skeleton } from '../distributor/ui';
-import { AEPS_PROVIDERS, PAYSPRINT_ENABLED, SERVICES, aepsKycDone, aepsProviderOf, aepsStepLabel, type AepsProvider, type ServiceKey } from '../../lib/services';
-import { AepsProviderSwitches } from '../AepsProviderPicker';
+import { SERVICES, aepsKycDone, aepsStepLabel, type ServiceKey } from '../../lib/services';
 import { ActivityList, type Activity } from './ActivityLog';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -76,9 +75,6 @@ const UserDetail = ({
         const label = SERVICES.find((s) => s.key === key)?.label;
         call(`svc:${key}`, `/api/admin/console/retailers/${id}/services`, 'PUT', { disabledServices: next }, `${label} switched ${next.includes(key) ? 'off' : 'on'}`);
     };
-
-    const setProvider = (aepsProvider: AepsProvider) =>
-        call('aepsProvider', `/api/admin/console/retailers/${id}/services`, 'PUT', { aepsProvider }, `AEPS: ${AEPS_PROVIDERS.find((p) => p.key === aepsProvider)?.label}`);
 
     // Where a retailer stands in AEPS onboarding, asked of the provider when the
     // page opens; the stored step is only as fresh as the retailer's last visit.
@@ -213,15 +209,6 @@ const UserDetail = ({
                         </div>
                         <span className={LABEL}>{SERVICES.length - disabled.length} of {SERVICES.length} on</span>
                     </div>
-                    {PAYSPRINT_ENABLED && (
-                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3">
-                        <div className="min-w-0">
-                            <p className="text-sm font-semibold">AEPS provider</p>
-                            <p className="text-xs text-muted-foreground">Add the second provider only once they meet its onboarding criteria.</p>
-                        </div>
-                        <AepsProviderSwitches value={aepsProviderOf(user)} onChange={setProvider} disabled={busy !== null} />
-                    </div>
-                    )}
                     <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
                         {SERVICES.map((svc) => {
                             const on = !disabled.includes(svc.key);

@@ -9,11 +9,6 @@ import {
   refreshAccessToken,
   logoutUser,
   verifyEmailOtp,
-  generateAadhaarOtp,
-  verifyAadhaarOtp,
-  verifyPan,
-  generateOnboardUrl,
-  updateKycStatus,
   updateProfile,
   changePassword,
   forgotPassword,
@@ -38,14 +33,6 @@ router.post('/refresh-token', refreshAccessToken);
 router.post('/logout', authMiddlewares, logoutUser);
 router.put('/update-profile', authMiddlewares, upload.single('profilePicture'), updateProfile);
 router.put('/change-password', authLimiter, authMiddlewares, changePassword);
-
-// PAYSPRINT-DISABLED: PaySprint AEPS merchant onboarding. PaySprint withdrew
-// its AEPS APIs; uncomment to switch back.
-// router.post('/paysprint/aadhaar/send-otp', authMiddlewares, generateAadhaarOtp);
-// router.post('/paysprint/aadhaar/verify-otp', authMiddlewares, verifyAadhaarOtp);
-// router.post('/paysprint/pan/verify', authMiddlewares, verifyPan);
-// router.post('/paysprint/get-onboard-url', authMiddlewares, generateOnboardUrl);
-// router.post('/paysprint/update-kyc-status', authMiddlewares, updateKycStatus);
 
 router.post(
   '/create-distributor',

@@ -6,7 +6,14 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useAuth } from "../context/AuthContext";
 
-type ServiceKind = "recharge" | "bbps";
+type ServiceKind = "recharge" | "bbps" | "collect";
+
+/** What each report lists and how its columns read a transaction. */
+const KINDS: Record<ServiceKind, { type: string; label: string; party: string; number: string; service: (tx: any) => string; partyOf: (tx: any) => string; numberOf: (tx: any) => string }> = {
+    recharge: { type: "RECHARGE", label: "Recharge", party: "Operator / Biller", number: "Customer Number", service: (tx) => tx.metadata?.mode || "Recharge", partyOf: (tx) => tx.metadata?.operator, numberOf: (tx) => tx.metadata?.caNumber || tx.metadata?.mobile },
+    bbps: { type: "BILL_PAYMENT", label: "BBPS", party: "Operator / Biller", number: "Customer Number", service: (tx) => tx.metadata?.mode || "BBPS", partyOf: (tx) => tx.metadata?.operator, numberOf: (tx) => tx.metadata?.caNumber || tx.metadata?.mobile },
+    collect: { type: "PG_COLLECTION", label: "CollectPayments", party: "Customer", number: "Customer Mobile", service: (tx) => (tx.metadata?.collectionChannel === "QR" ? "QR" : "Link"), partyOf: (tx) => tx.metadata?.payerName, numberOf: (tx) => tx.metadata?.payerMobile },
+};
 
 interface ServiceReportProps {
     kind: ServiceKind;
@@ -27,6 +34,7 @@ const reasonOf = (tx: any) =>
     tx?.metadata?.gatewayMessage || tx?.metadata?.apiMessage || tx?.metadata?.message || "";
 
 const ServiceReport = ({ kind, title, description }: ServiceReportProps) => {
+    const cfg = KINDS[kind];
     const { user } = useAuth();
     const [transactions, setTransactions] = useState<any[]>([]);
     const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
@@ -43,7 +51,7 @@ const ServiceReport = ({ kind, title, description }: ServiceReportProps) => {
             setLoading(true);
             try {
                 const params = new URLSearchParams({
-                    type: kind === "recharge" ? "RECHARGE" : "BILL_PAYMENT",
+                    type: cfg.type,
                     limit: "1000",
                 });
                 if (startDate && endDate) {
@@ -71,14 +79,13 @@ const ServiceReport = ({ kind, title, description }: ServiceReportProps) => {
         return transactions.filter((tx) => {
             const searchable = [
                 tx.transactionId,
-                tx.metadata?.caNumber,
-                tx.metadata?.mobile,
-                tx.metadata?.operator,
-                tx.metadata?.mode,
+                cfg.service(tx),
+                cfg.partyOf(tx),
+                cfg.numberOf(tx),
             ].filter(Boolean).join(" ").toLowerCase();
             return (!term || searchable.includes(term)) && (status === "ALL" || tx.status === status);
         });
-    }, [transactions, search, status]);
+    }, [transactions, search, status, cfg]);
 
     const totals = useMemo(() => ({
         amount: filtered.reduce((sum, tx) => sum + Number(tx.amount || 0), 0),
@@ -93,22 +100,22 @@ const ServiceReport = ({ kind, title, description }: ServiceReportProps) => {
         no: index + 1,
         id: tx.transactionId || tx._id || "N/A",
         date: new Date(tx.createdAt).toLocaleString(),
-        service: tx.metadata?.mode || (kind === "recharge" ? "Recharge" : "BBPS"),
-        operator: tx.metadata?.operator || "N/A",
-        number: tx.metadata?.caNumber || tx.metadata?.mobile || "N/A",
+        service: cfg.service(tx),
+        operator: cfg.partyOf(tx) || "N/A",
+        number: cfg.numberOf(tx) || "N/A",
         amount: Number(tx.amount || 0).toFixed(2),
         commission: Number(tx.commissions?.retailerEarned || 0).toFixed(2),
         status: tx.status || "UNKNOWN",
     }));
 
     const downloadCsv = () => {
-        const headers = ["S.No.", "Transaction ID", "Date", "Service", "Operator", "Number", "Amount", "Commission", "Status"];
+        const headers = ["S.No.", "Transaction ID", "Date", "Service", cfg.party, cfg.number, "Amount", "Commission", "Status"];
         const lines = [headers, ...exportRows.map((row) => Object.values(row))].map((row) =>
             row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(",")
         );
         const link = document.createElement("a");
         link.href = `data:text/csv;charset=utf-8,${encodeURIComponent(lines.join("\n"))}`;
-        link.download = `${kind === "recharge" ? "Recharge" : "BBPS"}Report_${Date.now()}.csv`;
+        link.download = `${cfg.label}Report_${Date.now()}.csv`;
         link.click();
     };
 
@@ -117,10 +124,10 @@ const ServiceReport = ({ kind, title, description }: ServiceReportProps) => {
         doc.text(`${title} - ${user?.name || "Retailer"}`, 14, 15);
         autoTable(doc, {
             startY: 22,
-            head: [["S.No.", "Transaction ID", "Date", "Service", "Operator", "Number", "Amount", "Commission", "Status"]],
+            head: [["S.No.", "Transaction ID", "Date", "Service", cfg.party, cfg.number, "Amount", "Commission", "Status"]],
             body: exportRows.map((row) => Object.values(row)),
         });
-        doc.save(`${kind === "recharge" ? "Recharge" : "BBPS"}Report_${Date.now()}.pdf`);
+        doc.save(`${cfg.label}Report_${Date.now()}.pdf`);
     };
 
     return (
@@ -143,9 +150,9 @@ const ServiceReport = ({ kind, title, description }: ServiceReportProps) => {
                         <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="px-3 py-2 bg-background border rounded-xl text-sm shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500">
                             <option value="ALL">All Status</option>
                             <option value="SUCCESS">Success</option>
-                            <option value="PROCESSING">Pending</option>
+                            <option value={kind === "collect" ? "PENDING" : "PROCESSING"}>Pending</option>
                             <option value="FAILED">Failed</option>
-                            <option value="REFUNDED">Refunded</option>
+                            {kind !== "collect" && <option value="REFUNDED">Refunded</option>}
                         </select>
                         <button onClick={downloadCsv} className="flex items-center gap-2 px-3 py-2 rounded-xl border bg-background hover:bg-black/5 dark:hover:bg-white/5 text-sm font-medium"><Download className="w-4 h-4" /> CSV</button>
                         <button onClick={downloadPdf} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium btn-primary"><FileDown className="w-4 h-4" /> PDF</button>
@@ -168,7 +175,7 @@ const ServiceReport = ({ kind, title, description }: ServiceReportProps) => {
                         <table className="w-full text-sm">
                             <thead className="sticky top-0 bg-zinc-50 dark:bg-zinc-900 z-10">
                                 <tr className="text-left">
-                                    {['S.No.', 'Transaction', 'Date', 'Service', 'Operator / Biller', 'Customer Number', 'Amount', 'Commission', 'Status'].map((heading) => <th key={heading} className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">{heading}</th>)}
+                                    {['S.No.', 'Transaction', 'Date', 'Service', cfg.party, cfg.number, 'Amount', 'Commission', 'Status'].map((heading) => <th key={heading} className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">{heading}</th>)}
                                 </tr>
                             </thead>
                             <tbody>
@@ -177,9 +184,9 @@ const ServiceReport = ({ kind, title, description }: ServiceReportProps) => {
                                         <td className="px-4 py-3 text-muted-foreground">{(page - 1) * pageSize + index + 1}</td>
                                         <td className="px-4 py-3 font-medium">{tx.transactionId || tx._id}</td>
                                         <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{new Date(tx.createdAt).toLocaleString()}</td>
-                                        <td className="px-4 py-3 uppercase">{tx.metadata?.mode || (kind === "recharge" ? "Recharge" : "BBPS")}</td>
-                                        <td className="px-4 py-3">{tx.metadata?.operator || "N/A"}</td>
-                                        <td className="px-4 py-3">{tx.metadata?.caNumber || tx.metadata?.mobile || "N/A"}</td>
+                                        <td className="px-4 py-3 uppercase">{cfg.service(tx)}</td>
+                                        <td className="px-4 py-3">{cfg.partyOf(tx) || "N/A"}</td>
+                                        <td className="px-4 py-3">{cfg.numberOf(tx) || "N/A"}</td>
                                         <td className="px-4 py-3 font-semibold">{money(tx.amount)}</td>
                                         <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-semibold">{money(tx.commissions?.retailerEarned)}</td>
                                         <td className="px-4 py-3"><span className={`px-2 py-1 rounded-full ring-1 text-[10px] font-bold ${statusClass(tx.status)}`}>{tx.status || "UNKNOWN"}</span>{reasonOf(tx) && tx.status === "FAILED" && <span className="block text-[11px] text-rose-500 mt-1 max-w-[180px]">{reasonOf(tx)}</span>}</td>

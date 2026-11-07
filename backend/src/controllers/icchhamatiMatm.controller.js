@@ -278,3 +278,15 @@ export const submitMatmResult = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Could not record the Micro ATM transaction. Check the report before retrying.' });
   }
 };
+
+export const getMatmHistory = async (req, res) => {
+  try {
+    const history = await Transaction.find({ userId: req.user.id, type: 'MATM' })
+      .sort({ createdAt: -1 })
+      .limit(50);
+    return res.status(200).json({ success: true, data: history });
+  } catch (error) {
+    console.error('MATM History Error:', error?.message);
+    return res.status(500).json({ success: false, message: 'Failed to fetch MATM history' });
+  }
+};

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, Linking } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -8,61 +8,29 @@ import { Input } from '@/components/ui/Input';
 import {
   Screen,
   EmptyState,
-  ErrorBanner,
   Grid,
   StatusPill,
-  SuccessBanner,
   money,
   SkeletonRows,
   SkeletonCard,
 } from '@/components/ui/Screen';
 import { OnboardMemberSheet } from '@/components/network/OnboardMemberSheet';
 import { EditRetailerSheet } from '@/components/network/EditRetailerSheet';
-import { useAsync, useAction } from '@/hooks/useAsync';
+import { useAsync } from '@/hooks/useAsync';
 import api from '@/services/api';
-import { PAYSPRINT_ENABLED, aepsKycDone, aepsStepLabel } from '@/constants/services';
-
-const KYC_CALLBACK = 'https://shahparpay.in/kyc-callback';
+import { aepsKycDone, aepsStepLabel } from '@/constants/services';
 
 /**
  * The distributor's network, one level down from the portal: every retailer,
- * their wallets and KYC state, and the eKYC link for the ones still pending.
+ * their wallets and AEPS onboarding state.
  * Tapping a row opens the full record.
  */
 export const RetailersScreen: React.FC = () => {
   const [query, setQuery] = useState('');
-  const [notice, setNotice] = useState('');
   const [onboarding, setOnboarding] = useState(false);
   const [selected, setSelected] = useState<any | null>(null);
 
   const retailers = useAsync<any[]>(async () => (await api.getDistributorRetailers()).data ?? [], []);
-
-  // The backend resolves the retailer code, and answers `alreadyOnboarded`
-  // with no URL once PaySprint has accepted them.
-  const kycLink = useAction(async (retailer: any) => {
-    const res = await api.getPaysprintOnboardUrl(
-      retailer.retailerId || retailer._id,
-      true,
-      undefined,
-      KYC_CALLBACK
-    );
-    if (!res.success) throw new Error(res.message || 'Could not generate the KYC link.');
-    if (!res.url)
-      throw new Error(
-        res.alreadyOnboarded
-          ? 'This retailer is already onboarded — their KYC is complete.'
-          : res.message || 'PaySprint did not return an onboarding link.'
-      );
-    return res.url as string;
-  });
-
-  const onKycLink = async (retailer: any) => {
-    setNotice('');
-    const url = await kycLink.run(retailer);
-    if (!url) return;
-    if (await Linking.canOpenURL(url)) await Linking.openURL(url);
-    else setNotice(`Share this KYC link with the retailer: ${url}`);
-  };
 
   const all = retailers.data ?? [];
   const needle = query.trim().toLowerCase();
@@ -96,9 +64,6 @@ export const RetailersScreen: React.FC = () => {
           value={money(all.reduce((sum: number, r: any) => sum + (r.mainWalletBalance ?? 0), 0))}
         />
       </Grid>
-
-      {!!notice && <SuccessBanner message={notice} />}
-      {!!kycLink.error && <ErrorBanner message={kycLink.error} />}
 
       <Button icon="account-plus-outline" onPress={() => setOnboarding(true)} fullWidth>
         Onboard a retailer
@@ -162,19 +127,6 @@ export const RetailersScreen: React.FC = () => {
                     color={colors.mutedForeground}
                   />
                 </Pressable>
-                {/* The KYC link is PaySprint's onboarding URL. */}
-                {PAYSPRINT_ENABLED && !ret.isMerchantKycComplete && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    icon="shield-link-variant-outline"
-                    onPress={() => onKycLink(ret)}
-                    loading={kycLink.pending}
-                    fullWidth
-                  >
-                    Generate KYC link
-                  </Button>
-                )}
               </View>
             ))
           ) : (

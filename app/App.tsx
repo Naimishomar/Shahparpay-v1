@@ -12,7 +12,6 @@ import { Figtree_700Bold } from '@expo-google-fonts/figtree/700Bold';
 import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { AppNavigator } from '@/navigation/AppNavigator';
-import { useKycCallback } from '@/hooks/useKycCallback';
 import { palettes } from '@/theme/colors';
 import { applyAppFont } from '@/theme/fonts';
 
@@ -29,9 +28,6 @@ SplashScreen.preventAutoHideAsync().catch(() => {
 const AppContent: React.FC = () => {
   const { resolvedTheme } = useTheme();
   const palette = palettes[resolvedTheme];
-  // Catches the PaySprint web-KYC redirect back into the app.
-  useKycCallback();
-
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: palette.background }}>
       <StatusBar

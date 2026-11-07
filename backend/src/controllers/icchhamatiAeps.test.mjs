@@ -2,7 +2,7 @@
 // The two calls that decide what a retailer sees and whether money moves.
 import assert from 'node:assert';
 import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks, recordStep, fingpayFailed, failureReason, correctedDraft, draftDetails, txnFields, readTxnRequest, aadhaarAddress } from './icchhamatiAeps.controller.js';
-import { parseServicesUpdate, usesAepsProvider } from '../utils/services.js';
+import { parseServicesUpdate } from '../utils/services.js';
 
 // --- Receipt fields from /doAeps ------------------------------------------
 
@@ -135,25 +135,14 @@ assert.ok(readTxnRequest(cd).error, 'a deposit needs an amount');
 assert.ok(readTxnRequest({ ...cd, amount: 10001 }).error, 'a deposit is capped like a withdrawal');
 assert.equal(readTxnRequest({ ...cd, aepsType: 'BE', amount: 500 }).amount, undefined);
 
-// --- provider switch ------------------------------------------------------
+// --- services update ------------------------------------------------------
 
-assert.deepEqual(parseServicesUpdate({ aepsProvider: 'icchhamati' }).set, {
-  aepsProvider: 'icchhamati',
-});
-assert.ok(parseServicesUpdate({ aepsProvider: 'fingpay' }).error);
 assert.deepEqual(parseServicesUpdate({ disabledServices: ['aeps'] }).set, {
   disabledServices: ['aeps'],
 });
 assert.ok(parseServicesUpdate({}).error);
-assert.deepEqual(parseServicesUpdate({ aepsProvider: 'both' }).set, { aepsProvider: 'both' });
-
-// --- which providers a retailer may use ------------------------------------
-
-// PaySprint is switched off: every retailer is on Icchhamati whatever is stored.
-assert.ok(usesAepsProvider({}, 'icchhamati'));
-assert.ok(usesAepsProvider({ aepsProvider: 'paysprint' }, 'icchhamati'));
-assert.ok(!usesAepsProvider({ aepsProvider: 'paysprint' }, 'paysprint'));
-assert.ok(!usesAepsProvider({ aepsProvider: 'both' }, 'paysprint'));
+// The retired AEPS provider switch is no longer a field anyone can set.
+assert.ok(parseServicesUpdate({ aepsProvider: 'both' }).error);
 
 // --- provider lists (shapes as the live gateway returns them) --------------
 

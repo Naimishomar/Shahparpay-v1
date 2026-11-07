@@ -101,6 +101,9 @@ const HIDDEN = new Set([
   'latitude', 'longitude', 'qrImageUrl', 'paymentUrl',
 ]);
 
+/** Old records carry PaySprint-era keys (paysprintRef duplicates the Fp Transaction Id). */
+const isHidden = (key: string) => HIDDEN.has(key) || /paysprint/i.test(key);
+
 /**
  * The web's TransactionDetailModal, row for row. Date, amount and status sit in
  * the sheet's own header, so they are not repeated here.
@@ -123,7 +126,7 @@ export const receiptRows = (tx: any): [string, string][] => {
     ['Charges', m.charges != null ? `₹ ${m.charges}` : null],
     ['Bank Balance', m.bankBalance != null ? `₹ ${m.bankBalance}` : null],
     ...Object.entries(m)
-      .filter(([k, v]) => !HIDDEN.has(k) && v !== '' && v != null && typeof v !== 'object')
+      .filter(([k, v]) => !isHidden(k) && v !== '' && v != null && typeof v !== 'object')
       .map(([k, v]) => [labelOf(k), String(v)] as [string, any]),
     ...(Array.isArray(m.ministatement)
       ? m.ministatement.map(
@@ -349,23 +352,35 @@ export const UpiReport = simpleReport('UPI', 'UpiReport', 'qrcode');
 const SERVICE_STATUSES = ['ALL', 'SUCCESS', 'PROCESSING', 'FAILED', 'REFUNDED'];
 const SERVICE_STATUS_LABELS = { ALL: 'All Status', SUCCESS: 'Success', PROCESSING: 'Pending', FAILED: 'Failed', REFUNDED: 'Refunded' };
 
-const serviceReport = (kind: 'recharge' | 'bbps'): React.FC => {
-  const fallback = kind === 'recharge' ? 'Recharge' : 'BBPS';
-  const service = (i: any) => i?.metadata?.mode || fallback;
-  const operator = (i: any) => i?.metadata?.operator || 'N/A';
-  const number = (i: any) => i?.metadata?.caNumber || i?.metadata?.mobile || 'N/A';
+type ServiceKind = 'recharge' | 'bbps' | 'collect';
+/** What each report lists and how it reads a transaction; same as the web's ServiceReport KINDS. */
+const SERVICE_KINDS: Record<ServiceKind, {
+  type: string; file: string; icon: string; party: string; number: string; statuses: string[];
+  service: (i: any) => string; partyOf: (i: any) => string; numberOf: (i: any) => string;
+}> = {
+  recharge: { type: 'RECHARGE', file: 'Recharge', icon: 'cellphone', party: 'Operator / Biller', number: 'Customer Number', statuses: SERVICE_STATUSES, service: (i) => i?.metadata?.mode || 'Recharge', partyOf: (i) => i?.metadata?.operator, numberOf: (i) => i?.metadata?.caNumber || i?.metadata?.mobile },
+  bbps: { type: 'BILL_PAYMENT', file: 'BBPS', icon: 'receipt', party: 'Operator / Biller', number: 'Customer Number', statuses: SERVICE_STATUSES, service: (i) => i?.metadata?.mode || 'BBPS', partyOf: (i) => i?.metadata?.operator, numberOf: (i) => i?.metadata?.caNumber || i?.metadata?.mobile },
+  collect: { type: 'PG_COLLECTION', file: 'CollectPayments', icon: 'link-variant', party: 'Customer', number: 'Customer Mobile', statuses: ['ALL', 'SUCCESS', 'PENDING', 'FAILED'], service: (i) => (i?.metadata?.collectionChannel === 'QR' ? 'QR' : 'Link'), partyOf: (i) => i?.metadata?.payerName, numberOf: (i) => i?.metadata?.payerMobile },
+};
+
+const serviceReport = (kind: ServiceKind): React.FC => {
+  const cfg = SERVICE_KINDS[kind];
+  const fallback = cfg.file;
+  const service = cfg.service;
+  const operator = (i: any) => cfg.partyOf(i) || 'N/A';
+  const number = (i: any) => cfg.numberOf(i) || 'N/A';
   const commission = (i: any) => Number(i?.commissions?.retailerEarned || 0);
   const Report: React.FC = () => (
     <TransactionReport
-      fetcher={recent(kind === 'recharge' ? 'RECHARGE' : 'BILL_PAYMENT')}
+      fetcher={recent(cfg.type)}
       searchFields={(i) =>
-        [i?.transactionId, i?.metadata?.caNumber, i?.metadata?.mobile, i?.metadata?.operator, i?.metadata?.mode]
+        [i?.transactionId, service(i), cfg.partyOf(i), cfg.numberOf(i)]
           .filter(Boolean)
           .join(' ')
       }
       searchPlaceholder="Search ID, number, operator"
-      statuses={SERVICE_STATUSES}
-      statusLabels={SERVICE_STATUS_LABELS}
+      statuses={cfg.statuses}
+      statusLabels={{ ...SERVICE_STATUS_LABELS, PENDING: 'Pending' }}
       summary={(rows) => [
         { label: 'Transactions', value: String(rows.length) },
         { label: 'Success', value: String(rows.filter((r) => r?.status === 'SUCCESS').length), tone: 'success' },
@@ -377,15 +392,15 @@ const serviceReport = (kind: 'recharge' | 'bbps'): React.FC => {
       }
       details={(tx) => [
         col('Service', service),
-        col('Operator / Biller', operator),
-        col('Customer Number', number),
+        col(cfg.party, operator),
+        col(cfg.number, number),
         col('Commission', (i) => money(commission(i))),
         ...receiptDetails(tx),
       ]}
       detailActions={shareReceipt}
       exportCsv={{
         filename: `${fallback}Report_${Date.now()}.csv`,
-        headers: ['S.No.', 'Transaction ID', 'Date', 'Service', 'Operator', 'Number', 'Amount', 'Commission', 'Status'],
+        headers: ['S.No.', 'Transaction ID', 'Date', 'Service', cfg.party, cfg.number, 'Amount', 'Commission', 'Status'],
         row: (tx, n) => [
           n + 1,
           tx.transactionId || tx._id || 'N/A',
@@ -398,7 +413,7 @@ const serviceReport = (kind: 'recharge' | 'bbps'): React.FC => {
           tx.status || 'UNKNOWN',
         ],
       }}
-      emptyIcon={kind === 'recharge' ? 'cellphone' : 'receipt'}
+      emptyIcon={cfg.icon}
       emptyTitle={`No ${kind} transactions found.`}
     />
   );
@@ -407,6 +422,7 @@ const serviceReport = (kind: 'recharge' | 'bbps'): React.FC => {
 
 export const RechargeReport = serviceReport('recharge');
 export const BbpsReport = serviceReport('bbps');
+export const CollectReport = serviceReport('collect');
 
 const PAN_TYPES = 'PAN_CARD,STD_PAN_CARD,PAN_SERVICE,PAN_COUPON';
 const panTypeLabel = (type: string) =>
@@ -646,8 +662,8 @@ const ledgerFailed = (i: any) => /FAIL|REJECT/i.test(String(i?.remarks ?? ''));
 const fmt = (v: any) => (Number.isFinite(Number(v)) ? Number(v) : 0).toFixed(2);
 
 /**
- * Ledgar (/reports/wallet-ledger). The endpoint answers with PaySprint's
- * uppercase column names (UTR/WALLET/AMOUNT/TYPE/NARRATION/remarks/DATE), not
+ * Ledgar (/reports/wallet-ledger). The endpoint answers with uppercase
+ * column names (UTR/WALLET/AMOUNT/TYPE/NARRATION/remarks/DATE), not
  * the camelCase transaction shape the other reports use.
  */
 export const WalletLedgerReport: React.FC = () => {

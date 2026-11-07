@@ -56,7 +56,7 @@ const PUBLIC = ['/api/auth/login', '/api/auth/verify-login-otp', '/api/auth/refr
 const AUTHENTICATED = [
   '/api/auth/update-profile',
   '/api/auth/change-password',
-  '/api/auth/paysprint/get-onboard-url',
+  '/api/auth/send-password-otp',
   '/api/auth/create-retailer',
 ];
 const isPublic = (url) => PUBLIC.some((p) => url.startsWith(p));

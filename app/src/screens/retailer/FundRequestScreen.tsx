@@ -22,14 +22,21 @@ import { IconTile } from '@/components/ui/Gradient';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import type { PickedFile } from '@/services/imagePicker';
 import api from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
+import { CollectScreen } from './CollectScreen';
 
 // Values are the backend enum verbatim (fundRequest.model.js), same as web.
 const MODES = ['IMPS', 'NEFT', 'RTGS', 'UPI', 'Cash Deposit', 'Cheque'].map((m) => ({ key: m, label: m }));
 const FILTERS = ['ALL', 'PENDING', 'APPROVED', 'REJECTED'];
+// Two ways to add funds: a bank deposit the distributor approves, or a payment link paid online.
+const TABS = [{ key: 'bank', label: 'Bank deposit' }, { key: 'online', label: 'Payment link' }];
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export const FundRequestScreen: React.FC = () => {
+  const { user } = useAuth();
+  const canCollect = !user?.disabledServices?.includes('collect');
+  const [tab, setTab] = useState('bank');
   const [mode, setMode] = useState<string>('');
   const [amount, setAmount] = useState('');
   const [bankUtr, setBankUtr] = useState('');
@@ -121,6 +128,9 @@ export const FundRequestScreen: React.FC = () => {
       ]
     );
 
+  const tabs = canCollect ? <Segmented options={TABS} value={tab} onChange={setTab} /> : null;
+  if (tab === 'online' && canCollect) return <CollectScreen header={tabs} />;
+
   return (
     <Screen
       refreshing={requests.refreshing}
@@ -128,6 +138,7 @@ export const FundRequestScreen: React.FC = () => {
       error={requests.error}
       onRetry={requests.reload}
     >
+      {tabs}
       <SectionTitle>Add Fund Request</SectionTitle>
       <Card>
         <CardContent style={styles.form}>

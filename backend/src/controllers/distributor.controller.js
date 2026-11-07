@@ -247,7 +247,7 @@ export const updateRetailer = async (req, res) => {
 };
 
 /**
- * PUT /api/distributor/retailers/:id/services  { disabledServices?: string[], aepsProvider?: string }
+ * PUT /api/distributor/retailers/:id/services  { disabledServices: string[] }
  * Switches services on or off for one of this distributor's retailers. Takes
  * effect on the retailer's next request; their menus refresh within 15 minutes.
  */
@@ -266,7 +266,7 @@ export const updateRetailerServices = async (req, res) => {
       { _id: req.params.id, distributorId: req.user.id },
       { $set: update.set },
       { new: true }
-    ).select('_id name disabledServices aepsProvider');
+    ).select('_id name disabledServices');
     if (!retailer) return res.status(404).json({ success: false, message: 'Retailer not found' });
     logActivity({
       req,

@@ -132,15 +132,6 @@ const retailerSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'BankAccount',
     },
-    lastDailyAuthDate: {
-      type: Date,
-      default: null,
-    },
-    dailyAuthDates: {
-      type: Map,
-      of: Date,
-      default: {},
-    },
     isMerchantKycComplete: {
       type: Boolean,
       default: false,
@@ -148,25 +139,6 @@ const retailerSchema = new mongoose.Schema(
     isExistingMerchant: {
       type: Boolean,
       default: false,
-    },
-    activeAepsPipes: [
-      {
-        type: String,
-      },
-    ],
-    lastPipeCheckDate: {
-      type: Date,
-      default: null,
-    },
-    // Which AEPS provider the retailer is onboarded with, chosen by their
-    // distributor or an admin: one of them, or 'both'. A retailer only sees and
-    // can use those providers' AEPS; documents written before this field
-    // existed are PaySprint.
-    aepsProvider: {
-      type: String,
-      enum: ['paysprint', 'icchhamati', 'both'],
-      // PAYSPRINT-DISABLED: default: 'paysprint',
-      default: 'icchhamati',
     },
     // Icchhamati (Fingpay) AEPS merchant. `outletId` is the MID their draft API
     // assigns and every later call is keyed by; the device is the scanner the
@@ -180,20 +152,6 @@ const retailerSchema = new mongoose.Schema(
       // can see who is stuck where without asking the provider for everyone.
       step: { type: String, default: null },
       stepAt: { type: Date, default: null },
-    },
-    // PaySprint's registered base location for AEPS geo-fencing, and the audit
-    // trail behind it. PaySprint caps base-location changes at three per
-    // merchant per calendar year and silently no-ops past that, so every
-    // successful change is counted here — otherwise a retailer burns the quota
-    // without anyone knowing and every later attempt appears to work while
-    // changing nothing.
-    aepsBaseLocation: {
-      lat: { type: Number, default: null },
-      long: { type: Number, default: null },
-      updatedAt: { type: Date, default: null },
-      // Reset when the calendar year in `countYear` no longer matches today's.
-      countYear: { type: Number, default: null },
-      countThisYear: { type: Number, default: 0 },
     },
 
     // The virtual account behind this retailer's collection QR. Standing, not

@@ -543,7 +543,7 @@ export const setRetailerVerification = async (req, res) => {
   }
 };
 
-/** PUT /api/admin/console/retailers/:id/services  { disabledServices?: string[], aepsProvider?: string } */
+/** PUT /api/admin/console/retailers/:id/services  { disabledServices: string[] } */
 export const setRetailerServices = async (req, res) => {
   try {
     if (forbid(req, res)) return;
@@ -551,7 +551,7 @@ export const setRetailerServices = async (req, res) => {
     const update = parseServicesUpdate(req.body);
     if (update.error) return res.status(400).json({ success: false, message: update.error });
 
-    const retailer = await Retailer.findByIdAndUpdate(req.params.id, { $set: update.set }, { new: true }).select('name disabledServices aepsProvider');
+    const retailer = await Retailer.findByIdAndUpdate(req.params.id, { $set: update.set }, { new: true }).select('name disabledServices');
     if (!retailer) return res.status(404).json({ success: false, message: 'Retailer not found' });
 
     logActivity({

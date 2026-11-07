@@ -12,10 +12,8 @@ export interface User {
   email: string;
   contactNumber?: string;
   profilePicture?: string;
-  isMerchantKycComplete?: boolean;
   /** Icchhamati AEPS onboarding: the step last seen, see aepsStepLabel. */
   icchhamatiAeps?: { outletId?: string | null; step?: string | null; stepAt?: string | null } | null;
-  activeAepsPipes?: string[];
   aadhaarNumber?: string;
   aadhaarPicture?: string;
   panNumber?: string;
@@ -23,8 +21,6 @@ export interface User {
   dob?: string;
   /** Services this retailer's distributor has switched off (see constants/services). */
   disabledServices?: string[];
-  /** AEPS provider the retailer is onboarded with; absent means PaySprint. */
-  aepsProvider?: 'paysprint' | 'icchhamati' | 'both';
   businessName?: string;
   businessAddress?: string;
   gstNumber?: string;
@@ -63,7 +59,6 @@ export interface WalletBalances {
   aepsBalance: number;
   mainBalance: number;
   /** Counter-QR collections land here; only this wallet moves to Main. */
-  qrBalance?: number;
   adminBalance: number;
 }
 
@@ -107,13 +102,10 @@ export interface NavigationParams {
     DMT: undefined;
     Recharge: undefined;
     BBPS: undefined;
-    Collect: undefined;
     FundRequest: undefined;
     AddMoney: undefined;
     BiometricSupport: undefined;
-    PipeStatus: undefined;
     Profile: undefined;
-    KycStatus: undefined;
     Reports: {
       Ledger: undefined;
       Aeps: undefined;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Link2, Copy, Check, RefreshCw, Clock, CheckCircle2, XCircle, User, Phone, Mail, Loader2, ExternalLink, ShieldCheck, QrCode, Inbox, Download, Wallet, ArrowRight, Landmark, Lock } from 'lucide-react';
-import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
+import { Link2, Copy, Check, RefreshCw, Clock, CheckCircle2, XCircle, User, Phone, Mail, Loader2, ExternalLink, ShieldCheck, QrCode, Inbox } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -19,12 +19,9 @@ const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm text
  * netbanking; the retailer's wallet is credited once the gateway confirms it,
  * which is why nothing here trusts the customer's own "I paid" and every order
  * is verified against the gateway before anything is shown as received.
- *
- * The standing counter QR is issued here too. Its payments settle into the
- * platform's Icchhamati wallet and are credited to the retailer's QR wallet,
- * less Icchhamati's charge, from which the retailer moves them to Main.
  */
-const Collect = () => {
+/** `embedded`: shown inside Fund Request, which supplies the page heading. */
+const Collect = ({ embedded = false }: { embedded?: boolean }) => {
     const { token } = useAuth();
     const [searchParams] = useSearchParams();
 
@@ -168,7 +165,7 @@ const Collect = () => {
     return (
         <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
             {/* Hero */}
-            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
+            {!embedded && <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
                 <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-5">
                     <div className="flex items-center gap-4">
                         <div className={`rounded-2xl p-3 ${SILVER_TILE}`}>
@@ -190,7 +187,7 @@ const Collect = () => {
                         </div>
                     </div>
                 </div>
-            </section>
+            </section>}
 
             <div className="grid gap-6 lg:grid-cols-2">
                 {/* New request: the form, and beside it the link's QR once created */}
@@ -273,18 +270,12 @@ const Collect = () => {
                     </div>
                 </section>
 
-                <CounterQr api={api} getHeaders={getHeaders} />
-
-                <QrWallet getHeaders={getHeaders} history={history} />
             </div>
 
             {/* Collections */}
             <section className="rounded-2xl border bg-card p-6 shadow-sm">
                 <div className="mb-4 flex items-center justify-between">
                     <h2 className="text-lg font-semibold">Recent Collections</h2>
-                    <button onClick={fetchHistory} className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5">
-                        <RefreshCw className="w-3.5 h-3.5" /> Refresh
-                    </button>
                 </div>
 
                 {history.length === 0 ? (
@@ -339,216 +330,6 @@ const Collect = () => {
                 )}
             </section>
         </div>
-    );
-};
-
-type Qr = { virtualAccountId: string; upiHandle: string | null; qrImage: string | null; name: string | null; qrPdf?: string | null };
-
-/**
- * Saves a file the browser would otherwise just open: `download` is ignored on
- * a cross-origin link such as the provider's S3 QR, so it is fetched first.
- * If the host refuses the fetch, the file opens in a new tab to save from there.
- */
-const saveFile = async (url: string, name: string) => {
-    try {
-        const blob = await (await fetch(url)).blob();
-        const href = URL.createObjectURL(blob);
-        const a = Object.assign(document.createElement('a'), { href, download: name });
-        a.click();
-        URL.revokeObjectURL(href);
-    } catch {
-        window.open(url, '_blank', 'noopener');
-    }
-};
-
-/** The retailer's standing counter QR. */
-const upiUri = (qr: Qr) =>
-    `upi://pay?pa=${encodeURIComponent(qr.upiHandle!)}${qr.name ? `&pn=${encodeURIComponent(qr.name)}` : ''}&cu=INR`;
-
-const saveCanvas = (id: string, filename: string) => {
-    const canvas = document.getElementById(id) as HTMLCanvasElement | null;
-    if (!canvas) return;
-    const a = document.createElement('a');
-    a.href = canvas.toDataURL('image/png');
-    a.download = filename;
-    a.click();
-};
-
-const CounterQr = ({ api, getHeaders }: { api: string; getHeaders: () => object }) => {
-    const { user } = useAuth();
-    const [qr, setQr] = useState<Qr | null>(null);
-    const [qrLoaded, setQrLoaded] = useState(false);
-    const [form, setForm] = useState({ name: user?.name || '', account_number: '', account_ifsc: '' });
-    const [generating, setGenerating] = useState(false);
-
-    useEffect(() => {
-        axios.get(`${api}/qr`, getHeaders())
-            .then((res) => res.data.success && setQr(res.data.data))
-            .catch(() => {})
-            .finally(() => setQrLoaded(true));
-    }, []);
-
-    const generate = async () => {
-        if (!form.name.trim() || !form.account_number || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.account_ifsc)) {
-            return toast.error('Enter the account holder name, account number and a valid IFSC');
-        }
-        setGenerating(true);
-        try {
-            const res = await axios.post(`${api}/qr`, form, getHeaders());
-            if (res.data.success) {
-                setQr(res.data.data);
-                toast.success(res.data.message || 'QR code generated');
-            } else toast.error(res.data.message || 'Could not generate the QR code');
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Could not generate the QR code');
-        } finally {
-            setGenerating(false);
-        }
-    };
-
-    return (
-        <section className="rounded-2xl border bg-card p-6 shadow-sm">
-            <h2 className="text-lg font-semibold">QR/UPI Transaction</h2>
-            <p className="mb-4 text-sm text-muted-foreground">A standing UPI QR to print for your counter. Every payment is credited to your Utility Wallet automatically.</p>
-            {!qrLoaded ? (
-                <div className="flex min-h-[200px] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-            ) : qr ? (
-                <div className="flex flex-col items-center gap-3 text-center">
-                    {qr.qrImage ? (
-                        <img src={qr.qrImage} alt="Your UPI QR code" className="w-56 rounded-xl border bg-white p-2" />
-                    ) : qr.upiHandle && (
-                        // QRs generated before the provider's image was kept: draw it from the UPI handle.
-                        <QRCodeCanvas id="counter-qr" value={upiUri(qr)} size={208} marginSize={2} aria-label="Your UPI QR code" className="rounded-xl border bg-white" />
-                    )}
-                    {qr.upiHandle && <p className="break-all font-mono text-sm font-medium">{qr.upiHandle}</p>}
-                    <p className="text-xs text-muted-foreground">Virtual account {qr.virtualAccountId}</p>
-                    <div className="flex flex-wrap justify-center gap-3">
-                        {(qr.qrImage || qr.upiHandle) && (
-                            <button type="button" onClick={() => qr.qrImage ? saveFile(qr.qrImage, 'shahparpay-qr.png') : saveCanvas('counter-qr', 'shahparpay-qr.png')} className="flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5">
-                                <Download className="h-4 w-4" /> Download QR
-                            </button>
-                        )}
-                        {qr.qrPdf && (
-                            <button type="button" onClick={() => saveFile(qr.qrPdf!, 'shahparpay-qr.pdf')} className="flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5">
-                                <Download className="h-4 w-4" /> Printable PDF
-                            </button>
-                        )}
-                    </div>
-                </div>
-            ) : (
-                <div className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-foreground">Account holder name</label>
-                        <input className={INPUT} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-medium text-foreground">Account number</label>
-                            <input className={`${INPUT} font-mono`} inputMode="numeric" value={form.account_number} onChange={(e) => setForm({ ...form, account_number: e.target.value.replace(/\D/g, '').slice(0, 18) })} />
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-medium text-foreground">IFSC</label>
-                            <input className={`${INPUT} font-mono uppercase`} value={form.account_ifsc} onChange={(e) => setForm({ ...form, account_ifsc: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11) })} />
-                        </div>
-                    </div>
-                    <button onClick={generate} disabled={generating} className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold disabled:opacity-50 ${ACTIVE_BUTTON}`}>
-                        {generating ? <Loader2 className="h-5 w-5 animate-spin" /> : <QrCode className="h-5 w-5" />}
-                        {generating ? 'Generating...' : 'Generate QR'}
-                    </button>
-                </div>
-            )}
-        </section>
-    );
-};
-
-// Self-transfer: leftover QR money moves into the Utility Wallet, where
-// Icchhamati credits collections.
-const MOVES = {
-    QR: { key: 'qrBalance', title: 'QR wallet', hint: 'QR/UPI money from before payments went straight to your Utility Wallet.', to: 'Utility Wallet' },
-} as const;
-
-/** The legacy QR wallet balance, and the move out of it into Utility. */
-export const QrWallet = ({ getHeaders, history = [], from = 'QR' }: { getHeaders: () => object; history?: any[]; from?: keyof typeof MOVES }) => {
-    const cfg = MOVES[from];
-    const [qrBalance, setQrBalance] = useState(0);
-    const [move, setMove] = useState({ amount: '', pin: '' });
-    const [moving, setMoving] = useState(false);
-    const walletApi = `${import.meta.env.VITE_BACKEND_URL}/api/wallet`;
-
-    const fetchBalance = async () => {
-        try {
-            const res = await axios.get(`${walletApi}/balance`, getHeaders());
-            if (res.data.success) setQrBalance(Number(res.data.data?.[cfg.key]) || 0);
-        } catch { /* the balance tile just stays as it was */ }
-    };
-
-    // A QR payment arrives by webhook and shows up in the history; the balance
-    // here and in the header follow it.
-    const qrCredits = history.filter((r) => r.metadata?.collectionChannel === 'QR').length;
-    useEffect(() => {
-        fetchBalance();
-        if (qrCredits) window.dispatchEvent(new Event('wallet-updated'));
-    }, [qrCredits]);
-
-    const moveToMain = async () => {
-        const amount = Number(move.amount);
-        if (!(amount > 0)) return toast.error('Enter an amount');
-        if (amount > qrBalance) return toast.error(`That is more than your ${cfg.title} balance`);
-        if (!/^\d{4}$/.test(move.pin)) return toast.error('Enter your 4-digit wallet PIN');
-        setMoving(true);
-        try {
-            const res = await axios.post(`${walletApi}/transfer`, { amount, pin: move.pin, from }, getHeaders());
-            if (res.data.success) {
-                toast.success(res.data.message || `Moved to your ${cfg.to}`);
-                setMove({ amount: '', pin: '' });
-                fetchBalance();
-                window.dispatchEvent(new Event('wallet-updated'));
-            } else toast.error(res.data.message || 'Transfer failed');
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Transfer failed');
-        } finally {
-            setMoving(false);
-        }
-    };
-
-    // QR payments now credit Utility directly; the QR card only lingers to empty an old balance.
-    if (from === 'QR' && qrBalance <= 0) return null;
-
-    return (
-        <section className="grid gap-6 rounded-2xl border bg-card p-6 shadow-sm lg:col-span-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:items-end">
-            <div className="flex flex-col gap-3">
-                <div className="flex items-start justify-between gap-3">
-                    <div>
-                        <h2 className="text-lg font-semibold">{cfg.title}</h2>
-                        <p className="text-sm text-muted-foreground">{cfg.hint}</p>
-                    </div>
-                    <div className={`rounded-xl p-2.5 ${SILVER_TILE}`}><Wallet className="h-5 w-5" /></div>
-                </div>
-                <p className="text-4xl font-bold tracking-tight tabular-nums">₹{qrBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-start">
-                <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium text-foreground">Amount</label>
-                    <div className="relative">
-                        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 font-semibold text-muted-foreground">₹</span>
-                        <input inputMode="decimal" className={`${INPUT} pl-8 tabular-nums`} value={move.amount} onChange={(e) => setMove({ ...move, amount: e.target.value.replace(/[^\d.]/g, '') })} />
-                    </div>
-                    <button type="button" onClick={() => setMove({ ...move, amount: String(qrBalance) })} className="self-start text-xs font-semibold text-muted-foreground hover:text-foreground">Use full balance</button>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium text-foreground">Wallet PIN</label>
-                    <div className="relative">
-                        <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <input type="password" inputMode="numeric" autoComplete="off" className={`${INPUT} pl-10 tracking-[0.4em]`} value={move.pin} onChange={(e) => setMove({ ...move, pin: e.target.value.replace(/\D/g, '').slice(0, 4) })} />
-                    </div>
-                </div>
-                <button onClick={moveToMain} disabled={moving || qrBalance <= 0} className={`flex items-center justify-center gap-2 whitespace-nowrap rounded-xl px-5 py-2.5 font-bold disabled:opacity-50 sm:mt-[26px] ${ACTIVE_BUTTON}`}>
-                    {moving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Landmark className="h-5 w-5" />}
-                    {moving ? 'Moving...' : `Move to ${cfg.to}`}
-                    {!moving && <ArrowRight className="h-4 w-4" />}
-                </button>
-            </div>
-        </section>
     );
 };
 

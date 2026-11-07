@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { AepsProvider } from '../lib/services';
 
 type UserRole = 'admin' | 'distributor' | 'retailer';
 
@@ -15,14 +14,10 @@ interface User {
     email: string;
     contactNumber?: string;
     profilePicture?: string;
-    isMerchantKycComplete?: boolean;
-    activeAepsPipes?: string[];
     aadhaarNumber?: string;
     dob?: string;
     /** Services this retailer's distributor has switched off. */
     disabledServices?: string[];
-    /** The AEPS provider this retailer is onboarded with; absent means PaySprint. */
-    aepsProvider?: AepsProvider;
     /** Self signups wait for an admin; absent means approved. */
     verificationStatus?: 'pending' | 'approved' | 'rejected';
     /** Why the admin rejected the signup. */

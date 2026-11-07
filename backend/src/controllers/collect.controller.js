@@ -18,7 +18,6 @@ import Retailer from '../models/users/retailer.model.js';
  * only touched after the gateway confirms.
  */
 
-const getFrontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:5173';
 
 const normalizePaymentUrl = (rawUrl, transactionId) => {
   if (!rawUrl) return null;
@@ -123,8 +122,11 @@ export const createOrder = async (req, res) => {
       name: String(name).trim(),
       email: payerEmail,
       mobile_number: payerMobile,
-      success_url: `${getFrontendUrl()}/payments/collect?ref=${referenceId}&result=success`,
-      failure_url: `${getFrontendUrl()}/payments/collect?ref=${referenceId}&result=failure`,
+      // The customer comes back through our server, which asks the gateway at
+      // once: the payment is credited the moment they return, with no wait for
+      // the cron or the retailer's Check.
+      success_url: `${returnBase(req)}/api/collect/return/${referenceId}`,
+      failure_url: `${returnBase(req)}/api/collect/return/${referenceId}`,
     });
 
     // The gateway returns the link at the top level — {status, message,
@@ -198,6 +200,44 @@ export const createOrder = async (req, res) => {
  * touched, so a customer refreshing the callback page, the retailer polling and
  * a later reconciliation cannot credit the same order twice.
  */
+/** This server's public origin, for the gateway's return URLs. */
+const returnBase = (req) => process.env.BACKEND_PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
+
+const returnPage = (title, text, tone) => `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,sans-serif;background:#f6f6f8;color:#18181b}
+.c{max-width:360px;margin:24px;padding:32px;border-radius:20px;background:#fff;box-shadow:0 4px 24px #0001;text-align:center}
+h1{font-size:20px;margin:0 0 8px;color:${tone}}p{margin:0;color:#52525b;line-height:1.5}</style></head>
+<body><div class="c"><h1>${title}</h1><p>${text}</p></div></body></html>`;
+
+/**
+ * GET|POST /api/collect/return/:ref (public): where the gateway sends the
+ * customer after checkout. The redirect itself proves nothing, so the order is
+ * verified with the gateway here and settled once (syncCollectionTransaction
+ * claims it out of PENDING), then the customer sees the result.
+ */
+export const paymentReturn = async (req, res) => {
+  try {
+    const reference = String(req.params.ref || '');
+    const txn = /^PG\d{8,24}$/.test(reference)
+      ? await Transaction.findOne({ transactionId: reference, type: 'PG_COLLECTION' })
+      : null;
+    if (!txn) return res.status(404).type('html').send(returnPage('Payment not found', 'This payment link is not valid.', '#b91c1c'));
+
+    const { transaction } = txn.status === 'PENDING' ? await syncCollectionTransaction(txn) : { transaction: txn };
+    const amount = `₹${Number(transaction.amount || 0).toLocaleString('en-IN')}`;
+    if (transaction.status === 'SUCCESS') {
+      return res.type('html').send(returnPage('Payment successful', `${amount} has been paid. You can close this page.`, '#047857'));
+    }
+    if (transaction.status === 'FAILED') {
+      return res.type('html').send(returnPage('Payment failed', `The payment of ${amount} did not go through. No money was taken; if it was, the bank returns it.`, '#b91c1c'));
+    }
+    return res.type('html').send(returnPage('Payment processing', `Your payment of ${amount} is being confirmed. You can close this page; the shop will see it once the bank confirms.`, '#b45309'));
+  } catch (error) {
+    console.error('Payment return error:', error?.message);
+    return res.status(500).type('html').send(returnPage('Payment processing', 'We could not confirm the payment right now. You can close this page; the shop will see it once the bank confirms.', '#b45309'));
+  }
+};
+
 export const verifyOrder = async (req, res) => {
   try {
     const { transactionId, txnid } = req.body;
@@ -306,25 +346,9 @@ export const getCollectionHistory = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(100);
 
-    // Make the Recent Collections table live: reconcile pending orders every
-    // time it is loaded/refreshed instead of returning stale local statuses.
-    await Promise.all(history
-      .filter((txn) => txn.status === 'PENDING')
-      .map(async (txn) => {
-        try {
-          await syncCollectionTransaction(txn);
-        } catch (error) {
-          console.error('Collection status refresh failed:', {
-            transactionId: txn.transactionId,
-            message: error?.response?.data || error?.message,
-          });
-        }
-      }));
-
-    const refreshedHistory = await Transaction.find({ userId: req.user.id, type: 'PG_COLLECTION' })
-      .sort({ createdAt: -1 })
-      .limit(100);
-    return res.status(200).json({ success: true, data: refreshedHistory });
+    // Read only: a pending link is checked with the gateway when the retailer
+    // presses Check on it (POST /verify), never all at once on load.
+    return res.status(200).json({ success: true, data: history });
   } catch (error) {
     console.error('Collection History Error:', error);
     return res.status(500).json({ success: false, message: 'Failed to fetch collections' });

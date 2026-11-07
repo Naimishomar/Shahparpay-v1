@@ -3,6 +3,7 @@ import { generateLeadUrl, checkLeadStatus } from '../utils/paysprint.util.js';
 import Retailer from '../models/users/retailer.model.js';
 import Transaction from '../models/transaction.model.js';
 import { LEAD_RATES, settleCommissions } from '../utils/wallet.util.js';
+import { hasCallbackKey } from '../utils/callbackKey.js';
 
 // Helper to get merchantcode
 const getMerchantCode = async (userId) => {
@@ -170,8 +171,25 @@ export const getLeadHistory = async (req, res) => {
   }
 };
 
-// PaySprint Webhook Callback
-export const leadCallback = async (req, res) => {
+/**
+ * PaySprint's single account callback URL, now used only for Lead Generation:
+ *   https://<host>/api/paysprint/callback?key=<PAYSPRINT_CALLBACK_KEY>
+ * Public (server-to-server), so the shared key is the only guard: unsigned, a
+ * retailer could approve their own lead and collect the commission. Replies
+ * PaySprint's { status, message } shape; anything else and it retries.
+ */
+export const paysprintCallback = async (req, res) => {
+  if (!hasCallbackKey(req, 'PAYSPRINT_CALLBACK_KEY')) {
+    return res.status(200).json({ status: 400, message: 'Unauthorized callback' });
+  }
+  if (req.body?.event !== 'LEAD_GENERATION_CALLBACK') {
+    console.error('[PaySprint Callback] Unhandled event:', req.body?.event);
+    return res.status(200).json({ status: 400, message: 'Unsupported event' });
+  }
+  return leadCallback(req, res);
+};
+
+const leadCallback = async (req, res) => {
   try {
     // According to docs, the payload has: { "event": "LEAD_GENERATION_CALLBACK", "param": { ... } }
     const { event, param } = req.body;

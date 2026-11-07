@@ -24,11 +24,11 @@ import {
 } from '../controllers/icchhamatiAeps.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 import { upload } from '../middlewares/multer.middleware.js';
-import { requireService, requireAepsProvider } from '../middlewares/service.middleware.js';
+import { requireService } from '../middlewares/service.middleware.js';
 
-// Mounted at /api/aeps/icchhamati. Only retailers onboarded with Icchhamati get in.
+// Mounted at /api/aeps/icchhamati.
 const router = express.Router();
-router.use(authMiddlewares, requireAepsProvider('icchhamati'));
+router.use(authMiddlewares);
 
 // Up to 100 MB: Android cameras ignore any quality setting, so a 30-second
 // clip is often 30-60 MB. Icchhamati takes 20 MB as a file; anything larger is

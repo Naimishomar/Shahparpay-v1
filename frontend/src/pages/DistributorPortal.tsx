@@ -9,14 +9,13 @@ import {
     Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
-import MerchantKycModal from '../components/MerchantKycModal';
 import EditRetailerModal from '../components/EditRetailerModal';
 import NetworkDashboard, { type DirectoryPreset } from '../components/distributor/NetworkDashboard';
 import RetailerDirectory from '../components/distributor/RetailerDirectory';
 import RetailerDetail from '../components/distributor/RetailerDetail';
 import CreateRetailerWizard from '../components/distributor/CreateRetailerWizard';
 import DistributorProfile from '../components/distributor/DistributorProfile';
-import { PAYSPRINT_ENABLED, SERVICES } from '../lib/services';
+import { SERVICES } from '../lib/services';
 
 const DistributorPortal = () => {
     const { user, token, isInitializing } = useAuth();
@@ -24,8 +23,6 @@ const DistributorPortal = () => {
     const { tab } = useParams<{ tab: string }>();
     const activeTab = tab ? tab.replace('-', '_') : 'dashboard';
     const setActiveTab = (t: string) => navigate('/distributor/' + t);
-    
-    const [isExistingMerchant, setIsExistingMerchant] = useState(false);
     
     // Data states
     const [retailers, setRetailers] = useState<any[]>([]);
@@ -36,7 +33,6 @@ const DistributorPortal = () => {
     const [showAddFrModal, setShowAddFrModal] = useState(false);
     const [frFormData, setFrFormData] = useState({ transactionMode: '', amount: '', bankUtr: '', depositDate: '', remarks: '' });
     const [frDepositSlip, setFrDepositSlip] = useState<File | null>(null);
-    const [showMerchantKycModal, setShowMerchantKycModal] = useState(false);
 
     // Form states
     const [formData, setFormData] = useState({
@@ -44,7 +40,6 @@ const DistributorPortal = () => {
         dob: '', city: '', landmark: '', district: '', state: '', 
         businessName: '', businessAddress: '', 
         aadhaarNumber: '', panNumber: '', hasGst: false, gstNumber: '',
-        aepsProvider: PAYSPRINT_ENABLED ? 'paysprint' : 'icchhamati',
         // Every service is on by default; the distributor switches off what they don't want.
         ...Object.fromEntries(SERVICES.map((svc) => [`svc_${svc.key}`, 'Yes'])),
         
@@ -178,7 +173,6 @@ const DistributorPortal = () => {
         if (panPicture) data.append('panPicture', panPicture);
         if (profilePicture) data.append('profilePicture', profilePicture);
         data.append('merchantCode', merchantCode);
-        data.append('isExistingMerchant', String(isExistingMerchant && formData.aepsProvider !== 'icchhamati'));
 
         try {
             const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/create-retailer`, {
@@ -249,50 +243,6 @@ const DistributorPortal = () => {
             toast.error('Failed to update profile.');
         } finally {
             setIsLoading(false);
-        }
-    };
-
-    const handleGenerateKycLink = async (merchantId: string) => {
-        const loadingToast = toast.loading("Generating KYC Link...");
-        // Open window synchronously to bypass popup blockers
-        const newWindow = window.open('', '_blank');
-        
-        try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/paysprint/get-onboard-url`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ merchantId, isNew: true })
-            });
-            const data = await res.json();
-            toast.dismiss(loadingToast);
-            if (data.success) {
-                if (data.url) {
-                    try {
-                        navigator.clipboard.writeText(data.url);
-                        toast.success('KYC Link copied to clipboard!');
-                    } catch (err) {}
-                    
-                    if (newWindow) {
-                        newWindow.location.href = data.url;
-                    } else {
-                        toast.error("Popup blocked! Please allow popups or paste the copied link.");
-                    }
-                } else if (data.alreadyOnboarded) {
-                    if (newWindow) newWindow.close();
-                    setShowMerchantKycModal(true);
-                }
-            } else {
-                if (newWindow) newWindow.close();
-                toast.error(data.message || 'Failed to generate KYC link');
-            }
-        } catch (err) {
-            if (newWindow) newWindow.close();
-            toast.dismiss(loadingToast);
-            toast.error('Error generating KYC link');
         }
     };
 
@@ -426,7 +376,6 @@ const DistributorPortal = () => {
                             onDaysChange={setDays}
                             onBack={() => setSelectedRetailer(null)}
                             onEdit={() => setEditingRetailer(selectedRetailer)}
-                            onKycLink={() => handleGenerateKycLink(selectedRetailer._id)}
                             onServicesChanged={(patch) => {
                                 setSelectedRetailer({ ...selectedRetailer, ...patch });
                                 setRetailers((list) => list.map((r) => (r._id === selectedRetailer._id ? { ...r, ...patch } : r)));
@@ -440,7 +389,6 @@ const DistributorPortal = () => {
                             onDaysChange={setDays}
                             preset={directoryPreset}
                             onOpenRetailer={openRetailer}
-                            onKycLink={handleGenerateKycLink}
                             onCreate={() => setActiveTab('create')}
                         />
                     )
@@ -650,9 +598,6 @@ const DistributorPortal = () => {
                         setFormData={(f) => setFormData(f as typeof formData)}
                         parentName={user?.name || 'you'}
                         merchantCode={merchantCode}
-                        setMerchantCode={setMerchantCode}
-                        isExistingMerchant={isExistingMerchant}
-                        setIsExistingMerchant={setIsExistingMerchant}
                         aadhaarPicture={aadhaarPicture} setAadhaarPicture={setAadhaarPicture}
                         panPicture={panPicture} setPanPicture={setPanPicture}
                         profilePicture={profilePicture} setProfilePicture={setProfilePicture}
@@ -680,11 +625,6 @@ const DistributorPortal = () => {
                         isPanLocked={isPanLocked}
                         onViewNetwork={() => setActiveTab('dashboard')}
                     />
-                )}
-
-                {/* Bank 3 Aeps / Biometric KYC Modal */}
-                {showMerchantKycModal && (
-                    <MerchantKycModal onClose={() => setShowMerchantKycModal(false)} />
                 )}
 
                 {/* Edit Retailer Modal */}

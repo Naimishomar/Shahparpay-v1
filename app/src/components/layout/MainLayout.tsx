@@ -29,7 +29,6 @@ const TITLES: Record<string, string> = {
   DMT: 'Money transfer',
   Recharge: 'Mobile recharge',
   BBPS: 'Pay bills',
-  Collect: 'Collect payment',
   AddMoney: 'Add money',
   AepsSettlement: 'Withdraw',
   AdminPortal: 'Overview',

@@ -4,7 +4,6 @@ import {
   getCircles,
   getBillCategories,
   browsePlans,
-  fetchDthInfo,
   doRecharge,
   getHistory,
   checkStatus,
@@ -33,10 +32,6 @@ router.get('/circles', cacheFor(24 * 3600), getCircles);
 router.get('/bill-categories', cacheFor(6 * 3600), getBillCategories);
 router.get('/operators/:type', cacheFor(6 * 3600), getOperators);
 router.post('/browse-plan', browsePlans);
-// PAYSPRINT-DISABLED: DTH customer details came from PaySprint's HLR lookup.
-// Icchhamati has no equivalent (fetch-bill answers "Invalid Service Provider"
-// for DTH billers); DTH recharge itself runs on Icchhamati.
-// router.post('/dth-info', fetchDthInfo);
 router.post('/fetch-bill', fetchBill);
 router.post('/do-recharge', doRecharge);
 router.get('/history', getHistory);

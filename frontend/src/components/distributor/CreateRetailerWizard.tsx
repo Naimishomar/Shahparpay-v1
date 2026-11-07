@@ -5,8 +5,7 @@ import {
 } from 'lucide-react';
 import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE } from './shared';
 import { INDIAN_STATES } from '../../constants';
-import { AEPS_PROVIDERS, PAYSPRINT_ENABLED, SERVICES } from '../../lib/services';
-import AepsProviderPicker from '../AepsProviderPicker';
+import { SERVICES } from '../../lib/services';
 
 export type RetailerForm = Record<string, string | boolean>;
 
@@ -81,7 +80,7 @@ const knownState = (name: string) => {
 };
 
 const CreateRetailerWizard = ({
-    formData, setFormData, parentName, merchantCode, setMerchantCode, isExistingMerchant, setIsExistingMerchant,
+    formData, setFormData, parentName, merchantCode,
     aadhaarPicture, setAadhaarPicture, panPicture, setPanPicture, profilePicture, setProfilePicture,
     otpSent, sendingOtp, isEmailVerified, verifyingEmail, onSendOtp, onVerifyEmail, onResetEmail,
     isLoading, message, onSubmit, kind = 'retailer',
@@ -90,9 +89,6 @@ const CreateRetailerWizard = ({
     setFormData: (f: RetailerForm) => void;
     parentName: string;
     merchantCode: string;
-    setMerchantCode: (v: string) => void;
-    isExistingMerchant: boolean;
-    setIsExistingMerchant: (v: boolean) => void;
     aadhaarPicture: File | null; setAadhaarPicture: (f: File | null) => void;
     panPicture: File | null; setPanPicture: (f: File | null) => void;
     profilePicture: File | null; setProfilePicture: (f: File | null) => void;
@@ -146,8 +142,6 @@ const CreateRetailerWizard = ({
 
     const v = (k: string) => String(formData[k] ?? '');
     const set = (k: string, value: string | boolean) => setFormData({ ...formData, [k]: value });
-    const provider = PAYSPRINT_ENABLED && v('aepsProvider') !== 'icchhamati' ? 'paysprint' : 'icchhamati';
-    const isPaysprint = provider === 'paysprint';
 
     // Errors for every step, shown only once the user has tried to leave that step.
     const errors: Record<string, string>[] = [
@@ -158,7 +152,6 @@ const CreateRetailerWizard = ({
             ...(!MOBILE.test(v('contactNumber')) && { contactNumber: 'Enter a 10-digit mobile number' }),
             ...(!v('dob') && { dob: 'Required' }),
             ...(v('password').length < 6 && { password: 'At least 6 characters' }),
-            ...(isRetailer && isPaysprint && isExistingMerchant && !merchantCode.trim() && { merchantCode: 'Enter the existing merchant ID' }),
         },
         {
             ...(!v('businessName').trim() && { businessName: 'Required' }),
@@ -326,43 +319,9 @@ const CreateRetailerWizard = ({
                             )}
                             {isRetailer && (
                             <div className="md:col-span-2 rounded-2xl border bg-background p-4">
-                                {PAYSPRINT_ENABLED && (
-                                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b pb-4">
-                                    <div>
-                                        <p className="text-sm font-semibold">AEPS provider</p>
-                                        <p className="text-xs text-muted-foreground">They start on this provider. You can add the other one later from their page.</p>
-                                    </div>
-                                    <AepsProviderPicker
-                                        value={provider}
-                                        onChange={(p) => {
-                                            set('aepsProvider', p);
-                                            if (p === 'icchhamati') setIsExistingMerchant(false);
-                                        }}
-                                    />
-                                </div>
-                                )}
-                                {isPaysprint && (
-                                <label className="flex cursor-pointer items-start gap-3">
-                                    <input
-                                        type="checkbox"
-                                        checked={isExistingMerchant}
-                                        onChange={(e) => setIsExistingMerchant(e.target.checked)}
-                                        className="mt-0.5 h-4 w-4 rounded border-border accent-zinc-900 dark:accent-zinc-200"
-                                    />
-                                    <div>
-                                        <p className="text-sm font-semibold">Already a PaySprint merchant</p>
-                                        <p className="text-xs text-muted-foreground">Tick this to migrate them with their existing merchant ID instead of a new one.</p>
-                                    </div>
-                                </label>
-                                )}
-                                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                                    <Field label={isExistingMerchant ? 'Existing merchant ID' : 'Retailer ID (auto-generated)'} error={err('merchantCode')}>
-                                        <input
-                                            value={merchantCode}
-                                            onChange={(e) => setMerchantCode(e.target.value.toUpperCase())}
-                                            disabled={!isExistingMerchant}
-                                            className={`${INPUT} font-mono disabled:cursor-not-allowed disabled:opacity-70`}
-                                        />
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <Field label="Retailer ID (auto-generated)">
+                                        <input value={merchantCode} disabled className={`${INPUT} font-mono disabled:cursor-not-allowed disabled:opacity-70`} />
                                     </Field>
                                     <Field label="Parent distributor">
                                         <input value={parentName} disabled className={`${INPUT} disabled:cursor-not-allowed disabled:opacity-70`} />
@@ -487,8 +446,7 @@ const CreateRetailerWizard = ({
                                 { title: 'Account', to: 0, rows: [
                                     ['Name', `${v('prefix')} ${v('firstName')} ${v('lastName')}`],
                                     ['Email', v('email')], ['Mobile', v('contactNumber') && `+91 ${v('contactNumber')}`],
-                                    ['Date of birth', v('dob')], [isRetailer ? 'Retailer ID' : 'Distributor ID', merchantCode + (isRetailer && isPaysprint && isExistingMerchant ? ' (existing)' : '')],
-                                    ...(isRetailer ? [['AEPS provider', AEPS_PROVIDERS.find((p) => p.key === provider)?.label || '']] : []),
+                                    ['Date of birth', v('dob')], [isRetailer ? 'Retailer ID' : 'Distributor ID', merchantCode],
                                 ] },
                                 { title: 'KYC & business', to: 1, rows: [
                                     ['Aadhaar', v('aadhaarNumber') && `XXXX XXXX ${v('aadhaarNumber').slice(-4)}`], ['PAN', v('panNumber')],

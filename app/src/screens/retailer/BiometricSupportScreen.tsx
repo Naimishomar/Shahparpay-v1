@@ -4,25 +4,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, themed, space, type as t } from '../../theme/colors';
 import { Card, CardContent } from '@/components/ui/Card';
 import { IconTile } from '@/components/ui/Gradient';
-import {
-  Screen,
-  SectionTitle,
-  Row,
-  SuccessBanner,
-  shortDate,
-  SkeletonCard,
-  SkeletonRows,
-  SkeletonTitle,
-} from '@/components/ui/Screen';
+import { Screen, SectionTitle, SuccessBanner } from '@/components/ui/Screen';
 import { BiometricCapture, useBiometricDevice } from '@/components/aeps/BiometricCapture';
-import { useAsync } from '@/hooks/useAsync';
-import { useAuth } from '@/context/AuthContext';
-import api from '@/services/api';
 
 /**
  * Fingerprint capture needs a vendor RD service app installed on the device;
- * the store links below are the only actionable part of this screen. Everything
- * else reports the merchant's live biometric readiness from the backend.
+ * the store links below point to them, and a test capture checks the scanner.
  */
 const RD_SERVICES = [
   { name: 'Mantra RD Service', pkg: 'com.mantra.rdservice' },
@@ -36,22 +23,14 @@ const RD_SERVICES = [
 const TIPS = [
   'Device not detected: reconnect the scanner and open the RD service app once.',
   'Capture timeout: clean the sensor and press firmly for the full countdown.',
-  'Daily 2FA failing: complete it from the AEPS screen before the first transaction of the day.',
-  'Pipe inactive: check Pipe Status — onboarding may still be pending with the bank.',
+  'Daily login failing: complete it from the AEPS screen before the first transaction of the day.',
 ];
 
 export const BiometricSupportScreen: React.FC = () => {
-  const { user } = useAuth();
   const { device, setDevice } = useBiometricDevice();
   // Discarded immediately: this is a "does the scanner work" check, not a
   // transaction, so the PID block must never leave the screen.
   const [testPassed, setTestPassed] = useState(false);
-  const merchantcode = user?.retailerId || user?.code;
-  const status = useAsync<any>(
-    async () => (await api.getAepsMerchantStatus({ merchantcode })).data,
-    [merchantcode]
-  );
-
   const openStore = (pkg: string) => {
     const url =
       Platform.OS === 'android'
@@ -60,33 +39,8 @@ export const BiometricSupportScreen: React.FC = () => {
     Linking.openURL(url).catch(() => {});
   };
 
-  const activePipes: string[] = status.data?.activePipes ?? [];
-
   return (
-    <Screen
-      loading={status.loading}
-      skeleton={<View style={{ gap: 16 }}><SkeletonTitle /><SkeletonCard><SkeletonRows count={3} amount={false} /></SkeletonCard><SkeletonTitle /><SkeletonCard><SkeletonRows count={3} amount={false} /></SkeletonCard></View>}
-      refreshing={status.refreshing}
-      onRefresh={status.refresh}
-      error={status.error}
-      onRetry={status.reload}
-    >
-      <SectionTitle>Biometric readiness</SectionTitle>
-      <Card>
-        <CardContent>
-          <Row
-            label="Merchant eKYC"
-            value={<StatusText status={status.data?.isMerchantKycComplete ? 'COMPLETED' : 'PENDING'} />}
-          />
-          <Row
-            label="Daily 2FA today"
-            value={<StatusText status={status.data?.isDailyAuthDoneToday ? 'SUCCESS' : 'PENDING'} />}
-          />
-          <Row label="Last daily auth" value={shortDate(status.data?.lastDailyAuthDate)} />
-          <Row label="Active pipes" value={activePipes.length ? activePipes.join(', ') : 'None'} last />
-        </CardContent>
-      </Card>
-
+    <Screen>
       <SectionTitle>RD service apps</SectionTitle>
       <Card>
         <CardContent>
@@ -153,21 +107,6 @@ export const BiometricSupportScreen: React.FC = () => {
       </Card>
 
     </Screen>
-  );
-};
-
-/** BHIM status: small coloured text, never a filled pill. */
-const StatusText: React.FC<{ status?: string | null }> = ({ status }) => {
-  const s = String(status || 'PENDING').toUpperCase();
-  const color = /SUCCESS|COMPLETE|APPROVED|ACTIVE|ACCEPTED|CONVERTED/.test(s)
-    ? colors.success
-    : /FAIL|REJECT/.test(s)
-      ? colors.destructive
-      : colors.warning;
-  return (
-    <Text style={{ fontSize: t.small, fontWeight: '500', color }}>
-      {s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, ' ')}
-    </Text>
   );
 };
 

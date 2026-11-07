@@ -52,14 +52,11 @@ type TokenRefreshedHandler = (token: string, user?: any, role?: string) => void;
  */
 const MINUTE = 60_000;
 const CACHE_TTL: Record<string, number> = {
-  // Reference data: PaySprint caches the bank list server-side for 24h.
-  [API_ENDPOINTS.aeps.banks]: 60 * MINUTE,
+  // Reference data.
   [API_ENDPOINTS.recharge.operators]: 60 * MINUTE,
   [API_ENDPOINTS.recharge.circles]: 60 * MINUTE,
   [API_ENDPOINTS.recharge.billCategories]: 60 * MINUTE,
   // Onboarding state changes only through flows that mutate and thus flush.
-  [API_ENDPOINTS.aeps.merchantStatus]: 2 * MINUTE,
-  [API_ENDPOINTS.aeps.pipesVerify]: 5 * MINUTE,
   [API_ENDPOINTS.pan.myPsaStatus]: 5 * MINUTE,
   [API_ENDPOINTS.pan.myStdPsaStatus]: 5 * MINUTE,
   // Money: short enough that a stale read is never how a retailer finds out.
@@ -113,9 +110,8 @@ class ApiService {
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
-        // PaySprint wants accessmode APP for Android-captured biometrics and
-        // SITE for the web dashboard. The backend reads this header to decide;
-        // without it every AEPS/eKYC call from the app is sent as SITE.
+        // The backend reports app-originated Micro ATM results as platform
+        // "App" (web is "Web"); it reads this header to tell them apart.
         'X-Client': 'APP',
       },
     });
@@ -140,7 +136,7 @@ class ApiService {
 
         // Only the genuinely public endpoints are exempt. `/api/auth/` also
         // hosts authenticated routes (update-profile, change-password,
-        // paysprint/*, create-retailer); excluding the whole prefix meant an
+        // create-retailer); excluding the whole prefix meant an
         // expired token failed those outright instead of refreshing.
         const isPublicAuthCall = PUBLIC_AUTH_PATHS.some((path) => original?.url?.startsWith(path));
 
@@ -373,10 +369,6 @@ class ApiService {
     return this.post(API_ENDPOINTS.auth.verifyEmailOtp, { email, otp });
   }
 
-  async getPaysprintOnboardUrl(merchantId: string, isNew: boolean, pipe?: string, callbackUrl?: string) {
-    return this.post(API_ENDPOINTS.auth.paysprintOnboardUrl, { merchantId, isNew, pipe, callbackUrl });
-  }
-
   // Wallet endpoints
   async getWalletBalance() {
     return this.get(API_ENDPOINTS.wallet.balance);
@@ -421,85 +413,6 @@ class ApiService {
 
   async changePassword(data: { email: string; otp: string; newPassword: string }) {
     return this.put(API_ENDPOINTS.auth.changePassword, data);
-  }
-
-  async updateKycStatus(jwt: string) {
-    return this.post(API_ENDPOINTS.auth.paysprintUpdateKyc, { jwt });
-  }
-
-  // ---------------------------------------------------------------- AEPS
-  async getAepsBanks() {
-    return this.get(API_ENDPOINTS.aeps.banks);
-  }
-
-  /** merchantcode is optional: the backend falls back to the caller. */
-  async getAepsMerchantStatus(params?: {
-    merchantcode?: string;
-    pipe?: string;
-    forceRefresh?: boolean;
-  }) {
-    return this.get(API_ENDPOINTS.aeps.merchantStatus, params);
-  }
-
-  async verifyAepsPipes() {
-    return this.get(API_ENDPOINTS.aeps.pipesVerify);
-  }
-
-  async getOnboardingPlan(pipe: string) {
-    return this.get(API_ENDPOINTS.aeps.onboardingPlan, { pipe });
-  }
-
-  async getPidOptions(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.aeps.pidOptions, data);
-  }
-
-  async aepsBalanceEnquiry(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.aeps.balanceEnquiry, data);
-  }
-
-  /** Withdrawals above the OTP threshold need this first. */
-  async aepsInitiateOtp(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.aeps.initiateOtp, data);
-  }
-
-  async aepsCashWithdrawal(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.aeps.cashWithdrawal, data);
-  }
-
-  async aepsCashDeposit(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.aeps.cashDeposit, data);
-  }
-
-  async aepsAadhaarPay(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.aeps.aadhaarPay, data);
-  }
-
-  async aepsMiniStatement(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.aeps.miniStatement, data);
-  }
-
-  async aepsTxnStatus(reference: string) {
-    return this.post(API_ENDPOINTS.aeps.txnStatus, { reference });
-  }
-
-  async aepsKycSendOtp(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.aeps.kycSendOtp, data);
-  }
-
-  async aepsKycResendOtp(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.aeps.kycResendOtp, data);
-  }
-
-  async aepsKycVerifyOtp(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.aeps.kycVerifyOtp, data);
-  }
-
-  async aepsActivateMerchant(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.aeps.kycActivate, data);
-  }
-
-  async aepsDailyAuth(data: Record<string, any>) {
-    return this.post(API_ENDPOINTS.aeps.dailyAuth, data);
   }
 
   // ------------------------------------------------------ Icchhamati AEPS
@@ -665,10 +578,6 @@ class ApiService {
     return this.post(API_ENDPOINTS.recharge.browsePlan, data);
   }
 
-  async getDthInfo(data: { dthNumber: string; operator: string }) {
-    return this.post(API_ENDPOINTS.recharge.dthInfo, data);
-  }
-
   async fetchBill(data: {
     caNumber: string;
     operator: string;
@@ -708,20 +617,6 @@ class ApiService {
 
   async getCollectionHistory() {
     return this.get(API_ENDPOINTS.collect.history);
-  }
-
-  /** The retailer's standing counter QR, or null before one is generated. */
-  async getCollectionQr() {
-    return this.get(API_ENDPOINTS.collect.qr);
-  }
-
-  async generateCollectionQr(data: { name: string; account_number: string; account_ifsc: string }) {
-    return this.post(API_ENDPOINTS.collect.qr, data);
-  }
-
-  /** Leftover QR wallet money -> Utility, behind the wallet PIN. */
-  async transferQrToMain(data: { amount: number; pin: string }) {
-    return this.post(API_ENDPOINTS.wallet.transfer, { ...data, from: 'QR' });
   }
 
   // --------------------------------------------------------------- TOP-UP
@@ -931,17 +826,8 @@ class ApiService {
   }
 
   // ---------------------------------------------------------------- MATM
-  /** Initialises PaySprint MATM session and parameters for mobile SDK/Intent initiation. */
-  async getMatmConfig() {
-    return this.post(API_ENDPOINTS.matm.config);
-  }
-
   async processMatm(data: { mobile: string; data: Record<string, any> }) {
     return this.post(API_ENDPOINTS.matm.request, data);
-  }
-
-  async checkMatmStatus(transactionId: string) {
-    return this.post(API_ENDPOINTS.matm.status, { transactionId });
   }
 
   /** Icchhamati (Fingpay) Micro ATM: the merchant login and a fresh txn id for the Android SDK. */

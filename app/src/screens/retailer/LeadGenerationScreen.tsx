@@ -10,7 +10,7 @@ import { useAsync } from '@/hooks/useAsync';
 import { INDIAN_STATES } from '@/constants';
 import api from '@/services/api';
 
-// Product codes the backend forwards to PaySprint; same list as the web.
+// Product codes the backend forwards to PaySprint (lead generation still runs there); same list as the web.
 const PRODUCTS = [
   { key: 'CC', label: 'Credit Card' },
   { key: 'PL', label: 'Personal Loan' },

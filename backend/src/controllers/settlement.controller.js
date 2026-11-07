@@ -1,7 +1,5 @@
-import axios from 'axios';
 import AepsWallet from '../models/aepsWallet.model.js';
 import Transaction from '../models/transaction.model.js';
-import { generatePaySprintToken } from '../utils/paysprint.util.js';
 import Retailer from '../models/users/retailer.model.js';
 import Distributor from '../models/users/distributor.model.js';
 import { checkWalletPin } from '../utils/walletPin.js';
@@ -31,16 +29,6 @@ const pendingPayoutResponse = (res, transactionId, apiMessage) =>
     detail: typeof apiMessage === 'string' ? apiMessage : undefined,
   });
 
-const getPaySprintHeaders = () => {
-  return {
-    Token: generatePaySprintToken(),
-    Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-    'Content-Type': 'application/json',
-  };
-};
-
-const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
-
 const getUser = async (req) => {
   if (req.user.role === 'distributor') {
     return Distributor.findById(req.user.id);
@@ -54,7 +42,7 @@ const getUser = async (req) => {
  * number. Nothing else can be picked: the beneficiary is looked up again from
  * the provider at payout time, so an id from the browser is never trusted.
  * Accounts are added, verified (OTP + penny drop) and removed in DMT; the old
- * PaySprint add / document / delete steps have nothing to do here.
+ * provider's add / document / delete steps have nothing to do here.
  */
 const registeredMobile = async (req) => requireMobile((await getUser(req))?.contactNumber);
 
@@ -293,9 +281,10 @@ export const initiateSettlement = async (req, res) => {
   }
 };
 
-// STATUS ENQUIRY — Icchhamati settlements read the payout listing; older
-// PaySprint ones (pre-Icchhamati, still pending) ask PaySprint.
-// txn_status: 0 = Failed & Refunded, 1 = Success, 2 = Pending, 3 = In Process, 4 = On Hold
+// STATUS ENQUIRY — Icchhamati settlements read the payout listing. Older ones
+// from the previous provider have no status service any more: they are only
+// reported as stored, and a held one waits for an admin.
+// txnStatus: 0 = Failed & Refunded, 1 = Success, 3 = In Process
 export const checkSettlementStatus = async (req, res) => {
   try {
     const { transactionId } = req.body;
@@ -328,77 +317,7 @@ export const checkSettlementStatus = async (req, res) => {
       });
     }
 
-    const refid = txn.metadata?.refid || txn.transactionId;
-    const ackno = txn.metadata?.ackno || null;
-
-    const payload = { refid };
-    if (ackno) payload.ackno = ackno;
-
-    let apiResponse;
-    try {
-      apiResponse = await axios.post(`${baseUrl}/service/payout/payout/status`, payload, {
-        headers: getPaySprintHeaders(),
-        validateStatus: () => true,
-      });
-    } catch (err) {
-      console.error('Payout Status API Error:', err?.response?.data || err.message);
-      return res
-        .status(502)
-        .json({ success: false, message: 'Failed to fetch status from PaySprint' });
-    }
-
-    const resData = apiResponse.data;
-    if (resData?.status === false) {
-      return res.status(400).json({
-        success: false,
-        message: resData?.message || 'Status enquiry failed',
-        data: resData,
-      });
-    }
-
-    const statusData = resData?.data || {};
-    const txnStatus = statusData.txn_status;
-
-    let finalStatus = txn.status;
-    if (txnStatus === 1) finalStatus = 'SUCCESS';
-    else if (txnStatus === 0) finalStatus = 'FAILED';
-    else if (txnStatus === 2 || txnStatus === 3 || txnStatus === 4) finalStatus = 'PROCESSING';
-
-    if (finalStatus === 'FAILED' && (txn.status === 'PROCESSING' || txn.status === 'PENDING')) {
-      const { resolveTransaction } = await import('../utils/wallet.util.js');
-      await resolveTransaction(
-        txn.transactionId,
-        'FAILED',
-        statusData.status || 'Transaction failed & refunded',
-        // Older direct payouts carry metadata.walletType = MAIN, which wins.
-        'AEPS'
-      );
-    } else if (finalStatus === 'SUCCESS') {
-      await Transaction.updateOne(
-        { _id: txn._id },
-        {
-          $set: {
-            status: 'SUCCESS',
-            transactionId: statusData.ackno || ackno || txn.transactionId,
-            'metadata.ackno': statusData.ackno || ackno,
-            'metadata.utr': statusData.utr || txn.metadata?.utr,
-            'metadata.charges': statusData.charges,
-            'metadata.apiMessage': statusData.status || 'Settlement successful',
-          },
-        }
-      );
-    } else if (finalStatus === 'PROCESSING') {
-      await Transaction.updateOne(
-        { _id: txn._id },
-        {
-          $set: {
-            status: 'PROCESSING',
-            'metadata.apiMessage': statusData.status || 'Transaction is in process',
-          },
-        }
-      );
-    }
-
+    const txnStatus = txn.status === 'SUCCESS' ? 1 : txn.status === 'FAILED' ? 0 : 3;
     return res.status(200).json({
       success: true,
       txnStatus,
@@ -407,15 +326,8 @@ export const checkSettlementStatus = async (req, res) => {
           ? 'Transaction Successful'
           : txnStatus === 0
             ? 'Transaction Failed and Refunded'
-            : txnStatus === 2
-              ? 'Transaction Pending'
-              : txnStatus === 3
-                ? 'Transaction In Process'
-                : 'Transaction On Hold',
-      data: {
-        ...statusData,
-        transactionId: txn.transactionId,
-      },
+            : 'This settlement went through our previous provider, which can no longer be asked for its status. It stays Pending; please contact support to have it resolved.',
+      data: { transactionId: txn.transactionId, utr: txn.metadata?.utr ?? null },
     });
   } catch (error) {
     console.error('Settlement status enquiry error:', error);

@@ -178,10 +178,6 @@ export const DashboardScreen: React.FC = () => {
   const wallets = [
     { key: 'aeps', icon: 'wallet-outline', label: 'Trade Wallet', amount: b?.aepsBalance },
     { key: 'main', icon: 'wallet-outline', label: 'Utility Wallet', amount: b?.mainBalance },
-    // QR payments now credit Utility; the card stays only while an old QR balance remains.
-    ...(user?.role === 'retailer' && Number(b?.qrBalance) > 0
-      ? [{ key: 'qr', icon: 'wallet-outline', label: 'QR Wallet', amount: b?.qrBalance }]
-      : []),
   ];
   const quickActions = QUICK_ACTIONS.filter((a) => isRouteEnabled(user, a.route));
 

@@ -27,7 +27,7 @@ const EMAIL_RE = /^\S+@\S+\.\S+$/;
 /**
  * PSA agent registration for both PAN flavours.
  *
- *   biometric — PaySprint's biometric PSA. Wants the numeric state/district
+ *   biometric — BharatPays' biometric PSA. Wants the numeric state/district
  *               IDs from locations.json, not their names.
  *   standard  — the standard PSA portal. Wants the state/district *names*,
  *               plus DOB and Aadhaar.

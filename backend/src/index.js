@@ -195,7 +195,7 @@ app.use('/api/topup', topupRouter);
 app.use('/api/matm', matmRouter);
 app.use('/api/notifications', notificationRouter);
 app.use('/api/support', supportRouter);
-// One URL for every PaySprint event — their panel accepts only a single callback.
+// PaySprint callback, Lead Generation only (their panel takes a single URL).
 app.use('/api/paysprint', paysprintRouter);
 // Same story for Icchhamati: one callback URL in their panel for every event.
 app.use('/api/icchhamati', icchhamatiRouter);

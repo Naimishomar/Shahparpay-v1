@@ -41,8 +41,8 @@ for (const path of Object.keys(CACHE_TTL)) {
 
 // --- what is cached -------------------------------------------------------
 assert.strictEqual(cacheTtlFor(endpoints.balance), 20_000, 'wallet balance');
-assert.strictEqual(cacheTtlFor(endpoints.banks), 3_600_000, 'AEPS bank list');
-assert.ok(cacheTtlFor(endpoints.merchantStatus) > 0, 'merchant status');
+assert.strictEqual(cacheTtlFor(endpoints.circles), 3_600_000, 'recharge circles');
+assert.ok(cacheTtlFor(endpoints.myPsaStatus) > 0, 'PSA status');
 
 // Prefix matching: `/operators/:type` and `/status/:id` inherit their parent.
 assert.strictEqual(
@@ -60,9 +60,8 @@ const NEVER = [
   endpoints.ledger,
   endpoints.status, // settlement / recharge status polling
   endpoints.accountStatus,
-  endpoints.onboardingPlan,
   endpoints.settings,
-  '/api/aeps/txn-status',
+  '/api/aeps/icchhamati/transaction',
   '/api/settlement/history',
 ];
 for (const path of NEVER) {

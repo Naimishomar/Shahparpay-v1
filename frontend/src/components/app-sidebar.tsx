@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/sidebar"
 
 import { Link, useLocation } from "react-router-dom"
-import { History, BarChart3, Send, Zap, ScanFace, Landmark, ArrowRightLeft, LayoutDashboard, Users, Store, UserPlus, UserCircle, FileText, QrCode, Link2, CreditCard, Bell, Headset, UserCheck } from "lucide-react"
+import { History, BarChart3, Send, Zap, ScanFace, Landmark, ArrowRightLeft, LayoutDashboard, Users, Store, UserPlus, UserCircle, FileText, QrCode, CreditCard, Bell, Headset, UserCheck } from "lucide-react"
 import logo from "../assets/logo.png"
 import { useAuth } from "../context/AuthContext"
 import { isServiceEnabled } from "../lib/services"
@@ -23,7 +23,6 @@ const retailerProjects = [
   { name: "DMT", url: "/dmt", service: "dmt", icon: Send },
   { name: "Recharge", url: "/recharge", service: "recharge", icon: Zap },
   { name: "BBPS", url: "/bbps", service: "bbps", icon: Zap },
-  { name: "Collect Payments", url: "/payments/collect", service: "collect", icon: Link2 },
   {
     name: "Reports",
     icon: BarChart3,
@@ -39,6 +38,7 @@ const retailerProjects = [
       { name: "Lead Generation Reports", url: "/reports/lead-generation" },
       { name: "Recharge Reports", url: "/reports/recharge" },
       { name: "BBPS Reports", url: "/reports/bbps" },
+      { name: "Collect Payment Reports", url: "/reports/collect" },
     ]
   },
   // Add Money (Razorpay) hidden for now; uncomment to bring it back.
@@ -74,13 +74,23 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/component
 import { ChevronRight } from "lucide-react"
 import { SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton } from "@/components/ui/sidebar"
 
+type NavUser = Parameters<typeof isServiceEnabled>[0];
+
+const projectsFor = (user: NavUser): any[] =>
+  user?.role === 'admin' ? adminProjects :
+  user?.role === 'distributor' ? distributorProjects :
+  retailerProjects.filter((item: any) => isServiceEnabled(user, item.service));
+
+/** Every page this user's sidebar links to, flat, for the header search. */
+// eslint-disable-next-line react-refresh/only-export-components
+export const navLinksFor = (user: NavUser): { name: string; url: string }[] =>
+  projectsFor(user).flatMap((p: any) => (p.subItems ? p.subItems : [p]).map((i: any) => ({ name: i.name, url: i.url })));
+
 export function AppSidebar() {
   const location = useLocation();
   const { user } = useAuth();
-  
-  const projects = user?.role === 'admin' ? adminProjects : 
-                   user?.role === 'distributor' ? distributorProjects : 
-                   retailerProjects.filter((item: any) => isServiceEnabled(user, item.service));
+
+  const projects = projectsFor(user);
 
   return (
     <Sidebar className="border-r border-border">

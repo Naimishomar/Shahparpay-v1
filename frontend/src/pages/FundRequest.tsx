@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Send, Plus, X, FileText, Trash2, Inbox, Landmark, Hash, Paperclip } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Send, Plus, X, FileText, Trash2, Inbox, Landmark, Hash, Paperclip, Link2 } from 'lucide-react';
+import Collect from './Collect';
+import { isServiceEnabled } from '../lib/services';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -10,7 +13,12 @@ const SILVER_TILE = 'icon-chip';
 const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500';
 
 const FundRequest = () => {
-    const { token } = useAuth();
+    const { token, user } = useAuth();
+    // Two ways to add funds: a bank deposit the distributor approves, or a payment link paid online.
+    const [searchParams, setSearchParams] = useSearchParams();
+    const canCollect = isServiceEnabled(user, 'collect');
+    const tab = canCollect && searchParams.get('tab') === 'online' ? 'online' : 'bank';
+    const setTab = (t: 'bank' | 'online') => setSearchParams(t === 'online' ? { tab: 'online' } : {}, { replace: true });
     const [requests, setRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
@@ -117,18 +125,36 @@ const FundRequest = () => {
                         </div>
                         <div>
                             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Fund Request</h1>
-                            <p className="text-sm text-muted-foreground">Request Trade Wallet funds from your distributor against a bank deposit.</p>
+                            <p className="text-sm text-muted-foreground">
+                                {tab === 'online' ? 'Send a payment link the customer can pay by UPI, card or netbanking; it credits your Utility Wallet.' : 'Request Trade Wallet funds from your distributor against a bank deposit.'}
+                            </p>
                         </div>
                     </div>
-                    <button
+                    {tab === 'bank' && <button
                         onClick={() => setShowAddModal(true)}
                         className={`flex items-center justify-center gap-2 self-start lg:self-auto rounded-xl px-6 py-3 font-semibold ${ACTIVE_BUTTON}`}
                     >
                         <Plus className="w-5 h-5" />
                         Create Request
-                    </button>
+                    </button>}
                 </div>
+                {canCollect && (
+                    <div className="relative mt-5 inline-flex gap-1 rounded-xl border bg-background/60 p-1">
+                        {([['bank', 'Bank deposit', Landmark], ['online', 'Payment link', Link2]] as const).map(([key, label, Icon]) => (
+                            <button
+                                key={key}
+                                onClick={() => setTab(key)}
+                                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all ${tab === key ? ACTIVE_BUTTON : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
+                            >
+                                <Icon className="h-4 w-4" />{label}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </section>
+
+            {tab === 'online' && <Collect embedded />}
+            {tab === 'bank' && <>
 
             <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
@@ -219,6 +245,7 @@ const FundRequest = () => {
                     </table>
                 </div>
             </section>
+            </>}
 
             {/* Add Fund Request Modal */}
             {showAddModal && (

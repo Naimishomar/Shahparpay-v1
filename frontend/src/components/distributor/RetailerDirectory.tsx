@@ -3,7 +3,7 @@ import { ArrowDownUp, Download, Search, ShieldCheck, Clock, UserPlus, Users } fr
 import { CARD, INPUT, LABEL, type NetworkAnalytics, type NetworkRetailer, PENDING_PILL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, ago, daysSince, inr, inrShort, useDistributorData } from './shared';
 import { Avatar, RangeSwitch, ShareBar, Skeleton } from './ui';
 import type { DirectoryPreset } from './NetworkDashboard';
-import { PAYSPRINT_ENABLED, aepsKycDone, aepsStepLabel } from '../../lib/services';
+import { aepsKycDone, aepsStepLabel } from '../../lib/services';
 
 type Filter = NonNullable<DirectoryPreset['filter']>;
 type Sort = NonNullable<DirectoryPreset['sort']>;
@@ -47,7 +47,6 @@ const RetailerDirectory = ({
     onDaysChange,
     preset,
     onOpenRetailer,
-    onKycLink,
     onCreate,
 }: {
     token: string | null;
@@ -55,7 +54,6 @@ const RetailerDirectory = ({
     onDaysChange: (d: number) => void;
     preset: DirectoryPreset;
     onOpenRetailer: (id: string) => void;
-    onKycLink: (id: string) => void;
     onCreate: () => void;
 }) => {
     const { data, loading, error } = useDistributorData<NetworkAnalytics>(token, '/api/distributor/analytics', days);
@@ -187,18 +185,9 @@ const RetailerDirectory = ({
                                                     <ShieldCheck size={12} /> Verified
                                                 </span>
                                             ) : (
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}>
-                                                        <Clock size={12} /> {aepsStepLabel(r)}
-                                                    </span>
-                                                    {/* The KYC link is PaySprint's onboarding URL. */}
-                                                    {PAYSPRINT_ENABLED && <button
-                                                        onClick={(e) => { e.stopPropagation(); onKycLink(r._id); }}
-                                                        className="rounded-lg border bg-background px-2 py-1 text-[11px] font-semibold hover:bg-black/5 dark:hover:bg-white/10"
-                                                    >
-                                                        KYC link
-                                                    </button>}
-                                                </div>
+                                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}>
+                                                    <Clock size={12} /> {aepsStepLabel(r)}
+                                                </span>
                                             )}
                                         </td>
                                     </tr>

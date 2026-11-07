@@ -7,7 +7,7 @@ import { Input, SelectField } from '@/components/ui/Input';
 import { ImageField } from '@/components/ui/ImageField';
 import { Sheet } from '@/components/ui/Sheet';
 import { Banner, Row, Segmented, SuccessBanner } from '@/components/ui/Screen';
-import { AEPS_PROVIDERS, PAYSPRINT_ENABLED, SERVICES, type AepsProvider } from '@/constants/services';
+import { SERVICES } from '@/constants/services';
 import { useAction } from '@/hooks/useAsync';
 import { INDIAN_STATES } from '@/constants';
 import { useAuth } from '@/context/AuthContext';
@@ -77,8 +77,8 @@ export const OnboardMemberSheet: React.FC<{
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
 
-  // Generated once per sheet open; editable only for an existing PaySprint merchant.
-  const [merchantCode, setMerchantCode] = useState(
+  // Generated once per sheet open.
+  const [merchantCode] = useState(
     () => `${spec.prefix}${Math.floor(100000 + Math.random() * 900000)}`
   );
 
@@ -94,9 +94,6 @@ export const OnboardMemberSheet: React.FC<{
   const [dob, setDob] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isExistingMerchant, setIsExistingMerchant] = useState(false);
-  const [aepsProvider, setAepsProvider] = useState<AepsProvider>(PAYSPRINT_ENABLED ? 'paysprint' : 'icchhamati');
-  const isPaysprint = PAYSPRINT_ENABLED && aepsProvider !== 'icchhamati';
 
   const [aadhaarNumber, setAadhaarNumber] = useState('');
   const [panNumber, setPanNumber] = useState('');
@@ -183,8 +180,6 @@ export const OnboardMemberSheet: React.FC<{
         supportMobile,
         ...(isRetailer
           ? {
-              aepsProvider,
-              isExistingMerchant: isExistingMerchant && isPaysprint,
               disabledServices: JSON.stringify(SERVICES.filter((svc) => services[svc.key] === 'No').map((svc) => svc.key)),
             }
           : {}),
@@ -210,7 +205,6 @@ export const OnboardMemberSheet: React.FC<{
       : !MOBILE_RE.test(contactNumber) ? 'Enter a 10-digit mobile number'
       : !dob ? 'Date of birth: Required'
       : password.length < 6 ? 'Password: At least 6 characters'
-      : isRetailer && isPaysprint && isExistingMerchant && !merchantCode.trim() ? 'Enter the existing merchant ID'
       : null,
     !AADHAAR_RE.test(aadhaarNumber) ? 'Aadhaar is 12 digits'
       : !PAN_RE.test(panNumber) ? 'PAN format: ABCDE1234F'
@@ -229,7 +223,6 @@ export const OnboardMemberSheet: React.FC<{
   const blocked = errors[step];
   const firstInvalid = errors.findIndex(Boolean);
   const enabledServices = SERVICES.filter((svc) => services[svc.key] === 'Yes');
-  const providerLabel = AEPS_PROVIDERS.find((p) => p.key === (isPaysprint ? 'paysprint' : 'icchhamati'))?.label || '';
 
   const review = [
     {
@@ -240,8 +233,7 @@ export const OnboardMemberSheet: React.FC<{
         ['Email', email],
         ['Mobile', contactNumber && `+91 ${contactNumber}`],
         ['Date of birth', dob],
-        ...(self ? [] : [[spec.idLabel, merchantCode + (isRetailer && isPaysprint && isExistingMerchant ? ' (existing)' : '')]]),
-        ...(isRetailer ? [['AEPS provider', providerLabel]] : []),
+        ...(self ? [] : [[spec.idLabel, merchantCode]]),
       ],
     },
     {
@@ -459,44 +451,10 @@ export const OnboardMemberSheet: React.FC<{
 
               {!isRetailer && <Input label="Distributor ID (auto-generated)" value={merchantCode} editable={false} disabled />}
 
-              {isRetailer && (
+              {isRetailer && !self && (
                 <>
-                  {PAYSPRINT_ENABLED && (
-                    <View>
-                      <Text style={styles.providerLabel}>AEPS provider</Text>
-                      <Segmented
-                        scroll={false}
-                        options={AEPS_PROVIDERS.filter((p) => p.key !== 'both').map((p) => ({ key: p.key, label: p.label }))}
-                        value={aepsProvider}
-                        onChange={(p) => {
-                          setAepsProvider(p);
-                          if (p === 'icchhamati') setIsExistingMerchant(false);
-                        }}
-                      />
-                      {!self && <Text style={styles.providerHint}>They start on this provider. You can add the other one later from their page.</Text>}
-                    </View>
-                  )}
-                  {isPaysprint && !self && (
-                    <Toggle
-                      label="Already a PaySprint merchant"
-                      hint="Tick this to migrate them with their existing merchant ID instead of a new one."
-                      value={isExistingMerchant}
-                      onChange={setIsExistingMerchant}
-                    />
-                  )}
-                  {!self && (
-                  <>
-                  <Input
-                    label={isExistingMerchant ? 'Existing merchant ID' : 'Retailer ID (auto-generated)'}
-                    value={merchantCode}
-                    onChangeText={(v) => setMerchantCode(v.toUpperCase())}
-                    editable={isExistingMerchant}
-                    disabled={!isExistingMerchant}
-                    autoCapitalize="characters"
-                  />
+                  <Input label="Retailer ID (auto-generated)" value={merchantCode} editable={false} disabled />
                   <Input label="Parent distributor" value={parentName} editable={false} disabled />
-                  </>
-                  )}
                 </>
               )}
             </>
@@ -644,34 +602,7 @@ export const OnboardMemberSheet: React.FC<{
   );
 };
 
-const Toggle: React.FC<{
-  label: string;
-  hint?: string;
-  value: boolean;
-  onChange: (next: boolean) => void;
-}> = ({ label, hint, value, onChange }) => (
-  <Pressable
-    onPress={() => onChange(!value)}
-    style={({ pressed }) => [styles.toggle, pressed && { opacity: 0.8 }]}
-    accessibilityRole="switch"
-    accessibilityState={{ checked: value }}
-    accessibilityLabel={label}
-  >
-    <MaterialCommunityIcons
-      name={value ? 'checkbox-marked' : 'checkbox-blank-outline'}
-      size={22}
-      color={value ? colors.accent : colors.mutedForeground}
-    />
-    <View style={styles.toggleText}>
-      <Text style={styles.toggleLabel}>{label}</Text>
-      {!!hint && <Text style={styles.toggleHint}>{hint}</Text>}
-    </View>
-  </Pressable>
-);
-
 const styles = themed((c) => ({
-  providerLabel: { fontSize: t.small, fontWeight: '500', color: c.foreground, marginBottom: 7 },
-  providerHint: { fontSize: t.micro, lineHeight: 16, color: c.mutedForeground, marginTop: 6 },
   footerRow: { flexDirection: 'row', gap: space.sm },
   flex: { flex: 1 },
   stepper: { flexDirection: 'row', gap: space.xs },

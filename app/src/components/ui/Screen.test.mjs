@@ -49,7 +49,7 @@ for (const junk of [null, undefined, '', 'abc', NaN, Infinity, -Infinity, {}]) {
 assert.strictEqual(money(null), '₹\u00A00.00');
 assert.strictEqual(money(undefined), '₹\u00A00.00');
 
-// Numeric strings are common in PaySprint payloads.
+// Numeric strings are common in provider payloads.
 assert.strictEqual(money('1234.5'), '₹\u00A01,234.50');
 assert.strictEqual(money('1234567'), '₹\u00A012,34,567.00');
 

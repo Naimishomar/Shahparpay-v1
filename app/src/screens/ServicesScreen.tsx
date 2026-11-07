@@ -26,7 +26,6 @@ const GROUPS: { title: string; items: { label: string; route: string; icon: stri
     items: [
       { label: 'Recharge', route: 'Recharge', icon: 'cellphone' },
       { label: 'BBPS', route: 'BBPS', icon: 'receipt' },
-      { label: 'Collect', route: 'Collect', icon: 'qrcode' },
       // Add Money (Razorpay) hidden for now; uncomment to bring it back.
       // { label: 'Add money', route: 'AddMoney', icon: 'credit-card-plus-outline' },
       { label: 'Fund request', route: 'FundRequest', icon: 'cash-multiple' },
@@ -38,7 +37,6 @@ const GROUPS: { title: string; items: { label: string; route: string; icon: stri
       { label: 'PAN card', route: 'PAN', icon: 'card-account-details-outline' },
       { label: 'ITR filing', route: 'ITR', icon: 'file-document-outline' },
       { label: 'Leads', route: 'LeadGeneration', icon: 'account-plus-outline' },
-      { label: 'KYC status', route: 'KycStatus', icon: 'check-decagram-outline' },
     ],
   },
 ];

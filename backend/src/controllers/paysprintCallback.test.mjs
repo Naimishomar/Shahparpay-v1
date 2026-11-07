@@ -1,14 +1,11 @@
 // Run: node src/controllers/paysprintCallback.test.mjs
-// PaySprint allows one callback URL per account, so every event arrives on the
-// same public endpoint. If the dispatch table loses an entry the matching
-// callback silently stops working — a merchant never unlocks a pipe, or an
-// onboarding charge is never billed — so the wiring is pinned here.
+// PaySprint's one public callback URL now carries only Lead Generation. The key
+// check is all that stops a retailer approving their own lead for commission.
 import assert from 'node:assert';
 
-process.env.PAYSPRINT_JWT_KEY = process.env.PAYSPRINT_JWT_KEY || 'dGVzdGtleTEyMzQ1Njc4';
 process.env.PAYSPRINT_CALLBACK_KEY = 'secret-key';
 
-const { paysprintCallback, CALLBACK_HANDLERS } = await import('./onboardCallback.controller.js');
+const { paysprintCallback } = await import('./lead.controller.js');
 
 const req = (over = {}) => ({ query: { key: 'secret-key' }, headers: {}, body: {}, ...over });
 const res = () => {
@@ -26,13 +23,7 @@ const res = () => {
   };
 };
 
-assert.deepStrictEqual(
-  Object.keys(CALLBACK_HANDLERS).sort(),
-  ['LEAD_GENERATION_CALLBACK', 'MATM', 'MATMBE', 'MERCHANT_ONBOARDING', 'MERCHANT_STATUS_ONBOARD'],
-  'every PaySprint event we handle must stay routable from the single callback URL'
-);
-
-// Unsigned callers must not reach leadCallback, which has no guard of its own.
+// Unsigned callers must not reach the lead handler, which has no guard of its own.
 {
   const r = res();
   await paysprintCallback(req({ query: {}, body: { event: 'LEAD_GENERATION_CALLBACK' } }), r);
@@ -43,8 +34,15 @@ assert.deepStrictEqual(
 // A wrong key is refused even for an event we do handle.
 {
   const r = res();
-  await paysprintCallback(req({ query: { key: 'wrong' }, body: { event: 'MERCHANT_ONBOARDING' } }), r);
+  await paysprintCallback(req({ query: { key: 'wrong' }, body: { event: 'LEAD_GENERATION_CALLBACK' } }), r);
   assert.strictEqual(r.captured.payload.message, 'Unauthorized callback');
+}
+
+// The old AEPS/MATM events are no longer handled.
+{
+  const r = res();
+  await paysprintCallback(req({ body: { event: 'MERCHANT_ONBOARDING' } }), r);
+  assert.strictEqual(r.captured.payload.message, 'Unsupported event');
 }
 
 // PaySprint retries anything that is not a 200-with-status body, so an event we

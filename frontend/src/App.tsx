@@ -5,7 +5,6 @@ import ServiceGate from "./components/ServiceGate"
 
 import { Toaster } from 'sonner'
 import { useAuth } from './context/AuthContext'
-import { PAYSPRINT_ENABLED, usesAepsProvider } from './lib/services'
 import { Navigate, useLocation, Outlet } from 'react-router-dom'
 
 // Route-level code splitting: only the landing page ships in the initial bundle.
@@ -26,15 +25,10 @@ const Login = page(() => import("./pages/Login"))
 const Layout = page(() => import("./pages/Layout"))
 const Dashboard = page(() => import("./pages/Dashboard"))
 const AepsSettlement = page(() => import("./pages/AepsSettlement"))
-const PipeStatus = page(() => import("./pages/PipeStatus"))
-const AepsPage = page(() => import("./pages/AepsPage"))
-
-const PaysprintOnly = ({ children }: { children: React.ReactNode }) =>
-  usesAepsProvider(useAuth().user, 'paysprint') ? <>{children}</> : <Navigate to="/aeps" replace />
+const IcchhamatiAEPS = page(() => import("./pages/IcchhamatiAEPS"))
 const DMT = page(() => import("./pages/DMT"))
 const Recharge = page(() => import("./pages/Recharge"))
 const BBPS = page(() => import("./pages/BBPS"))
-const Collect = page(() => import("./pages/Collect"))
 const FundRequest = page(() => import("./pages/FundRequest"))
 // Add Money (Razorpay) hidden for now; uncomment to bring it back.
 // const AddMoney = page(() => import("./pages/AddMoney"))
@@ -48,13 +42,18 @@ const PanReport = page(() => import("./pages/PanReport"))
 const ItrReport = page(() => import("./pages/ItrReport"))
 const LeadGenerationReport = page(() => import("./pages/LeadGenerationReport"))
 const ServiceReport = page(() => import("./pages/ServiceReport"))
+
+const CollectRedirect = () => {
+  const params = new URLSearchParams(useLocation().search)
+  params.set('tab', 'online')
+  return <Navigate to={`/fund-request?${params}`} replace/>
+}
 const WalletLedger = page(() => import("./pages/WalletLedger"))
 const LeadGeneration = page(() => import("./pages/LeadGeneration"))
 const PanCard = page(() => import("./pages/PanCard"))
 const ITR = page(() => import("./pages/ITR"))
 const AdminPortal = page(() => import("./pages/AdminPortal"))
 const DistributorPortal = page(() => import("./pages/DistributorPortal"))
-const KycStatus = page(() => import("./pages/KycStatus"))
 const Contact = page(() => import("./pages/Contact"))
 const Commission = page(() => import("./pages/Commission"))
 const About = page(() => import("./pages/About"))
@@ -64,8 +63,6 @@ const AepsTerms = page(() => import("./pages/AepsTerms"))
 const RefundPolicy = page(() => import("./pages/RefundPolicy"))
 const RetailerTerms = page(() => import("./pages/RetailerTerms"))
 const Profile = page(() => import("./pages/Profile"))
-// PAYSPRINT-DISABLED: PaySprint MATM page; route below uses Icchhamati while PAYSPRINT_ENABLED is false.
-const MATM = page(() => import("./pages/MATM"))
 const IcchhamatiMATM = page(() => import("./pages/IcchhamatiMATM"))
 const Support = page(() => import("./pages/Support"))
 const NotFound = page(() => import("./pages/NotFound"))
@@ -116,7 +113,6 @@ function App() {
       <Route element={<ScrollToTopWrapper />}>
       <Route path="/" element={<LandingRoute />} />
       <Route path="/login" element={<LoginRoute />} />
-      <Route path="/kyc-status" element={<KycStatus />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/commission" element={<Commission />} />
       <Route path="/about" element={<About />} />
@@ -139,14 +135,14 @@ function App() {
         <Route path="/distributor" element={<DistributorPortal/>}/>
         <Route path="/distributor/:tab" element={<DistributorPortal/>}/>
  
-        <Route path="/aeps" element={<ServiceGate service="aeps"><AepsPage/></ServiceGate>}/>
-        <Route path="/aeps/pipes" element={<PaysprintOnly><PipeStatus/></PaysprintOnly>}/>
+        <Route path="/aeps" element={<ServiceGate service="aeps"><IcchhamatiAEPS/></ServiceGate>}/>
         <Route path="/aeps-settlement" element={<AepsSettlement/>}/>
-        <Route path="/matm" element={<ServiceGate service="matm">{PAYSPRINT_ENABLED ? <MATM/> : <IcchhamatiMATM/>}</ServiceGate>}/>
+        <Route path="/matm" element={<ServiceGate service="matm"><IcchhamatiMATM/></ServiceGate>}/>
         <Route path="/dmt" element={<ServiceGate service="dmt"><DMT/></ServiceGate>}/>
         <Route path="/recharge" element={<ServiceGate service="recharge"><Recharge/></ServiceGate>}/>
         <Route path="/bbps" element={<ServiceGate service="bbps"><BBPS/></ServiceGate>}/>
-        <Route path="/payments/collect" element={<ServiceGate service="collect"><Collect/></ServiceGate>}/>
+        {/* Collect Payments now lives in Fund Request; old links (and gateway returns) land there. */}
+        <Route path="/payments/collect" element={<CollectRedirect/>}/>
         <Route path="/lead-generation" element={<ServiceGate service="lead"><LeadGeneration/></ServiceGate>}/>
         <Route path="/pan" element={<ServiceGate service="pan"><PanCard/></ServiceGate>}/>
         <Route path="/itr" element={<ServiceGate service="itr"><ITR/></ServiceGate>}/>
@@ -162,6 +158,7 @@ function App() {
         <Route path="/reports/lead-generation" element={<LeadGenerationReport/>}/>
         <Route path="/reports/recharge" element={<ServiceReport kind="recharge" title="Recharge Reports" description="Mobile prepaid and DTH recharge transactions and retailer commissions."/>}/>
         <Route path="/reports/bbps" element={<ServiceReport kind="bbps" title="BBPS Reports" description="Bill payment transactions, statuses, amounts, and retailer commissions."/>}/>
+        <Route path="/reports/collect" element={<ServiceReport kind="collect" title="Collect Payment Reports" description="Payments collected by link and QR, with their statuses and amounts."/>}/>
         <Route path="/reports/wallet-ledger" element={<WalletLedger/>}/>
 
         <Route path="/fund-request" element={<FundRequest/>}/>

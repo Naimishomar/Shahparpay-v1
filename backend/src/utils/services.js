@@ -32,25 +32,8 @@ export const parseDisabledServices = (value) => {
   return [...new Set(list.filter((key) => SERVICE_KEYS.includes(key)))];
 };
 
-/** The AEPS choices for a retailer: one provider or both. PaySprint is the default. */
-export const AEPS_PROVIDERS = ['paysprint', 'icchhamati', 'both'];
-
-// PAYSPRINT-DISABLED: PaySprint withdrew its AEPS APIs, so every retailer is on
-// Icchhamati whatever was stored. Restore the line below to switch back.
-// export const aepsProviderOf = (retailer) => retailer?.aepsProvider || 'paysprint';
-export const aepsProviderOf = () => 'icchhamati';
-
-/** Whether the retailer may use this provider's AEPS. */
-export const usesAepsProvider = (retailer, provider) => {
-  const chosen = aepsProviderOf(retailer);
-  return chosen === 'both' || chosen === provider;
-};
-
-/** null for anything that is not a known provider. */
-export const parseAepsProvider = (value) => (AEPS_PROVIDERS.includes(value) ? value : null);
-
 /**
- * The body of a retailer services update: either field may be sent alone.
+ * The body of a retailer services update.
  * Returns `{ set, summary }` for the $set and the activity log, or `{ error }`.
  */
 export const parseServicesUpdate = (body = {}) => {
@@ -62,20 +45,14 @@ export const parseServicesUpdate = (body = {}) => {
     set.disabledServices = disabledServices;
     summary.push(disabledServices.length ? `Switched off: ${disabledServices.join(', ')}` : 'All services switched on');
   }
-  if (body.aepsProvider !== undefined) {
-    const aepsProvider = parseAepsProvider(body.aepsProvider);
-    if (!aepsProvider) return { error: 'Invalid AEPS provider' };
-    set.aepsProvider = aepsProvider;
-    summary.push(`AEPS provider: ${aepsProvider}`);
-  }
   if (!summary.length) return { error: 'Nothing to update' };
   return { set, summary: summary.join('; ') };
 };
 
 /**
  * Icchhamati onboarding steps after which the merchant's KYC is done: what is
- * left is only the daily login. With PaySprint off this, not the old PaySprint
- * isMerchantKycComplete flag, is what "KYC verified" means.
+ * left is only the daily login. This, not the older isMerchantKycComplete flag,
+ * is what "KYC verified" means.
  */
 export const AEPS_KYC_DONE_STEPS = ['twofa', 'ready'];
 

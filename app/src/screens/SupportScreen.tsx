@@ -154,7 +154,6 @@ export const SupportScreen: React.FC = () => {
       {isRetailer && (
         <View style={styles.card}>
           {[
-            { route: 'PipeStatus', icon: 'git-network-outline', title: 'AEPS Pipe Status' },
             { route: 'BiometricSupport', icon: 'finger-print-outline', title: 'Biometric Support' },
           ].filter((link) => isRouteEnabled(user, link.route)).map((link) => (
             <Pressable

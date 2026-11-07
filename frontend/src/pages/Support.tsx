@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Headset, MessageCircle, Paperclip, Send, ScanFace, Fingerprint, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Headset, MessageCircle, Paperclip, Send, Fingerprint, ArrowLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -59,14 +59,9 @@ const Support = () => {
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2">
                         {isRetailer && (
-                            <>
-                                <Link to="/aeps/pipes" className="flex items-center justify-center gap-2 rounded-xl border bg-background/70 backdrop-blur px-4 py-2.5 text-sm font-semibold hover:bg-background">
-                                    <ScanFace className="w-4 h-4" /> AEPS Pipe Status
-                                </Link>
-                                <Link to="/biometric-support" className="flex items-center justify-center gap-2 rounded-xl border bg-background/70 backdrop-blur px-4 py-2.5 text-sm font-semibold hover:bg-background">
-                                    <Fingerprint className="w-4 h-4" /> Biometric Support
-                                </Link>
-                            </>
+                            <Link to="/biometric-support" className="flex items-center justify-center gap-2 rounded-xl border bg-background/70 backdrop-blur px-4 py-2.5 text-sm font-semibold hover:bg-background">
+                                <Fingerprint className="w-4 h-4" /> Biometric Support
+                            </Link>
                         )}
                         <button onClick={() => { setSelected(null); setNewRequest(true); }} className={`flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold ${ACTIVE_BUTTON}`}>
                             <MessageCircle className="w-4 h-4" /> New Request

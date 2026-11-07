@@ -1,4 +1,4 @@
-import { SERVICES, usesAepsProvider } from '../utils/services.js';
+import { SERVICES } from '../utils/services.js';
 
 /**
  * Refuses a retailer's request for a service their distributor has switched
@@ -18,17 +18,4 @@ export const requireService = (service) => (req, res, next) => {
     });
   }
   return next();
-};
-
-/**
- * Refuses a retailer's AEPS request to a provider they are not onboarded with;
- * a retailer on 'both' passes either way.
- */
-export const requireAepsProvider = (provider) => (req, res, next) => {
-  if (req.user?.role !== 'retailer' || usesAepsProvider(req.user, provider)) return next();
-  return res.status(403).json({
-    success: false,
-    code: 'AEPS_PROVIDER_MISMATCH',
-    message: 'This AEPS service is not enabled for your account. Please reload the AEPS page.',
-  });
 };

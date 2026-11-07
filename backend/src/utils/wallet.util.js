@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import axios from 'axios';
 import MainWallet from '../models/mainWallet.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
 import QrWallet from '../models/qrWallet.model.js';
@@ -7,7 +6,6 @@ import AdminWallet from '../models/adminWallet.model.js';
 import Admin from '../models/users/admin.model.js';
 import Retailer from '../models/users/retailer.model.js';
 import Transaction from '../models/transaction.model.js';
-import { generatePaySprintToken, encryptPayload } from './paysprint.util.js';
 
 /**
  * Rounds a number to 2 decimal places to prevent float precision issues.
@@ -167,7 +165,7 @@ export const PAN_RATES = { fee: 107, apiCost: 95, retailer: 5, distributor: 1 };
  * SA pays the zero-balance account rate and CC the credit-card rate; the lead
  * carries no bank or card variant to pick the Kotak811 / Bajaj EMI rows.
  * ponytail: PL/BL pay 0.70% (partner 0.10%) of the disbursed amount, which the lead callback
- * does not carry; add them once PaySprint sends it.
+ * does not carry; add them once PaySprint's lead callback sends it.
  */
 export const LEAD_RATES = {
   SA: { retailer: 100, distributor: 10, pool: 150 },
@@ -589,88 +587,6 @@ export const transferBetweenWallets = async (
 };
 
 /**
- * Queries the PaySprint AEPS transaction-status endpoint and maps the response
- * to a normalized status: 'SUCCESS' | 'FAILED' | 'PROCESSING'.
- *
- * PaySprint txnstatus codes (per docs):
- *   1 = SUCCESS, 2 = IN PROCESS, 3 = FAILED (all with status=true)
- * response_code 0 = failed, 2 = in process. Any other code (auth/validation
- * errors) or an API error is ambiguous -> 'PROCESSING' so it is re-queried
- * later rather than finalized on an inconclusive answer.
- */
-export const queryAepsTransactionStatus = async (reference) => {
-  const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
-  const token = generatePaySprintToken();
-  const encryptedData = encryptPayload(JSON.stringify({ reference }));
-
-  const headers = {
-    Token: token,
-    Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-    'Content-Type': 'application/json',
-  };
-
-  const response = await axios.post(
-    `${baseUrl}/service/aeps/aepsquery/query`,
-    { body: encryptedData },
-    { headers, validateStatus: () => true }
-  );
-
-  const data = response.data || {};
-  const txnstatus = String(data?.txnstatus ?? data?.data?.txnstatus ?? '').trim();
-  const responseCode = String(data?.response_code ?? data?.data?.response_code ?? '').trim();
-  const status = data?.status;
-
-  if (txnstatus === '1' || responseCode === '1') return { status: 'SUCCESS', data };
-  if (txnstatus === '3' || responseCode === '0') return { status: 'FAILED', data };
-  if (txnstatus === '2' || responseCode === '2') return { status: 'PROCESSING', data };
-
-  // Fallbacks when txnstatus is absent
-  if (status === true) return { status: 'SUCCESS', data };
-  if (status === false) return { status: 'FAILED', data };
-
-  // Inconclusive (auth/validation errors, txn not found) — keep reconciling.
-  return { status: 'PROCESSING', data };
-};
-
-/**
- * Queries the PaySprint NSDL Cash Deposit status endpoint and maps the response
- * to a normalized status: 'SUCCESS' | 'FAILED' | 'PROCESSING'.
- *
- * Per the PaySprint NSDL Cash Deposit Status Query docs this uses a DIFFERENT
- * endpoint and status mapping than the generic AEPS query:
- *   SUCCESS -> txnstatus 1 (and status true)
- *   FAILED  -> txnstatus 2 (and status true)
- */
-export const queryAepsDepositStatus = async (reference) => {
-  const baseUrl = process.env.PAYSPRINT_BASE_URL || 'https://api.paysprint.in/api/v1';
-  const token = generatePaySprintToken();
-  const encryptedData = encryptPayload(JSON.stringify({ reference }));
-
-  const headers = {
-    Token: token,
-    Authorisedkey: process.env.PAYSPRINT_AUTHORISED_KEY,
-    'Content-Type': 'application/json',
-  };
-
-  const response = await axios.post(
-    `${baseUrl}/service/cashdeposit/V3/Cashdeposit/query`,
-    { body: encryptedData },
-    { headers, validateStatus: () => true }
-  );
-
-  const data = response.data || {};
-  const txnstatus = String(data?.txnstatus ?? data?.data?.txnstatus ?? '').trim();
-
-  if (txnstatus === '1') return { status: 'SUCCESS', data };
-  if (txnstatus === '2') return { status: 'FAILED', data };
-
-  if (data?.status === true && data?.response_code === 1) return { status: 'SUCCESS', data };
-  if (data?.status === false && data?.response_code === 0) return { status: 'FAILED', data };
-
-  return { status: 'PROCESSING', data };
-};
-
-/**
  * Atomically credits wallets and finalizes an AEPS withdrawal that the bank has
  * confirmed as successful. Idempotent: only a PENDING or PROCESSING transaction
  * may transition to SUCCESS, so concurrent reconciliation cannot double-credit.
@@ -682,7 +598,7 @@ export const applyAepsWithdrawalSuccess = async ({
   transactionId,
   userId,
   amount,
-  paysprintRef,
+  providerRef,
   message,
 }) => {
   const session = await mongoose.startSession();
@@ -719,11 +635,8 @@ export const applyAepsWithdrawalSuccess = async ({
       distributorWallet: AepsWallet,
     });
 
-    claimed.transactionId = paysprintRef || claimed.transactionId;
+    claimed.transactionId = providerRef || claimed.transactionId;
     setCommissions(claimed, split);
-    if (paysprintRef) {
-      claimed.metadata = { ...claimed.metadata, paysprintRef };
-    }
     if (message) {
       claimed.metadata = { ...claimed.metadata, gatewayMessage: message };
     }
@@ -754,7 +667,7 @@ export const applyAepsDepositSuccess = async ({
   transactionId,
   userId,
   amount,
-  paysprintRef,
+  providerRef,
   message,
   // Icchhamati deposits are paid from the Trade (AEPS) wallet, and their
   // commission lands there, like every other Icchhamati AEPS earning.
@@ -789,11 +702,8 @@ export const applyAepsDepositSuccess = async ({
       distributorWallet,
     });
 
-    claimed.transactionId = paysprintRef || claimed.transactionId;
+    claimed.transactionId = providerRef || claimed.transactionId;
     setCommissions(claimed, split);
-    if (paysprintRef) {
-      claimed.metadata = { ...claimed.metadata, paysprintRef };
-    }
     if (message) {
       claimed.metadata = { ...claimed.metadata, gatewayMessage: message };
     }

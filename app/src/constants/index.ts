@@ -37,66 +37,10 @@ export const INDIAN_STATES = [
   "Puducherry",
 ];
 
-/**
- * Exact values PaySprint's `activate_merchant` accepts for
- * `nature_of_bussiness` (bank5 only). The backend rejects anything else, so
- * this list must stay in step with NATURE_OF_BUSINESS_OPTIONS in
- * backend/src/controllers/aepsPayment.controller.js.
- */
-export const NATURE_OF_BUSINESS = [
-  'Agriculture',
-  'Antique Dealer',
-  'Arms Dealer',
-  'Art Dealer',
-  'Banking',
-  'Mobility',
-  'Barber',
-  'Parlour',
-  'Salon',
-  'Bullion Dealer and Jeweller',
-  'Casino',
-  'Gaming Application',
-  'Educational Institute',
-  'Financial Institution',
-  'Healthcare',
-  'Pharma',
-  'Import And Export Trader',
-  'Law',
-  'Accountancy firm',
-  'Liquor',
-  'Manufacturing',
-  'Marketing including Multi-level Marketing',
-  'Media',
-  'Pawn Shop',
-  'Money Lender',
-  'Money Changer',
-  'Real Estate',
-  'Restaurant and Hospitality',
-  'Retail Shop',
-  'Service Provider',
-  'Small vendor',
-  'Kirana shop',
-  'Stock Trading',
-  'Brokerage',
-  'Transport',
-  'Logistics',
-  'Wholesale Trading',
-  'Others',
-];
-
-/** Every AEPS pipe the backend can onboard, in the order PaySprint lists them. */
-export const AEPS_PIPES = [
-  { key: 'bank2', label: 'Bank 2' },
-  { key: 'bank3', label: 'Bank 3' },
-  { key: 'bank4', label: 'Bank 4 (City Union)' },
-  { key: 'bank5', label: 'Bank 5' },
-  { key: 'bank6', label: 'Bank 6' },
-];
-
-/** AEPS cash withdrawals at or above this need a customer OTP first. */
+/** AEPS withdrawals and Aadhaar Pay above this need a customer OTP first. */
 export const AEPS_OTP_THRESHOLD = 5000;
 
-/** PaySprint caps a single AEPS cash withdrawal at this amount. */
+/** Icchhamati caps a single AEPS transaction at this amount. */
 export const AEPS_MAX_WITHDRAWAL = 10000;
 
 export interface MenuEntry {
@@ -157,7 +101,6 @@ export const SERVICE_ITEMS: MenuEntry[] = [
 
   { name: 'Recharge', route: 'Recharge', icon: 'cellphone', hint: 'Mobile & DTH', group: 'Payments' },
   { name: 'BBPS', route: 'BBPS', icon: 'receipt', hint: 'Utility bills', group: 'Payments' },
-  { name: 'Collect Payments', route: 'Collect', icon: 'link-variant', hint: 'Payment links', group: 'Payments' },
   // Add Money (Razorpay) hidden for now; uncomment to bring it back.
   // { name: 'Add Money', route: 'AddMoney', icon: 'qrcode-plus', hint: 'Top up instantly by UPI', group: 'Payments' },
   { name: 'Fund Request', route: 'FundRequest', icon: 'hand-coin-outline', hint: 'Top up by bank transfer or cash', group: 'Payments' },
@@ -166,7 +109,6 @@ export const SERVICE_ITEMS: MenuEntry[] = [
   { name: 'ITR Filing', route: 'ITR', icon: 'file-document-outline', hint: 'Income tax returns', group: 'Government' },
   { name: 'Lead Generation', route: 'LeadGeneration', icon: 'account-plus-outline', hint: 'Loans & cards', group: 'Government' },
 
-  { name: 'KYC Status', route: 'KycStatus', icon: 'shield-check-outline', hint: 'Verification', group: 'Account' },
   { name: 'Support Center', route: 'Support', icon: 'headset', hint: 'Raise an issue', group: 'Account' },
 ];
 
@@ -193,6 +135,7 @@ export const REPORT_ITEMS: ReportEntry[] = [
   { name: 'Lead Generation Reports', route: 'LeadReport', icon: 'account-plus-outline', hint: 'View all generated leads and track their application status.' },
   { name: 'Recharge Reports', route: 'RechargeReport', icon: 'cellphone', hint: 'Mobile prepaid and DTH recharge transactions and retailer commissions.', type: 'RECHARGE' },
   { name: 'BBPS Reports', route: 'BbpsReport', icon: 'receipt', hint: 'Bill payment transactions, statuses, amounts, and retailer commissions.', type: 'BILL_PAYMENT' },
+  { name: 'Collect Payment Reports', route: 'CollectReport', icon: 'link-variant', hint: 'Payments collected by link and QR, with their statuses and amounts.', type: 'PG_COLLECTION' },
 ];
 
 /**
@@ -220,11 +163,6 @@ export const API_ENDPOINTS = {
     verifyEmailOtp: '/api/auth/verify-email-otp',
     updateProfile: '/api/auth/update-profile',
     changePassword: '/api/auth/change-password',
-    paysprintOnboardUrl: '/api/auth/paysprint/get-onboard-url',
-    paysprintUpdateKyc: '/api/auth/paysprint/update-kyc-status',
-    aadhaarSendOtp: '/api/auth/paysprint/aadhaar/send-otp',
-    aadhaarVerifyOtp: '/api/auth/paysprint/aadhaar/verify-otp',
-    verifyPan: '/api/auth/paysprint/pan/verify',
     createRetailer: '/api/auth/create-retailer',
     signupRetailer: '/api/auth/signup-retailer',
     aadhaarAddress: '/api/auth/aadhaar-address',
@@ -243,26 +181,7 @@ export const API_ENDPOINTS = {
     recentTransactions: '/api/dashboard/recent-transactions',
     commissionByDay: '/api/dashboard/commission-by-day',
   },
-  aeps: {
-    merchantStatus: '/api/aeps/merchant-status',
-    pipesVerify: '/api/aeps/pipes/verify',
-    onboardingPlan: '/api/aeps/onboarding/plan',
-    pidOptions: '/api/aeps/get-pid-options',
-    banks: '/api/aeps/banks',
-    balanceEnquiry: '/api/aeps/balance-enquiry',
-    initiateOtp: '/api/aeps/initiate-otp',
-    cashWithdrawal: '/api/aeps/cash-withdrawal',
-    cashDeposit: '/api/aeps/cash-deposit',
-    aadhaarPay: '/api/aeps/aadhaar-pay',
-    miniStatement: '/api/aeps/mini-statement',
-    txnStatus: '/api/aeps/txn-status',
-    kycSendOtp: '/api/aeps/kyc/send-otp',
-    kycResendOtp: '/api/aeps/kyc/resend-otp',
-    kycVerifyOtp: '/api/aeps/kyc/verify-otp',
-    kycActivate: '/api/aeps/kyc/activate-merchant',
-    dailyAuth: '/api/aeps/daily-auth',
-  },
-  // Icchhamati (Fingpay) AEPS, for retailers onboarded there.
+  // Icchhamati (Fingpay) AEPS.
   icchAeps: {
     status: '/api/aeps/icchhamati/status',
     states: '/api/aeps/icchhamati/states',
@@ -307,7 +226,6 @@ export const API_ENDPOINTS = {
     circles: '/api/recharge/circles',
     billCategories: '/api/recharge/bill-categories',
     browsePlan: '/api/recharge/browse-plan',
-    dthInfo: '/api/recharge/dth-info',
     fetchBill: '/api/recharge/fetch-bill',
     doRecharge: '/api/recharge/do-recharge',
     history: '/api/recharge/history',
@@ -317,7 +235,6 @@ export const API_ENDPOINTS = {
     order: '/api/collect/order',
     verify: '/api/collect/verify',
     history: '/api/collect/history',
-    qr: '/api/collect/qr',
   },
   topup: {
     qr: '/api/topup/qr',
@@ -325,13 +242,13 @@ export const API_ENDPOINTS = {
     status: '/api/topup/status', // append /:transactionId
   },
   pan: {
-    // Biometric PSA (PaySprint)
+    // Biometric PSA (BharatPays)
     myPsaStatus: '/api/pan/my-psa-status',
     registerBioPsa: '/api/pan/register-bio-psa',
     buyCoupons: '/api/pan/buy-coupons',
     setPsaId: '/api/pan/set-psa-id',
     syncPsaStatus: '/api/pan/sync-psa-status',
-    // Standard PSA (PaySprint)
+    // Standard PSA (BharatPays)
     myStdPsaStatus: '/api/pan/my-std-psa-status',
     registerStdPsa: '/api/pan/register-std-psa',
     updateStdPsa: '/api/pan/update-std-psa',
@@ -366,9 +283,7 @@ export const API_ENDPOINTS = {
     delete: '/api/fund-request/delete', // append /:id
   },
   matm: {
-    config: '/api/matm/config',
     request: '/api/matm/request',
-    status: '/api/matm/status',
     history: '/api/matm/history',
     sdk: '/api/matm/sdk',
   },
@@ -398,7 +313,6 @@ export const STORAGE_KEYS = {
   refreshToken: 'refreshToken',
   user: 'user',
   theme: 'theme',
-  selectedPipe: 'selectedPipe',
 };
 
 export const DATE_FILTER_OPTIONS = [
@@ -415,9 +329,4 @@ export const TRANSACTION_STATUS = {
   SUCCESS: 'SUCCESS',
   FAILED: 'FAILED',
   PENDING: 'PENDING',
-};
-
-export const KYC_STEPS = {
-  WEB_KYC: 'web',
-  BIOMETRIC: 'biometric',
 };
