@@ -186,8 +186,8 @@ export function AppSidebar() {
   return (
     <Sidebar className="border-r border-border">
       <SidebarHeader className="bg-card px-6 pt-6 pb-4">
-        <Link to={groups[0]?.items[0]?.url || '/'} className="block rounded-lg focus-visible:outline-2 focus-visible:outline-violet-500" aria-label="Shahparpay home">
-          <img src={logo} alt="Shahparpay" className="h-auto w-full max-w-[200px] object-contain object-left dark:brightness-0 dark:invert dark:opacity-90" />
+        <Link to={groups[0]?.items[0]?.url || '/'} className="mx-auto block w-fit rounded-lg focus-visible:outline-2 focus-visible:outline-violet-500" aria-label="Shahparpay home">
+          <img src={logo} alt="Shahparpay" className="mx-auto h-auto w-[200px] max-w-full object-contain dark:brightness-0 dark:invert dark:opacity-90" />
         </Link>
       </SidebarHeader>
       <SidebarContent className="bg-card px-3 pb-3 no-scrollbar">
