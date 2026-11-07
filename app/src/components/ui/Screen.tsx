@@ -491,7 +491,14 @@ export const SectionTitle: React.FC<{ children: React.ReactNode; action?: React.
   </View>
 );
 
-/** Tabs/segmented control. Horizontal scroll so labels never shrink. */
+/**
+ * Tabs/segmented control. Default: pill chips that wrap onto as many rows as
+ * they need and stretch to fill each row, so every option is visible and two
+ * options split the width in half. No horizontal scroll: nested inside the
+ * page's vertical scroll it fought the swipe and hid options off the edge.
+ * `scroll={false}` keeps the underlined switch look; the prop name is kept so
+ * callers do not change.
+ */
 export const Segmented = <T extends string>({
   options,
   value,
@@ -511,9 +518,9 @@ export const Segmented = <T extends string>({
         onPress={() => onChange(option.key)}
         style={({ pressed }) => [
           styles.chip,
-          // Non-scrolling: the options share one track and split it evenly,
-          // so the control reads as a switch rather than a row of filters.
-          !scroll && styles.chipFlush,
+          // scroll={false}: the options share one underlined track and split
+          // it evenly, so the control reads as a switch rather than filters.
+          scroll ? styles.chipWrap : styles.chipFlush,
           active && (scroll ? styles.chipActive : styles.chipFlushActive),
           pressed && { opacity: 0.7 },
         ]}
@@ -531,21 +538,7 @@ export const Segmented = <T extends string>({
     );
   });
 
-  if (!scroll) return <View style={styles.chipGroup}>{body}</View>;
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      // flexGrow: 0 — react-native-web's ScrollView base style grows, so on a
-      // short page (a tab whose body is only a couple of tiles) the strip ate
-      // the leftover height and every chip stretched with it.
-      style={styles.chipScroll}
-      contentContainerStyle={styles.chipRow}
-      keyboardShouldPersistTaps="handled"
-    >
-      {body}
-    </ScrollView>
-  );
+  return <View style={scroll ? styles.chipRow : styles.chipGroup}>{body}</View>;
 };
 
 /**
@@ -730,8 +723,9 @@ const styles = themed((c, isDark) => ({
   sectionTitleText: { flexShrink: 1, fontSize: t.bodyLg, fontWeight: '500', color: c.foreground },
   sectionSpacer: { flex: 1 },
   sectionRule: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: c.borderStrong },
-  chipScroll: { flexGrow: 0, flexShrink: 0 },
-  chipRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingRight: space.xs },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  // Grows to share its row; the label stays on one line.
+  chipWrap: { flexGrow: 1, alignItems: 'center' },
   // Filter chips: outlined pills; the selected one fills in.
   chip: {
     minHeight: 38,

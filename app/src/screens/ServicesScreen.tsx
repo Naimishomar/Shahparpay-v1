@@ -10,7 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 
 /**
  * Second-level hub: a pill search, then each group as a titled card of grey
- * line-icon circles, four to a row — the same grid as Home.
+ * line-icon circles, three to a row so a three-item group fills the card.
  */
 const GROUPS: { title: string; items: { label: string; route: string; icon: string }[] }[] = [
   {
@@ -88,7 +88,7 @@ export const ServicesScreen: React.FC = () => {
                 accessibilityRole="button"
                 accessibilityLabel={item.label}
               >
-                <IconTile icon={item.icon} size={56} iconSize={26} />
+                <IconTile icon={item.icon} size={60} iconSize={28} />
                 <Text style={styles.label} numberOfLines={2}>
                   {item.label}
                 </Text>
@@ -128,7 +128,7 @@ const styles = themed((c) => ({
   },
   title: { fontSize: t.bodyLg, fontWeight: '500', color: c.foreground, marginBottom: space.lg },
   grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space.lg },
-  act: { width: '25%', alignItems: 'center', gap: space.sm, paddingHorizontal: 2 },
+  act: { width: '33.333%', alignItems: 'center', gap: space.sm, paddingHorizontal: 2 },
   pressed: { opacity: 0.7 },
   label: { fontSize: t.small, fontWeight: '400', color: c.foreground, textAlign: 'center', lineHeight: 17 },
 }));

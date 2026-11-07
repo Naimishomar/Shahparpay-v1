@@ -497,7 +497,7 @@ export const AepsScreen: React.FC = () => {
       }
     >
       <View>
-        {/* BHIM's grey line-icon circles; the selected one gains an orange ring. */}
+        {/* Three to a row so every label fits on one or two lines; the selected tile gains an orange border. */}
         <View style={styles.acts} accessibilityRole="radiogroup">
           {SERVICES.map((s) => {
             const active = s.key === service;
@@ -505,14 +505,12 @@ export const AepsScreen: React.FC = () => {
               <Pressable
                 key={s.key}
                 onPress={() => changeService(s.key)}
-                style={({ pressed }) => [styles.act, pressed && { opacity: 0.7 }]}
+                style={({ pressed }) => [styles.act, active && styles.actOn, pressed && { opacity: 0.7 }]}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={s.label}
               >
-                <View style={[styles.actRing, active && styles.actRingOn]}>
-                  <IconTile icon={s.icon} size={50} iconSize={22} />
-                </View>
+                <IconTile icon={s.icon} size={44} iconSize={22} />
                 <Text style={[styles.actLabel, active && styles.actLabelOn]} numberOfLines={2}>
                   {s.label}
                 </Text>
@@ -764,11 +762,21 @@ const styles = themed((c) => ({
   content: { paddingTop: space.md },
   gap: { marginBottom: space.md },
   field: { marginBottom: space.lg },
-  acts: { flexDirection: 'row', gap: 4, marginBottom: space.xl },
-  act: { flex: 1, alignItems: 'center', gap: space.sm },
-  // Same footprint on and off, so selecting never nudges the row.
-  actRing: { padding: 3, borderRadius: 30, borderWidth: 1.5, borderColor: 'transparent' },
-  actRingOn: { borderColor: c.highlight },
+  acts: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space.sm, marginBottom: space.xl },
+  // 31% x 3 plus two gaps fills the row; the last two tiles centre under it.
+  act: {
+    width: '31.5%',
+    alignItems: 'center',
+    gap: space.sm,
+    paddingVertical: space.md,
+    paddingHorizontal: space.xs,
+    borderRadius: radius.lg,
+    // Same 1.5 border on and off, so selecting never nudges the grid.
+    borderWidth: 1.5,
+    borderColor: c.border,
+    backgroundColor: c.card,
+  },
+  actOn: { borderColor: c.highlight },
   actLabel: { fontSize: t.caption, lineHeight: 16, color: c.mutedForeground, textAlign: 'center' },
   actLabelOn: { fontWeight: '500', color: c.foreground },
   fieldLabel: { fontSize: t.small, fontWeight: '500', color: c.foreground, marginBottom: 7 },
