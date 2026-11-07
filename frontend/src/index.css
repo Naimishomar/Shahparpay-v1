@@ -160,12 +160,16 @@
     color: var(--chip-foreground);
 }
 
-/* The banner: soft indigo through violet into pink, white text. */
+/* The banner: near-black with a faint violet light in the corners, white text. */
 @utility hero-panel {
-    background-color: #818CF8;
-    background-image: linear-gradient(120deg, #6D72F2, #818CF8 40%, #A78BFA 75%, #F472B6);
+    background-color: #0B0B10;
+    background-image:
+        radial-gradient(ellipse 60% 120% at 100% 0%, rgb(124 58 237 / 0.22), transparent 60%),
+        radial-gradient(ellipse 50% 100% at 0% 100%, rgb(79 70 229 / 0.16), transparent 60%),
+        linear-gradient(135deg, #111118, #09090B);
     color: #FFFFFF;
-    box-shadow: 0 24px 50px -24px rgb(139 92 246 / 0.55);
+    border: 1px solid rgb(255 255 255 / 0.06);
+    box-shadow: 0 24px 50px -24px rgb(0 0 0 / 0.6);
 }
 
 /* Two faint lights behind every screen, violet and pink. */
