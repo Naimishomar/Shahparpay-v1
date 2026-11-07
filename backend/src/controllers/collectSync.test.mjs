@@ -110,4 +110,20 @@ await withGateway({ status: 1, data: { txnid: 'D', status: 'failed' } }, async (
   assert.equal(balance(), 250);
 });
 
+// --- "fetched" is not "paid": no inner status, an unknown word, a wrong amount ---
+{
+  const before = balance();
+  for (const [id, reply] of [
+    ['E1', { status: 1, message: 'Payment Status fetched', data: null }],
+    ['E2', { status: 1, data: { txnid: 'E2', status: 'created' } }],
+    ['E3', { status: 1, data: { txnid: 'E3', status: 'success', amount: 1 } }],
+  ]) {
+    await withGateway(reply, async () => {
+      const { transaction } = await syncCollectionTransaction(newOrder(id));
+      assert.equal(transaction.status, 'PENDING', `${id} must stay open`);
+    });
+  }
+  assert.equal(balance(), before, 'none of them credits');
+}
+
 console.log('collectSync: unpaid and unanswered orders stay open, paid ones credit once OK');

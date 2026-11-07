@@ -250,11 +250,22 @@ export const verifyOrder = async (req, res) => {
 export const syncCollectionTransaction = async (txn) => {
   if (txn.status !== 'PENDING') return { transaction: txn, providerData: null };
 
-  const providerTxnId = txn.metadata?.providerTxnId || txn.metadata?.orderId || txn.transactionId;
-  const providerData = await icchhamatiPost('/api/pg/verify', { txnid: providerTxnId });
-  const status = isOk(providerData)
-    ? normaliseStatus(providerData?.data?.status ?? providerData?.status)
-    : 'PENDING';
+  // /api/pg/verify takes the reference_id sent to /api/pg/request: our own id.
+  const providerData = await icchhamatiPost('/api/pg/verify', { txnid: txn.transactionId });
+  // Only the payment's own status counts. The envelope's status 1 means "fetched",
+  // not "paid", and a word the gateway has not used before must not fail an
+  // order the customer may still pay: both stay PENDING.
+  const inner = String(providerData?.data?.status ?? '').trim().toUpperCase();
+  const FAILED_WORDS = ['FAILED', 'FAILURE', 'CANCELLED', 'CANCELED', 'DECLINED', 'REJECTED', 'EXPIRED'];
+  let status = !isOk(providerData) || !inner
+    ? 'PENDING'
+    : FAILED_WORDS.includes(inner) ? 'FAILED' : normaliseStatus(inner) === 'SUCCESS' ? 'SUCCESS' : 'PENDING';
+  // A paid amount that differs from the order is not credited; it waits for an admin.
+  const paid = Number(providerData?.data?.amount);
+  if (status === 'SUCCESS' && Number.isFinite(paid) && paid > 0 && paid !== Number(txn.amount)) {
+    console.error(`Collection ${txn.transactionId}: gateway says ${paid} paid for an order of ${txn.amount}; not credited.`);
+    status = 'PENDING';
+  }
 
   // An unpaid or still-open order is not a failure: the customer may pay in a
   // minute. Only a definite answer moves it out of PENDING.
