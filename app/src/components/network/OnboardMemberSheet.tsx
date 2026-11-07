@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { View, Text, Pressable, ScrollView, Modal, ActivityIndicator } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
 import { Button } from '@/components/ui/Button';
@@ -267,7 +267,7 @@ export const OnboardMemberSheet: React.FC<{
       title={spec.title}
       subtitle={self ? 'An admin verifies your account before you can start.' : isRetailer ? `Four short steps. They'll join your network under ${parentName}.` : 'Four short steps to add a distributor to the platform.'}
       icon="account-plus-outline"
-      dismissible={!create.pending}
+      dismissible={!create.pending && !readQr.pending}
       footer={
         done ? (
           <Button icon={self ? 'login' : 'check'} onPress={onClose} fullWidth>
@@ -493,6 +493,16 @@ export const OnboardMemberSheet: React.FC<{
                 }}
                 helperText={readQr.pending ? 'Reading the QR…' : 'Optional. The side with the QR code; the shop address is filled from it.'}
               />
+              {/* Blocks the form while the QR is read: anything typed meanwhile would be overwritten by the fill. */}
+              <Modal visible={readQr.pending} transparent animationType="fade" statusBarTranslucent onRequestClose={() => {}}>
+                <View style={styles.qrOverlay} accessibilityViewIsModal accessibilityLiveRegion="polite">
+                  <View style={styles.qrCard}>
+                    <ActivityIndicator size="large" color={colors.highlight} />
+                    <Text style={styles.qrTitle}>Reading your Aadhaar QR</Text>
+                    <Text style={styles.qrHint}>The shop address is being filled in. Please wait.</Text>
+                  </View>
+                </View>
+              </Modal>
               {!!readQr.error && <Banner tone="error" message={readQr.error} />}
               {!!qrNote && <SuccessBanner message={qrNote} />}
 
@@ -603,6 +613,10 @@ export const OnboardMemberSheet: React.FC<{
 };
 
 const styles = themed((c) => ({
+  qrOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xl, backgroundColor: 'rgba(0,0,0,0.55)' },
+  qrCard: { width: '100%', maxWidth: 320, alignItems: 'center', gap: space.md, padding: space.xl, borderRadius: radius.lg, backgroundColor: c.card },
+  qrTitle: { fontSize: t.bodyLg, fontWeight: '500', color: c.foreground, textAlign: 'center' },
+  qrHint: { fontSize: t.small, color: c.mutedForeground, textAlign: 'center' },
   footerRow: { flexDirection: 'row', gap: space.sm },
   flex: { flex: 1 },
   stepper: { flexDirection: 'row', gap: space.xs },
