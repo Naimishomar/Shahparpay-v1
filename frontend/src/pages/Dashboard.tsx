@@ -20,12 +20,12 @@ const ymd = (d: Date) =>
 // tile wherever that service appears (quick actions, recent activity).
 const accent = (from: string, to: string) => ({ card: `bg-gradient-to-br ${from} ${to}`, tile: `bg-gradient-to-br ${from} ${to} text-white shadow-sm` });
 const ACCENTS = {
-    blue: accent('from-blue-400', 'to-indigo-500'),
-    violet: accent('from-violet-400', 'to-fuchsia-500'),
-    emerald: accent('from-emerald-400', 'to-teal-500'),
-    orange: accent('from-orange-400', 'to-rose-500'),
-    pink: accent('from-pink-400', 'to-rose-400'),
-    cyan: accent('from-cyan-400', 'to-sky-500'),
+    blue: accent('from-blue-400', 'to-indigo-400'),
+    violet: accent('from-violet-400', 'to-fuchsia-400'),
+    emerald: accent('from-emerald-400', 'to-teal-400'),
+    orange: accent('from-orange-300', 'to-rose-400'),
+    pink: accent('from-pink-300', 'to-rose-400'),
+    cyan: accent('from-cyan-400', 'to-sky-400'),
 } as const;
 
 const QUICK_ACTIONS = [

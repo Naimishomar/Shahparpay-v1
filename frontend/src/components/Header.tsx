@@ -131,7 +131,7 @@ const HeaderSearch = () => {
     const isMac = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform);
 
     return (
-        <div className="relative w-full md:w-auto md:min-w-[220px] md:flex-1">
+        <div className="relative w-full min-w-[200px]">
             <div className="flex h-10 items-center gap-2.5 rounded-xl border border-transparent bg-black/[0.04] px-3 text-sm text-muted-foreground transition focus-within:border-border focus-within:bg-background hover:border-border dark:bg-white/[0.06]">
                 <Search className="h-4 w-4 shrink-0" />
                 <input
@@ -224,8 +224,8 @@ const Header = ({ trigger }: { trigger?: React.ReactNode }) => {
     const wallets = user?.role === 'admin'
         ? [{ label: 'Admin Wallet', value: balances.adminBalance, tone: TONES.trade, Icon: Wallet, link: null }]
         : [
-            { label: 'Trade Wallet', value: balances.aepsBalance, tone: TONES.trade, Icon: Wallet, link: isRetailer ? { to: '/aeps-settlement', text: 'Settle' } : null },
-            { label: 'Utility Wallet', value: balances.mainBalance, tone: TONES.utility, Icon: Zap, link: isRetailer ? { to: '/reports/wallet-ledger', text: 'History' } : null },
+            { label: 'Trade Wallet', value: balances.aepsBalance, tone: TONES.trade, Icon: Wallet, link: isRetailer ? { to: '/aeps-settlement', text: 'Settle', plus: false } : null },
+            { label: 'Utility Wallet', value: balances.mainBalance, tone: TONES.utility, Icon: Zap, link: isRetailer ? { to: '/fund-request', text: 'Add money', plus: true } : null },
         ];
     const firstName = String(user?.name || '').split(' ')[0];
 
@@ -242,17 +242,53 @@ const Header = ({ trigger }: { trigger?: React.ReactNode }) => {
             <TranslateHost />
             <StatusStrip />
 
-            {/* Row 1: greeting, notifications, theme, profile */}
-            <div className="flex items-center gap-3 px-5 pt-3 pb-2.5">
-                {trigger}
+            {/*
+              One line on a laptop (xl+): wallets, eye, search, then the
+              icons and profile. Narrower screens wrap with `order`: greeting and
+              icons first, then the wallets, then a full-width search.
+            */}
+            <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 md:gap-3 md:px-5 xl:flex-nowrap">
+                <div className="order-1 shrink-0">{trigger}</div>
                 {user && (
-                    <div className="min-w-0">
+                    <div className="order-2 min-w-0 flex-1 xl:hidden">
                         <p className="truncate text-base font-semibold text-foreground leading-tight">{greeting()}{firstName ? `, ${firstName}` : ''}</p>
                         <p className="truncate text-xs text-muted-foreground">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                     </div>
                 )}
-                <div className="flex-1" />
 
+                {user && (
+                    <div className="order-4 flex w-full flex-wrap items-center gap-2 md:gap-3 xl:order-2 xl:w-auto xl:flex-nowrap">
+                        {wallets.map(({ label, value, tone, Icon, link }) => (
+                            <div key={label} className={`flex min-w-[150px] flex-1 items-center gap-2.5 rounded-2xl py-1.5 pl-3 pr-1.5 md:flex-none 2xl:gap-3 2xl:py-2 2xl:pl-2 2xl:pr-2.5 ${tone.tile}`}>
+                                <span className={`hidden h-9 w-9 shrink-0 place-items-center rounded-xl 2xl:grid ${tone.icon}`}><Icon className="h-4 w-4" /></span>
+                                <div className="min-w-0 flex-1 md:flex-none">
+                                    <p className={`truncate text-[10.5px] font-semibold uppercase tracking-wider ${tone.cap}`}>{label}</p>
+                                    <p className={`whitespace-nowrap text-[15px] font-bold text-foreground tabular-nums leading-tight transition 2xl:text-[17px] ${hidden ? 'blur-[7px] select-none' : ''}`}>₹ {formatBalance(value)}</p>
+                                </div>
+                                {link && (link.plus ? (
+                                    <Link to={link.to} title={link.text} aria-label={link.text} className={`ml-1 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-background shadow-sm hover:opacity-90 ${tone.link}`}>
+                                        <Plus className="h-4 w-4" strokeWidth={2.5} />
+                                    </Link>
+                                ) : (
+                                    <Link to={link.to} className={`ml-1 shrink-0 rounded-lg bg-background px-2.5 py-1 text-xs font-semibold shadow-sm ${tone.link}`}>{link.text}</Link>
+                                ))}
+                            </div>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={toggleHidden}
+                            title={hidden ? 'Show balances' : 'Hide balances'}
+                            aria-label={hidden ? 'Show balances' : 'Hide balances'}
+                            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border bg-card/70 text-muted-foreground hover:text-foreground"
+                        >
+                            {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                    </div>
+                )}
+
+                {user && <div className="order-5 w-full xl:order-3 xl:w-auto xl:min-w-0 xl:flex-1"><HeaderSearch /></div>}
+
+                <div className="order-3 flex shrink-0 items-center gap-2 md:gap-3 xl:order-4">
                 {user && <NotificationCenter />}
 
                 <button
@@ -268,7 +304,7 @@ const Header = ({ trigger }: { trigger?: React.ReactNode }) => {
                     <PopoverTrigger asChild>
                         <button className="flex shrink-0 items-center gap-3 rounded-full border bg-card/70 py-1 pl-1 pr-3 shadow-sm hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
                             {avatar('w-9 h-9')}
-                            <div className="hidden md:block text-left">
+                            <div className="hidden md:block xl:hidden 2xl:block text-left">
                                 <p className="text-sm font-semibold text-foreground leading-none">{user?.name || "Admin User"}</p>
                                 <p className="text-xs text-muted-foreground mt-1 capitalize">{user?.role || "Superadmin"} Portal</p>
                             </div>
@@ -311,39 +347,8 @@ const Header = ({ trigger }: { trigger?: React.ReactNode }) => {
                         </div>
                     </PopoverContent>
                 </Popover>
-            </div>
-
-            {/* Row 2: every wallet balance at once, the eye, Add money, search */}
-            {user && (
-                // Wraps on a narrow screen: wallets two to a line, then the buttons, then a full-width search.
-                <div className="flex flex-wrap items-center gap-2 px-4 pb-3 md:gap-3 md:px-5">
-                    {wallets.map(({ label, value, tone, Icon, link }) => (
-                        <div key={label} className={`flex min-w-[150px] flex-1 items-center gap-2.5 rounded-2xl py-2 pl-2 pr-2.5 md:flex-none md:gap-3 md:pr-3 ${tone.tile}`}>
-                            <span className={`grid h-9 w-9 place-items-center rounded-xl ${tone.icon}`}><Icon className="h-4 w-4" /></span>
-                            <div className="min-w-0 flex-1 md:flex-none">
-                                <p className={`truncate text-[11px] font-semibold uppercase tracking-wider ${tone.cap}`}>{label}</p>
-                                <p className={`text-[15px] md:text-[17px] font-bold text-foreground tabular-nums leading-tight transition ${hidden ? 'blur-[7px] select-none' : ''}`}>₹ {formatBalance(value)}</p>
-                            </div>
-                            {link && <Link to={link.to} className={`ml-1 rounded-lg bg-background px-2.5 py-1 text-xs font-semibold shadow-sm ${tone.link}`}>{link.text}</Link>}
-                        </div>
-                    ))}
-                    <button
-                        type="button"
-                        onClick={toggleHidden}
-                        title={hidden ? 'Show balances' : 'Hide balances'}
-                        aria-label={hidden ? 'Show balances' : 'Hide balances'}
-                        className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border bg-card/70 text-muted-foreground hover:text-foreground"
-                    >
-                        {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                    {isRetailer && (
-                        <Link to="/fund-request" className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-700 to-indigo-600 px-4 text-sm font-semibold text-white shadow-md shadow-indigo-500/25 hover:opacity-95">
-                            <Plus className="h-4 w-4" /> Add money
-                        </Link>
-                    )}
-                    <HeaderSearch />
                 </div>
-            )}
+            </div>
         </div>
     );
 };
