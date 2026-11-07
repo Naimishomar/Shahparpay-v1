@@ -533,7 +533,7 @@ const BBPS = () => {
                             <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${receiptIsPending ? 'from-amber-400 to-amber-600' : receiptIsSuccess ? 'from-emerald-400 to-emerald-600' : 'from-red-400 to-red-600'}`}></div>
                             
                             <div className="flex flex-col items-center text-center mb-6 pb-6 border-b border-border border-dashed">
-                                <img src={logo} alt="Shahparpay" className="w-32 h-auto max-h-24 object-contain mb-2" crossOrigin="anonymous" />
+                                <img src={logo} alt="Shahparpay" className="w-44 h-auto max-h-24 object-contain mb-2" crossOrigin="anonymous" />
                                 <div className="text-sm text-muted-foreground mt-1">BBPS Transaction Receipt</div>
                             </div>
                             

@@ -82,7 +82,7 @@ const AepsReceipt = ({ transactionId, onClose }: { transactionId: string, onClos
                 <div className="flex flex-col items-center justify-center pb-4 border-b border-dashed border-slate-300">
                     {/* Logo */}
                     <div className="flex items-center gap-2 mb-2">
-                        <img src={logo} alt="Shahparpay" className="w-32 h-auto max-h-24 object-contain" crossOrigin="anonymous" />
+                        <img src={logo} alt="Shahparpay" className="w-44 h-auto max-h-24 object-contain" crossOrigin="anonymous" />
                     </div>
                     <p className="text-xs text-slate-500 text-center uppercase tracking-widest font-semibold">Transaction Receipt</p>
                 </div>
