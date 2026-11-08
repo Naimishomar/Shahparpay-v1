@@ -20,6 +20,12 @@
   --lp-accent-soft: rgba(109, 40, 217, 0.07);
   --lp-positive: #15803d;
   --lp-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* The counter: a deep violet surface the receipt and the closing band sit on. */
+  --lp-ink: #22143b;
+  --lp-ink-2: #2e1d4d;
+  --lp-on-ink: #efe9de;
+  --lp-on-ink-2: #b9b0c9;
+  --lp-display: 'Instrument Serif', Georgia, 'Times New Roman', serif;
   --lp-shadow-sm: 0 1px 2px rgba(28, 26, 23, 0.05);
   --lp-shadow-md: 0 8px 24px rgba(28, 26, 23, 0.06);
   --lp-shadow-lg: 0 8px 24px rgba(28, 26, 23, 0.08);
@@ -33,6 +39,40 @@
   min-height: 100vh;
   font-family: 'Figtree Variable', 'Figtree', ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Portal components (the onboarding wizard on /signup) read the shadcn tokens;
+ * inside a public page they take the public palette, light whatever the
+ * system theme, so a reused component looks like it belongs here.
+ */
+.landing-page,
+html.dark .landing-page {
+  color-scheme: light;
+  --background: var(--lp-bg);
+  --foreground: var(--lp-fg);
+  --card: var(--lp-card);
+  --card-foreground: var(--lp-fg);
+  --popover: var(--lp-card);
+  --popover-foreground: var(--lp-fg);
+  --primary: var(--lp-accent);
+  --primary-foreground: #ffffff;
+  --secondary: var(--lp-surface);
+  --secondary-foreground: var(--lp-fg);
+  --muted: var(--lp-surface);
+  --muted-foreground: var(--lp-muted);
+  --accent: var(--lp-surface);
+  --accent-foreground: var(--lp-fg);
+  --border: var(--lp-border);
+  --input: var(--lp-border-strong);
+  --ring: var(--lp-accent);
+  --chip: var(--lp-surface);
+  --chip-foreground: var(--lp-fg-2);
+  --brand-from: var(--lp-accent);
+  --brand-to: var(--lp-accent);
+  --brand-glow: transparent;
+  --brand-glow-2: transparent;
+  --glow-strength: 0;
 }
 
 /* The public site is light only. */
@@ -61,6 +101,43 @@ html:has(.landing-page) body {
 
 .lp-muted {
   color: var(--lp-muted);
+}
+
+/* Display headlines: a serif with a printed, ledger feel. Large sizes only. */
+.lp-serif {
+  font-family: var(--lp-display);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* The counter the receipt is printed on: one deep violet surface lit from above. */
+.lp-counter {
+  background-color: var(--lp-ink);
+  background-image: radial-gradient(120% 70% at 50% 0%, var(--lp-ink-2), transparent 70%);
+  color: var(--lp-on-ink);
+}
+
+/* A fingerprint scanner, drawn: dark body, glass window. */
+.lp-scanner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #34343a, #1b1b1f);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.lp-scanner > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 24px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #cdeed6, #a6dcb6);
+  color: #14532d;
 }
 
 /* Amounts, IDs and times, as a receipt prints them. */

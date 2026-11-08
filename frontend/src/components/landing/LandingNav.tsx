@@ -22,6 +22,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import logo from '../../assets/logo.png';
 import '../../pages/landing.css';
+import { WRAP } from './ui';
 
 const PRODUCT_MENU_CATEGORIES = [
     {
@@ -83,7 +84,7 @@ const LandingNav: React.FC = () => {
 
     return (
         <nav className="sticky top-0 z-50 border-b border-[var(--lp-border)] bg-[var(--lp-bg)]">
-            <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-6 px-4 sm:px-6">
+            <div className={`${WRAP} flex h-16 items-center justify-between gap-6`}>
                 <Link to="/" aria-label="Shahparpay home" className="shrink-0">
                     <img src={logo} alt="Shahparpay" className="h-8 w-auto object-contain sm:h-9" />
                 </Link>

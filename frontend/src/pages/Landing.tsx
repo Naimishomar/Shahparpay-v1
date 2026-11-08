@@ -280,7 +280,7 @@ const Landing: React.FC = () => {
             <section className="border-b border-[var(--lp-border)]">
                 <div className={`${WRAP} grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-12 lg:gap-12 lg:py-24`}>
                     <div className="lg:col-span-7">
-                        <h1 className="text-[40px] font-medium leading-[1.06] tracking-[-0.03em] text-[var(--lp-fg)] sm:text-[56px] lg:text-[64px]">
+                        <h1 className="lp-serif text-balance text-[52px] leading-[1] text-[var(--lp-fg)] sm:text-[68px] lg:text-[76px]">
                             Turn your shop into a banking point for your neighbourhood
                         </h1>
                         <p className={`${LEAD} mt-6 max-w-xl sm:text-xl`}>
@@ -314,9 +314,9 @@ const Landing: React.FC = () => {
                     <ol className="mt-12 grid gap-4 md:grid-cols-3">
                         {START_STEPS.map(({ title, text, icon }, i) => (
                             <li key={title} className={`${CARD} p-6`}>
-                                <div className="flex items-center justify-between">
+                                <div className="flex items-start justify-between">
+                                    <span className="lp-serif text-[56px] leading-none text-[var(--lp-accent-ink)]"><span className="sr-only">Step </span>{i + 1}</span>
                                     <div className="lp-icon-tile"><Icon icon={icon} /></div>
-                                    <span className="lp-figure text-sm text-[var(--lp-muted)]">Step {i + 1}</span>
                                 </div>
                                 <h3 className="mt-6 text-lg font-medium text-[var(--lp-fg)]">{title}</h3>
                                 <p className={`${BODY} mt-2`}>{text}</p>
@@ -554,11 +554,11 @@ const Landing: React.FC = () => {
             {/* --------------------------------------------------------- CTA */}
             <section className="pb-20 sm:pb-28">
                 <div className={WRAP}>
-                    <div className="rounded-[20px] bg-[var(--lp-fg)] p-8 text-[#efe9de] sm:p-12 lg:p-16">
-                        <h2 className="max-w-2xl text-3xl font-medium leading-[1.12] tracking-[-0.02em] text-white sm:text-4xl lg:text-[44px]">
+                    <div className="lp-counter rounded-[24px] p-8 sm:p-12 lg:p-16">
+                        <h2 className="lp-serif max-w-3xl text-[40px] leading-[1.04] text-white sm:text-[52px] lg:text-[60px]">
                             Your shop is already busy. Give people one more reason to come in
                         </h2>
-                        <p className="mt-6 max-w-xl text-base leading-relaxed text-[#bdb6aa]">
+                        <p className="mt-6 max-w-xl text-base leading-relaxed text-[var(--lp-on-ink-2)]">
                             Nothing to pay to join and nothing to pay monthly. You keep a commission on every transaction, and you settle your wallet to your own bank account whenever you want.
                         </p>
                         <div className="mt-8 flex flex-wrap gap-3">
@@ -569,7 +569,7 @@ const Landing: React.FC = () => {
                                 Talk to us
                             </Link>
                         </div>
-                        <p className="mt-10 border-t border-white/10 pt-6 text-sm text-[#bdb6aa]">
+                        <p className="mt-10 border-t border-white/10 pt-6 text-sm text-[var(--lp-on-ink-2)]">
                             AEPS · Micro ATM · BBPS · DMT · PAN and ITR
                         </p>
                     </div>

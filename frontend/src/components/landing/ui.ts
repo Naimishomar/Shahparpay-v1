@@ -2,10 +2,11 @@
  * Class strings shared by the public pages (landing, login, commission, contact,
  * about), so equal things stay equal. Tokens live in pages/landing.css.
  */
-export const WRAP = 'mx-auto w-full max-w-6xl px-4 sm:px-6';
+// Content runs up to 1680px with a slim gutter, so wide screens are used instead of left empty.
+export const WRAP = 'mx-auto w-full max-w-[1680px] px-4 sm:px-6 lg:px-12';
 export const SECTION = 'py-20 sm:py-28';
-export const H1 = 'text-[40px] font-medium leading-[1.06] tracking-[-0.03em] text-[var(--lp-fg)] sm:text-[56px]';
-export const H2 = 'text-3xl sm:text-4xl lg:text-[44px] font-medium tracking-[-0.02em] leading-[1.1] text-[var(--lp-fg)]';
+export const H1 = 'lp-serif text-balance text-[48px] leading-[1.02] text-[var(--lp-fg)] sm:text-[64px] lg:text-[72px]';
+export const H2 = 'lp-serif text-balance text-[40px] leading-[1.04] text-[var(--lp-fg)] sm:text-[48px] lg:text-[56px]';
 export const H3 = 'text-xl sm:text-2xl font-medium tracking-[-0.01em] text-[var(--lp-fg)]';
 export const LEAD = 'text-base sm:text-lg leading-relaxed text-[var(--lp-fg-2)]';
 export const BODY = 'text-[15px] leading-relaxed text-[var(--lp-fg-2)]';

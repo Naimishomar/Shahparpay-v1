@@ -229,7 +229,7 @@ const Login: React.FC = () => {
                 </div>
 
                 <div className="mx-auto w-full max-w-lg py-10">
-                    <h1 className="text-4xl font-medium leading-[1.1] tracking-[-0.02em] text-[var(--lp-fg)] xl:text-[44px]">
+                    <h1 className="lp-serif text-[48px] leading-[1.02] text-[var(--lp-fg)] xl:text-[60px]">
                         Your banking point, one sign in away
                     </h1>
                     <p className="mt-4 text-base leading-relaxed text-[var(--lp-fg-2)]">
@@ -259,7 +259,7 @@ const Login: React.FC = () => {
                 </div>
 
                 <div className="mx-auto my-auto w-full max-w-sm py-12">
-                    <h2 className="text-3xl font-medium tracking-[-0.02em] text-[var(--lp-fg)]">{title}</h2>
+                    <h2 className="lp-serif text-[44px] leading-[1.04] text-[var(--lp-fg)]">{title}</h2>
                     <p className="mt-2 text-[15px] leading-relaxed text-[var(--lp-fg-2)]">{subtitle}</p>
 
                     <div aria-live="polite" className="mt-6 space-y-3 empty:hidden">

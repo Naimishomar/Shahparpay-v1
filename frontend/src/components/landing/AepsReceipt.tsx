@@ -7,10 +7,15 @@ import { ROW } from './ui';
  * hero and the sign-in page.
  */
 const AepsReceipt = () => (
-    <div className="rounded-[20px] bg-[var(--lp-surface)] p-4 sm:p-8">
-        <div className="mb-4 flex items-center gap-2 px-1 text-sm text-[var(--lp-fg-2)]">
-            <Fingerprint aria-hidden strokeWidth={1.5} className="size-[18px] text-[var(--lp-muted)]" />
-            <span>Mantra MFS100 · fingerprint matched</span>
+    <div className="lp-counter rounded-[24px] p-5 sm:p-8">
+        <div className="mb-6 flex items-center gap-4">
+            <div className="lp-scanner" aria-hidden>
+                <span><Fingerprint strokeWidth={1.5} className="size-4" /></span>
+            </div>
+            <div>
+                <p className="text-sm text-[var(--lp-on-ink)]">Mantra MFS100</p>
+                <p className="text-sm text-[var(--lp-on-ink-2)]">Fingerprint matched · bank approved</p>
+            </div>
         </div>
         <div className="lp-receipt-wrap">
             <div className="lp-receipt rounded-t-xl px-5 pt-6 sm:px-7">

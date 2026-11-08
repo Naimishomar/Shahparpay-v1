@@ -1,9 +1,18 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, IdCard, Mail, Phone, Store } from 'lucide-react';
 import CreateRetailerWizard, { type RetailerForm } from '../components/distributor/CreateRetailerWizard';
+import { BTN_PRIMARY, H1, LEAD, WRAP } from '@/components/landing/ui';
 import logo from '../assets/logo.png';
+import './landing.css';
+
+/** What the form asks for, so nobody stops halfway to fetch a document. */
+const NEEDS = [
+    { icon: Mail, label: 'An email and mobile number you can check now' },
+    { icon: IdCard, label: 'PAN and Aadhaar, with a clear photo of each' },
+    { icon: Store, label: 'Your shop name and address' },
+];
 
 const API = import.meta.env.VITE_BACKEND_URL;
 
@@ -104,57 +113,89 @@ const Signup: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background text-foreground">
-            <header className="border-b">
-                <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
+        <div className="landing-page min-h-screen">
+            <header className="border-b border-[var(--lp-border)]">
+                <div className={`${WRAP} flex h-16 items-center justify-between`}>
                     <Link to="/" aria-label="Shahparpay home">
-                        <img src={logo} alt="Shahparpay" className="h-8 w-auto object-contain dark:invert" />
+                        <img src={logo} alt="Shahparpay" className="h-8 w-auto object-contain sm:h-9" />
                     </Link>
-                    <p className="text-sm text-muted-foreground">
-                        Already have an account? <Link to="/login" className="text-primary hover:underline">Sign in</Link>
+                    <p className="text-sm text-[var(--lp-fg-2)]">
+                        <span className="hidden sm:inline">Already have an account? </span>
+                        <Link to="/login" className="text-[var(--lp-accent-ink)] hover:underline">Sign in</Link>
                     </p>
                 </div>
             </header>
 
-            <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-                {done ? (
-                    <div className="mx-auto max-w-md rounded-2xl border bg-card p-8 text-center" role="status">
-                        <CheckCircle2 aria-hidden strokeWidth={1.5} className="mx-auto size-10 text-emerald-600" />
-                        <h1 className="mt-5 text-2xl font-medium">Account created</h1>
-                        <p className="mt-2 leading-relaxed text-muted-foreground">
+            {done ? (
+                <main className={`${WRAP} py-20 sm:py-28`}>
+                    <div className="mx-auto max-w-lg text-center" role="status">
+                        <CheckCircle2 aria-hidden strokeWidth={1.5} className="mx-auto size-10 text-[var(--lp-positive)]" />
+                        <h1 className={`${H1} mt-6`}>Account created</h1>
+                        <p className={`${LEAD} mt-4`}>
                             An admin will verify your details. Sign in with your email and password to check the status.
                         </p>
-                        <Link to="/login" className="mt-8 inline-flex h-11 items-center gap-2 rounded-[10px] bg-primary px-5 text-sm font-medium text-primary-foreground hover:opacity-90">
+                        <Link to="/login" className={`${BTN_PRIMARY} mt-10`}>
                             <ArrowLeft aria-hidden strokeWidth={1.5} className="size-4" /> Back to sign in
                         </Link>
                     </div>
-                ) : (
-                    <CreateRetailerWizard
-                        self
-                        formData={formData}
-                        setFormData={setFormData}
-                        parentName=""
-                        merchantCode={merchantCode}
-                        aadhaarPicture={aadhaarPicture} setAadhaarPicture={setAadhaarPicture}
-                        panPicture={panPicture} setPanPicture={setPanPicture}
-                        profilePicture={profilePicture} setProfilePicture={setProfilePicture}
-                        otpSent={otpSent}
-                        sendingOtp={sendingOtp}
-                        isEmailVerified={isEmailVerified}
-                        verifyingEmail={verifyingEmail}
-                        onSendOtp={sendOtp}
-                        onVerifyEmail={verifyEmail}
-                        onResetEmail={() => {
-                            setOtpSent(false);
-                            setIsEmailVerified(false);
-                            setFormData({ ...formData, otp: '' });
-                        }}
-                        isLoading={isLoading}
-                        message={message}
-                        onSubmit={submit}
-                    />
-                )}
-            </main>
+                </main>
+            ) : (
+                <main>
+                    <section className="border-b border-[var(--lp-border)]">
+                        <div className={`${WRAP} grid gap-10 py-12 sm:py-16 lg:grid-cols-12 lg:items-end`}>
+                            <div className="lg:col-span-7">
+                                <p className="lp-eyebrow">Retailer signup</p>
+                                <h1 className={`${H1} mt-3`}>Open your banking point</h1>
+                                <p className={`${LEAD} mt-5 max-w-xl`}>
+                                    Four short steps. An admin verifies your account, then you can start serving customers.
+                                </p>
+                            </div>
+                            <div className="lg:col-span-5">
+                                <p className="text-sm text-[var(--lp-muted)]">Keep these ready</p>
+                                <ul className="mt-3 divide-y divide-[var(--lp-border)] border-y border-[var(--lp-border)]">
+                                    {NEEDS.map(({ icon: Icon, label }) => (
+                                        <li key={label} className="flex h-12 items-center gap-3 text-[15px] text-[var(--lp-fg)]">
+                                            <Icon aria-hidden strokeWidth={1.5} className="size-[18px] shrink-0 text-[var(--lp-muted)]" /> {label}
+                                        </li>
+                                    ))}
+                                </ul>
+                                <p className="mt-3 flex items-center gap-2 text-sm text-[var(--lp-fg-2)]">
+                                    <Phone aria-hidden strokeWidth={1.5} className="size-4 text-[var(--lp-muted)]" /> Stuck? Call <a href="tel:+918240039776" className="lp-figure text-[var(--lp-fg)] hover:text-[var(--lp-accent-ink)]">+91 8240039776</a>
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="lp-band py-10 sm:py-14">
+                        <div className={WRAP}>
+                            <CreateRetailerWizard
+                                self
+                                formData={formData}
+                                setFormData={setFormData}
+                                parentName=""
+                                merchantCode={merchantCode}
+                                aadhaarPicture={aadhaarPicture} setAadhaarPicture={setAadhaarPicture}
+                                panPicture={panPicture} setPanPicture={setPanPicture}
+                                profilePicture={profilePicture} setProfilePicture={setProfilePicture}
+                                otpSent={otpSent}
+                                sendingOtp={sendingOtp}
+                                isEmailVerified={isEmailVerified}
+                                verifyingEmail={verifyingEmail}
+                                onSendOtp={sendOtp}
+                                onVerifyEmail={verifyEmail}
+                                onResetEmail={() => {
+                                    setOtpSent(false);
+                                    setIsEmailVerified(false);
+                                    setFormData({ ...formData, otp: '' });
+                                }}
+                                isLoading={isLoading}
+                                message={message}
+                                onSubmit={submit}
+                            />
+                        </div>
+                    </section>
+                </main>
+            )}
         </div>
     );
 };

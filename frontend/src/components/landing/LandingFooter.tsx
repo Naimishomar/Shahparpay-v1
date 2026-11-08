@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
 import whiteLogo from '../../assets/shahparpay-white-logo.png';
+import { WRAP } from './ui';
 
 const BANKING = ['AEPS Cash Withdrawal', 'Balance & Mini Statement', 'Micro ATM', 'Money Transfer (DMT)', 'UPI QR Collection', 'Aadhaar Pay'];
 const BILLS: [string, string][] = [
@@ -32,7 +33,7 @@ const SOCIAL = 'flex size-10 items-center justify-center rounded-lg border borde
  */
 const LandingFooter: React.FC = () => (
     <footer id="contact" className="relative z-10 scroll-mt-16 bg-[#161513] text-[#a39c90]">
-        <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">
+        <div className={`${WRAP} py-16`}>
             <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-5">
                 <div className="space-y-4 lg:col-span-2">
                     <img src={whiteLogo} alt="Shahparpay" className="h-9 w-auto object-contain" />

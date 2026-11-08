@@ -110,6 +110,8 @@ const CreateRetailerWizard = ({
     const STEPS = showPackages ? RETAILER_STEPS : DISTRIBUTOR_STEPS;
     const noun = isRetailer ? 'retailer' : 'distributor';
     const needsOtp = !isRetailer || self;
+    // On the public signup page the labels read in sentence case, like the rest of the site.
+    const LBL = self ? 'text-sm text-muted-foreground' : LABEL;
     const [step, setStep] = useState(0);
     const [touched, setTouched] = useState<Set<number>>(new Set());
     const [showPassword, setShowPassword] = useState(false);
@@ -201,15 +203,16 @@ const CreateRetailerWizard = ({
     return (
         <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
             {/* Hero + stepper */}
-            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
+            <section className={self ? '' : 'relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm'}>
                 <div className="relative flex flex-col gap-6">
-                    <div className="flex items-center gap-4">
+                    {/* The signup page sets its own title. */}
+                    {!self && <div className="flex items-center gap-4">
                         <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><UserPlus className="h-7 w-7" /></div>
                         <div>
                             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{self ? 'Create your account' : `Onboard a ${noun}`}</h1>
                             <p className="text-sm text-muted-foreground">{self ? 'Four short steps. An admin verifies your account before you can start.' : isRetailer ? `Four short steps. They'll join your network under ${parentName}.` : 'Four short steps to add a distributor to the platform.'}</p>
                         </div>
-                    </div>
+                    </div>}
 
                     <ol className="grid grid-cols-4 gap-2">
                         {STEPS.map((s, i) => {
@@ -248,7 +251,7 @@ const CreateRetailerWizard = ({
                     <div className="mb-6 flex items-center gap-3">
                         {(() => { const Icon = STEPS[step].icon; return <div className={`rounded-xl p-2 ${SILVER_TILE}`}><Icon className="h-4 w-4" /></div>; })()}
                         <div>
-                            <p className={LABEL}>Step {step + 1} of {STEPS.length}</p>
+                            <p className={LBL}>Step {step + 1} of {STEPS.length}</p>
                             <h2 className="text-lg font-semibold">{STEPS[step].title}</h2>
                         </div>
                     </div>
@@ -365,7 +368,7 @@ const CreateRetailerWizard = ({
                             </div>
 
                             <div className="md:col-span-2 border-t pt-5">
-                                <p className={`${LABEL} mb-4 flex items-center gap-2`}><Building2 size={14} /> Shop details</p>
+                                <p className={`${LBL} mb-4 flex items-center gap-2`}><Building2 size={14} /> Shop details</p>
                                 <div className="grid gap-5 md:grid-cols-2">
                                     <Field label="Business name" required error={err('businessName')}>
                                         {text('businessName', { placeholder: 'e.g. Sharma Mobile Centre' })}
@@ -393,7 +396,7 @@ const CreateRetailerWizard = ({
                     {step === 2 && (
                         <div className="space-y-6 animate-in fade-in duration-300">
                             <div>
-                                <p className={`${LABEL} mb-4 flex items-center gap-2`}><Globe size={14} /> Branding & support <span className="normal-case tracking-normal">(optional)</span></p>
+                                <p className={`${LBL} mb-4 flex items-center gap-2`}><Globe size={14} /> Branding & support <span className="normal-case tracking-normal">(optional)</span></p>
                                 <div className="grid gap-5 md:grid-cols-2">
                                     <Field label="Brand name">{text('brandName', { placeholder: 'Brand name' })}</Field>
                                     <Field label="Website">
@@ -410,7 +413,7 @@ const CreateRetailerWizard = ({
                             {showPackages && (
                             <div className="border-t pt-5">
                                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                                    <p className={`${LABEL} flex items-center gap-2`}><Package size={14} /> Service packages</p>
+                                    <p className={`${LBL} flex items-center gap-2`}><Package size={14} /> Service packages</p>
                                     <p className="w-full text-xs text-muted-foreground">Services set to No are hidden from the retailer and blocked. You can change this later from the retailer's page.</p>
                                     <div className="flex gap-2">
                                         {(['Yes', 'No'] as const).map((p) => (
@@ -483,7 +486,7 @@ const CreateRetailerWizard = ({
                                     <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
                                         {block.rows.map(([k, val]) => (
                                             <div key={k} className="flex justify-between gap-3 text-sm sm:block">
-                                                <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">{k}</dt>
+                                                <dt className={`${self ? 'text-xs' : 'text-[11px] uppercase tracking-wider'} text-muted-foreground`}>{k}</dt>
                                                 <dd className="truncate font-medium">{val || <span className="text-muted-foreground">—</span>}</dd>
                                             </div>
                                         ))}
@@ -518,7 +521,7 @@ const CreateRetailerWizard = ({
                 {/* Checklist */}
                 <aside className="flex flex-col gap-6">
                     <section className={CARD}>
-                        <p className={`${LABEL} mb-4`}>Checklist</p>
+                        <p className={`${LBL} mb-4`}>Checklist</p>
                         <ul className="space-y-3 text-sm">
                             {[
                                 needsOtp ? ['Email verified', isEmailVerified] : ['Valid email', /^\S+@\S+\.\S+$/.test(v('email'))],
@@ -536,9 +539,9 @@ const CreateRetailerWizard = ({
                             ))}
                         </ul>
                     </section>
-                    <section className={`${CARD} bg-gradient-to-br from-card to-zinc-100/60 dark:to-zinc-900/60`}>
+                    <section className={self ? CARD : `${CARD} bg-gradient-to-br from-card to-zinc-100/60 dark:to-zinc-900/60`}>
                         <div className="flex items-start gap-3">
-                            <div className={`rounded-xl p-2 ${SILVER_TILE}`}><Sparkles className="h-4 w-4" /></div>
+                            <div className={`rounded-xl p-2 ${SILVER_TILE}`}>{self ? <ShieldCheck className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}</div>
                             <div className="text-sm">
                                 <p className="font-semibold">{self ? 'After you sign up' : 'After you create them'}</p>
                                 <p className="mt-1 text-muted-foreground">{self ? <>An admin checks your details. Sign in with this email and password to see the status; once approved, finish AEPS onboarding from the AEPS page.</> : isRetailer ? <>They sign in with this email and password, then complete AEPS onboarding themselves from the AEPS page.</> : <>They sign in with this email and password and can start onboarding retailers right away. Find them under <b>Users</b>.</>}</p>
