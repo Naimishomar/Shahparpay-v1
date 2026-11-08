@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle, Banknote, Fingerprint, Loader2, Receipt, RefreshCw, Tv } from 'lucide-react';
+import { AlertCircle, Banknote, CreditCard, Fingerprint, IdCard, Loader2, Receipt, RefreshCw, Tv, Users } from 'lucide-react';
 import LandingNav from '@/components/landing/LandingNav';
 import LandingFooter from '@/components/landing/LandingFooter';
+import { ALERT_ERROR, BTN_SECONDARY, CARD, H1, LEAD, SECTION, WRAP } from '@/components/landing/ui';
 import './landing.css';
 
 type Slab = { label: string; sample: number; earns: number };
@@ -28,32 +29,27 @@ const Card: React.FC<{
     icon: React.ElementType;
     title: string;
     note?: string;
+    className?: string;
     children: React.ReactNode;
-}> = ({ icon: Icon, title, note, children }) => (
-    <div className="rounded-[28px] border border-slate-200 bg-white p-5 sm:p-7 shadow-sm">
+}> = ({ icon: Icon, title, note, className = '', children }) => (
+    <section className={`${CARD} p-6 sm:p-7 ${className}`}>
         <div className="flex items-start gap-3">
-            <div className="lp-icon-tile shrink-0 w-9 h-9 rounded-xl">
-                <Icon className="mega-icon h-4.5 w-4.5" />
-            </div>
+            <Icon aria-hidden strokeWidth={1.5} className="mt-1 size-[18px] shrink-0 text-[var(--lp-muted)]" />
             <div>
-                <h2 className="text-lg font-extrabold tracking-tight text-slate-900">{title}</h2>
-                {note && <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{note}</p>}
+                <h2 className="text-lg font-medium text-[var(--lp-fg)]">{title}</h2>
+                {note && <p className="mt-1 text-sm leading-relaxed text-[var(--lp-muted)]">{note}</p>}
             </div>
         </div>
-        <div className="mt-5">{children}</div>
-    </div>
+        <hr className="lp-tear mt-5" />
+        <div className="mt-1">{children}</div>
+    </section>
 );
 
+/** One line of the rate card: the label, then the figure in mono like a receipt prints it. */
 const RateRow: React.FC<{ left: string; right: string; muted?: boolean }> = ({ left, right, muted }) => (
-    <div className="flex items-center justify-between gap-4 py-2.5 border-b border-slate-100 last:border-0">
-        <span className={`text-sm ${muted ? 'text-slate-500' : 'text-slate-700'}`}>{left}</span>
-        <span
-            className={`text-sm font-extrabold tabular-nums shrink-0 ${
-                muted ? 'text-slate-500' : 'text-[#008c46]'
-            }`}
-        >
-            {right}
-        </span>
+    <div className="flex min-h-11 items-center justify-between gap-4 border-b border-[var(--lp-border)] py-2 last:border-0">
+        <span className="text-[15px] text-[var(--lp-fg-2)]">{left}</span>
+        <span className={`lp-figure shrink-0 text-sm ${muted ? 'text-[var(--lp-muted)]' : 'text-[var(--lp-fg)]'}`}>{right}</span>
     </div>
 );
 
@@ -80,46 +76,38 @@ const Commission: React.FC = () => {
     }, []);
 
     return (
-        <div className="landing-page relative overflow-x-clip bg-white text-slate-900">
+        <div className="landing-page relative overflow-x-clip">
             <LandingNav />
 
-            <section className="relative w-full border-b border-slate-100 bg-gradient-to-b from-[#f7fee7]/80 via-[#ecfccb]/30 to-white px-4 sm:px-6 py-14 sm:py-20">
-                <div className="mx-auto max-w-3xl text-center">
-                    <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-bold mb-4 shadow-2xs">
-                        <Banknote className="w-3.5 h-3.5 text-[#008c46]" />
-                        <span>The same rates that credit your wallet</span>
-                    </div>
-                    <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]">
-                        What you <span className="text-[#008c46]">earn</span>
-                    </h1>
-                    <p className="mt-4 text-sm sm:text-lg text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto">
+            <header className="border-b border-[var(--lp-border)]">
+                <div className={`${WRAP} py-16 sm:py-24`}>
+                    <p className="lp-eyebrow">The same rates that credit your wallet</p>
+                    <h1 className={`${H1} mt-3`}>What you earn</h1>
+                    <p className={`${LEAD} mt-5 max-w-2xl`}>
                         Commission is credited to your wallet as each transaction completes. No monthly
                         target, no minimum, and nothing held back until month end.
                     </p>
                 </div>
-            </section>
+            </header>
 
-            <section className="w-full bg-[#f8fafc] px-4 sm:px-6 py-14 sm:py-20 border-b border-slate-100">
-                <div className="mx-auto max-w-7xl">
+            <section className={`${SECTION} lp-band !py-16 sm:!py-20`}>
+                <div className={WRAP}>
                     {error && (
-                        <p
-                            role="alert"
-                            className="mb-8 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700"
-                        >
+                        <p role="alert" className={`${ALERT_ERROR} mb-8`}>
                             {error}
                         </p>
                     )}
 
                     {!rates && !error && (
-                        <div className="flex items-center justify-center gap-3 py-20 text-slate-500">
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                            <span className="text-sm font-semibold">Loading the rate card…</span>
+                        <div className="flex items-center justify-center gap-3 py-20 text-[var(--lp-muted)]">
+                            <Loader2 aria-hidden strokeWidth={1.5} className="size-5 animate-spin" />
+                            <span className="text-sm">Loading the rate card…</span>
                         </div>
                     )}
 
                     {rates && (
                         <>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                                 <Card
                                     icon={Fingerprint}
                                     title="AEPS cash withdrawal"
@@ -151,7 +139,7 @@ const Commission: React.FC = () => {
                                 </Card>
 
                                 <Card
-                                    icon={Fingerprint}
+                                    icon={CreditCard}
                                     title="Micro ATM cash withdrawal"
                                     note={`Shown per transaction. ${rates.aeps.tdsPercent}% TDS is deducted.`}
                                 >
@@ -186,7 +174,7 @@ const Commission: React.FC = () => {
                                     title="BBPS bill payments"
                                     note="Flat commission per bill, except where a percentage is shown."
                                 >
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
+                                    <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
                                         {rates.bbps.map((biller) => (
                                             <RateRow
                                                 key={biller.name}
@@ -202,7 +190,7 @@ const Commission: React.FC = () => {
                                 </Card>
 
                                 <Card
-                                    icon={Receipt}
+                                    icon={IdCard}
                                     title="PAN card"
                                     note={`Per application or coupon. ${rates.aeps.tdsPercent}% TDS is deducted.`}
                                 >
@@ -210,7 +198,7 @@ const Commission: React.FC = () => {
                                 </Card>
 
                                 <Card
-                                    icon={Receipt}
+                                    icon={Users}
                                     title="Lead generation"
                                     note={`Flat, once the lead is approved. ${rates.aeps.tdsPercent}% TDS is deducted.`}
                                 >
@@ -239,29 +227,20 @@ const Commission: React.FC = () => {
                                     title="Rates on request"
                                     note="These services are live on the platform, but the rate depends on your volume. Ask us and we will share the card."
                                 >
-                                    <div className="flex flex-wrap gap-2">
+                                    <ul className="mt-4 flex flex-wrap gap-2">
                                         {rates.onRequest.map((service) => (
-                                            <span
-                                                key={service}
-                                                className="text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200 rounded-full px-3 py-1.5"
-                                            >
+                                            <li key={service} className="rounded-md border border-[var(--lp-border)] px-2 py-1 text-sm text-[var(--lp-fg)]">
                                                 {service}
-                                            </span>
+                                            </li>
                                         ))}
-                                    </div>
-                                    <Link
-                                        to="/contact"
-                                        className="mt-5 inline-flex items-center justify-center gap-2.5 bg-[#18181b] hover:bg-black text-white font-bold pl-5 pr-2 py-2 rounded-full text-sm shadow-md transition-all hover:scale-[1.01] group"
-                                    >
-                                        <span>Ask for a rate card</span>
-                                        <span className="w-6 h-6 rounded-full bg-[#a3e635] text-black flex items-center justify-center font-black text-xs group-hover:rotate-45 transition-transform">
-                                            ↗
-                                        </span>
+                                    </ul>
+                                    <Link to="/contact" className={`${BTN_SECONDARY} mt-6`}>
+                                        Ask for a rate card
                                     </Link>
                                 </Card>
                             </div>
 
-                            <p className="mt-8 text-xs text-slate-500 leading-relaxed max-w-3xl">
+                            <p className="mt-8 max-w-3xl text-sm leading-relaxed text-[var(--lp-muted)]">
                                 Rates are per successful transaction and may change with the banking and
                                 biller networks we run on. Your dashboard shows the exact commission booked
                                 against every transaction, which is always the figure that counts.

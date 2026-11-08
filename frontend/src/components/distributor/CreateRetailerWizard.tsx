@@ -83,7 +83,7 @@ const CreateRetailerWizard = ({
     formData, setFormData, parentName, merchantCode,
     aadhaarPicture, setAadhaarPicture, panPicture, setPanPicture, profilePicture, setProfilePicture,
     otpSent, sendingOtp, isEmailVerified, verifyingEmail, onSendOtp, onVerifyEmail, onResetEmail,
-    isLoading, message, onSubmit, kind = 'retailer',
+    isLoading, message, onSubmit, kind = 'retailer', self = false,
 }: {
     formData: RetailerForm;
     setFormData: (f: RetailerForm) => void;
@@ -101,11 +101,15 @@ const CreateRetailerWizard = ({
     onSubmit: (e: React.FormEvent) => void;
     /** Admins onboard distributors with the same flow, minus the retailer-only parts. */
     kind?: 'retailer' | 'distributor';
+    /** A retailer signing themselves up from the public site: verifies their email, has no packages or parent. */
+    self?: boolean;
 }) => {
     const isRetailer = kind === 'retailer';
-    const STEPS = isRetailer ? RETAILER_STEPS : DISTRIBUTOR_STEPS;
+    // A self signup gets every service; the admin who approves it can switch them off.
+    const showPackages = isRetailer && !self;
+    const STEPS = showPackages ? RETAILER_STEPS : DISTRIBUTOR_STEPS;
     const noun = isRetailer ? 'retailer' : 'distributor';
-    const needsOtp = !isRetailer;
+    const needsOtp = !isRetailer || self;
     const [step, setStep] = useState(0);
     const [touched, setTouched] = useState<Set<number>>(new Set());
     const [showPassword, setShowPassword] = useState(false);
@@ -202,8 +206,8 @@ const CreateRetailerWizard = ({
                     <div className="flex items-center gap-4">
                         <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><UserPlus className="h-7 w-7" /></div>
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Onboard a {noun}</h1>
-                            <p className="text-sm text-muted-foreground">{isRetailer ? `Four short steps. They'll join your network under ${parentName}.` : 'Four short steps to add a distributor to the platform.'}</p>
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{self ? 'Create your account' : `Onboard a ${noun}`}</h1>
+                            <p className="text-sm text-muted-foreground">{self ? 'Four short steps. An admin verifies your account before you can start.' : isRetailer ? `Four short steps. They'll join your network under ${parentName}.` : 'Four short steps to add a distributor to the platform.'}</p>
                         </div>
                     </div>
 
@@ -302,7 +306,7 @@ const CreateRetailerWizard = ({
                                 {text('dob', { type: 'date', max: new Date().toISOString().slice(0, 10), className: `${inputCls('dob')} dark:[color-scheme:dark]` })}
                             </Field>
 
-                            <Field label="Password" required error={err('password')} hint="They can change it after signing in.">
+                            <Field label="Password" required error={err('password')} hint={self ? 'You can change it after signing in.' : 'They can change it after signing in.'}>
                                 <div className="relative">
                                     {text('password', { type: showPassword ? 'text' : 'password', placeholder: 'At least 6 characters', autoComplete: 'new-password', className: `${inputCls('password')} pr-16` })}
                                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground">
@@ -317,7 +321,7 @@ const CreateRetailerWizard = ({
                                     <input value={merchantCode} disabled className={`${INPUT} font-mono disabled:cursor-not-allowed disabled:opacity-70`} />
                                 </Field>
                             )}
-                            {isRetailer && (
+                            {isRetailer && !self && (
                             <div className="md:col-span-2 rounded-2xl border bg-background p-4">
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <Field label="Retailer ID (auto-generated)">
@@ -403,7 +407,7 @@ const CreateRetailerWizard = ({
                                 </div>
                             </div>
 
-                            {isRetailer && (
+                            {showPackages && (
                             <div className="border-t pt-5">
                                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                                     <p className={`${LABEL} flex items-center gap-2`}><Package size={14} /> Service packages</p>
@@ -456,7 +460,7 @@ const CreateRetailerWizard = ({
                                 { title: 'Account', to: 0, rows: [
                                     ['Name', `${v('prefix')} ${v('firstName')} ${v('lastName')}`],
                                     ['Email', v('email')], ['Mobile', v('contactNumber') && `+91 ${v('contactNumber')}`],
-                                    ['Date of birth', v('dob')], [isRetailer ? 'Retailer ID' : 'Distributor ID', merchantCode],
+                                    ['Date of birth', v('dob')], ...(self ? [] : [[isRetailer ? 'Retailer ID' : 'Distributor ID', merchantCode]]),
                                 ] },
                                 { title: 'KYC & business', to: 1, rows: [
                                     ['Aadhaar', v('aadhaarNumber') && `XXXX XXXX ${v('aadhaarNumber').slice(-4)}`], ['PAN', v('panNumber')],
@@ -466,7 +470,7 @@ const CreateRetailerWizard = ({
                                 ] },
                                 { title: STEPS[2].title, to: 2, rows: [
                                     ['Brand', v('brandName')], ['Website', v('website')],
-                                    ...(isRetailer ? [['Packages', PACKAGES.every(([k]) => v(k) === 'Yes') ? 'All services' : PACKAGES.filter(([k]) => v(k) === 'Yes').map(([, l]) => l).join(', ') || 'None']] : []),
+                                    ...(showPackages ? [['Packages', PACKAGES.every(([k]) => v(k) === 'Yes') ? 'All services' : PACKAGES.filter(([k]) => v(k) === 'Yes').map(([, l]) => l).join(', ') || 'None']] : []),
                                 ] },
                             ].map((block) => (
                                 <div key={block.title} className="rounded-2xl border bg-background p-4">
@@ -505,7 +509,7 @@ const CreateRetailerWizard = ({
                         ) : (
                             <button type="submit" disabled={isLoading || done} className={`${PRIMARY_BUTTON} px-6`}>
                                 {isLoading ? <Loader2 size={16} className="animate-spin" /> : done ? <CheckCircle2 size={16} /> : <UserPlus size={16} />}
-                                {isLoading ? 'Creating…' : done ? 'Created' : `Create ${noun}`}
+                                {isLoading ? 'Creating…' : done ? 'Created' : self ? 'Create account' : `Create ${noun}`}
                             </button>
                         )}
                     </div>
@@ -536,8 +540,8 @@ const CreateRetailerWizard = ({
                         <div className="flex items-start gap-3">
                             <div className={`rounded-xl p-2 ${SILVER_TILE}`}><Sparkles className="h-4 w-4" /></div>
                             <div className="text-sm">
-                                <p className="font-semibold">After you create them</p>
-                                <p className="mt-1 text-muted-foreground">{isRetailer ? <>They sign in with this email and password, then complete AEPS onboarding themselves from the AEPS page.</> : <>They sign in with this email and password and can start onboarding retailers right away. Find them under <b>Users</b>.</>}</p>
+                                <p className="font-semibold">{self ? 'After you sign up' : 'After you create them'}</p>
+                                <p className="mt-1 text-muted-foreground">{self ? <>An admin checks your details. Sign in with this email and password to see the status; once approved, finish AEPS onboarding from the AEPS page.</> : isRetailer ? <>They sign in with this email and password, then complete AEPS onboarding themselves from the AEPS page.</> : <>They sign in with this email and password and can start onboarding retailers right away. Find them under <b>Users</b>.</>}</p>
                             </div>
                         </div>
                     </section>

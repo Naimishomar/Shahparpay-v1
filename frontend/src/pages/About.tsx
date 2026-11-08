@@ -1,10 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import {
-    Award,
     Banknote,
     Building2,
-    CheckCircle2,
     CreditCard,
     FileCode,
     FileText,
@@ -15,19 +13,20 @@ import {
     Mail,
     MapPin,
     Phone,
-    QrCode,
     Receipt,
-    RefreshCw,
+    Scale,
     Send,
-    Shield,
     ShieldCheck,
-    Sparkles,
     Users,
     Zap,
 } from 'lucide-react';
 import LandingNav from '@/components/landing/LandingNav';
 import LandingFooter from '@/components/landing/LandingFooter';
+import { BODY, BTN_PRIMARY, BTN_SECONDARY, CARD, H1, H2, LEAD, SECTION, WRAP } from '@/components/landing/ui';
 import './landing.css';
+
+/** Only a badge that states availability is shown; the rest were marketing labels. */
+const STATUS_BADGES = new Set(['Coming Soon', 'Upcoming']);
 
 const SERVICES_LIST = [
     {
@@ -151,215 +150,160 @@ const VALUES = [
     },
 ];
 
+const ICON = 'size-[18px] shrink-0 text-[var(--lp-muted)]';
+
 const About: React.FC = () => {
     return (
-        <div className="landing-page relative overflow-x-clip bg-white text-slate-900 font-sans">
+        <div className="landing-page relative overflow-x-clip">
             <LandingNav />
 
-            {/* ------------------------------------------------------------- HERO HEADER */}
-            <section className="relative w-full border-b border-slate-100 bg-gradient-to-b from-[#f7fee7]/80 via-[#ecfccb]/30 to-white px-4 sm:px-6 py-14 sm:py-20">
-                <div className="mx-auto max-w-4xl text-center">
-                    <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-bold mb-4 shadow-2xs">
-                        <Sparkles className="w-3.5 h-3.5 text-[#008c46]" />
-                        <span>Shahparpay Solutions Private Limited</span>
-                    </div>
-                    <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]">
-                        Empowering Retailers with <span className="text-[#008c46]">Next-Gen Fintech</span>
-                    </h1>
-                    <p className="mt-4 text-sm sm:text-lg text-slate-600 font-medium leading-relaxed max-w-3xl mx-auto">
-                        At Shahparpay Solutions Pvt Ltd, we empower retailers, distributors, and businesses with robust,
-                        secure, and scalable fintech solutions. Our platform offers a comprehensive suite of banking,
-                        recharge, bill payment, tax, and loan services — all through one seamless, user-friendly dashboard.
+            <header className="border-b border-[var(--lp-border)]">
+                <div className={`${WRAP} py-16 sm:py-24`}>
+                    <p className="lp-eyebrow">Shahparpay Solutions Private Limited</p>
+                    <h1 className={`${H1} mt-3 max-w-3xl`}>Banking, bills and document services for every shop counter</h1>
+                    <p className={`${LEAD} mt-5 max-w-3xl`}>
+                        At Shahparpay Solutions Pvt Ltd, we equip retailers, distributors and businesses with banking,
+                        recharge, bill payment, tax and loan services — all through one dashboard.
                     </p>
                 </div>
-            </section>
+            </header>
 
-            {/* ------------------------------------------------------------- MISSION & VISION */}
-            <section className="w-full bg-[#f8fafc] px-4 sm:px-6 py-14 sm:py-20 border-b border-slate-100">
-                <div className="mx-auto max-w-7xl space-y-12">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-                        <div className="rounded-[28px] border border-slate-200 bg-white p-6 sm:p-8 shadow-sm relative overflow-hidden">
-                            <div className="w-12 h-12 rounded-2xl bg-[#f0fdf4] border border-[#bbf7d0] flex items-center justify-center mb-5">
-                                <Users className="h-6 w-6 text-[#008c46]" />
-                            </div>
-                            <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Our Mission</h2>
-                            <p className="mt-3 text-slate-600 text-sm sm:text-base leading-relaxed">
+            {/* Mission, platform and the official record */}
+            <section className={`${SECTION} lp-band`}>
+                <div className={`${WRAP} space-y-4`}>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div className={`${CARD} p-6 sm:p-8`}>
+                            <Users aria-hidden strokeWidth={1.5} className={ICON} />
+                            <h2 className="mt-5 text-xl font-medium text-[var(--lp-fg)]">Our mission</h2>
+                            <p className={`${BODY} mt-3`}>
                                 With a vision to bridge the digital gap and enable financial inclusion across India, we are
                                 committed to delivering instant transactions, transparent reporting, and dedicated support.
                                 Whether you're a local store owner or a large distributor, Shahparpay Solutions Pvt Ltd helps you
                                 serve your customers better and earn more on every transaction.
                             </p>
                         </div>
-
-                        <div className="rounded-[28px] border border-slate-200 bg-white p-6 sm:p-8 shadow-sm relative overflow-hidden">
-                            <div className="w-12 h-12 rounded-2xl bg-[#f0fdf4] border border-[#bbf7d0] flex items-center justify-center mb-5">
-                                <Award className="h-6 w-6 text-[#008c46]" />
-                            </div>
-                            <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Our Platform</h2>
-                            <p className="mt-3 text-slate-600 text-sm sm:text-base leading-relaxed">
-                                Shahparpay Solutions Private Limited is registered under Ministry of Electronics &amp; Information
-                                Technology guidelines and compliant with RBI PPI and NPCI payment security standards. Join thousands of
-                                trusted partners and grow your digital service business with us.
+                        <div className={`${CARD} p-6 sm:p-8`}>
+                            <ShieldCheck aria-hidden strokeWidth={1.5} className={ICON} />
+                            <h2 className="mt-5 text-xl font-medium text-[var(--lp-fg)]">Our platform</h2>
+                            <p className={`${BODY} mt-3`}>
+                                Join thousands of trusted partners and grow your digital service business with us.
                             </p>
                         </div>
                     </div>
 
-                    {/* VERBATIM DOCUMENT COPY CARD */}
-                    <div className="rounded-[28px] border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-4">
-                        <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                            <FileText className="w-5 h-5 text-[#008c46]" />
-                            <h3 className="text-lg font-extrabold text-slate-900">Official Document Record (ABOUT US SHAHPARPAY)</h3>
+                    {/* Kept word for word: the company's official About Us record. */}
+                    <div className={`${CARD} p-6 sm:p-8`}>
+                        <div className="flex items-center gap-2">
+                            <FileText aria-hidden strokeWidth={1.5} className={ICON} />
+                            <h2 className="text-lg font-medium text-[var(--lp-fg)]">Official document record</h2>
                         </div>
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-700 leading-relaxed space-y-3 font-mono">
-                            <p className="font-bold text-slate-900">About Us</p>
+                        <hr className="lp-tear my-5" />
+                        <div className={`${BODY} max-w-4xl space-y-3`}>
+                            <p className="text-[var(--lp-fg)]">About Us</p>
                             <p>
                                 At Shahparpay Solutions Pvt Ltd, we empower retailers, distributors, and businesses with robust, secure, and scalable fintech solutions. Our platform offers a comprehensive suite of services including AEPS (Aadhaar Enabled Payment System), Cash Withdrawal, Cash deposit, Micro ATM Service, Domestic Money Transfer (DMT), Mobile &amp; DTH Recharge, and BBPS (Bharat Bill Payment System), PAN Card Service, Account opening service, Credit Card Lead Generation, Loan Lead Generation, Income tax Returns Filing, GST Registration and GST Filing, FSSAI License Service, — all through a user-friendly dashboard.
                             </p>
                             <p>
                                 With a vision to bridge the digital gap and enable financial inclusion across India, we are committed to delivering instant transactions, transparent reporting, and 24/7 support. Whether you're a local store owner or a large distributor, Shahparpay Solutions Pvt Ltd helps you serve your customers better and earn more on every transaction.
                             </p>
-                            <p>
-                                Join thousands of trusted partners and grow your digital service business with us.
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* CORE VALUES */}
-                    <div>
-                        <div className="text-center max-w-2xl mx-auto mb-10">
-                            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                                Why Partner With <span className="text-[#008c46]">Shahparpay</span>
-                            </h2>
-                            <p className="mt-2 text-slate-600 text-sm">
-                                Built for trust, speed, and real earnings for every shop owner.
-                            </p>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {VALUES.map((val) => (
-                                <div key={val.title} className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
-                                    <div className="w-10 h-10 rounded-xl bg-[#f0fdf4] border border-[#bbf7d0] flex items-center justify-center mb-4">
-                                        <val.icon className="h-5 w-5 text-[#008c46]" />
-                                    </div>
-                                    <h3 className="text-base font-extrabold text-slate-900">{val.title}</h3>
-                                    <p className="mt-2 text-xs text-slate-500 leading-relaxed">{val.desc}</p>
-                                </div>
-                            ))}
+                            <p>Join thousands of trusted partners and grow your digital service business with us.</p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* ------------------------------------------------------------- PRODUCTS & SERVICES GRID */}
-            <section className="w-full bg-white px-4 sm:px-6 py-14 sm:py-20 border-b border-slate-100">
-                <div className="mx-auto max-w-7xl">
-                    <div className="text-center max-w-3xl mx-auto mb-12">
-                        <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 py-1.5 rounded-full text-xs font-bold mb-3">
-                            <Layers className="w-3.5 h-3.5 text-[#008c46]" />
-                            <span>Complete Product &amp; Service Portfolio</span>
-                        </div>
-                        <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-                            Everything You Can Offer <span className="text-[#008c46]">At Your Counter</span>
-                        </h2>
-                        <p className="mt-3 text-slate-600 text-sm sm:text-base leading-relaxed">
-                            Turn your retail store into a complete digital banking and financial services hub.
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {SERVICES_LIST.map((srv) => (
-                            <div key={srv.id} className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
-                                <div>
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="w-10 h-10 rounded-xl bg-[#f0fdf4] border border-[#bbf7d0] flex items-center justify-center">
-                                            <srv.icon className="h-5 w-5 text-[#008c46]" />
-                                        </div>
-                                        <span className="text-xs font-extrabold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                                            {srv.badge}
-                                        </span>
-                                    </div>
-                                    <h3 className="text-lg font-extrabold text-slate-900">{srv.title}</h3>
-                                    <p className="mt-2 text-xs text-slate-600 leading-relaxed">{srv.desc}</p>
-                                </div>
-                                <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-[#008c46]">
-                                    <span>{srv.price}</span>
-                                    <span className="text-slate-600">#{srv.id}</span>
-                                </div>
+            {/* Values */}
+            <section className={SECTION}>
+                <div className={WRAP}>
+                    <h2 className={H2}>Why partner with Shahparpay</h2>
+                    <p className={`${LEAD} mt-4`}>Built for trust, speed, and real earnings for every shop owner.</p>
+                    <div className="mt-12 grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+                        {VALUES.map((val) => (
+                            <div key={val.title} className="border-t border-[var(--lp-border-strong)] pt-5">
+                                <val.icon aria-hidden strokeWidth={1.5} className={ICON} />
+                                <h3 className="mt-4 text-base font-medium text-[var(--lp-fg)]">{val.title}</h3>
+                                <p className="mt-2 text-sm leading-relaxed text-[var(--lp-fg-2)]">{val.desc}</p>
                             </div>
                         ))}
                     </div>
                 </div>
             </section>
 
-            {/* ------------------------------------------------------------- SUPPORT & DIRECT CONTACT */}
-            <section className="w-full bg-[#f8fafc] px-4 sm:px-6 py-14 sm:py-20 border-b border-slate-100">
-                <div className="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                    <div className="lg:col-span-7 space-y-6">
-                        <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 py-1.5 rounded-full text-xs font-bold">
-                            <Headset className="w-3.5 h-3.5 text-[#008c46]" />
-                            <span>Partner / Retailer Support Facility</span>
-                        </div>
-                        <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                            We Are Here To <span className="text-[#008c46]">Support Your Business</span>
-                        </h2>
-                        <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
+            {/* Products and services */}
+            <section className={`${SECTION} lp-band`}>
+                <div className={WRAP}>
+                    <p className="lp-eyebrow">Complete product and service portfolio</p>
+                    <h2 className={`${H2} mt-3`}>Everything you can offer at your counter</h2>
+                    <p className={`${LEAD} mt-4`}>Turn your retail store into a complete digital banking and financial services hub.</p>
+
+                    <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {SERVICES_LIST.map((srv) => (
+                            <div key={srv.id} className={`${CARD} flex flex-col p-6`}>
+                                <div className="flex items-center justify-between">
+                                    <srv.icon aria-hidden strokeWidth={1.5} className={ICON} />
+                                    <span className="lp-figure text-xs text-[var(--lp-muted)]">{srv.id}</span>
+                                </div>
+                                <h3 className="mt-5 text-lg font-medium text-[var(--lp-fg)]">{srv.title}</h3>
+                                {STATUS_BADGES.has(srv.badge) && <p className="mt-1 text-sm text-[var(--lp-accent-ink)]">{srv.badge}</p>}
+                                <p className="mt-2 text-sm leading-relaxed text-[var(--lp-fg-2)]">{srv.desc}</p>
+                                <hr className="lp-tear mb-4 mt-auto pt-5" />
+                                <p className="text-sm text-[var(--lp-fg)]">{srv.price}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* Support and head office */}
+            <section className={SECTION}>
+                <div className={`${WRAP} grid grid-cols-1 items-center gap-12 lg:grid-cols-12`}>
+                    <div className="lg:col-span-7">
+                        <p className="lp-eyebrow">Partner and retailer support</p>
+                        <h2 className={`${H2} mt-3`}>We are here to support your business</h2>
+                        <p className={`${LEAD} mt-4`}>
                             Our dedicated support team is available Monday to Saturday (9:00 AM to 10:00 PM) for operational guidance,
                             transaction queries, and instant resolution.
                         </p>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="p-4 rounded-2xl bg-white border border-slate-200 flex items-start gap-3">
-                                <Phone className="h-5 w-5 text-[#008c46] shrink-0 mt-0.5" />
+                        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className={`${CARD} flex items-start gap-3 p-5`}>
+                                <Phone aria-hidden strokeWidth={1.5} className={`${ICON} mt-0.5`} />
                                 <div>
-                                    <div className="text-xs font-bold text-slate-600 uppercase">Support Care Line</div>
-                                    <a href="tel:+918240039776" className="text-sm font-extrabold text-slate-900 hover:text-[#008c46]">+91 8240039776</a>
+                                    <p className="text-sm text-[var(--lp-muted)]">Support care line</p>
+                                    <a href="tel:+918240039776" className="lp-figure text-[15px] text-[var(--lp-fg)] hover:text-[var(--lp-accent-ink)]">+91 8240039776</a>
                                 </div>
                             </div>
-
-                            <div className="p-4 rounded-2xl bg-white border border-slate-200 flex items-start gap-3">
-                                <Mail className="h-5 w-5 text-[#008c46] shrink-0 mt-0.5" />
+                            <div className={`${CARD} flex items-start gap-3 p-5`}>
+                                <Mail aria-hidden strokeWidth={1.5} className={`${ICON} mt-0.5`} />
                                 <div>
-                                    <div className="text-xs font-bold text-slate-600 uppercase">Support Email</div>
-                                    <a href="mailto:shahparpay@gmail.com" className="text-sm font-extrabold text-slate-900 hover:text-[#008c46]">shahparpay@gmail.com</a>
+                                    <p className="text-sm text-[var(--lp-muted)]">Support email</p>
+                                    <a href="mailto:shahparpay@gmail.com" className="text-[15px] text-[var(--lp-fg)] hover:text-[var(--lp-accent-ink)]">shahparpay@gmail.com</a>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-4 pt-2">
-                            <Link
-                                to="/login"
-                                className="inline-flex items-center justify-center gap-2.5 bg-[#18181b] hover:bg-black text-white font-bold pl-6 pr-2 py-2.5 rounded-full text-sm shadow-md transition-all hover:scale-[1.01] group"
-                            >
-                                <span>Get Started Now</span>
-                                <span className="w-7 h-7 rounded-full bg-[#a3e635] text-black flex items-center justify-center font-black text-sm group-hover:rotate-45 transition-transform">
-                                    ↗
-                                </span>
-                            </Link>
-
-                            <Link
-                                to="/contact"
-                                className="inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-900 font-bold px-6 py-2.5 rounded-full text-sm border border-slate-300 shadow-xs transition-colors"
-                            >
-                                <span>Contact Us</span>
-                            </Link>
+                        <div className="mt-8 flex flex-wrap gap-3">
+                            <Link to="/login" className={BTN_PRIMARY}>Get started</Link>
+                            <Link to="/contact" className={BTN_SECONDARY}>Contact us</Link>
                         </div>
                     </div>
 
-                    <div className="lg:col-span-5 rounded-[28px] bg-[#00381e] text-white p-6 sm:p-8 shadow-xl border border-emerald-800/60">
-                        <h3 className="text-xl font-extrabold text-white">Head Office Address</h3>
-                        <p className="mt-2 text-xs text-emerald-200">Registered Office &amp; Jurisdiction</p>
-
-                        <div className="mt-6 space-y-4 text-xs text-emerald-50 leading-relaxed">
+                    <div className={`${CARD} p-6 sm:p-8 lg:col-span-5`}>
+                        <h3 className="text-lg font-medium text-[var(--lp-fg)]">Head office address</h3>
+                        <p className="mt-1 text-sm text-[var(--lp-muted)]">Registered office and jurisdiction</p>
+                        <hr className="lp-tear my-5" />
+                        <div className="space-y-4 text-[15px] leading-relaxed text-[var(--lp-fg-2)]">
                             <div className="flex items-start gap-3">
-                                <MapPin className="h-4 w-4 text-[#a3e635] shrink-0 mt-0.5" />
+                                <MapPin aria-hidden strokeWidth={1.5} className={`${ICON} mt-1`} />
                                 <span>
-                                    <strong>Shahparpay Solutions Private Limited</strong><br />
+                                    <span className="text-[var(--lp-fg)]">Shahparpay Solutions Private Limited</span><br />
                                     4/1 Victoria Lane, Telinipara, Bhadreswar,<br />
                                     Hooghly, West Bengal - 712125
                                 </span>
                             </div>
-                            <div className="flex items-center gap-3 pt-2 border-t border-emerald-800/80">
-                                <Shield className="h-4 w-4 text-[#a3e635] shrink-0" />
-                                <span>Dispute Jurisdiction Area: Kolkata High Court</span>
+                            <div className="flex items-start gap-3">
+                                <Scale aria-hidden strokeWidth={1.5} className={`${ICON} mt-1`} />
+                                <span>Dispute jurisdiction area: Kolkata High Court</span>
                             </div>
                         </div>
                     </div>

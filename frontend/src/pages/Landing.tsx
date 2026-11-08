@@ -29,17 +29,8 @@ import './landing.css';
 import LandingNav from '@/components/landing/LandingNav';
 import LandingFooter from '@/components/landing/LandingFooter';
 
-/* Shared class strings, so equal things stay equal across sections. */
-const WRAP = 'mx-auto w-full max-w-6xl px-4 sm:px-6';
-const SECTION = 'py-20 sm:py-28';
-const H2 = 'text-3xl sm:text-4xl lg:text-[44px] font-medium tracking-[-0.02em] leading-[1.1] text-[var(--lp-fg)]';
-const H3 = 'text-xl sm:text-2xl font-medium tracking-[-0.01em] text-[var(--lp-fg)]';
-const LEAD = 'text-base sm:text-lg leading-relaxed text-[var(--lp-fg-2)]';
-const BODY = 'text-[15px] leading-relaxed text-[var(--lp-fg-2)]';
-const CARD = 'rounded-2xl border border-[var(--lp-border)] bg-[var(--lp-card)]';
-const BTN_PRIMARY = 'lp-btn-primary inline-flex h-12 items-center justify-center gap-2 px-5 text-base';
-const BTN_SECONDARY = 'lp-btn-secondary inline-flex h-12 items-center justify-center gap-2 px-5 text-base';
-const ROW = 'flex items-baseline justify-between gap-4';
+import AepsReceipt from '@/components/landing/AepsReceipt';
+import { BODY, BTN_PRIMARY, BTN_SECONDARY, CARD, H2, H3, LEAD, ROW, SECTION, WRAP } from '@/components/landing/ui';
 
 const Icon = ({ icon: I, className = '' }: { icon: LucideIcon; className?: string }) => (
     <I aria-hidden className={`size-[18px] shrink-0 text-[var(--lp-muted)] ${className}`} strokeWidth={1.5} />
@@ -79,51 +70,6 @@ const TRANSFER_AND_BILL_SERVICES = [
 ];
 
 const SERVICES = ['AEPS', 'Micro ATM', 'DMT', 'BBPS', 'UPI', 'Recharge', 'PAN', 'ITR'];
-
-/** The moment of the page: the slip a customer takes home after an AEPS withdrawal. */
-function AepsReceipt() {
-    return (
-        <div className="rounded-[20px] bg-[var(--lp-surface)] p-4 sm:p-8">
-            <div className="mb-4 flex items-center gap-2 px-1 text-sm text-[var(--lp-fg-2)]">
-                <Icon icon={Fingerprint} />
-                <span>Mantra MFS100 · fingerprint matched</span>
-            </div>
-            <div className="lp-receipt-wrap">
-                <div className="lp-receipt rounded-t-xl px-5 pt-6 sm:px-7">
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <p className="text-base font-medium text-[var(--lp-fg)]">AEPS cash withdrawal</p>
-                            <p className="lp-figure mt-1 text-xs text-[var(--lp-muted)]">08 Nov 2026 · 11:42 AM</p>
-                        </div>
-                        <span className="inline-flex items-center gap-1.5 text-sm text-[var(--lp-positive)]">
-                            <CheckCircle2 aria-hidden className="size-4" strokeWidth={1.5} /> Success
-                        </span>
-                    </div>
-                    <p className="lp-figure mt-6 text-[40px] leading-none tracking-[-0.02em] text-[var(--lp-fg)]">₹2,000.00</p>
-                    <hr className="lp-tear my-6" />
-                    <dl className="space-y-3 text-sm">
-                        {[
-                            ['Customer', 'Sunita Devi'],
-                            ['Aadhaar', 'XXXX XXXX 4410'],
-                            ['Bank', 'State Bank of India'],
-                            ['RRN', '431209876543'],
-                        ].map(([k, v]) => (
-                            <div key={k} className={ROW}>
-                                <dt className="text-[var(--lp-muted)]">{k}</dt>
-                                <dd className={`text-right text-[var(--lp-fg)] ${k === 'Customer' || k === 'Bank' ? '' : 'lp-figure'}`}>{v}</dd>
-                            </div>
-                        ))}
-                    </dl>
-                    <hr className="lp-tear my-6" />
-                    <div className={ROW}>
-                        <span className="text-sm text-[var(--lp-fg-2)]">Your commission</span>
-                        <span className="lp-figure text-base text-[var(--lp-accent-ink)]">+₹14.00</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
 
 function BillReceiptMockup() {
     return (
@@ -332,8 +278,8 @@ const Landing: React.FC = () => {
 
             {/* ------------------------------------------------------------ HERO */}
             <section className="border-b border-[var(--lp-border)]">
-                <div className={`${WRAP} grid items-center gap-12 py-16 sm:py-20 lg:min-h-[calc(100svh-64px)] lg:grid-cols-12 lg:gap-16 lg:py-16`}>
-                    <div className="lg:col-span-6">
+                <div className={`${WRAP} grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-12 lg:gap-12 lg:py-24`}>
+                    <div className="lg:col-span-7">
                         <h1 className="text-[40px] font-medium leading-[1.06] tracking-[-0.03em] text-[var(--lp-fg)] sm:text-[56px] lg:text-[64px]">
                             Turn your shop into a banking point for your neighbourhood
                         </h1>
@@ -350,7 +296,7 @@ const Landing: React.FC = () => {
                             <li className="flex items-center gap-2"><Icon icon={CheckCircle2} /> Retailers across West Bengal</li>
                         </ul>
                     </div>
-                    <div className="lg:col-span-6">
+                    <div className="lg:col-span-5">
                         <AepsReceipt />
                     </div>
                 </div>

@@ -22,6 +22,7 @@ const prefetchPages = () => {
   loaders.reduce((chain, load) => chain.then(() => load()).catch(() => {}), Promise.resolve() as Promise<unknown>)
 }
 const Login = page(() => import("./pages/Login"))
+const Signup = page(() => import("./pages/Signup"))
 const Layout = page(() => import("./pages/Layout"))
 const Dashboard = page(() => import("./pages/Dashboard"))
 const AepsSettlement = page(() => import("./pages/AepsSettlement"))
@@ -93,6 +94,12 @@ function LoginRoute() {
   return <Login />
 }
 
+function SignupRoute() {
+  const { token } = useAuth()
+  if (token) return <Navigate to="/dashboard" replace />
+  return <Signup />
+}
+
 /**
  * Signed in: fetches every page in the background shortly after load. Its own
  * component so auth changes re-render only this, not App and its router.
@@ -113,6 +120,7 @@ function App() {
       <Route element={<ScrollToTopWrapper />}>
       <Route path="/" element={<LandingRoute />} />
       <Route path="/login" element={<LoginRoute />} />
+      <Route path="/signup" element={<SignupRoute />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/commission" element={<Commission />} />
       <Route path="/about" element={<About />} />

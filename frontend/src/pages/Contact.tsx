@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { CheckCircle2, Clock, Headset, Loader2, Mail, MapPin, Phone, Sparkles } from 'lucide-react';
+import { CheckCircle2, Clock, Headset, Loader2, Mail, MapPin, Phone, Percent } from 'lucide-react';
 import LandingNav from '@/components/landing/LandingNav';
 import LandingFooter from '@/components/landing/LandingFooter';
+import { ALERT_ERROR, BTN_PRIMARY, BTN_SECONDARY, CARD, H1, INPUT, LABEL, LEAD, WRAP } from '@/components/landing/ui';
 import './landing.css';
 
 type Field = 'name' | 'mobile' | 'email' | 'city' | 'message';
 
 const EMPTY: Record<Field, string> = { name: '', mobile: '', email: '', city: '', message: '' };
 
-const INPUT_CLASS =
-    'mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-hidden transition-colors focus:border-[#008c46] focus:ring-2 focus:ring-[#008c46]/20';
+const REQ = <span className="text-[var(--lp-muted)]"> (required)</span>;
 
 const REASONS = [
     {
@@ -18,7 +18,7 @@ const REASONS = [
         desc: 'What you need to sign up, which devices work, and how soon you can start.',
     },
     {
-        icon: Sparkles,
+        icon: Percent,
         title: 'Commission rates',
         desc: 'What you earn on AEPS, money transfer, recharge, bills, PAN and ITR.',
     },
@@ -74,194 +74,108 @@ const Contact: React.FC = () => {
     };
 
     return (
-        <div className="landing-page relative overflow-x-clip bg-white text-slate-900">
+        <div className="landing-page relative overflow-x-clip">
             <LandingNav />
 
-            {/* ------------------------------------------------------------- HEADER BAND */}
-            <section className="relative w-full border-b border-slate-100 bg-gradient-to-b from-[#f7fee7]/80 via-[#ecfccb]/30 to-white px-4 sm:px-6 py-14 sm:py-20">
-                <div className="mx-auto max-w-3xl text-center">
-                    <div className="inline-flex items-center gap-2 bg-[#f0fdf4] text-[#008c46] border border-[#bbf7d0] px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-bold mb-4 shadow-2xs">
-                        <Headset className="w-3.5 h-3.5 text-[#008c46]" />
-                        <span>We answer in your language</span>
-                    </div>
-                    <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]">
-                        Talk to <span className="text-[#008c46]">our team</span>
-                    </h1>
-                    <p className="mt-4 text-sm sm:text-lg text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto">
+            <header className="border-b border-[var(--lp-border)]">
+                <div className={`${WRAP} py-16 sm:py-24`}>
+                    <p className="lp-eyebrow"><Headset aria-hidden strokeWidth={1.5} className="size-4" /> We answer in your language</p>
+                    <h1 className={`${H1} mt-3`}>Talk to our team</h1>
+                    <p className={`${LEAD} mt-5 max-w-2xl`}>
                         Leave your details and we will call you back. No form-filling marathon — a name,
                         a number and what you need is enough.
                     </p>
                 </div>
-            </section>
+            </header>
 
-            {/* ------------------------------------------------------------- FORM + SIDEBAR */}
-            <section className="w-full bg-[#f8fafc] px-4 sm:px-6 py-14 sm:py-20 border-b border-slate-100">
-                <div className="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-                    {/* Form card */}
-                    <div className="lg:col-span-7 rounded-[28px] border border-slate-200 bg-white p-5 sm:p-8 lg:p-10 shadow-xl">
+            <section className="lp-band py-16 sm:py-20">
+                <div className={`${WRAP} grid grid-cols-1 items-start gap-4 lg:grid-cols-12`}>
+                    <div className={`${CARD} p-6 sm:p-8 lg:col-span-7 lg:p-10`}>
                         {sent ? (
-                            <div className="py-12 text-center">
-                                <div className="mx-auto w-16 h-16 rounded-full bg-[#f0fdf4] border border-[#bbf7d0] flex items-center justify-center">
-                                    <CheckCircle2 className="h-8 w-8 text-[#008c46]" />
-                                </div>
-                                <h2 className="mt-5 text-2xl font-extrabold tracking-tight">Message sent</h2>
-                                <p className="mt-2 text-slate-600 max-w-sm mx-auto leading-relaxed">
+                            <div className="py-12 text-center" role="status">
+                                <CheckCircle2 aria-hidden strokeWidth={1.5} className="mx-auto size-10 text-[var(--lp-positive)]" />
+                                <h2 className="mt-5 text-2xl font-medium text-[var(--lp-fg)]">Message sent</h2>
+                                <p className="mx-auto mt-2 max-w-sm leading-relaxed text-[var(--lp-fg-2)]">
                                     Thanks — we have your details and will get back to you shortly.
                                 </p>
-                                <button
-                                    type="button"
-                                    onClick={() => setSent(false)}
-                                    className="mt-7 bg-[#18181b] hover:bg-black text-white font-bold px-6 py-2.5 rounded-full text-sm transition-colors"
-                                >
+                                <button type="button" onClick={() => setSent(false)} className={`${BTN_SECONDARY} mt-8`}>
                                     Send another message
                                 </button>
                             </div>
                         ) : (
-                            <form onSubmit={handleSubmit} noValidate className="space-y-5">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                                    <label className="block">
-                                        <span className="text-sm font-bold text-slate-700">
-                                            Your name <span className="text-rose-500">*</span>
-                                        </span>
-                                        <input
-                                            value={form.name}
-                                            onChange={set('name')}
-                                            autoComplete="name"
-                                            className={INPUT_CLASS}
-                                            placeholder="Sunita Devi"
-                                        />
+                            <form onSubmit={handleSubmit} noValidate className="space-y-6">
+                                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                    <label className={LABEL}>
+                                        Your name{REQ}
+                                        <input value={form.name} onChange={set('name')} autoComplete="name" className={INPUT} placeholder="Sunita Devi" />
                                     </label>
-                                    <label className="block">
-                                        <span className="text-sm font-bold text-slate-700">
-                                            Mobile number <span className="text-rose-500">*</span>
-                                        </span>
-                                        <input
-                                            value={form.mobile}
-                                            onChange={set('mobile')}
-                                            inputMode="numeric"
-                                            autoComplete="tel"
-                                            maxLength={10}
-                                            className={INPUT_CLASS}
-                                            placeholder="9876543210"
-                                        />
+                                    <label className={LABEL}>
+                                        Mobile number{REQ}
+                                        <input value={form.mobile} onChange={set('mobile')} inputMode="numeric" autoComplete="tel" maxLength={10} className={`${INPUT} lp-figure`} placeholder="9876543210" />
                                     </label>
-                                    <label className="block">
-                                        <span className="text-sm font-bold text-slate-700">Email</span>
-                                        <input
-                                            value={form.email}
-                                            onChange={set('email')}
-                                            type="email"
-                                            autoComplete="email"
-                                            className={INPUT_CLASS}
-                                            placeholder="you@example.com"
-                                        />
+                                    <label className={LABEL}>
+                                        Email
+                                        <input value={form.email} onChange={set('email')} type="email" autoComplete="email" className={INPUT} placeholder="you@example.com" />
                                     </label>
-                                    <label className="block">
-                                        <span className="text-sm font-bold text-slate-700">City</span>
-                                        <input
-                                            value={form.city}
-                                            onChange={set('city')}
-                                            autoComplete="address-level2"
-                                            className={INPUT_CLASS}
-                                            placeholder="Hooghly"
-                                        />
+                                    <label className={LABEL}>
+                                        City
+                                        <input value={form.city} onChange={set('city')} autoComplete="address-level2" className={INPUT} placeholder="Hooghly" />
                                     </label>
                                 </div>
 
-                                <label className="block">
-                                    <span className="text-sm font-bold text-slate-700">
-                                        How can we help? <span className="text-rose-500">*</span>
-                                    </span>
+                                <label className={LABEL}>
+                                    How can we help?{REQ}
                                     <textarea
                                         value={form.message}
                                         onChange={set('message')}
                                         rows={5}
                                         maxLength={2000}
-                                        className={`${INPUT_CLASS} resize-y py-3`}
-                                        placeholder="Tell us what you need — which services you want to offer, or the problem you are facing."
+                                        className={`${INPUT} h-auto resize-y py-3`}
+                                        placeholder="Which services you want to offer, or the problem you are facing"
                                     />
                                 </label>
 
-                                {error && (
-                                    <p
-                                        role="alert"
-                                        className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700"
-                                    >
-                                        {error}
-                                    </p>
-                                )}
+                                {error && <p role="alert" className={ALERT_ERROR}>{error}</p>}
 
-                                <button
-                                    type="submit"
-                                    disabled={sending}
-                                    className="inline-flex items-center justify-center gap-2.5 bg-[#18181b] hover:bg-black disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold pl-6 pr-2 py-2.5 rounded-full text-sm shadow-md transition-all hover:scale-[1.01] group"
-                                >
-                                    {sending ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            <span className="pr-4">Sending…</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <span>Send message</span>
-                                            <span className="w-7 h-7 rounded-full bg-[#a3e635] text-black flex items-center justify-center font-black text-sm group-hover:rotate-45 transition-transform">
-                                                ↗
-                                            </span>
-                                        </>
-                                    )}
+                                <button type="submit" disabled={sending} className={BTN_PRIMARY}>
+                                    {sending ? <><Loader2 aria-hidden strokeWidth={1.5} className="size-4 animate-spin" /> Sending…</> : 'Send message'}
                                 </button>
                             </form>
                         )}
                     </div>
 
-                    {/* Sidebar */}
-                    <div className="lg:col-span-5 space-y-6">
-                        <div className="rounded-[28px] bg-[#00381e] text-white p-6 sm:p-8 shadow-xl border border-emerald-800/60">
-                            <h2 className="text-lg font-extrabold tracking-tight">Reach us directly</h2>
-                            <div className="mt-6 space-y-5">
-                                <a href="tel:+918240039776" className="flex items-start gap-3 group">
-                                    <Phone className="h-4 w-4 text-[#a3e635] mt-0.5 shrink-0" />
-                                    <span className="text-sm font-bold group-hover:text-[#a3e635] transition-colors">
-                                        +91 8240039776
-                                    </span>
-                                </a>
-                                <a href="mailto:shahparpay@gmail.com" className="flex items-start gap-3 group">
-                                    <Mail className="h-4 w-4 text-[#a3e635] mt-0.5 shrink-0" />
-                                    <span className="text-sm text-emerald-50 group-hover:text-[#a3e635] transition-colors break-all">
-                                        shahparpay@gmail.com
-                                    </span>
-                                </a>
-                                <div className="flex items-start gap-3">
-                                    <MapPin className="h-4 w-4 text-[#a3e635] mt-0.5 shrink-0" />
-                                    <span className="text-sm text-emerald-50/90 leading-relaxed">
-                                        4/1 Victoria Lane, Telinipara, Bhadreswar, Hooghly, West Bengal -
-                                        712125
-                                    </span>
-                                </div>
-                            </div>
+                    <div className="space-y-4 lg:col-span-5">
+                        <div className={`${CARD} p-6 sm:p-8`}>
+                            <h2 className="text-lg font-medium text-[var(--lp-fg)]">Reach us directly</h2>
+                            <ul className="mt-5 space-y-4 text-[15px]">
+                                <li className="flex items-start gap-3">
+                                    <Phone aria-hidden strokeWidth={1.5} className="mt-0.5 size-[18px] shrink-0 text-[var(--lp-muted)]" />
+                                    <a href="tel:+918240039776" className="lp-figure text-[var(--lp-fg)] hover:text-[var(--lp-accent-ink)]">+91 8240039776</a>
+                                </li>
+                                <li className="flex items-start gap-3">
+                                    <Mail aria-hidden strokeWidth={1.5} className="mt-0.5 size-[18px] shrink-0 text-[var(--lp-muted)]" />
+                                    <a href="mailto:shahparpay@gmail.com" className="break-all text-[var(--lp-fg)] hover:text-[var(--lp-accent-ink)]">shahparpay@gmail.com</a>
+                                </li>
+                                <li className="flex items-start gap-3">
+                                    <MapPin aria-hidden strokeWidth={1.5} className="mt-0.5 size-[18px] shrink-0 text-[var(--lp-muted)]" />
+                                    <span className="leading-relaxed text-[var(--lp-fg-2)]">4/1 Victoria Lane, Telinipara, Bhadreswar, Hooghly, West Bengal - 712125</span>
+                                </li>
+                            </ul>
                         </div>
 
-                        <div className="rounded-[28px] border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
-                            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-600">
-                                What people ask us
-                            </h2>
-                            <div className="mt-5 space-y-5">
+                        <div className={`${CARD} p-6 sm:p-8`}>
+                            <h2 className="text-lg font-medium text-[var(--lp-fg)]">What people ask us</h2>
+                            <ul className="mt-5 space-y-5">
                                 {REASONS.map((reason) => (
-                                    <div key={reason.title} className="flex items-start gap-3">
-                                        <div className="lp-icon-tile shrink-0 w-8 h-8 rounded-lg">
-                                            <reason.icon className="mega-icon h-4 w-4" />
-                                        </div>
+                                    <li key={reason.title} className="flex items-start gap-3">
+                                        <reason.icon aria-hidden strokeWidth={1.5} className="mt-0.5 size-[18px] shrink-0 text-[var(--lp-muted)]" />
                                         <div>
-                                            <p className="text-sm font-extrabold text-slate-900">
-                                                {reason.title}
-                                            </p>
-                                            <p className="text-xs text-slate-500 leading-relaxed mt-0.5">
-                                                {reason.desc}
-                                            </p>
+                                            <p className="text-[15px] text-[var(--lp-fg)]">{reason.title}</p>
+                                            <p className="mt-0.5 text-sm leading-relaxed text-[var(--lp-muted)]">{reason.desc}</p>
                                         </div>
-                                    </div>
+                                    </li>
                                 ))}
-                            </div>
+                            </ul>
                         </div>
                     </div>
                 </div>
