@@ -25,7 +25,8 @@ const Layout = () => {
     if (user?.role === 'retailer' && (user.verificationStatus === 'pending' || user.verificationStatus === 'rejected')) return <UnderVerification />;
 
     return (
-        <LocationProvider>
+        // Only retailers move money; admins and distributors are never asked for location.
+        <LocationProvider required={user?.role === 'retailer'}>
         <SidebarProvider>
             <AppSidebar />
             <main className="flex-1 h-svh min-h-0 bg-background top-glow text-foreground flex flex-col overflow-hidden w-full relative">

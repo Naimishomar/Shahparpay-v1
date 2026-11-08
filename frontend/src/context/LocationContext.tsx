@@ -8,7 +8,11 @@ interface LocationContextType {
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
 
-export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+/**
+ * `required` false (admins, distributors: they never send a regulated
+ * transaction) skips asking for location and never shows the modal.
+ */
+export const LocationProvider: React.FC<{ children: React.ReactNode; required?: boolean }> = ({ children, required = true }) => {
     const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [permissionDenied, setPermissionDenied] = useState(false);
@@ -71,6 +75,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     useEffect(() => {
+        if (!required) return;
         requestLocation();
         // Allowing location from the address bar fires this, so the modal closes without a reload.
         let status: PermissionStatus | null = null;
@@ -79,11 +84,11 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             .then((st) => { status = st; st.addEventListener('change', onChange); })
             .catch(() => { /* older browsers: Retry still works */ });
         return () => status?.removeEventListener('change', onChange);
-    }, []);
+    }, [required]);
 
     return (
         <LocationContext.Provider value={{ location, error }}>
-            {permissionDenied && (
+            {required && permissionDenied && (
                 <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md flex items-center justify-center p-4">
                     <div className="bg-card border border-border p-8 rounded-2xl shadow-2xl max-w-md w-full text-center flex flex-col items-center gap-6">
                         <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center">
