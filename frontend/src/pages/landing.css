@@ -1,211 +1,208 @@
 /*
- * Shahparpay Landing Page Design System & Styles
- * Public pages: brand tokens and shared styles
+ * Public pages (landing, about, contact, terms): tokens and shared classes.
+ *
+ * Direction: a banking counter in a neighbourhood shop. Warm paper neutrals,
+ * one violet accent (the portal's brand colour) used for the primary action,
+ * the selection and the commission figure. The signature is the printed
+ * receipt: a dashed tear line and figures set in mono.
  */
 .landing-page {
-  /* BHIM 4, as in the app and the portal: orange for the action, green for money. */
-  --lp-bg: #ffffff;
-  --lp-surface: #fafafa;
+  --lp-bg: #faf9f6;
+  --lp-surface: #f2f0eb;
   --lp-card: #ffffff;
-  --lp-fg: #171717;
-  --lp-muted: #626262;
-  --lp-border: #e9e9e9;
-  --lp-accent: #E55C11;
-  --lp-accent-soft: rgba(229, 92, 17, 0.08);
-  --lp-accent-gradient: linear-gradient(135deg, #F47920 0%, #E55C11 100%);
-  --lp-emerald-glow: rgba(0, 140, 70, 0.08);
-  --lp-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
-  --lp-shadow-md: 0 12px 32px rgba(15, 23, 42, 0.07);
-  --lp-shadow-lg: 0 20px 48px rgba(15, 23, 42, 0.12);
+  --lp-fg: #1c1a17;
+  --lp-fg-2: #57524a;
+  --lp-muted: #736d65;
+  --lp-border: rgba(28, 26, 23, 0.09);
+  --lp-border-strong: rgba(28, 26, 23, 0.16);
+  --lp-accent: #6d28d9;
+  --lp-accent-ink: #5b21b6;
+  --lp-accent-soft: rgba(109, 40, 217, 0.07);
+  --lp-positive: #15803d;
+  --lp-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --lp-shadow-sm: 0 1px 2px rgba(28, 26, 23, 0.05);
+  --lp-shadow-md: 0 8px 24px rgba(28, 26, 23, 0.06);
+  --lp-shadow-lg: 0 8px 24px rgba(28, 26, 23, 0.08);
+  /* Older names other public pages still use; kept as solid, glow-free values. */
+  --lp-surface-alt: var(--lp-surface);
+  --lp-accent-gradient: var(--lp-accent);
+  --lp-emerald-glow: transparent;
 
-  background-color: #ffffff !important;
-  color: #171717 !important;
+  background-color: var(--lp-bg) !important;
+  color: var(--lp-fg) !important;
   min-height: 100vh;
   font-family: 'Figtree Variable', 'Figtree', ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
+/* The public site is light only. */
 html.dark .landing-page {
-  --lp-bg: #ffffff;
-  --lp-surface: #fafafa;
-  --lp-card: #ffffff;
-  --lp-fg: #171717;
-  --lp-muted: #626262;
-  --lp-border: #e9e9e9;
-
-  background-color: #ffffff !important;
-  color: #171717 !important;
+  background-color: var(--lp-bg) !important;
+  color: var(--lp-fg) !important;
 }
 
 html:has(.landing-page) body {
-  background: #ffffff !important;
-  color: #171717 !important;
+  background: #faf9f6 !important;
+  color: #1c1a17 !important;
 }
 
 /* Typography */
 .lp-display {
-  letter-spacing: -0.035em;
-  line-height: 1.05;
-  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.04;
+  font-weight: 500;
 }
 
 .lp-heading {
-  letter-spacing: -0.025em;
+  letter-spacing: -0.02em;
   line-height: 1.12;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .lp-muted {
   color: var(--lp-muted);
 }
 
-/* Cards & Containers */
+/* Amounts, IDs and times, as a receipt prints them. */
+.lp-figure {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Signature: the tear line on a printed receipt. */
+.lp-tear {
+  border: 0;
+  border-top: 1px dashed var(--lp-border-strong);
+}
+
+/* A paper slip with a torn zigzag bottom edge; the wrapper casts the shadow. */
+.lp-receipt-wrap {
+  filter: drop-shadow(0 1px 1px rgba(28, 26, 23, 0.06)) drop-shadow(0 10px 24px rgba(28, 26, 23, 0.08));
+}
+
+.lp-receipt {
+  background: #ffffff;
+  --lp-zig: 12px;
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / var(--lp-zig) 100%;
+  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / var(--lp-zig) 100%;
+  padding-bottom: calc(var(--lp-zig) + 16px);
+}
+
+/* Cards & containers */
 .lp-card {
   background-color: var(--lp-card);
   border: 1px solid var(--lp-border);
-  border-radius: 1.25rem;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 16px;
+  transition: border-color 160ms var(--lp-ease);
 }
 
 .lp-card:hover {
-  border-color: color-mix(in srgb, var(--lp-accent) 45%, var(--lp-border));
-  transform: translateY(-3px);
-  box-shadow: var(--lp-shadow-md);
+  border-color: var(--lp-border-strong);
 }
 
 .lp-icon-tile {
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 0.875rem;
-  background: var(--lp-accent-soft);
-  color: var(--lp-accent);
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 10px;
+  background: var(--lp-surface);
+  color: var(--lp-fg-2);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s ease;
-}
-
-.lp-card:hover .lp-icon-tile {
-  transform: scale(1.08);
 }
 
 .lp-eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.4rem 0.875rem;
-  border-radius: 9999px;
-  background: var(--lp-accent-soft);
-  color: var(--lp-accent);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  border: 1px solid color-mix(in srgb, var(--lp-accent) 20%, transparent);
+  color: var(--lp-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
-/* Glassmorphism & Decorative Backdrops */
+/* Kept for pages that still use it: a plain raised surface, no blur. */
 .lp-glass {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--lp-card);
   border: 1px solid var(--lp-border);
 }
 
-html.dark .lp-glass {
-  background: rgba(15, 20, 34, 0.8);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
 .lp-gradient-glow {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  pointer-events: none;
-  z-index: 0;
+  display: none;
 }
 
-/* Mega Menu Popup & Dropdown Styling */
+/* Menus */
 .mega-menu-content {
-  animation: megaMenuFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: megaMenuFadeIn 180ms var(--lp-ease) forwards;
   transform-origin: top center;
 }
 
 @keyframes megaMenuFadeIn {
   from {
     opacity: 0;
-    transform: translateY(-8px) scale(0.98);
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
 .mega-menu-item-link {
   display: flex;
   align-items: flex-start;
-  gap: 0.875rem;
-  padding: 0.75rem 0.875rem;
-  border-radius: 0.875rem;
-  transition: background-color 0.15s ease, transform 0.15s ease;
+  gap: 0.625rem;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: background-color 140ms var(--lp-ease);
 }
 
 .mega-menu-item-link:hover {
-  background-color: var(--lp-accent-soft);
-  transform: translateX(2px);
-}
-
-.mega-menu-item-link:hover .mega-icon {
-  color: var(--lp-accent);
-  transform: scale(1.1);
+  background-color: var(--lp-surface);
 }
 
 .mega-icon {
-  transition: transform 0.2s ease, color 0.2s ease;
+  transition: color 140ms var(--lp-ease);
+}
+
+.mega-menu-item-link:hover .mega-icon {
+  color: var(--lp-fg);
 }
 
 /* Buttons */
-.lp-btn-primary {
-  background: var(--lp-fg);
-  color: var(--lp-bg);
-  border-radius: 0.75rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
-}
-
-.lp-btn-primary:hover {
-  opacity: 0.92;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
-}
-
+.lp-btn-primary,
 .lp-btn-accent {
-  background: var(--lp-accent-gradient);
+  background: var(--lp-accent);
   color: #ffffff;
-  border-radius: 0.75rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 16px var(--lp-emerald-glow);
+  border-radius: 10px;
+  font-weight: 500;
+  transition: background-color 140ms var(--lp-ease), transform 140ms var(--lp-ease);
 }
 
+.lp-btn-primary:hover,
 .lp-btn-accent:hover {
-  opacity: 0.94;
-  transform: translateY(-1px);
-  box-shadow: 0 8px 24px var(--lp-emerald-glow);
+  background: var(--lp-accent-ink);
+}
+
+.lp-btn-primary:active,
+.lp-btn-accent:active {
+  transform: scale(0.98);
 }
 
 .lp-btn-secondary {
-  border: 1px solid var(--lp-border);
+  background: var(--lp-card);
+  border: 1px solid var(--lp-border-strong);
   color: var(--lp-fg);
-  border-radius: 0.75rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
+  border-radius: 10px;
+  font-weight: 500;
+  transition: background-color 140ms var(--lp-ease), transform 140ms var(--lp-ease);
 }
 
 .lp-btn-secondary:hover {
-  border-color: var(--lp-fg);
   background: var(--lp-surface);
+}
+
+.lp-btn-secondary:active {
+  transform: scale(0.98);
 }
 
 .lp-band {
@@ -213,7 +210,12 @@ html.dark .lp-glass {
   border-block: 1px solid var(--lp-border);
 }
 
-/* Marquee infinite scroll */
+.landing-page :focus-visible {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 2px;
+}
+
+/* Marquee */
 .lp-marquee {
   display: flex;
   overflow: hidden;
@@ -234,14 +236,12 @@ html.dark .lp-glass {
   }
 }
 
-/* Code Sandbox Syntax Highlight Box */
 .code-sandbox-bg {
-  background-color: #0d1117;
-  color: #e6edf3;
-  font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background-color: #1c1a17;
+  color: #efe9de;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-/* Range slider custom styling */
 input[type='range'] {
   accent-color: var(--lp-accent);
 }
@@ -252,6 +252,9 @@ input[type='range'] {
   }
   .lp-marquee {
     overflow-x: auto;
+  }
+  .mega-menu-content {
+    animation: none;
   }
 }
 

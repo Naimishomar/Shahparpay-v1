@@ -1,93 +1,49 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-    ArrowRight,
-    ArrowUpRight,
-    Award,
     Banknote,
     Car,
-    Check,
     CheckCircle2,
-    ChevronRight,
-    Copy,
-    Droplets,
     CreditCard,
-    FileText,
-    Flame,
+    Droplets,
     Fingerprint,
+    Flame,
     Headset,
     HeartPulse,
-    HelpCircle,
     IdCard,
     Landmark,
-    Layers,
-    Lock,
-    Mail,
-    MapPin,
     MessageCircle,
-    Moon,
     Phone,
-    QrCode,
+    Plus,
     Receipt,
-    RefreshCw,
     Send,
-    Shield,
     ShieldCheck,
-    ShoppingCart,
     Smartphone,
-    Sparkles,
-    Star,
-    Sun,
-    TrendingUp,
     Tv,
     Users,
     Wifi,
-    X,
-    Zap
+    Zap,
+    type LucideIcon,
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import './landing.css';
 import LandingNav from '@/components/landing/LandingNav';
 import LandingFooter from '@/components/landing/LandingFooter';
-import heroCspBg from '../assets/hero-csp-bg.svg';
 
-// --- DATA STRUCTURES FOR MEGA MENUS ---
-function Reveal({ children, delay = 0, className = '' }: { children: React.ReactNode; delay?: number; className?: string }) {
-    const ref = useRef<HTMLDivElement>(null);
-    const [visible, setVisible] = useState(false);
+/* Shared class strings, so equal things stay equal across sections. */
+const WRAP = 'mx-auto w-full max-w-6xl px-4 sm:px-6';
+const SECTION = 'py-20 sm:py-28';
+const H2 = 'text-3xl sm:text-4xl lg:text-[44px] font-medium tracking-[-0.02em] leading-[1.1] text-[var(--lp-fg)]';
+const H3 = 'text-xl sm:text-2xl font-medium tracking-[-0.01em] text-[var(--lp-fg)]';
+const LEAD = 'text-base sm:text-lg leading-relaxed text-[var(--lp-fg-2)]';
+const BODY = 'text-[15px] leading-relaxed text-[var(--lp-fg-2)]';
+const CARD = 'rounded-2xl border border-[var(--lp-border)] bg-[var(--lp-card)]';
+const BTN_PRIMARY = 'lp-btn-primary inline-flex h-12 items-center justify-center gap-2 px-5 text-base';
+const BTN_SECONDARY = 'lp-btn-secondary inline-flex h-12 items-center justify-center gap-2 px-5 text-base';
+const ROW = 'flex items-baseline justify-between gap-4';
 
-    useEffect(() => {
-        const el = ref.current;
-        if (!el) return;
-        const obs = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) {
-                    setVisible(true);
-                    obs.disconnect();
-                }
-            },
-            { threshold: 0.1 }
-        );
-        obs.observe(el);
-        return () => obs.disconnect();
-    }, []);
-
-    return (
-        <div
-            ref={ref}
-            className={className}
-            style={{
-                opacity: visible ? 1 : 0,
-                transform: visible ? 'translateY(0px)' : 'translateY(18px)',
-                transition: `opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
-            }}
-        >
-            {children}
-        </div>
-    );
-}
-
-
+const Icon = ({ icon: I, className = '' }: { icon: LucideIcon; className?: string }) => (
+    <I aria-hidden className={`size-[18px] shrink-0 text-[var(--lp-muted)] ${className}`} strokeWidth={1.5} />
+);
 
 const START_STEPS = [
     {
@@ -112,7 +68,7 @@ const TRANSFER_AND_BILL_SERVICES = [
     { label: 'NEFT', icon: Landmark },
     { label: 'Electricity', icon: Zap },
     { label: 'Water', icon: Droplets },
-    { label: 'Gas & LPG', icon: Flame },
+    { label: 'Gas and LPG', icon: Flame },
     { label: 'Broadband', icon: Wifi },
     { label: 'Mobile', icon: Smartphone },
     { label: 'DTH', icon: Tv },
@@ -122,29 +78,76 @@ const TRANSFER_AND_BILL_SERVICES = [
     { label: 'Loan EMIs', icon: Receipt },
 ];
 
-const mockCard = 'w-full max-w-[280px] sm:max-w-[320px] lg:max-w-[340px] rounded-3xl bg-white border border-slate-200 shadow-xl p-5 text-left';
+const SERVICES = ['AEPS', 'Micro ATM', 'DMT', 'BBPS', 'UPI', 'Recharge', 'PAN', 'ITR'];
+
+/** The moment of the page: the slip a customer takes home after an AEPS withdrawal. */
+function AepsReceipt() {
+    return (
+        <div className="rounded-[20px] bg-[var(--lp-surface)] p-4 sm:p-8">
+            <div className="mb-4 flex items-center gap-2 px-1 text-sm text-[var(--lp-fg-2)]">
+                <Icon icon={Fingerprint} />
+                <span>Mantra MFS100 · fingerprint matched</span>
+            </div>
+            <div className="lp-receipt-wrap">
+                <div className="lp-receipt rounded-t-xl px-5 pt-6 sm:px-7">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <p className="text-base font-medium text-[var(--lp-fg)]">AEPS cash withdrawal</p>
+                            <p className="lp-figure mt-1 text-xs text-[var(--lp-muted)]">08 Nov 2026 · 11:42 AM</p>
+                        </div>
+                        <span className="inline-flex items-center gap-1.5 text-sm text-[var(--lp-positive)]">
+                            <CheckCircle2 aria-hidden className="size-4" strokeWidth={1.5} /> Success
+                        </span>
+                    </div>
+                    <p className="lp-figure mt-6 text-[40px] leading-none tracking-[-0.02em] text-[var(--lp-fg)]">₹2,000.00</p>
+                    <hr className="lp-tear my-6" />
+                    <dl className="space-y-3 text-sm">
+                        {[
+                            ['Customer', 'Sunita Devi'],
+                            ['Aadhaar', 'XXXX XXXX 4410'],
+                            ['Bank', 'State Bank of India'],
+                            ['RRN', '431209876543'],
+                        ].map(([k, v]) => (
+                            <div key={k} className={ROW}>
+                                <dt className="text-[var(--lp-muted)]">{k}</dt>
+                                <dd className={`text-right text-[var(--lp-fg)] ${k === 'Customer' || k === 'Bank' ? '' : 'lp-figure'}`}>{v}</dd>
+                            </div>
+                        ))}
+                    </dl>
+                    <hr className="lp-tear my-6" />
+                    <div className={ROW}>
+                        <span className="text-sm text-[var(--lp-fg-2)]">Your commission</span>
+                        <span className="lp-figure text-base text-[var(--lp-accent-ink)]">+₹14.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 function BillReceiptMockup() {
     return (
-        <div className={mockCard}>
-            <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500">Electricity bill</span>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">BBPS</span>
+        <div className={`${CARD} w-full max-w-sm p-5 text-left`}>
+            <div className="flex items-center justify-between text-sm">
+                <span className="text-[var(--lp-fg-2)]">Electricity bill</span>
+                <span className="lp-figure text-xs text-[var(--lp-muted)]">BBPS</span>
             </div>
-            <div className="mt-3 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center"><Zap className="w-5 h-5" /></div>
+            <div className="mt-4 flex items-center gap-3">
+                <div className="lp-icon-tile"><Icon icon={Zap} /></div>
                 <div>
-                    <p className="text-sm font-extrabold text-slate-900">WBSEDCL</p>
-                    <p className="text-[11px] text-slate-500">Consumer no. 1023 4567 89</p>
+                    <p className="text-base font-medium text-[var(--lp-fg)]">WBSEDCL</p>
+                    <p className="lp-figure text-xs text-[var(--lp-muted)]">Consumer no. 1023 4567 89</p>
                 </div>
             </div>
-            <div className="mt-4 rounded-2xl bg-slate-50 border border-slate-200 p-3 space-y-1.5 text-xs">
-                <div className="flex justify-between"><span className="text-slate-500">Bill amount</span><span className="font-bold text-slate-900">₹1,186.00</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Due date</span><span className="font-bold text-slate-900">18 Oct</span></div>
-            </div>
-            <div className="mt-4 flex items-center justify-between rounded-2xl bg-[#00381e] text-white px-4 py-3">
-                <span className="flex items-center gap-1.5 text-xs font-bold"><CheckCircle2 className="w-4 h-4 text-orange-300" /> Paid · receipt sent</span>
-                <span className="text-xs font-extrabold text-orange-300">+₹4.50</span>
+            <hr className="lp-tear my-4" />
+            <dl className="space-y-2 text-sm">
+                <div className={ROW}><dt className="text-[var(--lp-muted)]">Bill amount</dt><dd className="lp-figure text-[var(--lp-fg)]">₹1,186.00</dd></div>
+                <div className={ROW}><dt className="text-[var(--lp-muted)]">Due date</dt><dd className="lp-figure text-[var(--lp-fg)]">18 Oct</dd></div>
+            </dl>
+            <hr className="lp-tear my-4" />
+            <div className={`${ROW} text-sm`}>
+                <span className="inline-flex items-center gap-1.5 text-[var(--lp-positive)]"><CheckCircle2 aria-hidden className="size-4" strokeWidth={1.5} /> Paid · receipt sent</span>
+                <span className="lp-figure text-[var(--lp-accent-ink)]">+₹4.50</span>
             </div>
         </div>
     );
@@ -158,52 +161,55 @@ const RECHARGE_PLANS = [
 
 function RechargePlansMockup() {
     return (
-        <div className={mockCard}>
+        <div className={`${CARD} w-full max-w-sm p-5 text-left`}>
             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center"><Smartphone className="w-5 h-5" /></div>
+                <div className="lp-icon-tile"><Icon icon={Smartphone} /></div>
                 <div>
-                    <p className="text-sm font-extrabold text-slate-900">98XXX XXX21</p>
-                    <p className="text-[11px] text-slate-500">Prepaid · West Bengal</p>
+                    <p className="lp-figure text-base text-[var(--lp-fg)]">98XXX XXX21</p>
+                    <p className="text-xs text-[var(--lp-muted)]">Prepaid · West Bengal</p>
                 </div>
             </div>
             <div className="mt-4 space-y-2">
                 {RECHARGE_PLANS.map((plan, i) => (
-                    <div key={plan.price} className={`flex items-center justify-between rounded-2xl border px-3 py-2.5 ${i === 1 ? 'border-[#008c46] bg-emerald-50' : 'border-slate-200 bg-white'}`}>
+                    <div
+                        key={plan.price}
+                        className={`flex h-14 items-center justify-between rounded-[10px] border px-3 ${i === 1 ? 'border-[var(--lp-accent)] bg-[var(--lp-accent-soft)]' : 'border-[var(--lp-border)]'}`}
+                    >
                         <div>
-                            <p className="text-sm font-extrabold text-slate-900">{plan.price}</p>
-                            <p className="text-[11px] text-slate-500">{plan.detail}</p>
+                            <p className="lp-figure text-sm text-[var(--lp-fg)]">{plan.price}</p>
+                            <p className="text-xs text-[var(--lp-muted)]">{plan.detail}</p>
                         </div>
-                        {i === 1 && <span className="text-[10px] font-bold text-white bg-[#E55C11] px-2 py-0.5 rounded-full">Selected</span>}
+                        {i === 1 && <span className="text-xs text-[var(--lp-accent-ink)]">Selected</span>}
                     </div>
                 ))}
             </div>
-            <button className="mt-4 w-full rounded-2xl bg-[#18181b] text-white text-xs font-bold py-3">Recharge ₹299</button>
+            <div className="mt-4 flex h-10 items-center justify-center rounded-[10px] bg-[var(--lp-fg)] text-sm font-medium text-white">Recharge ₹299</div>
         </div>
     );
 }
 
 const LEDGER_ROWS = [
     { label: 'AEPS withdrawal', amount: '+₹12.00', credit: true },
-    { label: 'Money transfer', amount: '-₹5,000', credit: false },
+    { label: 'Money transfer', amount: '−₹5,000.00', credit: false },
     { label: 'Recharge commission', amount: '+₹6.25', credit: true },
-    { label: 'Electricity bill', amount: '-₹1,186', credit: false },
-    { label: 'Settled to bank', amount: '-₹25,000', credit: false },
+    { label: 'Electricity bill', amount: '−₹1,186.00', credit: false },
+    { label: 'Settled to bank', amount: '−₹25,000.00', credit: false },
 ];
 
-function LedgerPhoneScreen() {
+function LedgerScreen() {
     return (
-        <div className="pt-10 pb-6 px-4 text-left bg-gradient-to-b from-[#f0fdf4] to-white min-h-[460px]">
-            <p className="text-[11px] font-bold text-slate-500">Wallet balance</p>
-            <p className="text-2xl font-black text-slate-900 tracking-tight">₹48,250.00</p>
-            <div className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                <TrendingUp className="w-3 h-3" /> ₹1,240 commission today
-            </div>
-            <p className="mt-5 mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">Today</p>
-            <div className="space-y-2">
+        <div className="px-4 pb-6 pt-10 text-left">
+            <p className="text-xs text-[var(--lp-muted)]">Wallet balance</p>
+            <p className="lp-figure mt-1 text-2xl text-[var(--lp-fg)]">₹48,250.00</p>
+            <p className="mt-1 text-xs text-[var(--lp-fg-2)]">
+                <span className="lp-figure text-[var(--lp-accent-ink)]">+₹1,240.00</span> commission today
+            </p>
+            <p className="mb-2 mt-6 text-xs text-[var(--lp-muted)]">Today</p>
+            <div className="divide-y divide-[var(--lp-border)] rounded-xl border border-[var(--lp-border)] bg-white">
                 {LEDGER_ROWS.map((row) => (
-                    <div key={row.label} className="flex items-center justify-between rounded-xl bg-white border border-slate-100 px-3 py-2.5 shadow-xs">
-                        <span className="text-xs font-semibold text-slate-700">{row.label}</span>
-                        <span className={`text-xs font-extrabold ${row.credit ? 'text-emerald-700' : 'text-slate-900'}`}>{row.amount}</span>
+                    <div key={row.label} className="flex h-11 items-center justify-between px-3">
+                        <span className="text-xs text-[var(--lp-fg-2)]">{row.label}</span>
+                        <span className={`lp-figure text-xs ${row.credit ? 'text-[var(--lp-positive)]' : 'text-[var(--lp-fg)]'}`}>{row.amount}</span>
                     </div>
                 ))}
             </div>
@@ -211,1108 +217,471 @@ function LedgerPhoneScreen() {
     );
 }
 
+/** A phone outline around a screen; flat, no tilt. */
+const PhoneFrame = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+    <div className={`rounded-[36px] border border-[var(--lp-border-strong)] bg-[var(--lp-fg)] p-2 shadow-[var(--lp-shadow-lg)] ${className}`}>
+        <div className="relative overflow-hidden rounded-[28px] bg-[var(--lp-bg)]">
+            <div className="absolute left-1/2 top-3 h-4 w-16 -translate-x-1/2 rounded-full bg-[var(--lp-fg)]" />
+            {children}
+        </div>
+    </div>
+);
+
 const FAQ_DATA = {
     support: [
         {
-            q: "How much can I actually earn from this?",
-            a: "You earn a commission on every transaction — AEPS withdrawals, money transfers, recharges, bill payments, PAN applications and ITR filings each carry their own rate. Your dashboard shows the exact commission on every transaction, and the full rate card is shared before you sign up."
+            q: 'How much can I actually earn from this?',
+            a: 'You earn a commission on every transaction — AEPS withdrawals, money transfers, recharges, bill payments, PAN applications and ITR filings each carry their own rate. Your dashboard shows the exact commission on every transaction, and the full rate card is shared before you sign up.',
         },
         {
-            q: "How do I get my earnings out?",
-            a: "Commissions land in your wallet as each transaction completes. Settle to your own bank account from the dashboard whenever you like — there is no minimum holding period and no waiting for month-end."
+            q: 'How do I get my earnings out?',
+            a: 'Commissions land in your wallet as each transaction completes. Settle to your own bank account from the dashboard whenever you like — there is no minimum holding period and no waiting for month-end.',
         },
         {
             q: "What if a transaction fails but the customer's money is debited?",
-            a: "Raise a ticket from the Support section with the transaction ID. Failed AEPS and DMT transactions are reconciled automatically against the bank, and refunds are credited back once the bank confirms. You can track the status of every dispute in your reports."
+            a: 'Raise a ticket from the Support section with the transaction ID. Failed AEPS and DMT transactions are reconciled automatically against the bank, and refunds are credited back once the bank confirms. You can track the status of every dispute in your reports.',
         },
         {
-            q: "Is there someone I can call when I am stuck at the counter?",
-            a: "Yes. Call +91 8240039776 during business hours, message us on WhatsApp, or raise a ticket from inside the dashboard. Most counter issues are resolved on the same call."
+            q: 'Is there someone I can call when I am stuck at the counter?',
+            a: 'Yes. Call +91 8240039776 during business hours, message us on WhatsApp, or raise a ticket from inside the dashboard. Most counter issues are resolved on the same call.',
         },
         {
-            q: "Do I need to be a registered business to join?",
-            a: "No. Individual shop owners can sign up. You need your own PAN and Aadhaar, a bank account in your name, and a shop or counter where you serve customers."
+            q: 'Do I need to be a registered business to join?',
+            a: 'No. Individual shop owners can sign up. You need your own PAN and Aadhaar, a bank account in your name, and a shop or counter where you serve customers.',
         },
         {
-            q: "Can I offer these services from more than one shop?",
-            a: "Each counter needs its own retailer login, because commissions, reports and settlements are tracked per retailer. If you run several outlets, ask about a distributor account instead — it lets you manage all of them from one place."
+            q: 'Can I offer these services from more than one shop?',
+            a: 'Each counter needs its own retailer login, because commissions, reports and settlements are tracked per retailer. If you run several outlets, ask about a distributor account instead — it lets you manage all of them from one place.',
         },
         {
-            q: "Is there a mobile app?",
-            a: "Yes. The Android app covers the same services as the web dashboard, so you can complete transactions and check your wallet without being at the computer."
-        }
+            q: 'Is there a mobile app?',
+            a: 'Yes. The Android app covers the same services as the web dashboard, so you can complete transactions and check your wallet without being at the computer.',
+        },
     ],
     getting_started: [
         {
-            q: "What documents do I need to sign up?",
-            a: "Your PAN card, Aadhaar card, a cancelled cheque or bank passbook page, a photograph, and a photo of your shop. If your shop is registered, keep the GST or Udyam certificate handy as well."
+            q: 'What documents do I need to sign up?',
+            a: 'Your PAN card, Aadhaar card, a cancelled cheque or bank passbook page, a photograph, and a photo of your shop. If your shop is registered, keep the GST or Udyam certificate handy as well.',
         },
         {
-            q: "How long before I can start taking transactions?",
-            a: "Basic services such as recharge and bill payments open as soon as your account is verified. AEPS takes longer because the bank runs its own Aadhaar KYC on you first — that step is done through a fingerprint scanner and is usually cleared within a working day."
+            q: 'How long before I can start taking transactions?',
+            a: 'Basic services such as recharge and bill payments open as soon as your account is verified. AEPS takes longer because the bank runs its own Aadhaar KYC on you first — that step is done through a fingerprint scanner and is usually cleared within a working day.',
         },
         {
-            q: "Is there a joining fee?",
-            a: "Signing up is free. You only need working balance in your wallet to start transacting, and a fingerprint scanner if you plan to offer AEPS."
+            q: 'Is there a joining fee?',
+            a: 'Signing up is free. You only need working balance in your wallet to start transacting, and a fingerprint scanner if you plan to offer AEPS.',
         },
         {
-            q: "How do I put money into my wallet?",
-            a: "Raise a fund request to your distributor and upload the payment receipt. Approved top-ups reflect in your wallet immediately."
-        }
+            q: 'How do I put money into my wallet?',
+            a: 'Raise a fund request to your distributor and upload the payment receipt. Approved top-ups reflect in your wallet immediately.',
+        },
     ],
     integration: [
         {
-            q: "Which fingerprint scanner do I need for AEPS?",
-            a: "Any RD-service certified scanner works — Mantra MFS100, Morpho MSO 1300 E3, Startek FM220U and Evolute are the ones our retailers use most. The device must be registered and its RD service installed before your first AEPS transaction."
+            q: 'Which fingerprint scanner do I need for AEPS?',
+            a: 'Any RD-service certified scanner works — Mantra MFS100, Morpho MSO 1300 E3, Startek FM220U and Evolute are the ones our retailers use most. The device must be registered and its RD service installed before your first AEPS transaction.',
         },
         {
-            q: "Can I use AEPS from my phone?",
-            a: "Yes, with an OTG-compatible scanner connected to an Android phone, using the app. Most retailers keep a laptop or desktop at the counter for higher daily volumes."
+            q: 'Can I use AEPS from my phone?',
+            a: 'Yes, with an OTG-compatible scanner connected to an Android phone, using the app. Most retailers keep a laptop or desktop at the counter for higher daily volumes.',
         },
         {
-            q: "What do I need for Micro ATM?",
-            a: "A Micro ATM device, which reads the customer's debit card and PIN. It is a separate device from the fingerprint scanner and is usually arranged through your distributor."
+            q: 'What do I need for Micro ATM?',
+            a: "A Micro ATM device, which reads the customer's debit card and PIN. It is a separate device from the fingerprint scanner and is usually arranged through your distributor.",
         },
         {
-            q: "Do I need a fast internet connection?",
-            a: "An ordinary broadband or 4G connection is enough. AEPS and DMT are small requests — what matters is that the connection is steady, since a drop mid-transaction means waiting for reconciliation."
-        }
+            q: 'Do I need a fast internet connection?',
+            a: 'An ordinary broadband or 4G connection is enough. AEPS and DMT are small requests — what matters is that the connection is steady, since a drop mid-transaction means waiting for reconciliation.',
+        },
     ],
     security: [
         {
             q: "Is the customer's Aadhaar data safe?",
-            a: "Fingerprints are captured by the certified RD service on your device and encrypted before they ever leave it. Neither you nor we can see or store the biometric. Aadhaar numbers are masked everywhere in the dashboard and in reports."
+            a: 'Fingerprints are captured by the certified RD service on your device and encrypted before they ever leave it. Neither you nor we can see or store the biometric. Aadhaar numbers are masked everywhere in the dashboard and in reports.',
         },
         {
-            q: "Who actually moves the money?",
-            a: "Transactions run over NPCI rails — AEPS, IMPS and BBPS — through our licensed banking partners. Shahparpay is the platform you work on; the settlement itself sits with the bank and the network."
+            q: 'Who actually moves the money?',
+            a: 'Transactions run over NPCI rails — AEPS, IMPS and BBPS — through our licensed banking partners. Shahparpay is the platform you work on; the settlement itself sits with the bank and the network.',
         },
         {
-            q: "What happens if someone gets into my account?",
-            a: "Logins are protected by a password and an OTP on your registered mobile, and AEPS additionally requires your own fingerprint for the daily authentication the bank mandates. If you suspect anything, call support and your account is frozen immediately."
+            q: 'What happens if someone gets into my account?',
+            a: 'Logins are protected by a password and an OTP on your registered mobile, and AEPS additionally requires your own fingerprint for the daily authentication the bank mandates. If you suspect anything, call support and your account is frozen immediately.',
         },
         {
-            q: "Can I see a record of everything I have done?",
-            a: "Yes. Every service has its own report, and the wallet ledger shows every credit and debit with the running balance. Reports can be filtered by date and exported."
-        }
-    ]
+            q: 'Can I see a record of everything I have done?',
+            a: 'Yes. Every service has its own report, and the wallet ledger shows every credit and debit with the running balance. Reports can be filtered by date and exported.',
+        },
+    ],
 };
 
+type FaqCategory = keyof typeof FAQ_DATA;
+const FAQ_TABS: { key: FaqCategory; label: string }[] = [
+    { key: 'getting_started', label: 'Getting started' },
+    { key: 'integration', label: 'Devices and setup' },
+    { key: 'security', label: 'Safety and trust' },
+    { key: 'support', label: 'Earnings and support' },
+];
+
 const Landing: React.FC = () => {
-    const { resolvedTheme, setTheme } = useTheme();
-
-
-    // Active Tab State
-    const [bentoTab, setBentoTab] = useState<'collect' | 'global' | 'identity' | 'ai' | 'disburse'>('collect');
-    const [faqCategory, setFaqCategory] = useState<'support' | 'getting_started' | 'integration' | 'security'>('support');
+    const [faqCategory, setFaqCategory] = useState<FaqCategory>('support');
     const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
-
     return (
-        <div id="top" className="landing-page relative overflow-x-clip bg-white text-slate-900">
-            {/* ---------------------------------------------------------- NAVBAR */}
+        <div id="top" className="landing-page relative overflow-x-clip">
             <LandingNav />
 
-            {/* --------------------------------------------------------- HERO SECTION (FULL SCREEN MATCH) */}
-            <section className="relative z-10 w-full min-h-0 lg:min-h-screen -mt-[72px] flex flex-col items-center justify-center pt-[96px] sm:pt-[110px] lg:pt-[88px] pb-8 sm:pb-12 lg:pb-8 px-4 sm:px-6 overflow-hidden bg-white">
-                {/* Background illustration: neighbourhood shops with a CSP banking point */}
-                <img
-                    src={heroCspBg}
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover object-bottom pointer-events-none select-none z-0"
-                />
-
-                {/* Centered Hero Header Text & Offer Card sitting over the background illustration */}
-                <div className="relative z-10 mx-auto max-w-5xl 2xl:max-w-6xl text-center flex flex-col items-center justify-center w-full">
-                    {/* Eyebrow Pill Badge */}
-                    <div className="inline-flex items-center gap-2 bg-[#FEF3EA] text-[#BE4510] border border-[#FAD3B5] px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-bold mb-3 sm:mb-4 shadow-2xs">
-                        <Sparkles className="w-3.5 h-3.5 text-[#BE4510]" />
-                        <span>Digital banking services for your shop</span>
-                    </div>
-
-                    <h1 className="text-3xl sm:text-5xl lg:text-[min(4.5rem,8.5vh)] 2xl:text-[min(6rem,9.5vh)] font-extrabold text-slate-900 tracking-tight leading-[1.12] sm:leading-[1.08] max-w-4xl 2xl:max-w-5xl text-center mx-auto">
-                        Turn Your Shop Into A Banking Point For Your Neighbourhood
-                    </h1>
-
-                    {/* Soft orange offer card (BHIM O-50) */}
-                    <div
-                        className="my-4 sm:my-8 lg:my-[min(2rem,3vh)] 2xl:my-[min(2.5rem,3.5vh)] rounded-2xl sm:rounded-3xl p-4 sm:p-8 lg:p-[min(2rem,3vh)] 2xl:p-[min(2.5rem,3.5vh)] max-w-2xl 2xl:max-w-3xl w-full border border-orange-300/80 shadow-md text-center relative overflow-hidden mx-auto flex flex-col items-center justify-center backdrop-blur-xs"
-                        style={{
-                            background: 'linear-gradient(180deg, rgba(254, 232, 214, 0.94) 0%, rgba(255, 246, 236, 0.94) 100%)'
-                        }}
-                    >
-                        <div className="flex flex-wrap sm:flex-col items-center justify-center gap-1.5 sm:gap-1 text-slate-900">
-                            <span className="text-4xl sm:text-6xl lg:text-[min(3.75rem,7vh)] leading-none font-black tracking-tight text-[#7A2E06]">
-                                ₹0
-                            </span>
-                            <span className="text-xs sm:text-xl font-extrabold text-[#7A2E06] ml-0.5 sm:ml-0">
-                                to join. You earn a commission on every transaction.
-                            </span>
-                        </div>
-
-                        <div className="w-full h-px bg-slate-900/10 my-3.5 sm:my-5 lg:my-[min(1.25rem,2vh)]" />
-
-                        {/* 3 Checkmark Features */}
-                        <div className="flex flex-wrap items-center justify-center gap-y-2 gap-x-3 sm:gap-x-6 text-xs sm:text-sm font-bold text-slate-800 text-center w-full">
-                            <span className="flex items-center gap-1.5">
-                                <span className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-slate-700 text-slate-800 flex items-center justify-center text-[0.55rem] sm:text-[0.6rem] font-black shrink-0">✓</span> Settle to your bank daily
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <span className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-slate-700 text-slate-800 flex items-center justify-center text-[0.55rem] sm:text-[0.6rem] font-black shrink-0">✓</span> Commission on every service
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex flex-row items-center justify-center gap-2.5 sm:gap-4 relative z-20 mx-auto w-full sm:w-auto">
-                        <Link
-                            to="/login"
-                            className="bg-[#E55C11] hover:bg-[#D2520E] text-white font-bold px-4 sm:px-7 py-3 rounded-full text-xs sm:text-base inline-flex items-center justify-center gap-2 sm:gap-3 shadow-md transition-transform hover:scale-[1.01] flex-1 sm:flex-initial"
-                        >
-                            <span>Sign In</span>
-                            <span className="bg-white text-[#E55C11] w-5 h-5 sm:w-6 sm:h-6 rounded-md flex items-center justify-center font-black text-xs sm:text-sm">
-                                ↗
-                            </span>
-                        </Link>
-                        <Link
-                            to="/contact"
-                            className="bg-white border border-[#18181b] text-[#18181b] hover:bg-slate-50 font-bold px-4 sm:px-7 py-3 rounded-full text-xs sm:text-base text-center transition-colors shadow-sm flex-1 sm:flex-initial"
-                        >
-                            Talk to Us
-                        </Link>
-                    </div>
-
-                    {/* Trust Badges Bar */}
-                    <div className="pt-4 sm:pt-6 lg:pt-[min(1.5rem,2.5vh)] flex flex-wrap items-center justify-center gap-y-1.5 gap-x-4 sm:gap-x-6 text-xs font-bold text-slate-600">
-                        <span className="flex items-center gap-1.2"><ShieldCheck className="w-3.5 h-3.5 text-[#008c46]" /> Aadhaar data never stored</span>
-                        <span className="text-slate-300 hidden sm:inline">•</span>
-                        <span className="flex items-center gap-1.2"><Zap className="w-3.5 h-3.5 text-[#008c46]" /> Runs on NPCI rails</span>
-                        <span className="text-slate-300 hidden sm:inline">•</span>
-                        <span className="flex items-center gap-1.2"><CheckCircle2 className="w-3.5 h-3.5 text-[#008c46]" /> Retailers across West Bengal</span>
-                    </div>
-                </div>
-            </section>
-
-            {/* --------------------------------------------------- HOW TO START: THREE STEPS */}
-            <section className="relative py-20 sm:py-28 px-4 sm:px-6 bg-white">
-                <div className="mx-auto max-w-6xl">
-                    <div className="text-center max-w-2xl mx-auto">
-                        <span className="inline-block bg-[#FEF3EA] text-[#BE4510] border border-[#FAD3B5] px-3.5 py-1 rounded-full text-xs font-bold">
-                            Get started
-                        </span>
-                        <h2 className="mt-4 text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-[1.1]">
-                            Open your banking point in three steps
-                        </h2>
-                        <p className="mt-4 text-base sm:text-lg text-slate-600 font-medium">
-                            No joining fee, no monthly charge, and our team helps you at every step.
+            {/* ------------------------------------------------------------ HERO */}
+            <section className="border-b border-[var(--lp-border)]">
+                <div className={`${WRAP} grid items-center gap-12 py-16 sm:py-20 lg:min-h-[calc(100svh-64px)] lg:grid-cols-12 lg:gap-16 lg:py-16`}>
+                    <div className="lg:col-span-6">
+                        <h1 className="text-[40px] font-medium leading-[1.06] tracking-[-0.03em] text-[var(--lp-fg)] sm:text-[56px] lg:text-[64px]">
+                            Turn your shop into a banking point for your neighbourhood
+                        </h1>
+                        <p className={`${LEAD} mt-6 max-w-xl sm:text-xl`}>
+                            ₹0 to join. You earn a commission on every transaction, and settle to your bank daily.
                         </p>
+                        <div className="mt-8 flex flex-wrap gap-3">
+                            <Link to="/login" className={BTN_PRIMARY}>Sign in</Link>
+                            <Link to="/contact" className={BTN_SECONDARY}>Talk to us</Link>
+                        </div>
+                        <ul className="mt-10 flex flex-wrap gap-x-6 gap-y-3 text-sm text-[var(--lp-fg-2)]">
+                            <li className="flex items-center gap-2"><Icon icon={ShieldCheck} /> Aadhaar data never stored</li>
+                            <li className="flex items-center gap-2"><Icon icon={Zap} /> Runs on NPCI rails</li>
+                            <li className="flex items-center gap-2"><Icon icon={CheckCircle2} /> Retailers across West Bengal</li>
+                        </ul>
+                    </div>
+                    <div className="lg:col-span-6">
+                        <AepsReceipt />
+                    </div>
+                </div>
+            </section>
+
+            {/* ------------------------------------------------- HOW TO START */}
+            <section className={SECTION}>
+                <div className={WRAP}>
+                    <div className="max-w-2xl">
+                        <p className="lp-eyebrow">Get started</p>
+                        <h2 className={`${H2} mt-3`}>Open your banking point in three steps</h2>
+                        <p className={`${LEAD} mt-4`}>No joining fee, no monthly charge, and our team helps you at every step.</p>
                     </div>
 
-                    <div className="relative mt-14 grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Connector line behind the step badges */}
-                        <div className="hidden md:block absolute top-7 left-[16.6%] right-[16.6%] h-0.5 bg-gradient-to-r from-[#bbf7d0] via-[#008c46] to-[#bbf7d0]" />
-                        {START_STEPS.map(({ title, text, icon: Icon }, i) => (
-                            <Reveal key={title} delay={i * 0.12} className="relative flex flex-col items-center text-center">
-                                <div className="relative z-10 w-14 h-14 rounded-full bg-[#E55C11] text-white flex items-center justify-center text-lg font-black shadow-lg ring-8 ring-white">
-                                    {i + 1}
+                    <ol className="mt-12 grid gap-4 md:grid-cols-3">
+                        {START_STEPS.map(({ title, text, icon }, i) => (
+                            <li key={title} className={`${CARD} p-6`}>
+                                <div className="flex items-center justify-between">
+                                    <div className="lp-icon-tile"><Icon icon={icon} /></div>
+                                    <span className="lp-figure text-sm text-[var(--lp-muted)]">Step {i + 1}</span>
                                 </div>
-                                <div className="mt-6 w-full rounded-3xl border border-slate-200 bg-[#f8fafc] p-6 sm:p-7 text-left shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="w-11 h-11 rounded-2xl bg-[#FEF0E4] text-[#7A2E06] flex items-center justify-center">
-                                        <Icon className="w-5 h-5" />
-                                    </div>
-                                    <h3 className="mt-4 text-xl font-extrabold text-slate-900 tracking-tight">{title}</h3>
-                                    <p className="mt-2 text-sm sm:text-base text-slate-600 leading-relaxed">{text}</p>
-                                </div>
-                            </Reveal>
+                                <h3 className="mt-6 text-lg font-medium text-[var(--lp-fg)]">{title}</h3>
+                                <p className={`${BODY} mt-2`}>{text}</p>
+                            </li>
                         ))}
-                    </div>
+                    </ol>
 
-                    <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-3">
-                        <a
-                            href="tel:+918240039776"
-                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#E55C11] hover:bg-[#D2520E] text-white px-7 text-sm sm:text-base font-bold shadow-md"
-                        >
-                            <Phone className="w-4 h-4" /> Call +91 8240039776
+                    <div className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
+                        <a href="tel:+918240039776" className={BTN_SECONDARY}>
+                            <Icon icon={Phone} /> <span className="lp-figure">+91 8240039776</span>
                         </a>
-                        <span className="text-sm font-semibold text-slate-600">or ask your local Shahparpay distributor</span>
+                        <span className="text-sm text-[var(--lp-fg-2)]">or ask your local Shahparpay distributor</span>
                     </div>
                 </div>
             </section>
 
-            {/* FLOATING GREEN CHAT BUBBLE BUTTON IN BOTTOM RIGHT */}
-            <a
-                href="#contact"
-                aria-label="Open support chat"
-                className="fixed bottom-6 right-6 w-14 h-14 bg-[#E55C11] hover:bg-[#D2520E] text-white rounded-full flex items-center justify-center shadow-2xl z-50 transition-transform hover:scale-105"
-            >
-                <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-                    <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
-                </svg>
-            </a>
+            {/* ------------------------------------ EVERY SERVICE, ONE LOGIN */}
+            <section className={`${SECTION} lp-band`}>
+                <div className={`${WRAP} grid items-center gap-12 lg:grid-cols-12 lg:gap-16`}>
+                    <div className="lg:col-span-5">
+                        <h2 className={H2}>Every service your customers ask for, on one login</h2>
+                    </div>
 
+                    <div className="grid gap-4 sm:grid-cols-2 lg:col-span-7">
+                        <div className={`${CARD} p-6`}>
+                            <p className="text-sm text-[var(--lp-fg-2)]">Transactions this week</p>
+                            <p className="lp-figure mt-3 text-[32px] leading-none text-[var(--lp-fg)]">2,847</p>
+                            <p className="mt-3 text-sm text-[var(--lp-muted)]"><span className="text-[var(--lp-positive)]">+3.5%</span> vs last week</p>
+                        </div>
 
+                        <div className={`${CARD} p-6`}>
+                            <p className="text-sm text-[var(--lp-fg-2)]">No hidden charges</p>
+                            <p className="lp-figure mt-3 text-[32px] leading-none text-[var(--lp-fg)]">₹0</p>
+                            <p className="mt-3 text-sm text-[var(--lp-muted)]">to join, and nothing monthly</p>
+                        </div>
 
-            {/* --------------------------------------------------- THE WHOLE PAYMENTS STACK, ON ONE PLATFORM ---------------- */}
-            <section className="relative py-28 px-6 bg-white overflow-hidden select-none">
-                {/* Soft brand glows */}
-                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_10%_50%,#dcfce7_0%,transparent_45%),radial-gradient(ellipse_at_90%_50%,#FEF0E4_0%,transparent_45%)]" />
-
-                <div className="mx-auto max-w-7xl relative z-10">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center min-h-[600px]">
-                        {/* Left Column Floating Tiles */}
-                        <div className="lg:col-span-4 flex flex-col items-center lg:items-end justify-between gap-14">
-                            {/* Top Left: Live Analytics Chart Card */}
-                            <div className="bg-[#FDE3CF] border border-orange-300 rounded-3xl p-4 shadow-lg w-full max-w-xs transform -rotate-2 hover:rotate-0 transition-transform">
-                                <div className="bg-white rounded-2xl p-4 shadow-sm">
-                                    <div className="flex items-center justify-between text-[0.65rem] font-bold text-slate-500 mb-1">
-                                        <span className="flex items-center gap-1">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" /> Transactions this week
-                                        </span>
-                                    </div>
-                                    <div className="flex items-baseline justify-between mb-2">
-                                        <span className="text-3xl font-extrabold text-slate-900 tracking-tight">2,847</span>
-                                        <span className="text-[0.6rem] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">
-                                            ↑ 3.5% VS LAST WEEK
-                                        </span>
-                                    </div>
-                                    {/* Dual Wave Mountain Chart Graphic */}
-                                    <svg className="w-full h-12 overflow-visible" viewBox="0 0 200 45">
-                                        <defs>
-                                            <linearGradient id="walletChartGrad" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#10b981" stopOpacity="0.45" />
-                                                <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-                                            </linearGradient>
-                                        </defs>
-                                        <path d="M0,35 Q40,10 80,28 T160,12 T200,30 L200,45 L0,45 Z" fill="url(#walletChartGrad)" />
-                                        <path d="M0,35 Q40,10 80,28 T160,12 T200,30" fill="none" stroke="#059669" strokeWidth="3.5" strokeLinecap="round" />
-                                        <circle cx="160" cy="12" r="4.5" fill="#047857" className="animate-ping" />
-                                        <circle cx="160" cy="12" r="3.5" fill="#F79440" />
-                                    </svg>
+                        <div className={`${CARD} p-6 sm:col-span-2`}>
+                            <div className="flex items-center gap-3">
+                                <div className="flex size-10 items-center justify-center rounded-full bg-[var(--lp-surface)] text-sm text-[var(--lp-fg-2)]">AV</div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-base text-[var(--lp-fg)]">Abhishek Verma</p>
+                                    <p className="text-sm text-[var(--lp-muted)]">Retailer KYC verified</p>
                                 </div>
+                                <span className="lp-figure text-base text-[var(--lp-fg)]">₹11,000.00</span>
                             </div>
-
-                            {/* Bottom Left: Assisted Onboarding Support Card */}
-                            <div className="relative rounded-3xl overflow-hidden border border-emerald-200 shadow-xl w-full max-w-xs h-64 transform rotate-1 hover:rotate-0 transition-transform bg-gradient-to-br from-[#008c46] to-[#00502b]">
-                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_25%,rgba(255,255,255,0.18),transparent_55%)]" />
-                                <div className="absolute top-6 left-6 right-6 text-white">
-                                    <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center">
-                                        <Headset className="w-7 h-7 text-orange-300" />
-                                    </div>
-                                    <p className="mt-4 text-lg font-extrabold leading-tight">Our team sets up your counter with you</p>
-                                    <p className="mt-1 text-xs font-semibold text-emerald-100">Call +91 8240039776 · Mon–Sat</p>
-                                </div>
-                                <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-white/80 text-xs shadow-lg">
-                                    <p className="font-bold text-slate-800 text-[0.7rem]">Welcome onboard</p>
-                                    <div className="flex items-center justify-between mt-1 text-emerald-700 font-extrabold text-[0.7rem]">
-                                        <span>Start assisted setup</span>
-                                        <ArrowRight className="h-3.5 w-3.5" />
-                                    </div>
-                                </div>
+                            <hr className="lp-tear my-4" />
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="flex items-center gap-2 text-[var(--lp-fg-2)]"><Icon icon={Fingerprint} /> AEPS cash withdrawal</span>
+                                <span className="text-[var(--lp-positive)]">Settled</span>
                             </div>
                         </div>
 
-                        {/* Center Column Title & Disbursal Card */}
-                        <div className="lg:col-span-4 flex flex-col items-center text-center justify-center space-y-12">
-                            {/* Centered H2 Title */}
-                            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.08] max-w-md">
-                                Every service your customers ask for, on one login.
-                            </h2>
-
-                            {/* Bottom Center: Retailer transaction card */}
-                            <div className="bg-[#00381e] text-white p-5 rounded-3xl shadow-2xl w-full max-w-xs border border-emerald-800/60">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="w-9 h-9 rounded-full bg-emerald-700 border border-emerald-500 flex items-center justify-center font-bold text-white text-xs shadow-inner">
-                                        AV
-                                    </div>
-                                    <div className="text-left">
-                                        <p className="text-xs font-extrabold text-white">Abhishek Verma</p>
-                                        <p className="text-[0.6rem] text-emerald-300">Retailer KYC verified</p>
-                                    </div>
-                                    <span className="ml-auto text-sm font-black text-emerald-400">₹11,000.00</span>
-                                </div>
-                                <div className="bg-[#002715] p-2.5 rounded-2xl flex items-center justify-between text-xs border border-emerald-800/60">
-                                    <div className="flex items-center gap-1.5 font-extrabold text-xs text-white">
-                                        <Fingerprint className="w-4 h-4 text-emerald-400" />
-                                        <span>AEPS cash withdrawal</span>
-                                    </div>
-                                    <span className="text-xs font-bold text-emerald-300">Settled</span>
-                                </div>
-                            </div>
+                        <div className={`${CARD} p-6`}>
+                            <p className="text-sm text-[var(--lp-fg-2)]">On every counter</p>
+                            <ul className="mt-4 flex flex-wrap gap-2">
+                                {SERVICES.map((s) => (
+                                    <li key={s} className="rounded-md border border-[var(--lp-border)] px-2 py-1 text-sm text-[var(--lp-fg)]">{s}</li>
+                                ))}
+                            </ul>
                         </div>
 
-                        {/* Right Column Floating Tiles */}
-                        <div className="lg:col-span-4 flex flex-col items-center lg:items-start justify-between gap-14">
-                            {/* Top Right: Banking point shop card with the services it offers */}
-                            <div className="relative rounded-3xl overflow-hidden border border-slate-200 shadow-xl w-full max-w-xs h-64 transform rotate-2 hover:rotate-0 transition-transform group bg-[#f4fbf6]">
-                                <img
-                                    src={heroCspBg}
-                                    alt="Shahparpay banking point shop"
-                                    className="w-full h-full object-cover object-[100%_100%] scale-[2.1] origin-[100%_100%] group-hover:scale-[2.2] transition-transform duration-300"
-                                />
-                                {/* Floating Service Badges Glass Overlay */}
-                                <div className="absolute inset-3 flex items-end">
-                                    <div className="bg-white/85 backdrop-blur-md p-2 rounded-2xl border border-white/90 w-full grid grid-cols-4 gap-1.5 text-center shadow-lg">
-                                        <span className="text-[0.6rem] font-bold py-1 bg-[#008c46] text-white rounded">AEPS</span>
-                                        <span className="text-[0.6rem] font-bold py-1 bg-emerald-100 text-emerald-800 rounded">mATM</span>
-                                        <span className="text-[0.6rem] font-bold py-1 bg-orange-100 text-orange-900 rounded">DMT</span>
-                                        <span className="text-[0.6rem] font-bold py-1 bg-amber-100 text-amber-900 rounded">BBPS</span>
-                                        <span className="text-[0.6rem] font-bold py-1 bg-sky-100 text-sky-800 rounded">UPI</span>
-                                        <span className="text-[0.6rem] font-bold py-1 bg-slate-100 text-slate-800 rounded">Recharge</span>
-                                        <span className="text-[0.6rem] font-bold py-1 bg-rose-100 text-rose-800 rounded">PAN</span>
-                                        <span className="text-[0.6rem] font-bold py-1 bg-indigo-100 text-indigo-800 rounded">ITR</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Bottom Right: "No Hidden Charges" Sky Blue Card */}
-                            <div className="bg-[#0284c7] text-white rounded-3xl p-6 shadow-xl w-full max-w-xs text-center border border-sky-300 relative transform -rotate-1 hover:rotate-0 transition-transform">
-                                <h4 className="text-2xl font-black tracking-tight mb-2">No Hidden</h4>
-                                <div className="my-2 mx-auto w-32 h-20 rounded-2xl bg-white/20 backdrop-blur-md border border-white/40 p-1.5 flex items-center justify-center">
-                                    <div className="w-full h-full rounded-xl bg-gradient-to-br from-orange-300 via-emerald-300 to-emerald-400 flex items-center justify-center text-slate-900 font-extrabold text-xs shadow-inner">
-                                        ₹0 to join
-                                    </div>
-                                </div>
-                                <h4 className="text-2xl font-black tracking-tight mt-2">Charges</h4>
-                            </div>
+                        <div className={`${CARD} flex flex-col p-6`}>
+                            <div className="lp-icon-tile"><Icon icon={Headset} /></div>
+                            <p className="mt-4 text-base text-[var(--lp-fg)]">Our team sets up your counter with you</p>
+                            <p className="mt-1 text-sm text-[var(--lp-muted)]">Call <span className="lp-figure">+91 8240039776</span> · Mon–Sat</p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* -------------------------------------------------- EVERY WAY YOUR CUSTOMER WANTS TO PAY (BENTO GRID) */}
-            <section className="w-full bg-[#f8fafc] py-20 px-4 sm:px-6 lg:px-8 border-y border-slate-100">
-                <div className="mx-auto max-w-7xl">
-                    {/* Centered Main Title */}
-                    <div className="text-center max-w-4xl mx-auto mb-14">
-                        <h2 className="text-4xl sm:text-5xl lg:text-[52px] font-extrabold text-slate-900 tracking-tight leading-[1.15]">
-                            Cash withdrawal, money transfer, bills, recharge. All from your counter.
-                        </h2>
-                    </div>
+            {/* ------------------------------------------ SERVICES IN DETAIL */}
+            <section id="products" className={`${SECTION} scroll-mt-16`}>
+                <div className={WRAP}>
+                    <h2 className={`${H2} max-w-3xl`}>Cash withdrawal, money transfer, bills, recharge. All from your counter</h2>
 
-                    {/* Bento Grid (2 Cards) */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch">
-                        {/* LEFT BENTO CARD: Shahparpay Checkout */}
-                        <div className="relative rounded-[32px] bg-gradient-to-br from-[#bae6fd] via-[#7dd3fc] to-[#38bdf8] p-8 sm:p-10 overflow-hidden flex flex-col justify-between shadow-xl min-h-[480px] border border-sky-200 group">
-                            {/* Top Text */}
-                            <div className="relative z-10 max-w-sm pr-12">
-                                <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                                    AEPS Cash Withdrawal
-                                </h3>
-                                <p className="mt-3 text-sm sm:text-base text-slate-800 leading-relaxed font-medium">
+                    <div className="mt-12 grid gap-4 lg:grid-cols-12">
+                        {/* AEPS */}
+                        <article className={`${CARD} flex flex-col overflow-hidden lg:col-span-7`}>
+                            <div className="p-6 sm:p-8">
+                                <h3 className={H3}>AEPS cash withdrawal</h3>
+                                <p className={`${BODY} mt-3 max-w-md`}>
                                     Your customer puts a finger on the scanner and walks out with cash. No card, no passbook, no trip to a bank branch. You earn on every withdrawal.
                                 </p>
                             </div>
-
-                            {/* Top Right Arrow Circle Button */}
-                            <a
-                                href="#products"
-                                aria-label="Explore AEPS cash withdrawal"
-                                className="absolute top-8 right-8 z-20 w-11 h-11 rounded-full bg-[#18181b] text-white flex items-center justify-center hover:bg-black transition-all duration-200 hover:scale-110 shadow-lg"
-                            >
-                                <ArrowUpRight className="w-5 h-5" />
-                            </a>
-
-                            {/* Floating Pill Badge: Faster Checkout */}
-                            <div className="absolute left-8 bottom-36 z-20 hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-[#008c46] text-white text-xs font-extrabold shadow-xl border border-emerald-400/40">
-                                <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
-                                    <ShoppingCart className="w-3.5 h-3.5 text-white" />
-                                </div>
-                                <span>Cash paid out</span>
-                            </div>
-
-                            {/* Floating Dark Glass Badge: Conversion Rate */}
-                            <div className="absolute left-8 bottom-8 z-20 bg-[#18181b]/95 text-white p-4 sm:p-5 rounded-2xl shadow-2xl border border-white/10 w-56 backdrop-blur-md">
-                                <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
-                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                    Commission earned today
-                                </div>
-                                <div className="mt-1 flex items-baseline justify-between">
-                                    <span className="text-2xl font-black text-white tracking-tight flex items-center gap-1">
-                                        <span className="text-emerald-400 text-lg">↑</span> ₹1,240
-                                    </span>
-                                </div>
-                                {/* Wave chart graphic */}
-                                <div className="mt-2 h-8 w-full">
-                                    <svg className="w-full h-full text-emerald-400" viewBox="0 0 100 30" fill="none">
-                                        <path
-                                            d="M0 25 Q 15 28, 30 18 T 60 15 T 80 8 T 100 5 L 100 30 L 0 30 Z"
-                                            fill="url(#greenWaveGrad)"
-                                            opacity="0.3"
-                                        />
-                                        <path
-                                            d="M0 25 Q 15 28, 30 18 T 60 15 T 80 8 T 100 5"
-                                            stroke="currentColor"
-                                            strokeWidth="3"
-                                            strokeLinecap="round"
-                                            fill="none"
-                                        />
-                                        <defs>
-                                            <linearGradient id="greenWaveGrad" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#22c55e" stopOpacity="0.8" />
-                                                <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
-                                            </linearGradient>
-                                        </defs>
-                                    </svg>
-                                </div>
-                            </div>
-
-                            {/* Center/Right Phone Mockup */}
-                            <div className="relative mt-8 lg:mt-0 flex justify-end items-end -mr-6 -mb-10 sm:-mr-8 sm:-mb-12 pointer-events-none">
-                                <div className="relative w-64 sm:w-72 rounded-[36px] bg-[#18181b] p-3 shadow-2xl border-4 border-slate-800 transform rotate-[-3deg] group-hover:rotate-0 transition-transform duration-500">
-                                    {/* Dynamic Island / Notch */}
-                                    <div className="absolute top-4 left-1/2 -translate-x-1/2 w-20 h-4 bg-black rounded-full z-30" />
-
-                                    {/* Phone Screen UI */}
-                                    <div className="bg-slate-50 rounded-[28px] overflow-hidden pt-6 pb-4 px-3.5 space-y-2.5 border border-slate-200">
-                                        {/* URL Bar */}
-                                        <div className="bg-slate-200/80 text-slate-700 rounded-full px-3 py-1 text-[10px] text-center font-semibold flex items-center justify-center gap-1 mx-auto max-w-[150px]">
-                                            <Lock className="w-2.5 h-2.5 text-slate-500" />
-                                            <span>shahparpay.in</span>
-                                        </div>
-
-                                        {/* Merchant Store Header */}
-                                        <div className="bg-white rounded-xl p-3 border border-slate-200/80 shadow-sm flex items-center justify-between">
+                            <div className="mt-auto flex justify-center bg-[var(--lp-surface)] px-6 pt-8">
+                                <PhoneFrame className="-mb-24 w-64 sm:w-72">
+                                    <div className="space-y-3 px-4 pb-28 pt-10">
+                                        <div className="flex items-center justify-between rounded-xl border border-[var(--lp-border)] bg-white p-3">
                                             <div>
-                                                <div className="flex items-center gap-1">
-                                                    <span className="text-xs">☕</span>
-                                                    <span className="text-xs font-bold text-slate-900">Sunita Devi</span>
-                                                </div>
-                                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold inline-block mt-0.5 border border-emerald-200">
-                                                    Aadhaar verified
-                                                </span>
+                                                <p className="text-sm text-[var(--lp-fg)]">Sunita Devi</p>
+                                                <p className="text-xs text-[var(--lp-positive)]">Aadhaar verified</p>
                                             </div>
                                             <div className="text-right">
-                                                <span className="text-[10px] text-slate-400">Withdrawing</span>
-                                                <div className="text-sm font-black text-slate-900">₹2,000</div>
+                                                <p className="text-xs text-[var(--lp-muted)]">Withdrawing</p>
+                                                <p className="lp-figure text-sm text-[var(--lp-fg)]">₹2,000.00</p>
                                             </div>
                                         </div>
-
-                                        {/* Coupon Card */}
-                                        <div className="bg-[#008c46] text-white rounded-xl p-2.5 flex items-center justify-between text-xs shadow-sm">
+                                        <div className="flex items-center justify-between rounded-xl border border-[var(--lp-border)] bg-white p-3">
                                             <div>
-                                                <div className="font-black text-xs">Your commission ₹14</div>
-                                                <div className="text-[9px] text-emerald-100">Credited to wallet</div>
+                                                <p className="text-sm text-[var(--lp-fg)]">Your commission</p>
+                                                <p className="text-xs text-[var(--lp-muted)]">Credited to wallet</p>
                                             </div>
-                                            <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">
-                                                Paid
-                                            </span>
+                                            <p className="lp-figure text-sm text-[var(--lp-accent-ink)]">+₹14.00</p>
                                         </div>
-
-                                        {/* Product Item */}
-                                        <div className="bg-white rounded-xl p-2.5 border border-slate-200/80 shadow-sm flex items-center gap-2">
-                                            <div className="w-9 h-9 rounded-lg bg-sky-100 flex items-center justify-center text-sm font-bold">
-                                                🥣
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-[10px] font-bold text-slate-900">Mobile recharge</p>
-                                                <p className="text-[9px] text-slate-500">₹239 / 28 days</p>
-                                            </div>
-                                            <button className="bg-[#E55C11] text-white text-[9px] font-bold px-2.5 py-1 rounded">
-                                                PAY
-                                            </button>
-                                        </div>
-
-                                        {/* Payment Methods */}
-                                        <div className="bg-white rounded-xl p-2.5 border border-slate-200/80 shadow-sm space-y-1.5">
-                                            <p className="text-[9px] font-bold text-slate-400">Bank chosen automatically</p>
-                                            <div className="flex items-center justify-between text-[10px] font-bold text-slate-800 py-1 border-b border-slate-100">
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                                                    <span>State Bank of India</span>
-                                                </div>
-                                                <ChevronRight className="w-3 h-3 text-slate-400" />
-                                            </div>
-                                            <div className="flex items-center justify-between text-[10px] font-bold text-slate-800 py-1 border-b border-slate-100">
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="w-2 h-2 rounded-full bg-purple-500" />
-                                                    <span>Bank of Baroda</span>
-                                                </div>
-                                                <ChevronRight className="w-3 h-3 text-slate-400" />
-                                            </div>
-                                            <div className="flex items-center justify-between text-[10px] font-bold text-slate-800 py-1">
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="w-2 h-2 rounded-full bg-amber-500" />
-                                                    <span>Punjab National Bank</span>
-                                                </div>
-                                                <ChevronRight className="w-3 h-3 text-slate-400" />
-                                            </div>
+                                        <div className="rounded-xl border border-[var(--lp-border)] bg-white p-3">
+                                            <p className="text-xs text-[var(--lp-muted)]">Bank chosen automatically</p>
+                                            <ul className="mt-2 divide-y divide-[var(--lp-border)] text-sm text-[var(--lp-fg)]">
+                                                {['State Bank of India', 'Bank of Baroda', 'Punjab National Bank'].map((b) => (
+                                                    <li key={b} className="py-2">{b}</li>
+                                                ))}
+                                            </ul>
                                         </div>
                                     </div>
-                                </div>
+                                </PhoneFrame>
                             </div>
-                        </div>
+                        </article>
 
-                        {/* RIGHT BENTO CARD: Payment Gateway */}
-                        <div className="relative rounded-[32px] bg-gradient-to-br from-[#e0f2fe] via-[#f0fdf4] to-[#dcfce7] p-8 sm:p-10 overflow-hidden flex flex-col justify-between shadow-xl min-h-[480px] border border-emerald-200 group">
-                            {/* Top Text */}
-                            <div className="relative z-10 max-w-md pr-6">
-                                <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                                    Money Transfer & Bills
-                                </h3>
-                                <p className="mt-3 text-sm sm:text-base text-slate-800 leading-relaxed font-medium">
-                                    Send cash to any bank account over IMPS, pay an electricity or gas bill, recharge a phone or a FASTag. The errands that bring the same customers back to your shop every month.
-                                </p>
-                            </div>
-
-                            {/* Floating Service Pills Grid */}
-                            <div className="mt-10 sm:mt-12 grid grid-cols-2 sm:grid-cols-3 gap-3.5 relative z-10">
-                                {TRANSFER_AND_BILL_SERVICES.map(({ label, icon: Icon }) => (
-                                    <div key={label} className="bg-white/85 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-white/90 flex items-center gap-2.5 font-bold text-slate-800 text-sm group-hover:scale-105 transition-all">
-                                        <div className="w-7 h-7 rounded-lg bg-[#F1F1F1] text-[#171717] flex items-center justify-center shadow-sm shrink-0">
-                                            <Icon className="w-4 h-4" />
-                                        </div>
-                                        <span>{label}</span>
-                                    </div>
+                        {/* Money transfer and bills */}
+                        <article id="payouts" className={`${CARD} scroll-mt-16 p-6 sm:p-8 lg:col-span-5`}>
+                            <h3 className={H3}>Money transfer and bills</h3>
+                            <p className={`${BODY} mt-3`}>
+                                Send cash to any bank account over IMPS, pay an electricity or gas bill, recharge a phone or a FASTag. The errands that bring the same customers back to your shop every month.
+                            </p>
+                            <ul className="mt-8 grid grid-cols-2 gap-x-4 border-t border-[var(--lp-border)]">
+                                {TRANSFER_AND_BILL_SERVICES.map(({ label, icon }) => (
+                                    <li key={label} className="flex h-11 items-center gap-2.5 border-b border-[var(--lp-border)] text-sm text-[var(--lp-fg)]">
+                                        <Icon icon={icon} /> {label}
+                                    </li>
                                 ))}
-                            </div>
-                        </div>
-                    </div>
+                            </ul>
+                        </article>
 
-                    {/* Bento Grid Row 2: Payment Forms (no-code) & Instant Settlements */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch mt-8">
-                        {/* LEFT CARD: Payment Forms (no-code) */}
-                        <div className="relative rounded-[32px] bg-[#f8fafc] p-8 sm:p-10 overflow-hidden flex flex-col justify-between shadow-xl min-h-[480px] border border-slate-200/80 group">
-                            {/* Top Text */}
-                            <div className="relative z-10 max-w-sm pr-12">
-                                <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                                    PAN Card & ITR Filing
-                                </h3>
-                                <p className="mt-3 text-sm sm:text-base text-slate-700 leading-relaxed font-medium">
-                                    Apply for a new PAN card, file a correction, or file an income tax return for a customer. Higher value work than a recharge, and nobody in the area is offering it.
-                                </p>
-                            </div>
-
-                            {/* Top Right Arrow Circle Button */}
-                            <a
-                                href="#products"
-                                aria-label="Explore PAN and ITR services"
-                                className="absolute top-8 right-8 z-20 w-11 h-11 rounded-full bg-[#18181b] text-white flex items-center justify-center hover:bg-black transition-all duration-200 hover:scale-110 shadow-lg"
-                            >
-                                <ArrowUpRight className="w-5 h-5" />
-                            </a>
-
-                            {/* Form Mockup Container & Gold Pillar Accent */}
-                            <div className="relative mt-8 lg:mt-0 flex items-end justify-between">
-                                {/* Form Mockup Card */}
-                                <div className="bg-white rounded-2xl shadow-xl border border-slate-200/80 p-4 sm:p-5 text-slate-900 max-w-md w-full transform -rotate-1 group-hover:rotate-0 transition-transform duration-500 z-10">
-                                    {/* Form Header Banner */}
-                                    <div className="bg-gradient-to-r from-orange-200 via-emerald-200 to-teal-200 rounded-xl p-3.5 text-center relative overflow-hidden mb-3 border border-emerald-200/60">
-                                        <span className="absolute top-2 right-2 text-[8px] font-bold text-slate-600 bg-white/70 px-1.5 py-0.5 rounded">
-                                            Powered by Shahparpay
-                                        </span>
-                                        <div className="flex items-center justify-center gap-1.5 pt-1">
-                                            <div className="w-6 h-6 rounded-full bg-[#F1F1F1] text-[#171717] flex items-center justify-center">
-                                                <IdCard className="w-3.5 h-3.5" />
-                                            </div>
-                                            <span className="text-base font-extrabold text-slate-900 tracking-tight">PAN Card Application</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Form Content Grid */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
-                                        {/* Left Column Placeholders */}
-                                        <div className="space-y-2 text-[10px]">
-                                            <div>
-                                                <p className="font-bold text-slate-800">New PAN · Form 49A</p>
-                                                <div className="h-1.5 bg-slate-200 rounded w-full mt-1" />
-                                                <div className="h-1.5 bg-slate-100 rounded w-4/5 mt-1" />
-                                            </div>
-                                            <div className="pt-2">
-                                                <p className="font-bold text-slate-800">Aadhaar · Photo · Signature</p>
-                                                <div className="h-1.5 bg-slate-200 rounded w-full mt-1" />
-                                                <div className="h-1.5 bg-slate-100 rounded w-3/4 mt-1" />
-                                            </div>
-                                        </div>
-
-                                        {/* Right Column Fields */}
-                                        <div className="space-y-2">
-                                            <div>
-                                                <label className="text-[10px] font-bold text-slate-800 block">Phone Number</label>
-                                                <div className="bg-slate-100/90 rounded-lg p-2 text-[10px] font-semibold text-slate-700 border border-slate-200 flex items-center gap-1 mt-0.5">
-                                                    <span className="text-slate-500">+91</span>
-                                                    <span className="text-slate-300">|</span>
-                                                    <span>98XXX XXX10</span>
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <label className="text-[10px] font-bold text-slate-800 block">Applicant name</label>
-                                                <div className="bg-slate-100/90 rounded-lg p-2 text-[10px] font-semibold text-slate-800 border border-slate-200 mt-0.5">
-                                                    Samar Ahuja
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <label className="text-[10px] font-bold text-slate-800 block">Service fee</label>
-                                                <div className="bg-slate-100/90 rounded-lg p-2 text-[10px] font-extrabold text-slate-900 border border-slate-200 flex items-center gap-1 mt-0.5">
-                                                    <span className="text-slate-400 font-bold">₹</span>
-                                                    <span className="text-slate-300">|</span>
-                                                    <span>107</span>
-                                                </div>
-                                            </div>
-
-                                            <button className="bg-[#E55C11] hover:bg-[#007339] text-white font-extrabold py-2 px-3 rounded-xl text-[10px] shadow-sm flex items-center justify-center gap-1.5 w-full transition-colors mt-2">
-                                                <span>Submit application</span>
-                                                <ArrowRight className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                    </div>
+                        {/* PAN and ITR */}
+                        <article id="identity" className={`${CARD} scroll-mt-16 p-6 sm:p-8 lg:col-span-5`}>
+                            <h3 className={H3}>PAN card and ITR filing</h3>
+                            <p className={`${BODY} mt-3`}>
+                                Apply for a new PAN card, file a correction, or file an income tax return for a customer. Higher value work than a recharge, and nobody in the area is offering it.
+                            </p>
+                            <div className="mt-8 rounded-xl border border-[var(--lp-border)] bg-[var(--lp-bg)] p-5">
+                                <div className="flex items-center gap-2">
+                                    <Icon icon={IdCard} />
+                                    <p className="text-base text-[var(--lp-fg)]">PAN card application</p>
                                 </div>
-
-                                {/* Gold PAN Card Accent Graphic */}
-                                <div className="hidden sm:flex flex-col items-center justify-center ml-4 opacity-90">
-                                    <div className="w-20 h-32 rounded-3xl bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 shadow-xl border-2 border-amber-200/80 flex flex-col items-center justify-center p-2 transform rotate-6">
-                                        <div className="w-12 h-12 rounded-full bg-amber-100/60 border border-amber-200 flex items-center justify-center shadow-inner">
-                                            <IdCard className="w-6 h-6 text-amber-800" />
-                                        </div>
-                                        <div className="w-10 h-2 bg-amber-600/40 rounded-full mt-2" />
-                                        <div className="w-8 h-2 bg-amber-600/40 rounded-full mt-1" />
-                                    </div>
-                                </div>
+                                <p className="mt-1 text-sm text-[var(--lp-muted)]">New PAN · Form 49A · Aadhaar, photo and signature</p>
+                                <hr className="lp-tear my-4" />
+                                <dl className="space-y-2 text-sm">
+                                    <div className={ROW}><dt className="text-[var(--lp-muted)]">Applicant name</dt><dd className="text-[var(--lp-fg)]">Samar Ahuja</dd></div>
+                                    <div className={ROW}><dt className="text-[var(--lp-muted)]">Phone number</dt><dd className="lp-figure text-[var(--lp-fg)]">+91 98XXX XXX10</dd></div>
+                                    <div className={ROW}><dt className="text-[var(--lp-muted)]">Service fee</dt><dd className="lp-figure text-[var(--lp-fg)]">₹107.00</dd></div>
+                                </dl>
+                                <div className="mt-4 flex h-10 items-center justify-center rounded-[10px] bg-[var(--lp-fg)] text-sm font-medium text-white">Submit application</div>
                             </div>
-                        </div>
+                        </article>
 
-                        {/* RIGHT CARD: Instant Settlements */}
-                        <div className="relative rounded-[32px] bg-[#f8fafc] p-8 sm:p-10 overflow-hidden flex flex-col justify-between shadow-xl min-h-[480px] border border-slate-200/80 group">
-                            {/* Top Text */}
-                            <div className="relative z-10 max-w-md pr-12">
-                                <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                                    Daily Settlement
-                                </h3>
-                                <p className="mt-3 text-sm sm:text-base text-slate-700 leading-relaxed font-medium">
-                                    Move the day's earnings from your wallet to your own bank account, on your schedule. <a href="#products" className="underline font-bold text-slate-900 hover:text-[#E55C11]">Learn more</a>
-                                </p>
-                            </div>
-
-                            {/* Top Right Arrow Circle Button */}
-                            <a
-                                href="#products"
-                                aria-label="Learn more about daily settlement"
-                                className="absolute top-8 right-8 z-20 w-11 h-11 rounded-full bg-[#18181b] text-white flex items-center justify-center hover:bg-black transition-all duration-200 hover:scale-110 shadow-lg"
-                            >
-                                <ArrowUpRight className="w-5 h-5" />
-                            </a>
-
-                            {/* Settlement Graphic Showcase */}
-                            <div className="relative mt-8 lg:mt-0 flex flex-col sm:flex-row items-center justify-between gap-4">
-                                {/* Dark Green Receipt Card */}
-                                <div className="bg-gradient-to-br from-[#1b3a2b] via-[#122b1f] to-[#0c1f16] text-white p-5 rounded-2xl shadow-2xl border border-emerald-800/80 w-full sm:w-64 transform -rotate-2 group-hover:rotate-0 transition-transform duration-500 z-10">
-                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold">
-                                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                        <span>Settled to your bank</span>
-                                    </div>
-                                    <div className="text-3xl font-black text-white tracking-tight my-2">
-                                        ₹2,450
-                                    </div>
-                                    <div className="text-[10px] text-emerald-200/70 font-medium mb-4">
-                                        29 Nov 2026 • 02:16 PM
-                                    </div>
-                                    <div className="pt-2 border-t border-emerald-800/60 flex items-center gap-1.5 text-[11px] font-bold text-emerald-100">
-                                        <span>🏛️</span>
-                                        <span>Your account •••• 4771</span>
-                                    </div>
+                        {/* Daily settlement */}
+                        <article className={`${CARD} p-6 sm:p-8 lg:col-span-7`}>
+                            <h3 className={H3}>Daily settlement</h3>
+                            <p className={`${BODY} mt-3 max-w-md`}>
+                                Move the day's earnings from your wallet to your own bank account, on your schedule.
+                            </p>
+                            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                                <div className="rounded-xl bg-[var(--lp-surface)] p-5">
+                                    <p className="text-sm text-[var(--lp-fg-2)]">Settled to your bank</p>
+                                    <p className="lp-figure mt-2 text-[32px] leading-none text-[var(--lp-fg)]">₹2,450.00</p>
+                                    <p className="lp-figure mt-2 text-xs text-[var(--lp-muted)]">29 Nov 2026 · 02:16 PM</p>
+                                    <hr className="lp-tear my-4" />
+                                    <p className="flex items-center gap-2 text-sm text-[var(--lp-fg-2)]"><Icon icon={Landmark} /> Your account <span className="lp-figure">•••• 4771</span></p>
                                 </div>
-
-                                {/* Stack of Settlement Status Pills */}
-                                <div className="space-y-2.5 w-full sm:w-auto z-20">
-                                    {/* Pill 1 */}
-                                    <div className="bg-white text-slate-900 p-3 rounded-2xl shadow-md border border-slate-200/80 flex items-center justify-between gap-3 text-xs font-bold hover:scale-105 transition-all">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-base">💸</span>
+                                <ul className="divide-y divide-[var(--lp-border)] rounded-xl border border-[var(--lp-border)]">
+                                    {[
+                                        { amt: '₹2,450.00', what: 'AEPS withdrawal', when: '4 min' },
+                                        { amt: '₹1,800.00', what: 'Money transfer', when: '22 min' },
+                                        { amt: '₹899.00', what: 'To UPI •••• 7712', when: '11 min' },
+                                    ].map((r) => (
+                                        <li key={r.what} className="flex h-16 items-center justify-between px-4">
                                             <div>
-                                                <p className="text-slate-900 font-extrabold text-xs">₹2,450</p>
-                                                <p className="text-[9px] text-slate-400 font-medium">AEPS withdrawal</p>
+                                                <p className="lp-figure text-sm text-[var(--lp-fg)]">{r.amt}</p>
+                                                <p className="text-xs text-[var(--lp-muted)]">{r.what}</p>
                                             </div>
-                                        </div>
-                                        <span className="bg-[#008c46] text-white px-2.5 py-1 rounded-full text-[9px] font-extrabold shadow-sm">
-                                            Settled in 4 mins
-                                        </span>
-                                    </div>
-
-                                    {/* Pill 2 */}
-                                    <div className="bg-white text-slate-900 p-3 rounded-2xl shadow-md border border-slate-200/80 flex items-center justify-between gap-3 text-xs font-bold hover:scale-105 transition-all transform sm:translate-x-2">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-base">📲</span>
-                                            <div>
-                                                <p className="text-slate-900 font-extrabold text-xs">₹1,800</p>
-                                                <p className="text-[9px] text-slate-400 font-medium">Money transfer</p>
-                                            </div>
-                                        </div>
-                                        <span className="bg-[#008c46] text-white px-2.5 py-1 rounded-full text-[9px] font-extrabold shadow-sm">
-                                            Settled in 22 mins
-                                        </span>
-                                    </div>
-
-                                    {/* Pill 3 */}
-                                    <div className="bg-white text-slate-900 p-3 rounded-2xl shadow-md border border-slate-200/80 flex items-center justify-between gap-3 text-xs font-bold hover:scale-105 transition-all transform sm:translate-x-4">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-base">🔄</span>
-                                            <div>
-                                                <p className="text-slate-900 font-extrabold text-xs">₹899</p>
-                                                <p className="text-[9px] text-slate-400 font-medium">To UPI •••• 7712</p>
-                                            </div>
-                                        </div>
-                                        <span className="bg-[#008c46] text-white px-2.5 py-1 rounded-full text-[9px] font-extrabold shadow-sm">
-                                            Settled in 11 mins
-                                        </span>
-                                    </div>
-                                </div>
+                                            <span className="text-xs text-[var(--lp-positive)]">Settled in <span className="lp-figure">{r.when}</span></span>
+                                        </li>
+                                    ))}
+                                </ul>
                             </div>
-                        </div>
-                    </div>
-
-                    {/* Bottom Interactive Pill Navigation Tab Bar */}
-                    <div className="mt-12 flex justify-center">
-                        <div className="bg-white rounded-full p-1.5 shadow-xl border border-slate-200/90 inline-flex items-center gap-1 sm:gap-2 max-w-full overflow-x-auto">
-                            <button
-                                onClick={() => setBentoTab('collect')}
-                                className={`px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
-                                    bentoTab === 'collect'
-                                        ? 'bg-[#E55C11] text-white shadow-md'
-                                        : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
-                                }`}
-                            >
-                                Banking
-                            </button>
-                            <button
-                                onClick={() => setBentoTab('global')}
-                                className={`px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
-                                    bentoTab === 'global'
-                                        ? 'bg-[#E55C11] text-white shadow-md'
-                                        : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
-                                }`}
-                            >
-                                Bills & Recharge
-                            </button>
-                            <button
-                                onClick={() => setBentoTab('identity')}
-                                className={`px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
-                                    bentoTab === 'identity'
-                                        ? 'bg-[#E55C11] text-white shadow-md'
-                                        : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
-                                }`}
-                            >
-                                Documents
-                            </button>
-                            <button
-                                onClick={() => setBentoTab('ai')}
-                                className={`px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
-                                    bentoTab === 'ai'
-                                        ? 'bg-[#E55C11] text-white shadow-md'
-                                        : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
-                                }`}
-                            >
-                                Earnings
-                            </button>
-                            <button
-                                onClick={() => setBentoTab('disburse')}
-                                className={`px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
-                                    bentoTab === 'disburse'
-                                        ? 'bg-[#E55C11] text-white shadow-md'
-                                        : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
-                                }`}
-                            >
-                                Payouts
-                            </button>
-                        </div>
+                        </article>
                     </div>
                 </div>
             </section>
 
-            {/* -------------------------------------------------- BILLS & RECHARGE SECTION */}
-            <section className="relative w-full py-24 px-4 sm:px-6 lg:px-8 overflow-hidden bg-white border-b border-slate-100">
-                {/* Soft brand glow */}
-                <div className="absolute inset-0 pointer-events-none z-0 bg-[radial-gradient(ellipse_at_50%_100%,#dcfce7_0%,transparent_60%)]" />
-
-                {/* Soft Subtle Green Glow on Far Left & Right Edges Only */}
-                <div className="absolute top-0 bottom-0 left-0 w-72 bg-gradient-to-r from-emerald-300/10 via-emerald-100/5 to-transparent pointer-events-none z-0" />
-                <div className="absolute top-0 bottom-0 right-0 w-72 bg-gradient-to-l from-emerald-300/10 via-emerald-100/5 to-transparent pointer-events-none z-0" />
-
-                <div className="mx-auto max-w-7xl relative z-10">
-                    {/* Section Title */}
-                    <div className="text-center max-w-3xl mx-auto mb-16">
-                        <h2 className="text-4xl sm:text-5xl lg:text-[52px] font-extrabold text-slate-900 tracking-tight leading-[1.15]">
-                            Two more reasons they walk in.
-                        </h2>
-                    </div>
-
-                    {/* Two Phone Cards Grid (Compact & Small) */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start max-w-4xl lg:max-w-5xl mx-auto">
-                        {/* LEFT COLUMN: BBPS bill payments */}
-                        <div className="flex flex-col items-center text-center space-y-6 group">
-                            {/* BBPS receipt mockup */}
-                            <div className="w-full flex justify-center">
-                                <BillReceiptMockup />
-                            </div>
-
-                            {/* Description & Link */}
-                            <div className="max-w-sm space-y-2.5">
-                                <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                                    BBPS Bill Payments
-                                </h3>
-                                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-                                    Electricity, water, gas, broadband, LPG, FASTag, insurance premiums and credit card bills — all on the Bharat BillPay network, with an instant receipt for the customer.
-                                </p>
-                                <a
-                                    href="#products"
-                                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#BE4510] hover:text-[#D2520E] transition-colors group-hover:translate-x-1 duration-200 pt-1"
-                                >
-                                    <span>Know More</span>
-                                    <ArrowRight className="w-4 h-4" />
-                                </a>
-                            </div>
+            {/* ----------------------------------------- BILLS AND RECHARGE */}
+            <section className={`${SECTION} lp-band`}>
+                <div className={WRAP}>
+                    <h2 className={H2}>Two more reasons they walk in</h2>
+                    <div className="mt-12 grid gap-12 md:grid-cols-2">
+                        <div>
+                            <BillReceiptMockup />
+                            <h3 className="mt-8 text-lg font-medium text-[var(--lp-fg)]">BBPS bill payments</h3>
+                            <p className={`${BODY} mt-2 max-w-md`}>
+                                Electricity, water, gas, broadband, LPG, FASTag, insurance premiums and credit card bills — all on the Bharat BillPay network, with an instant receipt for the customer.
+                            </p>
                         </div>
-
-                        {/* RIGHT COLUMN: Mobile & DTH recharge */}
-                        <div className="flex flex-col items-center text-center space-y-6 group">
-                            {/* Recharge plans mockup */}
-                            <div className="w-full flex justify-center">
-                                <RechargePlansMockup />
-                            </div>
-
-                            {/* Description & Link */}
-                            <div className="max-w-sm space-y-2.5">
-                                <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                                    Mobile & DTH Recharge
-                                </h3>
-                                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-                                    Every prepaid operator and DTH provider, with current plans listed in the dashboard so you are not hunting for a pack while a customer waits. Small tickets, steady footfall, commission on each one.
-                                </p>
-                                <a
-                                    href="#products"
-                                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#BE4510] hover:text-[#D2520E] transition-colors group-hover:translate-x-1 duration-200 pt-1"
-                                >
-                                    <span>Know More</span>
-                                    <ArrowRight className="w-4 h-4" />
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* -------------------------------------------------- PAYMENTS, BUILT FOR AI SECTION */}
-            <section className="relative w-full py-24 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gradient-to-b from-[#FFF8F2]/80 via-[#FEF0E4]/30 to-white border-b border-slate-100">
-                <div className="mx-auto max-w-7xl relative z-10">
-                    {/* Section Header */}
-                    <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-                        <h2 className="text-4xl sm:text-5xl lg:text-[52px] font-extrabold text-slate-900 tracking-tight leading-[1.15]">
-                            Know exactly what you earned
-                        </h2>
-                        <p className="text-base sm:text-lg text-slate-700 font-medium leading-relaxed max-w-2xl mx-auto">
-                            Every transaction, every commission and every settlement is on record, so the day's takings are never a guess.
-                        </p>
-                    </div>
-
-                    {/* 3-Column Container Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center max-w-6xl mx-auto">
-                        {/* Left Column: Eyebrow + Shahparpay Here Title */}
-                        <div className="lg:col-span-4 flex flex-col items-center lg:items-start text-center lg:text-left space-y-4">
-                            <span className="inline-block bg-[#fef08a]/80 text-[#854d0e] font-extrabold text-[11px] tracking-wider uppercase px-3.5 py-1 rounded-full border border-amber-300/60 shadow-xs">
-                                WALLET & REPORTS
-                            </span>
-                            <h3 className="text-3xl sm:text-4xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
-                                Your ledger, live
-                            </h3>
-                            <a
-                                href="#products"
-                                className="inline-flex items-center gap-1.5 text-sm sm:text-base font-bold text-[#BE4510] hover:text-[#D2520E] transition-colors group pt-2"
-                            >
-                                <span>See what you can track</span>
-                                <ArrowRight className="w-4.5 h-4.5 group-hover:translate-x-1 transition-transform" />
-                            </a>
-                        </div>
-
-                        {/* Center Column: Phone mockup with the wallet ledger */}
-                        <div className="lg:col-span-4 flex justify-center">
-                            <div className="relative w-[250px] sm:w-[270px] rounded-[42px] bg-black p-2 shadow-2xl border-2 border-slate-800/80 overflow-hidden group hover:scale-[1.02] transition-transform duration-500">
-                                {/* Dynamic Island Notch */}
-                                <div className="absolute top-3.5 left-1/2 -translate-x-1/2 w-16 h-3.5 bg-black rounded-full z-30 border border-slate-900" />
-
-                                {/* Wallet ledger screen */}
-                                <div className="rounded-[34px] overflow-hidden bg-white relative">
-                                    <LedgerPhoneScreen />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Right Column: Description Text */}
-                        <div className="lg:col-span-4 flex flex-col items-center lg:items-start text-center lg:text-left space-y-4 relative">
-                                                        
-
-                            <p className="text-sm sm:text-base text-slate-700 leading-relaxed font-medium">
-                                One wallet across every service, with a running balance and a line for each credit and debit. Separate reports for AEPS, money transfer, recharge, bills, PAN and ITR, filterable by date and exportable whenever your accountant asks.
+                        <div>
+                            <RechargePlansMockup />
+                            <h3 className="mt-8 text-lg font-medium text-[var(--lp-fg)]">Mobile and DTH recharge</h3>
+                            <p className={`${BODY} mt-2 max-w-md`}>
+                                Every prepaid operator and DTH provider, with current plans listed in the dashboard so you are not hunting for a pack while a customer waits. Small tickets, steady footfall, commission on each one.
                             </p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* -------------------------------------------------- BUILD PAYMENTS TO MATCH CTA BANNER SECTION */}
-            <section className="w-full bg-[#0b1411] py-16 sm:py-20 px-4 sm:px-6 lg:px-8">
-                <div className="mx-auto max-w-7xl">
-                    <div className="relative rounded-[36px] bg-gradient-to-r from-[#007038] via-[#008c46] to-[#009e4f] p-8 sm:p-12 lg:p-16 overflow-hidden shadow-2xl border border-emerald-700/60">
-                        {/* Grid Layout: Left Content, Right Image Asset */}
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center relative z-10">
-                            {/* Left Column Content */}
-                            <div className="lg:col-span-7 space-y-6 text-left">
-                                <h2 className="text-3xl sm:text-4xl lg:text-[46px] font-extrabold text-white tracking-tight leading-[1.12] max-w-xl">
-                                    Your shop is already busy. Give people one more reason to come in.
-                                </h2>
-
-                                {/* CTA Buttons */}
-                                <div className="flex items-center gap-4 flex-wrap pt-2">
-                                    <Link
-                                        to="/login"
-                                        className="bg-[#E55C11] hover:bg-[#D2520E] text-white pl-6 pr-2 py-2.5 rounded-full font-extrabold text-sm shadow-2xl flex items-center gap-3 transition-all hover:scale-105 group"
-                                    >
-                                        <span>Sign In</span>
-                                        <div className="w-8 h-8 rounded-full bg-white text-[#E55C11] flex items-center justify-center font-black group-hover:rotate-45 transition-transform">
-                                            ↗
-                                        </div>
-                                    </Link>
-
-                                    <Link
-                                        to="/contact"
-                                        className="border border-white/80 hover:bg-white/10 text-white px-6 py-3 rounded-full font-bold text-sm transition-all shadow-md"
-                                    >
-                                        Talk to Us
-                                    </Link>
-                                </div>
-
-                                {/* Offer Subtext */}
-                                <p className="text-xs sm:text-sm text-emerald-100/90 font-medium max-w-lg leading-relaxed pt-2">
-                                    Nothing to pay to join and nothing to pay monthly. You keep a commission on every transaction, and you settle your wallet to your own bank account whenever you want.
-                                </p>
-
-                                {/* Certifications Row */}
-                                <div className="pt-4 border-t border-emerald-600/40 flex items-center gap-3 text-xs font-bold text-emerald-100 flex-wrap">
-                                    <span>AEPS</span>
-                                    <span className="text-emerald-300/60">■</span>
-                                    <span>Micro ATM</span>
-                                    <span className="text-emerald-300/60">■</span>
-                                    <span>BBPS</span>
-                                    <span className="text-emerald-300/60">■</span>
-                                    <span>DMT</span>
-                                    <span className="text-emerald-300/60">■</span>
-                                    <span>PAN &amp; ITR</span>
-                                </div>
-                            </div>
-
-                            {/* Right Column: Banking point shop illustration */}
-                            <div className="lg:col-span-5 flex justify-center lg:justify-end">
-                                <div className="w-full max-w-md lg:max-w-lg aspect-[4/3] rounded-3xl overflow-hidden bg-[#f4fbf6] border-4 border-white/25 shadow-2xl rotate-1 hover:rotate-0 transition-transform duration-500">
-                                    <img
-                                        src={heroCspBg}
-                                        alt="A Shahparpay banking point shop in the neighbourhood"
-                                        className="w-full h-full object-cover object-[100%_100%] scale-[1.9] origin-[100%_100%]"
-                                    />
-                                </div>
-                            </div>
-                        </div>
+            {/* ------------------------------------------ WALLET AND REPORTS */}
+            <section className={SECTION}>
+                <div className={`${WRAP} grid items-center gap-12 lg:grid-cols-12 lg:gap-16`}>
+                    <div className="lg:col-span-7">
+                        <p className="lp-eyebrow">Wallet and reports</p>
+                        <h2 className={`${H2} mt-3`}>Know exactly what you earned</h2>
+                        <p className={`${LEAD} mt-4 max-w-xl`}>
+                            Every transaction, every commission and every settlement is on record, so the day's takings are never a guess.
+                        </p>
+                        <h3 className="mt-10 text-lg font-medium text-[var(--lp-fg)]">Your ledger, live</h3>
+                        <p className={`${BODY} mt-2 max-w-xl`}>
+                            One wallet across every service, with a running balance and a line for each credit and debit. Separate reports for AEPS, money transfer, recharge, bills, PAN and ITR, filterable by date and exportable whenever your accountant asks.
+                        </p>
+                    </div>
+                    <div className="flex justify-center lg:col-span-5">
+                        <PhoneFrame className="w-[272px]">
+                            <LedgerScreen />
+                        </PhoneFrame>
                     </div>
                 </div>
             </section>
 
-
-
-
-            {/* --------------------------------------------------- FREQUENTLY ASKED QUESTIONS */}
-            <section 
-                id="faq" 
-                className="relative py-20 sm:py-28 px-4 sm:px-6 overflow-hidden bg-white select-none"
-            >
-                {/* Soft brand glows */}
-                <div className="absolute inset-0 pointer-events-none z-0 bg-[radial-gradient(ellipse_at_0%_60%,#bbf7d0_0%,transparent_40%),radial-gradient(ellipse_at_100%_40%,#FBD5B5_0%,transparent_40%)]" />
-
-                <div className="relative z-10 max-w-5xl mx-auto space-y-8 sm:space-y-10">
-                    {/* Centered Heading */}
-                    <div className="text-center space-y-3">
-                        <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight">
-                            Frequently <span className="text-[#BE4510]">asked questions</span>
+            {/* --------------------------------------------------------- CTA */}
+            <section className="pb-20 sm:pb-28">
+                <div className={WRAP}>
+                    <div className="rounded-[20px] bg-[var(--lp-fg)] p-8 text-[#efe9de] sm:p-12 lg:p-16">
+                        <h2 className="max-w-2xl text-3xl font-medium leading-[1.12] tracking-[-0.02em] text-white sm:text-4xl lg:text-[44px]">
+                            Your shop is already busy. Give people one more reason to come in
                         </h2>
-                        <p className="text-sm sm:text-base text-slate-600 font-medium max-w-xl mx-auto">
-                            Earnings, onboarding, devices and security — the things retailers ask before they sign up.
+                        <p className="mt-6 max-w-xl text-base leading-relaxed text-[#bdb6aa]">
+                            Nothing to pay to join and nothing to pay monthly. You keep a commission on every transaction, and you settle your wallet to your own bank account whenever you want.
+                        </p>
+                        <div className="mt-8 flex flex-wrap gap-3">
+                            <Link to="/login" className="inline-flex h-12 items-center rounded-[10px] bg-[#efe9de] px-5 text-base font-medium text-[var(--lp-fg)] transition-colors hover:bg-white">
+                                Sign in
+                            </Link>
+                            <Link to="/contact" className="inline-flex h-12 items-center rounded-[10px] border border-white/20 px-5 text-base font-medium text-white transition-colors hover:bg-white/10">
+                                Talk to us
+                            </Link>
+                        </div>
+                        <p className="mt-10 border-t border-white/10 pt-6 text-sm text-[#bdb6aa]">
+                            AEPS · Micro ATM · BBPS · DMT · PAN and ITR
                         </p>
                     </div>
+                </div>
+            </section>
 
-                    {/* Category Pill Tabs */}
-                    <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 max-w-3xl mx-auto">
-                        <button
-                            type="button"
-                            onClick={() => { setFaqCategory('getting_started'); setOpenFaqIndex(0); }}
-                            className={`px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                                faqCategory === 'getting_started'
-                                    ? 'bg-[#FDEBDD] text-slate-900 border border-[#F79440] shadow-xs scale-[1.02]'
-                                    : 'bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80'
-                            }`}
-                        >
-                            Getting Started
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => { setFaqCategory('integration'); setOpenFaqIndex(0); }}
-                            className={`px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                                faqCategory === 'integration'
-                                    ? 'bg-[#FDEBDD] text-slate-900 border border-[#F79440] shadow-xs scale-[1.02]'
-                                    : 'bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80'
-                            }`}
-                        >
-                            Devices &amp; Setup
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => { setFaqCategory('security'); setOpenFaqIndex(0); }}
-                            className={`px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                                faqCategory === 'security'
-                                    ? 'bg-[#FDEBDD] text-slate-900 border border-[#F79440] shadow-xs scale-[1.02]'
-                                    : 'bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80'
-                            }`}
-                        >
-                            Safety &amp; Trust
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => { setFaqCategory('support'); setOpenFaqIndex(0); }}
-                            className={`px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                                faqCategory === 'support'
-                                    ? 'bg-[#FDEBDD] text-slate-900 border border-[#F79440] shadow-xs scale-[1.02]'
-                                    : 'bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80'
-                            }`}
-                        >
-                            Earnings &amp; Support
-                        </button>
-                    </div>
+            {/* --------------------------------------------------------- FAQ */}
+            <section id="faq" className={`${SECTION} lp-band scroll-mt-16`}>
+                <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
+                    <h2 className={H2}>Frequently asked questions</h2>
+                    <p className={`${LEAD} mt-4`}>Earnings, onboarding, devices and security — the things retailers ask before they sign up.</p>
 
-                    {/* FAQ Items Grid (2 Column Responsive Layout) */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start pt-2">
-                        {FAQ_DATA[faqCategory].map((item, index) => {
-                            const isOpen = openFaqIndex === index;
+                    <div role="tablist" aria-label="Question topics" className="mt-10 flex flex-wrap gap-2">
+                        {FAQ_TABS.map((tab) => {
+                            const on = faqCategory === tab.key;
                             return (
-                                <div
-                                    key={index}
-                                    onClick={() => setOpenFaqIndex(isOpen ? null : index)}
-                                    className={`bg-white/90 backdrop-blur-md rounded-2xl border p-5 sm:p-6 transition-all duration-200 shadow-2xs cursor-pointer ${
-                                        isOpen ? 'border-emerald-400/90 shadow-md bg-white' : 'border-slate-200/80 hover:border-emerald-300/80'
+                                <button
+                                    key={tab.key}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={on}
+                                    onClick={() => { setFaqCategory(tab.key); setOpenFaqIndex(0); }}
+                                    className={`h-9 rounded-lg border px-3.5 text-sm transition-colors ${
+                                        on
+                                            ? 'border-[var(--lp-fg)] bg-[var(--lp-card)] text-[var(--lp-fg)]'
+                                            : 'border-[var(--lp-border)] text-[var(--lp-fg-2)] hover:bg-[var(--lp-card)]'
                                     }`}
                                 >
-                                    <div className="flex items-center justify-between gap-4">
-                                        <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
-                                            {item.q}
-                                        </h3>
-                                        <div
-                                            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-base shrink-0 transition-transform ${
-                                                isOpen ? 'bg-[#E55C11] text-white rotate-45' : 'bg-slate-100 text-slate-700'
-                                            }`}
-                                        >
-                                            +
-                                        </div>
-                                    </div>
+                                    {tab.label}
+                                </button>
+                            );
+                        })}
+                    </div>
 
+                    <div className={`${CARD} mt-6 divide-y divide-[var(--lp-border)]`}>
+                        {FAQ_DATA[faqCategory].map((item, index) => {
+                            const isOpen = openFaqIndex === index;
+                            const id = `faq-${faqCategory}-${index}`;
+                            return (
+                                <div key={item.q}>
+                                    <button
+                                        type="button"
+                                        aria-expanded={isOpen}
+                                        aria-controls={id}
+                                        onClick={() => setOpenFaqIndex(isOpen ? null : index)}
+                                        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left sm:px-6"
+                                    >
+                                        <span className="text-base text-[var(--lp-fg)]">{item.q}</span>
+                                        <Plus
+                                            aria-hidden
+                                            strokeWidth={1.5}
+                                            className={`size-[18px] shrink-0 text-[var(--lp-muted)] transition-transform duration-150 ${isOpen ? 'rotate-45' : ''}`}
+                                        />
+                                    </button>
                                     {isOpen && (
-                                        <div className="mt-4 pt-4 border-t border-slate-100 text-xs sm:text-sm text-slate-600 font-medium leading-relaxed animate-in fade-in duration-200">
+                                        <p id={id} className={`${BODY} px-5 pb-5 sm:px-6`}>
                                             {item.a}
-                                        </div>
+                                        </p>
                                     )}
                                 </div>
                             );
@@ -1321,18 +690,16 @@ const Landing: React.FC = () => {
                 </div>
             </section>
 
-            {/* Floating WhatsApp Action Button */}
             <a
                 href="https://wa.me/918240039776?text=Hi%20Shahparpay%2C%20I%20need%20help%20with%20my%20retailer%20account."
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Chat on WhatsApp"
-                className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-[#00a859] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform duration-200 border-2 border-white cursor-pointer"
+                className="fixed bottom-6 right-6 z-50 flex size-12 items-center justify-center rounded-full bg-[#1f7a4d] text-white shadow-[var(--lp-shadow-lg)] transition-colors hover:bg-[#186440]"
             >
-                <MessageCircle className="w-7 h-7 fill-current" />
+                <MessageCircle aria-hidden className="size-5" strokeWidth={1.5} />
             </a>
 
-            {/* -------------------------------------------------------- FOOTER WITH GIANT BRAND LOGO BANNER */}
             <LandingFooter />
         </div>
     );

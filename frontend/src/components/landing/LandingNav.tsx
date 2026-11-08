@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
     X,
@@ -25,172 +25,55 @@ import '../../pages/landing.css';
 
 const PRODUCT_MENU_CATEGORIES = [
     {
-        title: 'BANKING SERVICES',
+        title: 'Banking services',
         items: [
-            {
-                title: 'AEPS Cash Withdrawal',
-                desc: 'Aadhaar and fingerprint, no card needed',
-                icon: Fingerprint,
-                link: '#products'
-            },
-            {
-                title: 'Balance & Mini Statement',
-                desc: 'Instant account balance for any customer',
-                icon: FileText,
-                link: '#products'
-            },
-            {
-                title: 'Micro ATM',
-                desc: 'Debit card withdrawal at your counter',
-                icon: CreditCard,
-                link: '#products'
-            },
-            {
-                title: 'Money Transfer (DMT)',
-                desc: 'Cash in hand to any bank account',
-                icon: Send,
-                link: '#products'
-            },
-            {
-                title: 'UPI QR Collection',
-                desc: 'Your own QR, money lands in your wallet',
-                icon: QrCode,
-                link: '#products'
-            },
-            {
-                title: 'Aadhaar Pay',
-                desc: 'Customers pay you by fingerprint',
-                icon: Shield,
-                link: '#products'
-            },
-            {
-                title: 'Daily Settlement',
-                desc: 'Move earnings to your bank account',
-                icon: Zap,
-                link: '#products'
-            },
-            {
-                title: 'Payout to Bank',
-                desc: 'Send money out 24x7, including holidays',
-                icon: Banknote,
-                link: '#products'
-            }
-        ]
+            { title: 'AEPS Cash Withdrawal', desc: 'Aadhaar and fingerprint, no card needed', icon: Fingerprint },
+            { title: 'Balance & Mini Statement', desc: 'Instant account balance for any customer', icon: FileText },
+            { title: 'Micro ATM', desc: 'Debit card withdrawal at your counter', icon: CreditCard },
+            { title: 'Money Transfer (DMT)', desc: 'Cash in hand to any bank account', icon: Send },
+            { title: 'UPI QR Collection', desc: 'Your own QR, money lands in your wallet', icon: QrCode },
+            { title: 'Aadhaar Pay', desc: 'Customers pay you by fingerprint', icon: Shield },
+            { title: 'Daily Settlement', desc: 'Move earnings to your bank account', icon: Zap },
+            { title: 'Payout to Bank', desc: 'Send money out 24x7, including holidays', icon: Banknote },
+        ],
     },
     {
-        title: 'BILLS & RECHARGE',
+        title: 'Bills and recharge',
         items: [
-            {
-                title: 'Mobile & DTH Recharge',
-                desc: 'Every prepaid operator and DTH provider',
-                icon: RefreshCw,
-                link: '#payouts'
-            },
-            {
-                title: 'BBPS Bill Payments',
-                desc: 'Electricity, water, gas, broadband, LPG',
-                icon: Receipt,
-                link: '#payouts'
-            },
-            {
-                title: 'FASTag Recharge',
-                desc: 'Top up FASTag for walk-in customers',
-                icon: Zap,
-                link: '#payouts'
-            },
-            {
-                title: 'Insurance Premium',
-                desc: 'Collect LIC and general insurance premiums',
-                icon: ShieldCheck,
-                link: '#payouts'
-            },
-            {
-                title: 'Credit Card Bills',
-                desc: 'Pay any bank credit card bill over BBPS',
-                icon: CreditCard,
-                link: '#payouts'
-            }
-        ]
+            { title: 'Mobile & DTH Recharge', desc: 'Every prepaid operator and DTH provider', icon: RefreshCw },
+            { title: 'BBPS Bill Payments', desc: 'Electricity, water, gas, broadband, LPG', icon: Receipt },
+            { title: 'FASTag Recharge', desc: 'Top up FASTag for walk-in customers', icon: Zap },
+            { title: 'Insurance Premium', desc: 'Collect LIC and general insurance premiums', icon: ShieldCheck },
+            { title: 'Credit Card Bills', desc: 'Pay any bank credit card bill over BBPS', icon: CreditCard },
+        ],
     },
     {
-        title: 'DOCUMENTS & EARNINGS',
+        title: 'Documents and earnings',
         items: [
-            {
-                title: 'PAN Card Services',
-                desc: 'New PAN, corrections and reprints',
-                icon: FileText,
-                link: '#identity'
-            },
-            {
-                title: 'ITR Filing',
-                desc: 'File income tax returns for your customers',
-                icon: FileCode,
-                link: '#identity'
-            },
-            {
-                title: 'Lead Generation',
-                desc: 'Earn on loan and insurance referrals',
-                icon: Building,
-                link: '#identity'
-            },
-            {
-                title: 'Wallet & Reports',
-                desc: 'Every transaction and commission, itemised',
-                icon: Layers,
-                link: '#identity'
-            }
-        ]
-    }
+            { title: 'PAN Card Services', desc: 'New PAN, corrections and reprints', icon: FileText },
+            { title: 'ITR Filing', desc: 'File income tax returns for your customers', icon: FileCode },
+            { title: 'Lead Generation', desc: 'Earn on loan and insurance referrals', icon: Building },
+            { title: 'Wallet & Reports', desc: 'Every transaction and commission, itemised', icon: Layers },
+        ],
+    },
 ];
 
-const MEGA_FEATURED_CARDS = [
-    {
-        tag: 'MOST USED',
-        title: 'AEPS Banking',
-        desc: 'Cash withdrawal, balance and mini statement on a fingerprint',
-        badge: 'Popular',
-        gradient: 'from-emerald-500/20 to-teal-500/20'
-    },
-    {
-        tag: 'EVERYDAY FOOTFALL',
-        title: 'Bills & Recharge',
-        desc: 'The reason customers come back to your shop every month',
-        badge: 'High volume',
-        gradient: 'from-emerald-600/20 to-green-400/20'
-    },
-    {
-        tag: 'HIGHER TICKET',
-        title: 'PAN & ITR',
-        desc: 'Document services that earn more per customer',
-        badge: 'Good margin',
-        gradient: 'from-teal-600/20 to-cyan-500/20'
-    }
+const NAV_LINKS = [
+    { to: '/commission', label: 'Commission' },
+    { to: '/contact', label: 'Contact us' },
+    { to: '/about', label: 'About us' },
 ];
 
-
-
-const Logo = ({ className = 'h-11' }: { className?: string }) => (
-    <div className="flex items-center gap-2.5">
-        <img
-            src={logo}
-            alt="Shahparpay Solutions"
-            className={`${className} w-auto object-contain`}
-            onError={(e) => {
-                e.currentTarget.style.display = 'none';
-            }}
-        />
-    </div>
-);
+const LINK = 'rounded-lg px-3 py-2 text-[15px] text-[var(--lp-fg-2)] transition-colors hover:text-[var(--lp-fg)]';
 
 /**
  * The public site's top bar. Shared by every public page so the landing page and
- * the contact page cannot drift apart. It owns its own menu and scroll state, so
- * a page only has to render it.
+ * the contact page cannot drift apart. It owns its own menu state, so a page
+ * only has to render it.
  */
 const LandingNav: React.FC = () => {
     const [menuOpen, setMenuOpen] = useState(false);
-    const [activeDropdown, setActiveDropdown] = useState<'products' | null>(null);
-    const [scrolled, setScrolled] = useState(false);
+    const [productsOpen, setProductsOpen] = useState(false);
     const { token } = useAuth();
 
     // Every service in the menu opens the app. Signed in, "/" hands off to the
@@ -198,65 +81,38 @@ const LandingNav: React.FC = () => {
     // so they go straight to the login screen.
     const appHref = token ? '/' : '/login';
 
-    useEffect(() => {
-        const onScroll = () => setScrolled(window.scrollY > 8);
-        onScroll();
-        window.addEventListener('scroll', onScroll);
-        return () => window.removeEventListener('scroll', onScroll);
-    }, []);
-
     return (
-    <nav
-        className={`sticky top-0 z-50 transition-all duration-200 ${
-            scrolled ? 'bg-white/70 backdrop-blur-md border-b border-slate-200/60 shadow-sm' : 'bg-white/30 backdrop-blur-md border-b border-transparent'
-        }`}
-    >
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 sm:gap-6 px-4 sm:px-6 h-[72px]">
-            {/* Fixed 72px height: the landing hero pulls itself up by this much to sit under the translucent nav. */}
-            <Link to="/" aria-label="Shahparpay home" className="shrink-0">
-                <Logo className="h-8 sm:h-10" />
-            </Link>
+        <nav className="sticky top-0 z-50 border-b border-[var(--lp-border)] bg-[var(--lp-bg)]">
+            <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-6 px-4 sm:px-6">
+                <Link to="/" aria-label="Shahparpay home" className="shrink-0">
+                    <img src={logo} alt="Shahparpay" className="h-8 w-auto object-contain sm:h-9" />
+                </Link>
 
-            {/* Desktop Navigation Links */}
-            <div className="hidden items-center gap-2 xl:flex">
-                {/* PRODUCTS DROPDOWN */}
-                <div
-                    className="relative"
-                    onMouseEnter={() => setActiveDropdown('products')}
-                    onMouseLeave={() => setActiveDropdown(null)}
-                >
-                    <button className="text-slate-600 hover:text-black inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors">
-                        Products
-                        <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${activeDropdown === 'products' ? 'rotate-180 text-[#BE4510]' : ''}`} />
-                    </button>
+                <div className="hidden items-center gap-1 lg:flex">
+                    <div className="relative" onMouseEnter={() => setProductsOpen(true)} onMouseLeave={() => setProductsOpen(false)}>
+                        <button
+                            type="button"
+                            aria-expanded={productsOpen}
+                            onClick={() => setProductsOpen((o) => !o)}
+                            className={`${LINK} inline-flex items-center gap-1`}
+                        >
+                            Products
+                            <ChevronDown aria-hidden strokeWidth={1.5} className={`size-4 transition-transform duration-150 ${productsOpen ? 'rotate-180' : ''}`} />
+                        </button>
 
-                    {activeDropdown === 'products' && (
-                        <div className="absolute left-0 top-full pt-2 w-[920px] max-w-[calc(100vw-2rem)] -translate-x-16 z-50 mega-menu-content">
-                            <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-2xl grid grid-cols-12 gap-6">
-                                <div className="col-span-8 grid grid-cols-3 gap-6">
+                        {productsOpen && (
+                            <div className="mega-menu-content absolute left-1/2 top-full z-50 w-[760px] max-w-[calc(100vw-2rem)] -translate-x-1/2 pt-2">
+                                <div className="grid grid-cols-3 gap-6 rounded-2xl border border-[var(--lp-border)] bg-[var(--lp-card)] p-5 shadow-[var(--lp-shadow-md)]">
                                     {PRODUCT_MENU_CATEGORIES.map((cat) => (
-                                        <div key={cat.title} className="space-y-3">
-                                            <h4 className="text-xs font-bold tracking-wider text-slate-600 uppercase border-b border-slate-100 pb-2">
-                                                {cat.title}
-                                            </h4>
-                                            <div className="space-y-1">
+                                        <div key={cat.title}>
+                                            <p className="px-2 pb-2 text-sm text-[var(--lp-muted)]">{cat.title}</p>
+                                            <div className="space-y-0.5">
                                                 {cat.items.map((item) => (
-                                                    <Link
-                                                        key={item.title}
-                                                        to={appHref}
-                                                        onClick={() => setActiveDropdown(null)}
-                                                        className="mega-menu-item-link group flex items-start gap-2.5 p-2 rounded-xl hover:bg-slate-50 transition-colors"
-                                                    >
-                                                        <div className="lp-icon-tile shrink-0 w-7 h-7 rounded-lg">
-                                                            <item.icon className="mega-icon h-3.5 w-3.5" />
-                                                        </div>
+                                                    <Link key={item.title} to={appHref} onClick={() => setProductsOpen(false)} className="mega-menu-item-link">
+                                                        <item.icon aria-hidden strokeWidth={1.5} className="mega-icon mt-0.5 size-4 shrink-0 text-[var(--lp-muted)]" />
                                                         <div>
-                                                            <div className="text-xs font-bold text-slate-900 group-hover:text-[#E55C11] transition-colors">
-                                                                {item.title}
-                                                            </div>
-                                                            <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
-                                                                {item.desc}
-                                                            </p>
+                                                            <div className="text-sm text-[var(--lp-fg)]">{item.title}</div>
+                                                            <p className="mt-0.5 line-clamp-1 text-xs text-[var(--lp-muted)]">{item.desc}</p>
                                                         </div>
                                                     </Link>
                                                 ))}
@@ -264,112 +120,46 @@ const LandingNav: React.FC = () => {
                                         </div>
                                     ))}
                                 </div>
-
-                                {/* Right Side Featured Product Cards */}
-                                <div className="col-span-4 border-l border-slate-100 pl-6 space-y-3">
-                                    <p className="text-xs font-bold tracking-wider text-slate-600 uppercase">
-                                        FEATURED SOLUTIONS
-                                    </p>
-                                    {MEGA_FEATURED_CARDS.map((card) => (
-                                        <Link
-                                            key={card.title}
-                                            to={appHref}
-                                            onClick={() => setActiveDropdown(null)}
-                                            className={`block p-3 rounded-xl border border-slate-200 bg-slate-50 hover:border-[#E55C11] transition-all group`}
-                                        >
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="text-[0.6rem] font-bold tracking-wider uppercase text-[#BE4510]">
-                                                    {card.tag}
-                                                </span>
-                                                <span className="text-[0.6rem] font-bold px-1.5 py-0.5 rounded bg-[#E55C11] text-white">
-                                                    {card.badge}
-                                                </span>
-                                            </div>
-                                            <div className="text-xs font-extrabold text-slate-900 group-hover:text-[#E55C11] transition-colors">
-                                                {card.title}
-                                            </div>
-                                            <p className="text-xs text-slate-500 mt-0.5">
-                                                {card.desc}
-                                            </p>
-                                        </Link>
-                                    ))}
-                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
+
+                    {NAV_LINKS.map((l) => (
+                        <Link key={l.to} to={l.to} className={LINK}>{l.label}</Link>
+                    ))}
                 </div>
 
-
-
-                <Link to="/commission" className="text-slate-600 hover:text-black rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors">
-                    Commission
-                </Link>
-                <Link to="/contact" className="text-slate-600 hover:text-black rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors">
-                    Contact Us
-                </Link>
-                <Link to="/about" className="text-slate-600 hover:text-black rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors">
-                    About Us
-                </Link>
-            </div>
-
-            {/* Right Side Action Buttons */}
-            <div className="flex items-center gap-2 sm:gap-3">
-                <Link
-                    to="/login"
-                    className="inline-flex min-h-11 items-center justify-center gap-2 sm:gap-2.5 bg-[#E55C11] hover:bg-[#D2520E] text-white rounded-full pl-4 sm:pl-5 pr-1.5 sm:pr-2 py-1.5 sm:py-2 text-xs sm:text-sm font-bold shadow-md transition-all hover:scale-[1.01] group"
-                >
-                    <span>Sign In</span>
-                    <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white text-[#E55C11] flex items-center justify-center font-black text-[0.6rem] sm:text-xs group-hover:rotate-45 transition-transform">
-                        ↗
-                    </span>
-                </Link>
-
-                <button
-                    className="xl:hidden p-2.5 text-slate-800 rounded-lg hover:bg-slate-100 transition-colors"
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-                >
-                    {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                </button>
-            </div>
-        </div>
-
-        {/* Mobile Navigation Drawer */}
-        {menuOpen && (
-            <div className="border-t border-slate-200 px-6 py-6 xl:hidden space-y-5 shadow-2xl bg-white animate-in slide-in-from-top-2 duration-200">
-                <div className="space-y-1">
-                    <p className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Navigation</p>
-                    <Link to={appHref} onClick={() => setMenuOpen(false)} className="block py-3 text-sm font-bold text-slate-900 border-b border-slate-100">
-                        Products &amp; Services
+                <div className="flex items-center gap-2">
+                    <Link to="/login" className="lp-btn-primary inline-flex h-10 items-center px-4 text-sm">
+                        Sign in
                     </Link>
-                    <Link to="/contact" onClick={() => setMenuOpen(false)} className="block py-3 text-sm font-bold text-slate-900 border-b border-slate-100">
-                        Contact Us
-                    </Link>
-                    <Link to="/commission" onClick={() => setMenuOpen(false)} className="block py-3 text-sm font-bold text-slate-900 border-b border-slate-100">
-                        Commission Rates
-                    </Link>
-                    <Link to="/about" onClick={() => setMenuOpen(false)} className="block py-3 text-sm font-bold text-slate-900 border-b border-slate-100">
-                        About Us
-                    </Link>
-                    <Link to="/contact" onClick={() => setMenuOpen(false)} className="block py-3 text-sm font-bold text-slate-900 border-b border-slate-100">
-                        Contact &amp; Details
-                    </Link>
-                </div>
-                <div className="pt-2 flex flex-col gap-2.5">
-                    <Link
-                        to="/login"
-                        onClick={() => setMenuOpen(false)}
-                        className="inline-flex items-center justify-center gap-2.5 bg-[#E55C11] hover:bg-[#D2520E] text-white py-2.5 rounded-full text-sm font-bold shadow-md transition-all group"
+                    <button
+                        type="button"
+                        className="flex size-10 items-center justify-center rounded-lg text-[var(--lp-fg)] transition-colors hover:bg-[var(--lp-surface)] lg:hidden"
+                        onClick={() => setMenuOpen(!menuOpen)}
+                        aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                        aria-expanded={menuOpen}
                     >
-                        <span>Sign In</span>
-                        <span className="w-6 h-6 rounded-full bg-white text-[#E55C11] flex items-center justify-center font-black text-xs group-hover:rotate-45 transition-transform">
-                            ↗
-                        </span>
-                    </Link>
+                        {menuOpen ? <X aria-hidden strokeWidth={1.5} className="size-5" /> : <Menu aria-hidden strokeWidth={1.5} className="size-5" />}
+                    </button>
                 </div>
             </div>
-        )}
-    </nav>
+
+            {menuOpen && (
+                <div className="mega-menu-content border-t border-[var(--lp-border)] bg-[var(--lp-bg)] px-4 py-4 sm:px-6 lg:hidden">
+                    {[{ to: appHref, label: 'Products and services' }, ...NAV_LINKS].map((l) => (
+                        <Link
+                            key={l.label}
+                            to={l.to}
+                            onClick={() => setMenuOpen(false)}
+                            className="flex h-12 items-center border-b border-[var(--lp-border)] text-base text-[var(--lp-fg)] last:border-0"
+                        >
+                            {l.label}
+                        </Link>
+                    ))}
+                </div>
+            )}
+        </nav>
     );
 };
 

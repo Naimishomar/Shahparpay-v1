@@ -1,130 +1,110 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, Globe, Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
+import { Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
 import whiteLogo from '../../assets/shahparpay-white-logo.png';
+
+const BANKING = ['AEPS Cash Withdrawal', 'Balance & Mini Statement', 'Micro ATM', 'Money Transfer (DMT)', 'UPI QR Collection', 'Aadhaar Pay'];
+const BILLS: [string, string][] = [
+    ['Mobile & DTH Recharge', '#payouts'],
+    ['BBPS Bill Payments', '#payouts'],
+    ['FASTag Recharge', '#payouts'],
+    ['PAN Card Services', '#identity'],
+    ['ITR Filing', '#identity'],
+    ['Lead Generation', '#identity'],
+];
+const LEGAL: [string, string][] = [
+    ['About us', '/about'],
+    ['General terms', '/terms'],
+    ['Retailer terms', '/retailer-terms'],
+    ['AEPS terms', '/aeps-terms'],
+    ['AEPS declaration', '/aeps-permission'],
+    ['Refund policy', '/refund-policy'],
+];
+
+const HEAD = 'text-sm text-white';
+const ITEM = 'inline-block py-1.5 text-sm text-[#a39c90] transition-colors hover:text-white';
+const ICON = 'size-4 shrink-0 text-[#8a847a]';
+const SOCIAL = 'flex size-10 items-center justify-center rounded-lg border border-white/10 text-[#a39c90] transition-colors hover:bg-white/5 hover:text-white';
 
 /**
  * The public site's footer, shared by every public page. Carries the #contact
  * anchor that the address links on the landing page point at.
  */
-const LandingFooter: React.FC = () => {
-    return (
-    <footer id="contact" className="scroll-mt-20 bg-[#0c120e] text-slate-300 border-t border-slate-800 relative z-10 overflow-hidden">
-        <div className="mx-auto w-full max-w-7xl px-6 py-16">
-            {/* Top 4 Navigation Columns */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
-                {/* Column 1: Brand Info */}
-                <div className="lg:col-span-2 space-y-4">
-                    <div className="flex items-center gap-3">
-                        <img src={whiteLogo} alt="Shahparpay Logo" className="h-9 w-auto object-contain" />
-                        <span className="text-xl font-extrabold text-white tracking-tight">Shahparpay</span>
-                    </div>
-                    <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
+const LandingFooter: React.FC = () => (
+    <footer id="contact" className="relative z-10 scroll-mt-16 bg-[#161513] text-[#a39c90]">
+        <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">
+            <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-5">
+                <div className="space-y-4 lg:col-span-2">
+                    <img src={whiteLogo} alt="Shahparpay" className="h-9 w-auto object-contain" />
+                    <p className="max-w-sm text-sm leading-relaxed">
                         Shahparpay Solutions Private Limited equips shop owners across India to offer banking, bill payment and document services to their customers, and to earn on every transaction.
                     </p>
-                    <div className="pt-2 text-xs font-semibold text-[#F79440] flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4" /> Services delivered over NPCI rails through licensed banking partners
-                    </div>
+                    <p className="text-sm text-[#8a847a]">Services delivered over NPCI rails through licensed banking partners</p>
                 </div>
 
-                {/* Column 2: Products */}
-                <div className="space-y-3">
-                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">Banking Services</h4>
-                    <ul className="space-y-0 sm:space-y-2 text-xs font-medium text-slate-400">
-                        <li><a href="#products" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">AEPS Cash Withdrawal</a></li>
-                        <li><a href="#products" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">Balance &amp; Mini Statement</a></li>
-                        <li><a href="#products" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">Micro ATM</a></li>
-                        <li><a href="#products" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">Money Transfer (DMT)</a></li>
-                        <li><a href="#products" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">UPI QR Collection</a></li>
-                        <li><a href="#products" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">Aadhaar Pay</a></li>
+                <div>
+                    <p className={HEAD}>Banking services</p>
+                    <ul className="mt-3">
+                        {BANKING.map((label) => (
+                            <li key={label}><a href="#products" className={ITEM}>{label}</a></li>
+                        ))}
                     </ul>
                 </div>
 
-                {/* Column 3: Payouts & Verification */}
-                <div className="space-y-3">
-                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">Bills &amp; Documents</h4>
-                    <ul className="space-y-0 sm:space-y-2 text-xs font-medium text-slate-400">
-                        <li><a href="#payouts" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">Mobile &amp; DTH Recharge</a></li>
-                        <li><a href="#payouts" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">BBPS Bill Payments</a></li>
-                        <li><a href="#payouts" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">FASTag Recharge</a></li>
-                        <li><a href="#identity" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">PAN Card Services</a></li>
-                        <li><a href="#identity" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">ITR Filing</a></li>
-                        <li><a href="#identity" className="inline-block py-2 sm:py-0 hover:text-white transition-colors">Lead Generation</a></li>
+                <div>
+                    <p className={HEAD}>Bills and documents</p>
+                    <ul className="mt-3">
+                        {BILLS.map(([label, href]) => (
+                            <li key={label}><a href={href} className={ITEM}>{label}</a></li>
+                        ))}
                     </ul>
                 </div>
 
-                {/* Column 4: Official Contact */}
-                <div className="space-y-3">
-                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">Official Contact</h4>
-                    <ul className="space-y-3 text-xs text-slate-400 font-medium">
+                <div>
+                    <p className={HEAD}>Official contact</p>
+                    <ul className="mt-3 space-y-3 text-sm">
                         <li className="flex items-center gap-2.5">
-                            <Phone className="h-4 w-4 text-[#F79440] shrink-0" />
-                            <a href="tel:+918240039776" className="hover:text-white transition-colors font-bold">+91 8240039776</a>
+                            <Phone aria-hidden strokeWidth={1.5} className={ICON} />
+                            <a href="tel:+918240039776" className="font-mono tabular-nums transition-colors hover:text-white">+91 8240039776</a>
                         </li>
                         <li className="flex items-center gap-2.5">
-                            <Mail className="h-4 w-4 text-[#F79440] shrink-0" />
-                            <a href="mailto:shahparpay@gmail.com" className="hover:text-white transition-colors">shahparpay@gmail.com</a>
+                            <Mail aria-hidden strokeWidth={1.5} className={ICON} />
+                            <a href="mailto:shahparpay@gmail.com" className="transition-colors hover:text-white">shahparpay@gmail.com</a>
                         </li>
                         <li className="flex items-start gap-2.5">
-                            <MapPin className="h-4 w-4 text-[#F79440] shrink-0 mt-0.5" />
+                            <MapPin aria-hidden strokeWidth={1.5} className={`${ICON} mt-0.5`} />
                             <span>4/1 Victoria Lane, Telinipara, Bhadreswar, Hooghly, West Bengal - 712125</span>
                         </li>
                     </ul>
                 </div>
             </div>
 
-            {/* GIANT FULL-WIDTH BRAND LOGO BANNER */}
-            <div className="w-full pt-12 sm:pt-16 pb-8 border-t border-slate-800/80 my-8 sm:my-12 flex items-center justify-center overflow-hidden">
-                <div className="w-full flex items-center justify-center gap-2 sm:gap-4 md:gap-2 select-none group cursor-pointer">
-                    {/* <img
-                        src={whiteLogo}
-                        alt="Shahparpay"
-                        className="h-[8.5vw] max-h-40 min-h-10 w-auto object-contain transition-transform group-hover:scale-105 duration-300 shrink-0"
-                    /> */}
-                    <h2 className="text-[11.5vw] sm:text-[13vw] xl:text-[13.5vw] font-black text-white tracking-tighter leading-none text-center transition-colors group-hover:text-[#FDE3CF] whitespace-nowrap">
-                        Shahparpay
-                    </h2>
-                </div>
-            </div>
+            <p aria-hidden className="mt-16 select-none overflow-hidden whitespace-nowrap border-t border-white/10 pt-12 text-center text-[13vw] font-medium leading-none tracking-[-0.04em] text-white/90 xl:text-[168px]">
+                Shahparpay
+            </p>
 
-            {/* BOTTOM BAR WITH SOCIAL ICONS AND COPYRIGHT */}
-            <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-6 text-xs text-slate-400 font-medium">
-                {/* Social Links Row */}
-                <div className="flex items-center gap-3">
-                    <a href="https://wa.me/918240039776?text=Hi%20Shahparpay%2C%20I%20need%20help%20with%20my%20retailer%20account." target="_blank" rel="noopener noreferrer" aria-label="WhatsApp Support" className="w-11 h-11 rounded-full bg-slate-800/90 hover:bg-[#E55C11] hover:text-white text-slate-300 transition-all flex items-center justify-center">
-                        <MessageCircle className="w-4 h-4" />
+            <div className="mt-12 flex flex-col items-center justify-between gap-6 border-t border-white/10 pt-6 sm:flex-row">
+                <div className="flex items-center gap-2">
+                    <a href="https://wa.me/918240039776?text=Hi%20Shahparpay%2C%20I%20need%20help%20with%20my%20retailer%20account." target="_blank" rel="noopener noreferrer" aria-label="WhatsApp support" className={SOCIAL}>
+                        <MessageCircle aria-hidden strokeWidth={1.5} className="size-4" />
                     </a>
-                    <a href="mailto:shahparpay@gmail.com" aria-label="Email Support" className="w-11 h-11 rounded-full bg-slate-800/90 hover:bg-[#E55C11] hover:text-white text-slate-300 transition-all flex items-center justify-center">
-                        <Mail className="w-4 h-4" />
+                    <a href="mailto:shahparpay@gmail.com" aria-label="Email support" className={SOCIAL}>
+                        <Mail aria-hidden strokeWidth={1.5} className="size-4" />
                     </a>
-                    <a href="tel:+918240039776" aria-label="Official Phone" className="w-11 h-11 rounded-full bg-slate-800/90 hover:bg-[#E55C11] hover:text-white text-slate-300 transition-all flex items-center justify-center">
-                        <Phone className="w-4 h-4" />
-                    </a>
-                    <a href="#contact" aria-label="Location" className="w-11 h-11 rounded-full bg-slate-800/90 hover:bg-[#E55C11] hover:text-white text-slate-300 transition-all flex items-center justify-center">
-                        <Globe className="w-4 h-4" />
+                    <a href="tel:+918240039776" aria-label="Call support" className={SOCIAL}>
+                        <Phone aria-hidden strokeWidth={1.5} className="size-4" />
                     </a>
                 </div>
 
-                {/* Copyright & Legal Links */}
-                <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-4 text-slate-400 text-xs font-semibold">
-                    <Link to="/about" className="inline-block py-3 sm:py-0 hover:text-white transition-colors">About Us</Link>
-                    <span>•</span>
-                    <Link to="/terms" className="inline-block py-3 sm:py-0 hover:text-white transition-colors">General Terms</Link>
-                    <span>•</span>
-                    <Link to="/retailer-terms" className="inline-block py-3 sm:py-0 hover:text-white transition-colors">Retailer Terms</Link>
-                    <span>•</span>
-                    <Link to="/aeps-terms" className="inline-block py-3 sm:py-0 hover:text-white transition-colors">AEPS Terms</Link>
-                    <span>•</span>
-                    <Link to="/aeps-permission" className="inline-block py-3 sm:py-0 hover:text-white transition-colors">AEPS Declaration</Link>
-                    <span>•</span>
-                    <Link to="/refund-policy" className="inline-block py-3 sm:py-0 hover:text-white transition-colors">Refund Policy</Link>
-                    <span>•</span>
-                    <span>© {new Date().getFullYear()} Shahparpay Solutions Private Limited</span>
+                <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm sm:justify-end">
+                    {LEGAL.map(([label, to]) => (
+                        <Link key={to} to={to} className="inline-block py-2 transition-colors hover:text-white">{label}</Link>
+                    ))}
+                    <span className="py-2 text-[#8a847a]">© {new Date().getFullYear()} Shahparpay Solutions Private Limited</span>
                 </div>
             </div>
         </div>
     </footer>
-    );
-};
+);
 
 export default LandingFooter;
