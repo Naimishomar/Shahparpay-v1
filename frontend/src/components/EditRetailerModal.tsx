@@ -293,7 +293,7 @@ const EditRetailerModal: React.FC<EditRetailerModalProps> = ({ retailer, onClose
                         type="submit"
                         form="edit-retailer-form"
                         disabled={loading}
-                        className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-semibold shadow-md flex items-center gap-2 disabled:opacity-50 transition-all hover:bg-primary/90"
+                        className="px-6 py-2.5 btn-primary rounded-lg font-semibold shadow-md flex items-center gap-2 disabled:opacity-50 transition-all "
                     >
                         {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserPlus size={18} />}
                         Save Changes

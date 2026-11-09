@@ -140,7 +140,7 @@ const AepsReceipt = ({ transactionId, onClose }: { transactionId: string, onClos
             <div className="w-full flex gap-4 mt-6">
                 <button 
                     onClick={downloadPDF}
-                    className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-lg hover:shadow-indigo-500/30 transition-all flex items-center justify-center gap-2"
+                    className="flex-1 py-3 px-4 btn-primary font-bold rounded-lg shadow-lg transition-all flex items-center justify-center gap-2"
                 >
                     <Download size={18} />
                     Download PDF

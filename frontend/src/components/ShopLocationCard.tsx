@@ -156,7 +156,7 @@ const ShopLocationCard: React.FC = () => {
                             type="button"
                             onClick={submit}
                             disabled={busy || !location}
-                            className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 disabled:opacity-60 text-primary-foreground text-xs font-bold px-4 py-2 rounded-lg transition-colors"
+                            className="inline-flex items-center gap-2 btn-primary disabled:opacity-60 text-xs font-bold px-4 py-2 rounded-lg transition-colors"
                         >
                             {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                             {busy ? 'Updating…' : 'Yes, update it'}

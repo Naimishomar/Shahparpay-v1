@@ -110,7 +110,7 @@ const AEPS_Settlement = () => {
                 <div className="flex items-center gap-3 ml-auto mt-2 md:mt-0">
                     <button 
                         onClick={handleSearch}
-                        className="flex items-center gap-2 px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md transition-all duration-300 text-sm font-medium shadow-[0_0_10px_rgba(139,92,246,0.2)] hover:shadow-[0_0_15px_rgba(139,92,246,0.4)]"
+                        className="flex items-center gap-2 px-5 py-2 btn-primary rounded-md transition-all duration-300 text-sm font-medium shadow-[0_0_10px_rgba(139,92,246,0.2)] hover:shadow-[0_0_15px_rgba(139,92,246,0.4)]"
                     >
                         <Search className="w-4 h-4" />
                         Search

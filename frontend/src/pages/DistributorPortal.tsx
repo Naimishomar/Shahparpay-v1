@@ -405,13 +405,13 @@ const DistributorPortal = () => {
                             <div className="flex bg-white/5 p-1 rounded-lg border border-border">
                                 <button 
                                     onClick={() => setFrSubTab('incoming')} 
-                                    className={`px-4 py-2 rounded-md text-sm transition-colors ${frSubTab === 'incoming' ? 'bg-primary text-primary-foreground font-medium' : 'text-muted-foreground hover:text-white'}`}
+                                    className={`px-4 py-2 rounded-md text-sm transition-colors ${frSubTab === 'incoming' ? 'btn-primary font-medium' : 'text-muted-foreground hover:text-white'}`}
                                 >
                                     From Retailers
                                 </button>
                                 <button 
                                     onClick={() => setFrSubTab('outgoing')} 
-                                    className={`px-4 py-2 rounded-md text-sm transition-colors ${frSubTab === 'outgoing' ? 'bg-primary text-primary-foreground font-medium' : 'text-muted-foreground hover:text-white'}`}
+                                    className={`px-4 py-2 rounded-md text-sm transition-colors ${frSubTab === 'outgoing' ? 'btn-primary font-medium' : 'text-muted-foreground hover:text-white'}`}
                                 >
                                     My Requests (To Admin)
                                 </button>
@@ -511,7 +511,7 @@ const DistributorPortal = () => {
                                 <div className="flex justify-end">
                                     <button 
                                         onClick={() => setShowAddFrModal(true)}
-                                        className="px-5 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-all flex items-center gap-2"
+                                        className="px-5 py-2 btn-primary rounded-lg font-medium transition-all flex items-center gap-2"
                                     >
                                         <UserPlus className="w-4 h-4" /> Request Funds from Admin
                                     </button>
@@ -732,7 +732,7 @@ const DistributorPortal = () => {
                                 <button 
                                     type="submit"
                                     disabled={loadingFR}
-                                    className="px-12 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/25"
+                                    className="px-12 py-3 btn-primary rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/25"
                                 >
                                     {loadingFR ? 'Submitting...' : 'Submit'}
                                 </button>

@@ -281,7 +281,7 @@ const StandardPsaTab: React.FC = () => {
                                         <button
                                             type="submit"
                                             disabled={couponLoading}
-                                            className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
+                                            className="px-6 py-3 btn-primary rounded-xl font-bold transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
                                         >
                                             {couponLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Buy Now'}
                                         </button>
@@ -395,7 +395,7 @@ const StandardPsaTab: React.FC = () => {
                     <button
                         type="submit"
                         disabled={loading || updateLoading}
-                        className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="w-full px-6 py-3 btn-primary rounded-xl font-bold transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                         {(loading || updateLoading) ? <Loader2 className="w-5 h-5 animate-spin" /> : <ChevronRight className="w-5 h-5" />}
                         {existingPsa ? 'Update Application' : 'Submit Registration'}

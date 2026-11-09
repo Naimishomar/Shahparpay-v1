@@ -231,7 +231,7 @@ const PanCard: React.FC = () => {
                             <button
                                 type="submit"
                                 disabled={linkLoading}
-                                className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                                className="px-5 py-2.5 btn-primary rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
                             >
                                 {linkLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
                                 Link PSA ID
@@ -437,7 +437,7 @@ const PanCard: React.FC = () => {
                                         <button
                                             type="submit"
                                             disabled={couponLoading}
-                                            className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                            className="w-full py-3 btn-primary rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                                         >
                                             {couponLoading ? (
                                                 <>
@@ -696,7 +696,7 @@ const PanCard: React.FC = () => {
                                         <button
                                             type="submit"
                                             disabled={loading}
-                                            className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                            className="w-full py-3 btn-primary rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                                         >
                                             {loading ? (
                                                 <>

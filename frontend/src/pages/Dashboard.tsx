@@ -106,12 +106,12 @@ const VolumeChart = ({ points, start, end }: { points: number[]; start: Date; en
                     <defs>
                         {/* White on the hero banner. */}
                         <linearGradient id="dash-line-stroke" x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.75" />
-                            <stop offset="100%" stopColor="#FFFFFF" />
+                            <stop offset="0%" stopColor="currentColor" stopOpacity="0.75" />
+                            <stop offset="100%" stopColor="currentColor" />
                         </linearGradient>
                         <linearGradient id="dash-line-fill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.3" />
-                            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+                            <stop offset="0%" stopColor="currentColor" stopOpacity="0.3" />
+                            <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
                         </linearGradient>
                     </defs>
                     <path d={`${line} L${W},${H} L0,${H} Z`} fill="url(#dash-line-fill)" style={morph} />

@@ -146,13 +146,13 @@
 }
 
 /* The primary action: a deep navy pill (pastel lavender in dark mode). */
+/* Primary buttons: the pastel card wash (lavender, sky, peach) with navy text, in both themes. */
 @utility btn-primary {
-    background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to));
-    color: #FFFFFF;
-    border-color: transparent;
-    box-shadow: 0 10px 24px -14px rgb(22 20 46 / 0.55);
-    &:hover { filter: brightness(1.15); }
-    &:is(.dark *) { background-image: linear-gradient(135deg, #E4DAFF, #C9BCF7); color: #16142E; }
+    background-image: linear-gradient(135deg, #E4DAFF 0%, #D3E7FB 55%, #FBE2D4 100%);
+    color: #16142E;
+    border-color: rgb(22 20 46 / 0.08);
+    box-shadow: 0 8px 20px -12px rgb(120 100 200 / 0.45);
+    &:hover { filter: saturate(1.25) brightness(0.98); }
 }
 
 @utility icon-chip {
@@ -160,24 +160,18 @@
     color: var(--chip-foreground);
 }
 
-/* The banner: deep navy with a faint lavender light, white text. */
+/* The banner: the same pastel wash as the primary buttons, navy text, in both themes.
+   White utilities inside it (text-white/80, bg-white/15, ...) read as navy. */
 @utility hero-panel {
-    background-color: #16142E;
+    --color-white: #16142E;
+    background-color: #EEE9FF;
     background-image:
-        radial-gradient(ellipse 50% 110% at 100% 0%, rgb(185 168 240 / 0.22), transparent 60%),
-        radial-gradient(ellipse 45% 100% at 0% 100%, rgb(189 230 250 / 0.10), transparent 60%),
-        linear-gradient(135deg, #2A2556, #16142E);
-    color: #FFFFFF;
-    border: 1px solid rgb(255 255 255 / 0.06);
-    box-shadow: 0 24px 50px -24px rgb(22 20 46 / 0.55);
-    /* Dark mode: neutral charcoal, only a whisper of lavender. */
-    &:is(.dark *) {
-        background-color: #18181A;
-        background-image:
-            radial-gradient(ellipse 50% 110% at 100% 0%, rgb(217 204 255 / 0.07), transparent 60%),
-            linear-gradient(135deg, #1E1E21, #141415);
-        box-shadow: none;
-    }
+        radial-gradient(ellipse 50% 110% at 100% 0%, rgb(251 226 212 / 0.85), transparent 65%),
+        radial-gradient(ellipse 45% 100% at 0% 100%, rgb(211 231 251 / 0.9), transparent 65%),
+        linear-gradient(135deg, #E4DAFF 0%, #D3E7FB 55%, #FBE2D4 100%);
+    color: #16142E;
+    border: 1px solid rgb(22 20 46 / 0.06);
+    box-shadow: 0 20px 44px -26px rgb(120 100 200 / 0.45);
 }
 
 /* Soft pastel mesh tints, one per service. Dark text on light; in dark mode
@@ -302,34 +296,18 @@ body { top: 0 !important; }
 .goog-te-banner-frame.skiptranslate { display: none !important; }
 .goog-te-gadget { display: none !important; }
 
-/* A faint pastel wash behind every card and panel, so the palette shows
-   through everywhere. Three hue pairs rotate so neighbouring cards differ.
-   Only adds a background-image: each card keeps its own background-color,
-   and the sidebar and receipts (bg-white) stay plain. */
-[class*="bg-card"]:not([data-sidebar]) {
-    --wash-a: rgb(217 204 255 / 0.55); /* lavender */
-    --wash-b: rgb(251 211 230 / 0.42); /* pink */
+/* The pastel wash sits on the page behind the cards, not inside them. */
+body, [data-slot="sidebar-inset"] {
     background-image:
-        radial-gradient(90% 110% at 0% 0%, var(--wash-a), transparent 70%),
-        radial-gradient(80% 100% at 100% 100%, var(--wash-b), transparent 70%);
+        radial-gradient(ellipse 80% 70% at 0% 0%, rgb(217 204 255 / 0.7), transparent 75%),
+        radial-gradient(ellipse 70% 65% at 100% 0%, rgb(189 230 250 / 0.65), transparent 75%),
+        radial-gradient(ellipse 75% 65% at 100% 100%, rgb(250 214 191 / 0.6), transparent 75%),
+        radial-gradient(ellipse 70% 60% at 0% 100%, rgb(234 246 184 / 0.6), transparent 75%);
+    background-attachment: fixed;
 }
-[class*="bg-card"]:not([data-sidebar]):nth-child(3n+2) {
-    --wash-a: rgb(189 230 250 / 0.55); /* sky */
-    --wash-b: rgb(211 207 255 / 0.42); /* periwinkle */
-}
-[class*="bg-card"]:not([data-sidebar]):nth-child(3n) {
-    --wash-a: rgb(234 246 184 / 0.6); /* lime */
-    --wash-b: rgb(250 214 191 / 0.42); /* peach */
-}
-.dark [class*="bg-card"]:not([data-sidebar]) {
-    --wash-a: rgb(217 204 255 / 0.12);
-    --wash-b: rgb(251 211 230 / 0.08);
-}
-.dark [class*="bg-card"]:not([data-sidebar]):nth-child(3n+2) {
-    --wash-a: rgb(189 230 250 / 0.12);
-    --wash-b: rgb(211 207 255 / 0.08);
-}
-.dark [class*="bg-card"]:not([data-sidebar]):nth-child(3n) {
-    --wash-a: rgb(234 246 184 / 0.1);
-    --wash-b: rgb(250 214 191 / 0.08);
+.dark body, .dark [data-slot="sidebar-inset"] {
+    background-image:
+        radial-gradient(ellipse 60% 55% at 0% 0%, rgb(217 204 255 / 0.07), transparent 70%),
+        radial-gradient(ellipse 50% 50% at 100% 0%, rgb(189 230 250 / 0.05), transparent 70%),
+        radial-gradient(ellipse 55% 50% at 100% 100%, rgb(250 214 191 / 0.05), transparent 70%);
 }

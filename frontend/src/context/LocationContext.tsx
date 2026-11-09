@@ -109,7 +109,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode; required?: 
                                 <li>Press Retry (or reload the page).</li>
                             </ol>
                         )}
-                        <button onClick={requestLocation} disabled={loading} className="flex w-full items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-70">
+                        <button onClick={requestLocation} disabled={loading} className="flex w-full items-center justify-center gap-2 btn-primary font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-70">
                             {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Finding your location…</> : 'Retry'}
                         </button>
                     </div>
