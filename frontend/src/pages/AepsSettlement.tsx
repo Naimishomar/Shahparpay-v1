@@ -273,7 +273,7 @@ const AepsSettlement = () => {
                                         ) : (
                                             savedBanks.map(bank => (
                                                 <option key={bank._id} value={bank._id}>
-                                                    {bank.status === 'VERIFIED' ? '✓ ' : bank.status === 'PENDING' ? '⏳ ' : '✗ '}{bank.bankName} · {String(bank.accountNumber || '').slice(-4)}
+                                                    {bank.bankName} · {String(bank.accountNumber || '').slice(-4)}
                                                 </option>
                                             ))
                                         )}
