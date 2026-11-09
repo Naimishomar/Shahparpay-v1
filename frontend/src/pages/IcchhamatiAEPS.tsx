@@ -106,11 +106,11 @@ const VideoDrop = ({ video, onChange, disabled }: { video: File | null; onChange
 };
 
 const TXN_TABS = [
-    { key: 'BE', label: 'Balance Enquiry', icon: Wallet },
-    { key: 'CW', label: 'Cash Withdrawal', icon: IndianRupee },
-    { key: 'MS', label: 'Mini Statement', icon: FileText },
-    { key: 'M', label: 'Aadhaar Pay', icon: CreditCard },
-    { key: 'CD', label: 'Cash Deposit', icon: Landmark },
+    { key: 'BE', label: 'Balance Enquiry', icon: Wallet, tone: 'text-violet-500 dark:text-violet-300' },
+    { key: 'CW', label: 'Cash Withdrawal', icon: IndianRupee, tone: 'text-emerald-500 dark:text-emerald-300' },
+    { key: 'MS', label: 'Mini Statement', icon: FileText, tone: 'text-sky-500 dark:text-sky-300' },
+    { key: 'M', label: 'Aadhaar Pay', icon: CreditCard, tone: 'text-orange-500 dark:text-orange-300' },
+    { key: 'CD', label: 'Cash Deposit', icon: Landmark, tone: 'text-pink-500 dark:text-pink-300' },
 ] as const;
 type TxnType = (typeof TXN_TABS)[number]['key'];
 
@@ -691,8 +691,8 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
                         </div>
                     )}
                     <DevicePicker {...device} />
-                    <button disabled={busy} onClick={submit} className={`${PRIMARY_BUTTON} w-full`}>
-                        {busy ? <Loader2 size={16} className="animate-spin" /> : <Fingerprint size={16} />} Scan customer fingerprint & submit
+                    <button disabled={busy} onClick={submit} className={`${PRIMARY_BUTTON} w-full py-4! text-base! rounded-2xl`}>
+                        {busy ? <Loader2 size={20} className="animate-spin" /> : <Fingerprint size={20} />} Scan customer fingerprint & submit
                     </button>
                 </section>
 
@@ -819,9 +819,9 @@ const ReceiptModal = ({ result, onClose }: { result: TxnResult; onClose: () => v
 
 const TxnTabs = ({ tab, setTab }: { tab: TxnType; setTab: (t: TxnType) => void }) => (
     <div className="flex w-full gap-1 overflow-x-auto no-scrollbar rounded-2xl border bg-card p-1.5 md:w-max">
-        {TXN_TABS.map(({ key, label, icon: Icon }) => (
-            <button key={key} onClick={() => setTab(key)} className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition-all ${tab === key ? 'btn-primary' : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}>
-                <Icon size={16} /> {label}
+        {TXN_TABS.map(({ key, label, icon: Icon, tone }) => (
+            <button key={key} onClick={() => setTab(key)} className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${tab === key ? 'btn-primary' : 'text-foreground/75 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}>
+                <Icon size={17} strokeWidth={2.2} className={tone} /> {label}
             </button>
         ))}
     </div>
