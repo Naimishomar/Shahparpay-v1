@@ -77,9 +77,9 @@ const settlementBanks = async (req) => {
   if (error) {
     return { error: { status: 502, message: providerMessage(error, 'Could not load your bank accounts right now.') } };
   }
-  // Only payout (type 3) beneficiaries. ponytail: rows without a type field pass, tighten once the provider list is known to return it.
+  // Settlements go out as payouts only: type 3 beneficiaries. DMT ones (type 2) never show here.
   const banks = rows
-    .filter((row) => beneficiaryMobile(row) === mobile && (row.type == null || String(row.type) === '3'))
+    .filter((row) => beneficiaryMobile(row) === mobile && String(row.type) === '3')
     .map(toSettlementBank);
   return { mobile, banks };
 };
