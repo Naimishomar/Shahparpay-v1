@@ -1,5 +1,5 @@
 import axios from "axios";
-import { User, Wallet, Zap, Sun, Moon, ChevronDown, UserCircle, LogOut, Eye, EyeOff, Plus, Search, Headset } from "lucide-react";
+import { User, Wallet, Zap, Sun, Moon, ChevronDown, UserCircle, LogOut, Eye, EyeOff, Plus, Search, Headset, BanknoteArrowUp } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "../context/AuthContext";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -224,8 +224,8 @@ const Header = ({ trigger }: { trigger?: React.ReactNode }) => {
     const wallets = user?.role === 'admin'
         ? [{ label: 'Admin Wallet', value: balances.adminBalance, tone: TONES.trade, Icon: Wallet, link: null }]
         : [
-            { label: 'Trade Wallet', value: balances.aepsBalance, tone: TONES.trade, Icon: Wallet, link: isRetailer ? { to: '/aeps-settlement', text: 'Settle', plus: false } : null },
-            { label: 'Utility Wallet', value: balances.mainBalance, tone: TONES.utility, Icon: Zap, link: isRetailer ? { to: '/fund-request', text: 'Add money', plus: true } : null },
+            { label: 'Trade Wallet', value: balances.aepsBalance, tone: TONES.trade, Icon: Wallet, link: isRetailer ? { to: '/aeps-settlement', text: 'Withdraw to bank', icon: BanknoteArrowUp } : null },
+            { label: 'Utility Wallet', value: balances.mainBalance, tone: TONES.utility, Icon: Zap, link: isRetailer ? { to: '/fund-request', text: 'Add money', icon: Plus } : null },
         ];
     const firstName = String(user?.name || '').split(' ')[0];
     // A retailer's distributorId is their parent (an object once populated), so only a distributor's own counts.
@@ -269,13 +269,11 @@ const Header = ({ trigger }: { trigger?: React.ReactNode }) => {
                                     <p className={`truncate text-[10.5px] font-semibold uppercase tracking-wider ${tone.cap}`}>{label}</p>
                                     <p className={`whitespace-nowrap text-[15px] font-bold text-foreground tabular-nums leading-tight transition 2xl:text-[17px] ${hidden ? 'blur-[7px] select-none' : ''}`}>₹ {formatBalance(value)}</p>
                                 </div>
-                                {link && (link.plus ? (
+                                {link && (
                                     <Link to={link.to} title={link.text} aria-label={link.text} className={`ml-1 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-background shadow-sm hover:opacity-90 ${tone.link}`}>
-                                        <Plus className="h-4 w-4" strokeWidth={2.5} />
+                                        <link.icon className="h-4 w-4" strokeWidth={2.5} />
                                     </Link>
-                                ) : (
-                                    <Link to={link.to} className={`ml-1 shrink-0 rounded-lg bg-background px-2.5 py-1 text-xs font-semibold shadow-sm ${tone.link}`}>{link.text}</Link>
-                                ))}
+                                )}
                             </div>
                         ))}
                         <button
