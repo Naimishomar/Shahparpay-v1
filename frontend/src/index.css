@@ -255,6 +255,9 @@
     @apply font-sans;
     font-size: 90%;
     }
+  /* Bigger desktop monitors (a 24" screen is usually 1920px wide): scale the whole UI up. */
+  @media (min-width: 1600px) { html { font-size: 100%; } }
+  @media (min-width: 1880px) { html { font-size: 106.25%; } }
 }
 
 @media print {

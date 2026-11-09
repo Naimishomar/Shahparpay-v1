@@ -123,13 +123,34 @@ const supportFor = (user: NavUser): NavItem =>
 export const navLinksFor = (user: NavUser): { name: string; url: string }[] =>
   [...groupsFor(user).flatMap((g) => g.items), supportFor(user)].map(({ name, url }) => ({ name, url }));
 
+// Soft colours for the sidebar icons, picked per page name so a page keeps its colour.
+const ICON_TONES = [
+  'text-violet-500 dark:text-violet-300',
+  'text-sky-500 dark:text-sky-300',
+  'text-emerald-500 dark:text-emerald-300',
+  'text-orange-500 dark:text-orange-300',
+  'text-pink-500 dark:text-pink-300',
+  'text-amber-500 dark:text-amber-300',
+  'text-teal-500 dark:text-teal-300',
+  'text-indigo-500 dark:text-indigo-300',
+  'text-rose-500 dark:text-rose-300',
+];
+// Main pages get a fixed colour each, so neighbours never match; others fall back to a hash.
+const NAME_TONE: Record<string, number> = {
+  Dashboard: 0, Overview: 0, AEPS: 1, 'Micro ATM': 2, DMT: 3, 'Trade Wallet Settlement': 4,
+  Recharge: 5, BBPS: 6, 'Fund Request': 7, 'PAN Card': 8, 'ITR Filing': 1, 'Lead Generation': 2,
+  'Support Center': 3, 'Customer Support': 3,
+};
+const iconTone = (name: string) =>
+  ICON_TONES[NAME_TONE[name] ?? [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % ICON_TONES.length];
+
 const NavLink = ({ item, active }: { item: NavItem; active: boolean }) => {
   const Icon = item.icon;
   return (
     <Link
       to={item.url}
       aria-current={active ? 'page' : undefined}
-      className={`relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-[15px] transition-colors focus-visible:outline-2 focus-visible:outline-foreground ${
+      className={`relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-[1.04rem] transition-colors focus-visible:outline-2 focus-visible:outline-foreground ${
         active
           ? 'tint-lavender font-semibold'
           : 'text-foreground/70 hover:bg-black/[0.04] hover:text-foreground dark:hover:bg-white/[0.05]'
@@ -137,7 +158,7 @@ const NavLink = ({ item, active }: { item: NavItem; active: boolean }) => {
     >
       {/* The active page: colour, weight and a bar, so it never rests on colour alone. */}
       {active && <span aria-hidden="true" className="absolute -left-3 top-2.5 bottom-2.5 w-[3px] rounded-r bg-foreground" />}
-      <Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${active ? 'text-foreground' : ''}`} strokeWidth={1.8} />
+      <Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${iconTone(item.name)}`} strokeWidth={active ? 2.2 : 1.8} />
       <span className="truncate">{item.name}</span>
     </Link>
   );
