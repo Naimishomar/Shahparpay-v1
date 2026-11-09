@@ -5,6 +5,8 @@ import Distributor from '../models/users/distributor.model.js';
 import { checkWalletPin } from '../utils/walletPin.js';
 import {
   icchhamatiPost,
+  icchhamatiGet,
+  isOk,
   payoutOutcome,
   providerMessage,
   makeReferenceId,
@@ -15,7 +17,6 @@ import {
   requireMobile,
   beneficiaryMobile,
   getBeneficiaryId,
-  fetchProviderBeneficiaries,
   addBeneficiary,
   sendBeneficiaryOtp,
   sendBeneficiaryDeleteOtp,
@@ -46,10 +47,9 @@ const getUser = async (req) => {
  * saved under the retailer's registered mobile number. Nothing else can be
  * picked: the beneficiary is looked up again from the provider at payout time,
  * so an id from the browser is never trusted. Accounts are added here with
- * type 3 (penny drop + OTP, same as DMT); DMT's own beneficiaries carry no type.
+ * type 3 (penny drop, then active at once); the provider decides payout vs DMT
+ * by the beneficiary's type, not by anything sent with the payout.
  */
-const registeredMobile = async (req) => requireMobile((await getUser(req))?.contactNumber);
-
 /** A provider beneficiary in the shape the settlement screens already read. */
 export const toSettlementBank = (row) => {
   const id = String(getBeneficiaryId(row) ?? '');
@@ -68,19 +68,30 @@ export const toSettlementBank = (row) => {
   };
 };
 
-/** { mobile, banks } for this user, or { error: { status, message } }. */
+/**
+ * { mobile, banks } for this user, or { error: { status, message } }.
+ * Settlements go out as payouts only, to type 3 beneficiaries. The provider's list
+ * endpoint never returns those, so each id saved on the user is fetched on its own;
+ * ids the provider no longer knows (deleted) are dropped from the user.
+ */
 const settlementBanks = async (req) => {
-  const mobile = await registeredMobile(req);
+  const user = await getUser(req);
+  const mobile = requireMobile(user?.contactNumber);
   if (!mobile) {
     return { error: { status: 400, message: 'Your registered mobile number is missing or invalid. Contact support.' } };
   }
-  const { rows, error } = await fetchProviderBeneficiaries();
-  if (error) {
-    return { error: { status: 502, message: providerMessage(error, 'Could not load your bank accounts right now.') } };
+  const ids = user.payoutBeneficiaryIds || [];
+  const results = await Promise.all(
+    ids.map((id) => icchhamatiGet(`/api/v2/beneficiaries/${encodeURIComponent(id)}`).catch(() => null))
+  );
+  if (results.some((d) => d === null)) {
+    return { error: { status: 502, message: 'Could not load your bank accounts right now.' } };
   }
-  // Settlements go out as payouts only: type 3 beneficiaries. DMT ones (type 2) never show here.
-  const banks = rows
-    .filter((row) => beneficiaryMobile(row) === mobile && String(row.type) === '3')
+  const gone = ids.filter((id, i) => !isOk(results[i]) && /not found/i.test(String(results[i]?.message || '')));
+  if (gone.length) await user.updateOne({ $pull: { payoutBeneficiaryIds: { $in: gone } } });
+  const banks = results
+    .map((d) => (isOk(d) ? d.data : null))
+    .filter((row) => row && String(row.type) === '3' && beneficiaryMobile(row) === mobile && String(row.status) === '1')
     .map(toSettlementBank);
   return { mobile, banks };
 };
@@ -107,12 +118,17 @@ export const syncSavedBanks = async (req, res) => {
   }
 };
 
-/** Adds a payout (type 3) beneficiary on the retailer's registered mobile; verified by OTP next. */
+/** Adds a payout (type 3) beneficiary on the retailer's registered mobile and keeps its id. */
 export const addSettlementBank = async (req, res) => {
-  const mobile = await registeredMobile(req).catch(() => null);
+  const user = await getUser(req).catch(() => null);
+  const mobile = requireMobile(user?.contactNumber);
   if (!mobile) {
     return res.status(400).json({ success: false, message: 'Your registered mobile number is missing or invalid. Contact support.' });
   }
+  res.locals.onBeneficiaryCreated = async (row) => {
+    const id = row && getBeneficiaryId(row);
+    if (id != null) await user.updateOne({ $addToSet: { payoutBeneficiaryIds: String(id) } });
+  };
   req.body = { ...req.body, mobile, type: 3 };
   return addBeneficiary(req, res);
 };
@@ -155,10 +171,11 @@ export const getSettlementAccountStatus = async (req, res) => {
   }
 };
 
-// AEPS Settlement flat fee: ₹5 base charge + 18% GST on that charge (₹0.90).
-// All values configurable via env.
+// Settlements go out as Icchhamati payouts, which carry no charge, so neither does
+// the settlement by default. A fee can still be set with AEPS_SETTLEMENT_BASE_CHARGE
+// (plus AEPS_SETTLEMENT_GST_RATE on it).
 const getSettlementFee = () => {
-  const baseCharge = Number(process.env.AEPS_SETTLEMENT_BASE_CHARGE || 5);
+  const baseCharge = Number(process.env.AEPS_SETTLEMENT_BASE_CHARGE || 0);
   const gstRate = Number(process.env.AEPS_SETTLEMENT_GST_RATE || 18) / 100;
   const gstAmount = Math.round(baseCharge * gstRate * 100) / 100;
   return {
@@ -170,7 +187,8 @@ const getSettlementFee = () => {
 };
 
 const getSettlementAmountLimits = () => ({
-  min: Number(process.env.AEPS_SETTLEMENT_MIN_AMOUNT || 100),
+  // Icchhamati refuses payouts of ₹500 or less ("Amount must be greater than 500").
+  min: Number(process.env.AEPS_SETTLEMENT_MIN_AMOUNT || 501),
   max: Number(process.env.AEPS_SETTLEMENT_MAX_AMOUNT || 25000),
 });
 
@@ -213,14 +231,14 @@ export const initiateSettlement = async (req, res) => {
     const pinError = await checkWalletPin(aepsWallet, pin);
     if (pinError) return res.status(pinError.status).json({ success: false, message: pinError.message });
 
-    // Flat fee: ₹5 base charge + 18% GST on that charge (e.g. ₹5 + ₹0.90 = ₹5.90)
+    // ₹0 unless AEPS_SETTLEMENT_BASE_CHARGE is set (see getSettlementFee).
     const { baseCharge, gstAmount, total: fee } = getSettlementFee();
     const totalDeduction = Number(amount) + fee;
 
     if (aepsWallet.balance < totalDeduction) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient Trade Wallet balance. (Amount: ₹${amount} + Charge: ₹${fee})`,
+        message: fee ? `Insufficient Trade Wallet balance. (Amount: ₹${amount} + Charge: ₹${fee})` : 'Insufficient Trade Wallet balance.',
       });
     }
 

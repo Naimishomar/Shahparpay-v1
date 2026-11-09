@@ -6,11 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import logo from '../assets/logo.png';
 
-const SETTLEMENT_BASE_CHARGE = 5;
-const SETTLEMENT_GST_RATE = 18;
-const SETTLEMENT_GST_AMOUNT = Math.round(SETTLEMENT_BASE_CHARGE * (SETTLEMENT_GST_RATE / 100) * 100) / 100;
-const SETTLEMENT_FEE = SETTLEMENT_BASE_CHARGE + SETTLEMENT_GST_AMOUNT;
-const SETTLEMENT_MIN = 100;
+// Icchhamati refuses payouts of ₹500 or less.
+const SETTLEMENT_MIN = 501;
 const SETTLEMENT_MAX = 25000;
 
 // Same black (light) / silver (dark) language as the dashboard and AEPS page.
@@ -130,7 +127,6 @@ const AepsSettlement = () => {
                 transactionId,
                 utr: body?.data?.response?.rrn || body?.data?.response?.utr || '',
                 amount: amt,
-                fee: SETTLEMENT_FEE,
                 mode,
                 bankName: bank?.bankName || '',
                 accountNumber: String(bank?.accountNumber || ''),
@@ -374,16 +370,12 @@ const AepsSettlement = () => {
                             <span className="font-semibold tabular-nums">₹{amountValid ? amt.toFixed(2) : '0.00'}</span>
                         </div>
                         <div className="flex justify-between gap-3">
-                            <span className="text-muted-foreground">Charge (₹{SETTLEMENT_BASE_CHARGE} + {SETTLEMENT_GST_RATE}% GST)</span>
-                            <span className="font-semibold tabular-nums">₹{SETTLEMENT_FEE.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between gap-3">
                             <span className="text-muted-foreground">Mode</span>
                             <span className="font-semibold">{mode}</span>
                         </div>
                         <div className="flex items-end justify-between gap-3 border-t pt-3">
                             <span className="text-muted-foreground">Total deduction from Trade Wallet</span>
-                            <span className="text-2xl font-bold tracking-tight tabular-nums">₹{amountValid ? (amt + SETTLEMENT_FEE).toFixed(2) : '0.00'}</span>
+                            <span className="text-2xl font-bold tracking-tight tabular-nums">₹{amountValid ? amt.toFixed(2) : '0.00'}</span>
                         </div>
                     </div>
 
@@ -504,7 +496,6 @@ type SettlementReceiptData = {
     transactionId: string;
     utr: string;
     amount: number;
-    fee: number;
     mode: string;
     bankName: string;
     accountNumber: string;
@@ -523,8 +514,7 @@ const SettlementReceipt = ({ receipt, onClose }: { receipt: SettlementReceiptDat
     const rows = ([
         ['Type', 'Trade Wallet Settlement'],
         ['Amount', inr(receipt.amount)],
-        ['Charges (incl. GST)', inr(receipt.fee)],
-        ['Total debited', status === 'FAILED' ? `${inr(0)} (refunded)` : inr(receipt.amount + receipt.fee)],
+        ['Total debited', status === 'FAILED' ? `${inr(0)} (refunded)` : inr(receipt.amount)],
         ['Mode', receipt.mode],
         ['Account holder', receipt.accountHolderName],
         ['Bank', receipt.bankName],
@@ -602,9 +592,16 @@ const AddSettlementBank = ({ headers, onClose, onAdded }: { headers: object; onC
         try {
             const res = await axios.post(`${api}/add-bank`, { benename: form.benename.trim(), beneaccount: form.beneaccount.trim(), ifsc: form.ifsc.trim() }, headers);
             const id = res.data?.data?.id;
-            if (!id) { toast.success(res.data.message || 'Bank added'); return onAdded(); }
+            // Payout beneficiaries are active as soon as they are created: no OTP step.
+            if (!id || res.data?.data?.verified) { toast.success('Bank account added for settlement'); return onAdded(); }
             setBeneId(id);
-            await sendOtp(id);
+            try {
+                await sendOtp(id);
+            } catch (otpErr) {
+                const msg = (otpErr as { response?: { data?: { message?: string } } })?.response?.data?.message || '';
+                if (/already verified|active/i.test(msg)) { toast.success('Bank account added for settlement'); return onAdded(); }
+                throw otpErr;
+            }
         } catch (err) { fail(err, 'Could not add this bank account'); }
         setBusy(false);
     };

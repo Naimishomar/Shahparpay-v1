@@ -94,6 +94,9 @@ const retailerSchema = new mongoose.Schema(
     },
     businessName: { type: String, required: true },
     businessAddress: { type: String, required: true },
+    // Icchhamati payout (type 3) beneficiary ids for Trade Wallet settlement. The provider's
+    // beneficiary list only returns DMT (type 2) ones, so these are kept here and fetched by id.
+    payoutBeneficiaryIds: { type: [String], default: [] },
     aadhaarNumber: {
       type: String,
       required: true,

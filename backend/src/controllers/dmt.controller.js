@@ -221,6 +221,8 @@ export const addBeneficiary = async (req, res) => {
         message: providerMessage(data, 'Could not add this beneficiary.'),
       });
     }
+    // Settlement records the new payout beneficiary's id (see settlement.controller).
+    await res.locals.onBeneficiaryCreated?.(data.data);
 
     return res.status(200).json({
       success: true,
