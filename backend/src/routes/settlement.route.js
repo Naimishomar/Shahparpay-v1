@@ -4,6 +4,8 @@ import {
   getSavedBanks,
   syncSavedBanks,
   addSettlementBank,
+  sendSettlementBankOtp,
+  verifySettlementBank,
   deleteSettlementBank,
   getSettlementAccountStatus,
   uploadSettlementDocument,
@@ -21,6 +23,8 @@ router.use(authMiddlewares);
 router.get('/saved-banks', getSavedBanks);
 router.get('/sync-banks', syncSavedBanks);
 router.post('/add-bank', addSettlementBank);
+router.post('/bank-otp', sendSettlementBankOtp);
+router.post('/bank-verify', verifySettlementBank);
 router.delete('/bank/:id', deleteSettlementBank);
 router.get('/account-status/:id', getSettlementAccountStatus);
 router.post(

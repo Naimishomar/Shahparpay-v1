@@ -211,6 +211,8 @@ export const addBeneficiary = async (req, res) => {
       account: beneAccount,
       confirmAccount: beneAccount,
       ifsc: normalizedIfsc,
+      // Icchhamati: type 3 = payout (settlement) beneficiary; no type = DMT.
+      ...(String(req.body.type) === '3' && { type: 3 }),
     });
 
     if (!isOk(data)) {

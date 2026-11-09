@@ -16,6 +16,9 @@ import {
   beneficiaryMobile,
   getBeneficiaryId,
   fetchProviderBeneficiaries,
+  addBeneficiary,
+  sendBeneficiaryOtp,
+  verifyBeneficiary,
 } from './dmt.controller.js';
 
 // Accepted and held: shown as submitted, and as Pending in history until the
@@ -37,12 +40,11 @@ const getUser = async (req) => {
 };
 
 /**
- * AEPS settlement pays out on Icchhamati, to the beneficiaries saved under the
- * retailer's registered mobile number — the same list DMT shows for that
- * number. Nothing else can be picked: the beneficiary is looked up again from
- * the provider at payout time, so an id from the browser is never trusted.
- * Accounts are added, verified (OTP + penny drop) and removed in DMT; the old
- * provider's add / document / delete steps have nothing to do here.
+ * AEPS settlement pays out on Icchhamati, to the payout (type 3) beneficiaries
+ * saved under the retailer's registered mobile number. Nothing else can be
+ * picked: the beneficiary is looked up again from the provider at payout time,
+ * so an id from the browser is never trusted. Accounts are added here with
+ * type 3 (penny drop + OTP, same as DMT); DMT's own beneficiaries carry no type.
  */
 const registeredMobile = async (req) => requireMobile((await getUser(req))?.contactNumber);
 
@@ -74,14 +76,17 @@ const settlementBanks = async (req) => {
   if (error) {
     return { error: { status: 502, message: providerMessage(error, 'Could not load your bank accounts right now.') } };
   }
-  const banks = rows.filter((row) => beneficiaryMobile(row) === mobile).map(toSettlementBank);
+  // Only payout (type 3) beneficiaries. ponytail: rows without a type field pass, tighten once the provider list is known to return it.
+  const banks = rows
+    .filter((row) => beneficiaryMobile(row) === mobile && (row.type == null || String(row.type) === '3'))
+    .map(toSettlementBank);
   return { mobile, banks };
 };
 
 const DMT_ONLY = (mobile) =>
-  `Settlement accounts are the verified DMT beneficiaries of your registered mobile${
+  `Settlement accounts are the payout beneficiaries of your registered mobile${
     mobile ? ` (******${mobile.slice(-4)})` : ''
-  }. Add or remove the account in DMT and it shows here.`;
+  }. Contact support to remove it.`;
 
 export const getSavedBanks = async (req, res) => {
   try {
@@ -105,10 +110,21 @@ export const syncSavedBanks = async (req, res) => {
   }
 };
 
-export const addSettlementBank = async (req, res) =>
-  res.status(400).json({ success: false, message: DMT_ONLY(await registeredMobile(req).catch(() => null)) });
+/** Adds a payout (type 3) beneficiary on the retailer's registered mobile; verified by OTP next. */
+export const addSettlementBank = async (req, res) => {
+  const mobile = await registeredMobile(req).catch(() => null);
+  if (!mobile) {
+    return res.status(400).json({ success: false, message: 'Your registered mobile number is missing or invalid. Contact support.' });
+  }
+  req.body = { ...req.body, mobile, type: 3 };
+  return addBeneficiary(req, res);
+};
 
-export const deleteSettlementBank = addSettlementBank;
+export const sendSettlementBankOtp = sendBeneficiaryOtp;
+export const verifySettlementBank = verifyBeneficiary;
+
+export const deleteSettlementBank = async (req, res) =>
+  res.status(400).json({ success: false, message: DMT_ONLY(await registeredMobile(req).catch(() => null)) });
 
 export const uploadSettlementDocument = async (req, res) =>
   res.status(400).json({ success: false, message: 'No document is needed: DMT beneficiaries are verified by OTP.' });
@@ -234,12 +250,10 @@ export const initiateSettlement = async (req, res) => {
         amount: Number(amount),
         transfer_mode: mode,
         transaction_id: transactionId,
-        // Icchhamati reads type "3" as a payout (settlement) and wants it as a string; DMT sends no type.
         type: '3',
         details: `Trade wallet settlement ${transactionId}`,
       });
     } catch (providerError) {
-      // Timeout / network: the provider may have accepted it, so hold the funds.
       await Transaction.updateOne(
         { transactionId },
         { $set: { 'metadata.apiMessage': providerError.message, 'metadata.transportError': true } }

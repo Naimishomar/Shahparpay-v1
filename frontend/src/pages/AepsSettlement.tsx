@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send, Plus, Building2, Clock, RefreshCw, SearchCheck, Landmark, Phone, KeyRound, IndianRupee, ShieldCheck, CheckCircle2, XCircle, Download, X } from 'lucide-react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
 import html2canvas from 'html2canvas-pro';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -34,6 +33,7 @@ const AepsSettlement = () => {
     const [pin, setPin] = useState('');
     const [mode, setMode] = useState('IMPS');
     const [receipt, setReceipt] = useState<SettlementReceiptData | null>(null);
+    const [addingBank, setAddingBank] = useState(false);
 
     const getHeaders = () => ({ headers: { 'Authorization': `Bearer ${token}` } });
 
@@ -205,14 +205,14 @@ const AepsSettlement = () => {
                             <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
                             {syncing ? 'Syncing...' : 'Sync Banks'}
                         </button>
-                        {/* Settlement accounts are the DMT beneficiaries of the registered mobile. */}
-                        <Link
-                            to="/dmt"
+                        <button
+                            type="button"
+                            onClick={() => setAddingBank(true)}
                             className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${ACTIVE_BUTTON}`}
                         >
                             <Plus className="w-4 h-4" />
                             Add Bank
-                        </Link>
+                        </button>
                     </div>
                 </div>
             </section>
@@ -255,7 +255,7 @@ const AepsSettlement = () => {
                             <div className="relative flex flex-col items-center gap-2 py-6 text-center">
                                 <Landmark className="h-8 w-8 opacity-70" />
                                 <p className="font-semibold">No bank account added</p>
-                                <p className="text-xs opacity-70">Add the account as a DMT beneficiary on your registered mobile, then sync.</p>
+                                <p className="text-xs opacity-70">Add a bank account and verify it with the OTP sent to your registered mobile.</p>
                             </div>
                         )}
                     </div>
@@ -467,6 +467,13 @@ const AepsSettlement = () => {
             </section>
 
             {receipt && <SettlementReceipt receipt={receipt} onClose={() => setReceipt(null)} />}
+            {addingBank && (
+                <AddSettlementBank
+                    headers={getHeaders()}
+                    onClose={() => setAddingBank(false)}
+                    onAdded={() => { setAddingBank(false); fetchSavedBanks(); }}
+                />
+            )}
         </div>
     );
 };
@@ -548,6 +555,85 @@ const SettlementReceipt = ({ receipt, onClose }: { receipt: SettlementReceiptDat
                     <button onClick={download} className="flex flex-1 items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold hover:bg-black/5"><Download size={16} /> Download</button>
                     <button onClick={onClose} className={`flex-1 rounded-xl py-2.5 text-sm font-semibold ${ACTIVE_BUTTON}`}>Done</button>
                 </div>
+            </div>
+        </div>
+    );
+};
+
+/** Adds a payout (type 3) beneficiary on the registered mobile, then activates it by OTP. */
+const AddSettlementBank = ({ headers, onClose, onAdded }: { headers: object; onClose: () => void; onAdded: () => void }) => {
+    const api = `${import.meta.env.VITE_BACKEND_URL}/api/settlement`;
+    const [form, setForm] = useState({ benename: '', beneaccount: '', confirm: '', ifsc: '' });
+    const [beneId, setBeneId] = useState('');
+    const [otp, setOtp] = useState('');
+    const [busy, setBusy] = useState(false);
+    const fail = (e: unknown, fallback: string) =>
+        toast.error((e as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback);
+
+    const sendOtp = async (id: string) => {
+        const res = await axios.post(`${api}/bank-otp`, { beneficiary_id: id }, headers);
+        toast.success(res.data.message || 'OTP sent to your registered mobile');
+    };
+
+    const add = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (form.beneaccount !== form.confirm) return toast.error('Account numbers do not match');
+        setBusy(true);
+        try {
+            const res = await axios.post(`${api}/add-bank`, { benename: form.benename.trim(), beneaccount: form.beneaccount.trim(), ifsc: form.ifsc.trim() }, headers);
+            const id = res.data?.data?.id;
+            if (!id) { toast.success(res.data.message || 'Bank added'); return onAdded(); }
+            setBeneId(id);
+            await sendOtp(id);
+        } catch (err) { fail(err, 'Could not add this bank account'); }
+        setBusy(false);
+    };
+
+    const verify = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setBusy(true);
+        try {
+            const res = await axios.post(`${api}/bank-verify`, { beneficiary_id: beneId, otp }, headers);
+            toast.success(res.data.message || 'Bank account activated');
+            return onAdded();
+        } catch (err) { fail(err, 'Could not verify that OTP'); }
+        setBusy(false);
+    };
+
+    const field = (key: keyof typeof form, label: string, extra: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
+        <label className="flex flex-col gap-1.5 text-sm font-medium">
+            {label}
+            <input required value={form[key]} onChange={(e) => setForm({ ...form, [key]: key === 'ifsc' ? e.target.value.toUpperCase() : e.target.value })} className={INPUT} {...extra} />
+        </label>
+    );
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+            <div className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <div className="mb-5 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">{beneId ? 'Verify Bank Account' : 'Add Settlement Bank'}</h2>
+                    <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1 hover:bg-muted"><X className="h-5 w-5" /></button>
+                </div>
+                {beneId ? (
+                    <form onSubmit={verify} className="flex flex-col gap-4">
+                        <p className="text-sm text-muted-foreground">Enter the OTP sent to your registered mobile.</p>
+                        <label className="flex flex-col gap-1.5 text-sm font-medium">
+                            OTP
+                            <input required inputMode="numeric" autoComplete="one-time-code" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} className={INPUT} />
+                        </label>
+                        <button type="submit" disabled={busy} className={`rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50 ${ACTIVE_BUTTON}`}>{busy ? 'Verifying...' : 'Verify & Activate'}</button>
+                        <button type="button" disabled={busy} onClick={() => sendOtp(beneId).catch((err) => fail(err, 'Could not send the OTP'))} className="text-sm font-medium text-muted-foreground hover:text-foreground">Resend OTP</button>
+                    </form>
+                ) : (
+                    <form onSubmit={add} className="flex flex-col gap-4">
+                        {field('benename', 'Account holder name')}
+                        {field('beneaccount', 'Account number', { inputMode: 'numeric' })}
+                        {field('confirm', 'Confirm account number', { inputMode: 'numeric' })}
+                        {field('ifsc', 'IFSC', { maxLength: 11 })}
+                        <p className="text-xs text-muted-foreground">A ₹4 account verification charge is debited from your Utility Wallet.</p>
+                        <button type="submit" disabled={busy} className={`rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50 ${ACTIVE_BUTTON}`}>{busy ? 'Adding...' : 'Add Bank'}</button>
+                    </form>
+                )}
             </div>
         </div>
     );
