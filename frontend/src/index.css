@@ -100,21 +100,21 @@
 }
 
 .dark {
-    --glow-strength: 0.12;
+    --glow-strength: 0.04;
 
-    --background: #1A1A26;
+    --background: #0F0F10;
     --foreground: #FFFFFF;
-    --card: #252536;
+    --card: #18181A;
     --card-foreground: #FFFFFF;
-    --popover: #2A2A3D;
+    --popover: #1E1E20;
     --popover-foreground: #FFFFFF;
     --primary: #D9CCFF;
     --primary-foreground: #16142E;
-    --secondary: #2D2D40;
+    --secondary: #232325;
     --secondary-foreground: #FFFFFF;
-    --muted: #2D2D40;
-    --muted-foreground: #B8BACD;
-    --accent: #383852;
+    --muted: #232325;
+    --muted-foreground: #A6A6AD;
+    --accent: #2A2A2D;
     --accent-foreground: #FFFFFF;
     --destructive: #FF6565;
     --border: rgb(255 255 255 / 0.10);
@@ -125,24 +125,24 @@
     --chip-foreground: #FFFFFF;
     --chart-1: #D9CCFF;
     --chart-2: #28BF72;
-    --chart-3: #A1A3B8;
+    --chart-3: #9A9AA2;
     --chart-4: #E8E6F5;
     --chart-5: #F1BF1E;
-    --sidebar: #1E1E2C;
+    --sidebar: #141415;
     --sidebar-foreground: #FFFFFF;
     --sidebar-primary: #D9CCFF;
     --sidebar-primary-foreground: #16142E;
-    --sidebar-accent: #2D2D40;
+    --sidebar-accent: #232325;
     --sidebar-accent-foreground: #FFFFFF;
     --sidebar-border: rgb(255 255 255 / 0.06);
     --sidebar-ring: #D9CCFF;
 
     /* Pages hard-code zinc for table heads and focus rings; in dark mode
-       those greys take the canvas's violet-black tint. */
-    --color-zinc-700: #3E3E56;
-    --color-zinc-800: #2D2D40;
-    --color-zinc-900: #252536;
-    --color-zinc-950: #1A1A26;
+       those greys match the neutral near-black canvas. */
+    --color-zinc-700: #36363A;
+    --color-zinc-800: #26262A;
+    --color-zinc-900: #18181A;
+    --color-zinc-950: #0F0F10;
 }
 
 /* The primary action: a deep navy pill (pastel lavender in dark mode). */
@@ -170,6 +170,14 @@
     color: #FFFFFF;
     border: 1px solid rgb(255 255 255 / 0.06);
     box-shadow: 0 24px 50px -24px rgb(22 20 46 / 0.55);
+    /* Dark mode: neutral charcoal, only a whisper of lavender. */
+    &:is(.dark *) {
+        background-color: #18181A;
+        background-image:
+            radial-gradient(ellipse 50% 110% at 100% 0%, rgb(217 204 255 / 0.07), transparent 60%),
+            linear-gradient(135deg, #1E1E21, #141415);
+        box-shadow: none;
+    }
 }
 
 /* Soft pastel mesh tints, one per service. Dark text on light; in dark mode

@@ -63,7 +63,7 @@ const StatusStrip = () => {
                 : null;
 
     return (
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 bg-gradient-to-r from-[#16142E] to-[#2A2556] px-4 py-1.5 text-xs text-white/70 md:px-5">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 bg-gradient-to-r from-[#16142E] to-[#2A2556] dark:from-[#141415] dark:to-[#1C1C1E] px-4 py-1.5 text-xs text-white/70 md:px-5">
             {aeps && <span className="flex shrink-0 items-center gap-2 whitespace-nowrap"><i className={`h-1.5 w-1.5 rounded-full ${aeps.dot}`} />{aeps.text}</span>}
             {lastSettlement && (
                 <span className="shrink-0 whitespace-nowrap">
