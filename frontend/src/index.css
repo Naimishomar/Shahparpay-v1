@@ -293,3 +293,35 @@
 body { top: 0 !important; }
 .goog-te-banner-frame.skiptranslate { display: none !important; }
 .goog-te-gadget { display: none !important; }
+
+/* A faint pastel wash behind every card and panel, so the palette shows
+   through everywhere. Three hue pairs rotate so neighbouring cards differ.
+   Only adds a background-image: each card keeps its own background-color,
+   and the sidebar and receipts (bg-white) stay plain. */
+[class*="bg-card"]:not([data-sidebar]) {
+    --wash-a: rgb(217 204 255 / 0.26); /* lavender */
+    --wash-b: rgb(251 211 230 / 0.2); /* pink */
+    background-image:
+        radial-gradient(70% 90% at 0% 0%, var(--wash-a), transparent 70%),
+        radial-gradient(60% 80% at 100% 100%, var(--wash-b), transparent 70%);
+}
+[class*="bg-card"]:not([data-sidebar]):nth-child(3n+2) {
+    --wash-a: rgb(189 230 250 / 0.26); /* sky */
+    --wash-b: rgb(211 207 255 / 0.2); /* periwinkle */
+}
+[class*="bg-card"]:not([data-sidebar]):nth-child(3n) {
+    --wash-a: rgb(234 246 184 / 0.3); /* lime */
+    --wash-b: rgb(250 214 191 / 0.2); /* peach */
+}
+.dark [class*="bg-card"]:not([data-sidebar]) {
+    --wash-a: rgb(217 204 255 / 0.06);
+    --wash-b: rgb(251 211 230 / 0.04);
+}
+.dark [class*="bg-card"]:not([data-sidebar]):nth-child(3n+2) {
+    --wash-a: rgb(189 230 250 / 0.06);
+    --wash-b: rgb(211 207 255 / 0.04);
+}
+.dark [class*="bg-card"]:not([data-sidebar]):nth-child(3n) {
+    --wash-a: rgb(234 246 184 / 0.05);
+    --wash-b: rgb(250 214 191 / 0.04);
+}
