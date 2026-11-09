@@ -162,8 +162,8 @@ const ItrReport = () => {
                 <div className="relative isolate overflow-hidden top-glow flex flex-col gap-4 w-full shrink-0 rounded-3xl border bg-card p-4 md:p-5 shadow-sm">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-3 shrink-0">
-                        <div className="p-2 bg-indigo-500/10 rounded-lg">
-                            <FileText className="w-6 h-6 text-indigo-500" />
+                        <div className="p-2 icon-chip rounded-lg">
+                            <FileText className="w-6 h-6 text-current" />
                         </div>
                         <div>
                             <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">ITR Filing Reports</h1>
@@ -224,8 +224,8 @@ const ItrReport = () => {
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="bg-card border border-border/50 rounded-xl p-4 shadow-sm">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-indigo-500/10 rounded-lg">
-                                <Landmark className="w-5 h-5 text-indigo-500" />
+                            <div className="p-2 icon-chip rounded-lg">
+                                <Landmark className="w-5 h-5 text-current" />
                             </div>
                             <div>
                                 <p className="text-xs text-muted-foreground">Total Filings</p>

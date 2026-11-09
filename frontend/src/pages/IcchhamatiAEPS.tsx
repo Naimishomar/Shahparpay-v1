@@ -737,6 +737,9 @@ type TxnResult = { ok: boolean | 'pending'; message: string; data: any; at: Date
 const statementOf = (result: TxnResult | null) =>
     Object.values(result?.data || {}).find((v) => Array.isArray(v) && v.length) as any[] | undefined;
 
+/** Rows printed bold on the receipt: the service used, the money, the balance. */
+const RECEIPT_KEY_ROWS = new Set(['Type', 'Amount', 'Account balance']);
+
 const receiptRows = (result: TxnResult) => {
     const d = result.data;
     return [
@@ -778,8 +781,8 @@ const ReceiptModal = ({ result, onClose }: { result: TxnResult; onClose: () => v
                 <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 rounded-full p-1.5 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
                 <div ref={ref} className="space-y-4 bg-white p-6 text-slate-800">
                     <div className="border-b border-dashed border-slate-300 pb-4 text-center">
-                        <img src={logo} alt="Shahparpay" className="mx-auto mb-1 h-10 w-auto object-contain" />
-                        <p className="text-xs uppercase tracking-widest text-slate-500">{type} receipt</p>
+                        <img src={logo} alt="Shahparpay" className="mx-auto mb-2 h-auto w-64 max-w-full object-contain" />
+                        <p className="text-sm font-bold uppercase tracking-widest text-slate-900">{type} receipt</p>
                     </div>
                     <div className="flex flex-col items-center gap-1 text-center">
                         {result.ok === true ? <CheckCircle2 className="h-12 w-12 text-emerald-500" /> : result.ok === 'pending' ? <Clock className="h-12 w-12 text-amber-500" /> : <XCircle className="h-12 w-12 text-red-500" />}
@@ -790,7 +793,7 @@ const ReceiptModal = ({ result, onClose }: { result: TxnResult; onClose: () => v
                     <dl className="space-y-2 text-sm">
                         {[['Type', type] as [string, string], ...receiptRows(result)].map(([k, v]) => (
                             <div key={k} className="flex justify-between gap-3 border-b border-dashed border-slate-200 pb-2 last:border-0">
-                                <dt className="text-slate-500">{k}</dt><dd className="break-all text-right font-medium tabular-nums">{v}</dd>
+                                <dt className={RECEIPT_KEY_ROWS.has(k) ? 'font-semibold text-slate-900' : 'text-slate-500'}>{k}</dt><dd className={`break-all text-right tabular-nums ${RECEIPT_KEY_ROWS.has(k) ? 'text-base font-bold text-slate-900' : 'font-medium'}`}>{v}</dd>
                             </div>
                         ))}
                     </dl>

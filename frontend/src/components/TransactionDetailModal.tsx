@@ -90,12 +90,12 @@ const TransactionDetailModal = ({ tx, onClose }: { tx: any; onClose: () => void 
 
                 <div className="flex-1 overflow-y-auto no-scrollbar">
                     <div ref={ref} className="bg-white p-6 text-slate-800">
-                        <img src={logo} alt="Shahparpay" className="mx-auto mb-5 h-12 w-auto object-contain" />
+                        <img src={logo} alt="Shahparpay" className="mx-auto mb-6 h-auto w-64 max-w-full object-contain" />
                         <dl className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
                             {shown.map(([k, v]) => (
                                 <div key={k}>
                                     <dt className="text-sm font-semibold text-slate-900">{k}</dt>
-                                    <dd className={`break-all text-sm ${k === "Transaction Status" ? `font-bold ${statusTone(status)}` : "text-slate-600"}`}>{v}</dd>
+                                    <dd className={`break-all ${k === "Transaction Status" ? `text-sm font-bold ${statusTone(status)}` : ["Type", "Amount", "Bank Balance"].includes(k) ? "text-base font-bold capitalize text-slate-900" : "text-sm text-slate-600"}`}>{v}</dd>
                                 </div>
                             ))}
                         </dl>

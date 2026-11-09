@@ -526,8 +526,8 @@ const SettlementReceipt = ({ receipt, onClose }: { receipt: SettlementReceiptDat
                 <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 rounded-full p-1.5 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
                 <div ref={ref} className="space-y-4 bg-white p-6 text-slate-800">
                     <div className="border-b border-dashed border-slate-300 pb-4 text-center">
-                        <img src={logo} alt="Shahparpay" className="mx-auto mb-1 h-10 w-auto object-contain" />
-                        <p className="text-xs uppercase tracking-widest text-slate-500">Settlement receipt</p>
+                        <img src={logo} alt="Shahparpay" className="mx-auto mb-2 h-auto w-64 max-w-full object-contain" />
+                        <p className="text-sm font-bold uppercase tracking-widest text-slate-900">Settlement receipt</p>
                     </div>
                     <div className="flex flex-col items-center gap-1 text-center">
                         {status === 'SUCCESS' ? <CheckCircle2 className="h-12 w-12 text-emerald-500" /> : status === 'PENDING' ? <Clock className="h-12 w-12 text-amber-500" /> : <XCircle className="h-12 w-12 text-red-500" />}
@@ -538,7 +538,7 @@ const SettlementReceipt = ({ receipt, onClose }: { receipt: SettlementReceiptDat
                     <dl className="space-y-2 text-sm">
                         {rows.map(([k, v]) => (
                             <div key={k} className="flex justify-between gap-3 border-b border-dashed border-slate-200 pb-2 last:border-0">
-                                <dt className="text-slate-500">{k}</dt><dd className="break-all text-right font-medium tabular-nums">{v}</dd>
+                                <dt className={['Type', 'Amount', 'Total debited', 'Mode'].includes(k) ? 'font-semibold text-slate-900' : 'text-slate-500'}>{k}</dt><dd className={`break-all text-right tabular-nums ${['Type', 'Amount', 'Total debited', 'Mode'].includes(k) ? 'text-base font-bold text-slate-900' : 'font-medium'}`}>{v}</dd>
                             </div>
                         ))}
                     </dl>

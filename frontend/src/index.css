@@ -51,53 +51,52 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Vibrant gradients: a soft charcoal canvas with a violet tint, flat panels,
-   and colour carried by gradients: the indigo-violet-pink hero, the violet
-   primary pill, and each service's own gradient card on the dashboard.
-   Dark is the default; light is the same palette on white. */
+/* Calm pastels: deep navy for actions and the hero, soft pastel mesh tints
+   (lavender, sky, lime, peach, butter, mint, lilac) for service cards and
+   icon chips. No saturated purple. */
 :root {
-    --brand-from: #8B5CF6;
-    --brand-to: #4F46E5;
-    --brand-glow: #7C3AED;
-    --brand-glow-2: #DB2777;
+    --brand-from: #2A2556;
+    --brand-to: #16142E;
+    --brand-glow: #B9A8F0;
+    --brand-glow-2: #F5B9A0;
     --success: #12A65A;
     --glow-strength: 0.10;
 
-    --background: #F5F4FB;
-    --foreground: #15131F;
+    --background: #F4F4F7;
+    --foreground: #16142E;
     --card: #FFFFFF;
     --card-foreground: #15131F;
     --popover: #FFFFFF;
     --popover-foreground: #15131F;
-    --primary: #6D28D9;
+    --primary: #16142E;
     --primary-foreground: #FFFFFF;
-    --secondary: #EEEBFA;
+    --secondary: #F1EFF8;
     --secondary-foreground: #15131F;
-    --muted: #F0EEF8;
-    --muted-foreground: #5F5B73;
-    --accent: #ECE8FB;
+    --muted: #F2F1F6;
+    --muted-foreground: #615F78;
+    --accent: #EEEBF8;
     --accent-foreground: #15131F;
     --destructive: #C11414;
-    --border: #E4E1F0;
-    --input: #DAD6EA;
-    --ring: #6D28D9;
-    --chip: #EDE7FE;
-    --brand: #6D28D9;
-    --chip-foreground: #6D28D9;
-    --chart-1: #7C3AED;
+    --border: #E6E5EE;
+    --input: #DCDBE6;
+    --ring: #16142E;
+    --chip: #EEE9FF;
+    --brand: #2A2556;
+    --chip-foreground: #16142E;
+    --chart-1: #2A2556;
     --chart-2: #12A65A;
     --chart-3: #8C88A0;
     --chart-4: #15131F;
     --chart-5: #DEA511;
     --radius: 0.875rem;
-    --sidebar: #FBFAFF;
-    --sidebar-foreground: #15131F;
-    --sidebar-primary: #6D28D9;
+    --sidebar: #FFFFFF;
+    --sidebar-foreground: #16142E;
+    --sidebar-primary: #16142E;
     --sidebar-primary-foreground: #FFFFFF;
-    --sidebar-accent: #ECE8FB;
-    --sidebar-accent-foreground: #15131F;
-    --sidebar-border: #E4E1F0;
-    --sidebar-ring: #6D28D9;
+    --sidebar-accent: #F1EFF8;
+    --sidebar-accent-foreground: #16142E;
+    --sidebar-border: #E6E5EE;
+    --sidebar-ring: #16142E;
 }
 
 .dark {
@@ -109,8 +108,8 @@
     --card-foreground: #FFFFFF;
     --popover: #2A2A3D;
     --popover-foreground: #FFFFFF;
-    --primary: #8B5CF6;
-    --primary-foreground: #FFFFFF;
+    --primary: #D9CCFF;
+    --primary-foreground: #16142E;
     --secondary: #2D2D40;
     --secondary-foreground: #FFFFFF;
     --muted: #2D2D40;
@@ -120,23 +119,23 @@
     --destructive: #FF6565;
     --border: rgb(255 255 255 / 0.10);
     --input: rgb(255 255 255 / 0.12);
-    --ring: #A78BFA;
+    --ring: #D9CCFF;
     --chip: rgb(255 255 255 / 0.10);
-    --brand: #C4B5FD;
+    --brand: #D9CCFF;
     --chip-foreground: #FFFFFF;
-    --chart-1: #8B5CF6;
+    --chart-1: #D9CCFF;
     --chart-2: #28BF72;
     --chart-3: #A1A3B8;
     --chart-4: #E8E6F5;
     --chart-5: #F1BF1E;
     --sidebar: #1E1E2C;
     --sidebar-foreground: #FFFFFF;
-    --sidebar-primary: #8B5CF6;
-    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-primary: #D9CCFF;
+    --sidebar-primary-foreground: #16142E;
     --sidebar-accent: #2D2D40;
     --sidebar-accent-foreground: #FFFFFF;
     --sidebar-border: rgb(255 255 255 / 0.06);
-    --sidebar-ring: #A78BFA;
+    --sidebar-ring: #D9CCFF;
 
     /* Pages hard-code zinc for table heads and focus rings; in dark mode
        those greys take the canvas's violet-black tint. */
@@ -146,13 +145,14 @@
     --color-zinc-950: #1A1A26;
 }
 
-/* The primary action: a violet-to-indigo pill. */
+/* The primary action: a deep navy pill (pastel lavender in dark mode). */
 @utility btn-primary {
     background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to));
     color: #FFFFFF;
     border-color: transparent;
-    box-shadow: 0 10px 24px -12px var(--brand-glow);
-    &:hover { filter: brightness(1.08); }
+    box-shadow: 0 10px 24px -14px rgb(22 20 46 / 0.55);
+    &:hover { filter: brightness(1.15); }
+    &:is(.dark *) { background-image: linear-gradient(135deg, #E4DAFF, #C9BCF7); color: #16142E; }
 }
 
 @utility icon-chip {
@@ -160,16 +160,54 @@
     color: var(--chip-foreground);
 }
 
-/* The banner: deep indigo with violet and blue light in the corners, white text. */
+/* The banner: deep navy with a faint lavender light, white text. */
 @utility hero-panel {
-    background-color: #1E1B4B;
+    background-color: #16142E;
     background-image:
-        radial-gradient(ellipse 60% 120% at 100% 0%, rgb(139 92 246 / 0.45), transparent 60%),
-        radial-gradient(ellipse 50% 100% at 0% 100%, rgb(59 130 246 / 0.25), transparent 60%),
-        linear-gradient(135deg, #25215C, #1A1744);
+        radial-gradient(ellipse 50% 110% at 100% 0%, rgb(185 168 240 / 0.22), transparent 60%),
+        radial-gradient(ellipse 45% 100% at 0% 100%, rgb(189 230 250 / 0.10), transparent 60%),
+        linear-gradient(135deg, #2A2556, #16142E);
     color: #FFFFFF;
     border: 1px solid rgb(255 255 255 / 0.06);
-    box-shadow: 0 24px 50px -24px rgb(30 27 75 / 0.6);
+    box-shadow: 0 24px 50px -24px rgb(22 20 46 / 0.55);
+}
+
+/* Soft pastel mesh tints, one per service. Dark text on light; in dark mode
+   the same hues glow faintly over the card colour. */
+@utility tint-lavender {
+    background: radial-gradient(90% 90% at 0% 0%, #D9CCFF, transparent 60%), radial-gradient(80% 80% at 100% 100%, #FBD3E6, transparent 60%), #F1ECFF;
+    color: #16142E;
+    &:is(.dark *) { background: radial-gradient(90% 90% at 0% 0%, rgb(217 204 255 / .22), transparent 60%), radial-gradient(80% 80% at 100% 100%, rgb(251 211 230 / .14), transparent 60%), var(--card); color: #fff; }
+}
+@utility tint-sky {
+    background: radial-gradient(90% 90% at 100% 0%, #BDE6FA, transparent 60%), radial-gradient(80% 80% at 0% 100%, #D3CFFF, transparent 60%), #EDF3FD;
+    color: #16142E;
+    &:is(.dark *) { background: radial-gradient(90% 90% at 100% 0%, rgb(189 230 250 / .2), transparent 60%), radial-gradient(80% 80% at 0% 100%, rgb(211 207 255 / .14), transparent 60%), var(--card); color: #fff; }
+}
+@utility tint-lime {
+    background: radial-gradient(90% 90% at 0% 100%, #EAF6B8, transparent 60%), radial-gradient(80% 80% at 100% 0%, #C2EFD9, transparent 60%), #F3F9EA;
+    color: #16142E;
+    &:is(.dark *) { background: radial-gradient(90% 90% at 0% 100%, rgb(234 246 184 / .18), transparent 60%), radial-gradient(80% 80% at 100% 0%, rgb(194 239 217 / .16), transparent 60%), var(--card); color: #fff; }
+}
+@utility tint-peach {
+    background: radial-gradient(90% 90% at 100% 100%, #FAD6BF, transparent 60%), radial-gradient(80% 80% at 0% 0%, #F7CBD2, transparent 60%), #FCF1EC;
+    color: #16142E;
+    &:is(.dark *) { background: radial-gradient(90% 90% at 100% 100%, rgb(250 214 191 / .18), transparent 60%), radial-gradient(80% 80% at 0% 0%, rgb(247 203 210 / .14), transparent 60%), var(--card); color: #fff; }
+}
+@utility tint-butter {
+    background: radial-gradient(90% 90% at 100% 0%, #FBE7B5, transparent 60%), radial-gradient(80% 80% at 0% 100%, #F8D6C8, transparent 60%), #FDF6EA;
+    color: #16142E;
+    &:is(.dark *) { background: radial-gradient(90% 90% at 100% 0%, rgb(251 231 181 / .18), transparent 60%), radial-gradient(80% 80% at 0% 100%, rgb(248 214 200 / .14), transparent 60%), var(--card); color: #fff; }
+}
+@utility tint-mint {
+    background: radial-gradient(90% 90% at 0% 0%, #C6EEE6, transparent 60%), radial-gradient(80% 80% at 100% 100%, #C9DDFB, transparent 60%), #EEF7F6;
+    color: #16142E;
+    &:is(.dark *) { background: radial-gradient(90% 90% at 0% 0%, rgb(198 238 230 / .18), transparent 60%), radial-gradient(80% 80% at 100% 100%, rgb(201 221 251 / .14), transparent 60%), var(--card); color: #fff; }
+}
+@utility tint-lilac {
+    background: radial-gradient(90% 90% at 100% 0%, #E7D3FB, transparent 60%), radial-gradient(80% 80% at 0% 100%, #CDE0FB, transparent 60%), #F3EFFC;
+    color: #16142E;
+    &:is(.dark *) { background: radial-gradient(90% 90% at 100% 0%, rgb(231 211 251 / .2), transparent 60%), radial-gradient(80% 80% at 0% 100%, rgb(205 224 251 / .14), transparent 60%), var(--card); color: #fff; }
 }
 
 /* Two faint lights behind every screen, violet and pink. */

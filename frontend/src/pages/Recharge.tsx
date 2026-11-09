@@ -561,7 +561,7 @@ const Recharge = () => {
                         <div id="receipt-content" className="p-6 flex flex-col gap-4" style={{ backgroundColor: '#ffffff', color: '#000000', fontFamily: 'sans-serif' }}>
                             {/* Receipt content styling */}
                             <div className="flex flex-col items-center gap-2 pb-4" style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                <img src={logo} alt="Shahparpay" className="w-48 h-auto max-h-24 object-contain" crossOrigin="anonymous" />
+                                <img src={logo} alt="Shahparpay" className="w-64 max-w-full h-auto object-contain" crossOrigin="anonymous" />
                                 <h2 className="text-xl font-bold mt-2" style={{ color: '#1f2937' }}>Shahparpay Pvt. Ltd.</h2>
                                 <p className="text-sm" style={{ color: '#6b7280' }}>{receiptData.status === 'PENDING' ? 'Recharge Pending' : receiptData.status === 'FAILED' ? 'Recharge Failed' : 'Recharge Successful'}</p>
                             </div>

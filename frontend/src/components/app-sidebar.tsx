@@ -129,15 +129,15 @@ const NavLink = ({ item, active }: { item: NavItem; active: boolean }) => {
     <Link
       to={item.url}
       aria-current={active ? 'page' : undefined}
-      className={`relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-[15px] transition-colors focus-visible:outline-2 focus-visible:outline-violet-500 ${
+      className={`relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-[15px] transition-colors focus-visible:outline-2 focus-visible:outline-foreground ${
         active
-          ? 'bg-black/[0.05] font-semibold text-foreground dark:bg-white/[0.08]'
+          ? 'tint-lavender font-semibold'
           : 'text-foreground/70 hover:bg-black/[0.04] hover:text-foreground dark:hover:bg-white/[0.05]'
       }`}
     >
       {/* The active page: colour, weight and a bar, so it never rests on colour alone. */}
-      {active && <span aria-hidden="true" className="absolute -left-3 top-2.5 bottom-2.5 w-[3px] rounded-r bg-violet-600 dark:bg-violet-400" />}
-      <Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${active ? 'text-violet-600 dark:text-violet-400' : ''}`} strokeWidth={1.8} />
+      {active && <span aria-hidden="true" className="absolute -left-3 top-2.5 bottom-2.5 w-[3px] rounded-r bg-foreground" />}
+      <Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${active ? 'text-foreground' : ''}`} strokeWidth={1.8} />
       <span className="truncate">{item.name}</span>
     </Link>
   );
@@ -186,7 +186,7 @@ export function AppSidebar() {
   return (
     <Sidebar className="border-r border-border">
       <SidebarHeader className="bg-card px-6 pt-6 pb-4">
-        <Link to={groups[0]?.items[0]?.url || '/'} className="mx-auto block w-fit rounded-lg focus-visible:outline-2 focus-visible:outline-violet-500" aria-label="Shahparpay home">
+        <Link to={groups[0]?.items[0]?.url || '/'} className="mx-auto block w-fit rounded-lg focus-visible:outline-2 focus-visible:outline-foreground" aria-label="Shahparpay home">
           <img src={logo} alt="Shahparpay" className="mx-auto h-auto w-[200px] max-w-full object-contain dark:brightness-0 dark:invert dark:opacity-90" />
         </Link>
       </SidebarHeader>

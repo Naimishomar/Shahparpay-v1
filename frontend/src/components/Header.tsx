@@ -27,11 +27,11 @@ const greeting = () => {
 
 // Full class strings: Tailwind only ships classes it can find literally.
 const TONES = {
-    trade: { tile: 'bg-violet-500/10', icon: 'bg-background text-violet-600 dark:text-violet-400', cap: 'text-violet-700 dark:text-violet-400', link: 'text-violet-700 dark:text-violet-300' },
-    utility: { tile: 'bg-emerald-500/10', icon: 'bg-background text-emerald-600 dark:text-emerald-400', cap: 'text-emerald-700 dark:text-emerald-400', link: 'text-emerald-700 dark:text-emerald-300' },
+    trade: { tile: 'tint-lavender', icon: 'bg-white/70 text-[#16142E] dark:bg-white/10 dark:text-white', cap: 'text-[#16142E]/70 dark:text-white/70', link: 'text-[#16142E] dark:text-white' },
+    utility: { tile: 'tint-lime', icon: 'bg-white/70 text-[#16142E] dark:bg-white/10 dark:text-white', cap: 'text-[#16142E]/70 dark:text-white/70', link: 'text-[#16142E] dark:text-white' },
 };
 
-/** The purple line on top: AEPS login and last settlement for a retailer, support for everyone. */
+/** The navy line on top: AEPS login and last settlement for a retailer, support for everyone. */
 const StatusStrip = () => {
     const { user, token } = useAuth();
     const isRetailer = user?.role === 'retailer';
@@ -63,7 +63,7 @@ const StatusStrip = () => {
                 : null;
 
     return (
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 bg-gradient-to-r from-violet-900 to-indigo-700 px-4 py-1.5 text-xs text-violet-200 md:px-5">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 bg-gradient-to-r from-[#16142E] to-[#2A2556] px-4 py-1.5 text-xs text-white/70 md:px-5">
             {aeps && <span className="flex shrink-0 items-center gap-2 whitespace-nowrap"><i className={`h-1.5 w-1.5 rounded-full ${aeps.dot}`} />{aeps.text}</span>}
             {lastSettlement && (
                 <span className="shrink-0 whitespace-nowrap">

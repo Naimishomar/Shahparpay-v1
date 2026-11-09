@@ -16,16 +16,17 @@ const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR',
 const ymd = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-// Every service has its own gradient: the whole stat card, and the icon
+// Every service has its own soft pastel tint: the whole stat card, and the icon
 // tile wherever that service appears (quick actions, recent activity).
-const accent = (from: string, to: string) => ({ card: `bg-gradient-to-br ${from} ${to}`, tile: `bg-gradient-to-br ${from} ${to} text-white shadow-sm` });
+const accent = (tint: string) => ({ card: tint, tile: `${tint} ring-1 ring-black/5 dark:ring-white/10` });
 const ACCENTS = {
-    blue: accent('from-blue-400', 'to-indigo-400'),
-    violet: accent('from-violet-400', 'to-fuchsia-400'),
-    emerald: accent('from-emerald-400', 'to-teal-400'),
-    orange: accent('from-orange-300', 'to-rose-400'),
-    pink: accent('from-pink-300', 'to-rose-400'),
-    cyan: accent('from-cyan-400', 'to-sky-400'),
+    blue: accent('tint-sky'),
+    violet: accent('tint-lavender'),
+    emerald: accent('tint-lime'),
+    orange: accent('tint-peach'),
+    pink: accent('tint-butter'),
+    cyan: accent('tint-mint'),
+    lilac: accent('tint-lilac'),
 } as const;
 
 const QUICK_ACTIONS = [
@@ -120,7 +121,7 @@ const VolumeChart = ({ points, start, end }: { points: number[]; start: Date; en
                     <>
                         <div className="pointer-events-none absolute inset-y-0 w-px bg-white/50" style={{ left: pct(hover) }} />
                         <div
-                            className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-fuchsia-500 shadow"
+                            className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#D9CCFF] shadow"
                             style={{ left: pct(hover), top: `${(py(points[hover]) / H) * 100}%` }}
                         />
                         <div
@@ -345,7 +346,7 @@ const Dashboard = () => {
                     [
                         service('Total Success BBPS', 'BILL_PAYMENT', Receipt, 'pink'),
                         service('Total Success UPI', 'WALLET_TOPUP', Wallet, 'cyan'),
-                        plain('Total Earnings', inr.format(Number(stats?.TotalCommission) || 0), 'Credited to wallet, after TDS', IndianRupee, 'violet'),
+                        plain('Total Earnings', inr.format(Number(stats?.TotalCommission) || 0), 'Credited to wallet, after TDS', IndianRupee, 'lilac'),
                         plain('Total Commission', inr.format(Number(stats?.TotalGrossCommission) || 0), 'Gross, before TDS', IndianRupee, 'blue'),
                     ],
                 ];
@@ -355,26 +356,25 @@ const Dashboard = () => {
                             const a = ACCENTS[card.accent];
                             const Icon = card.icon;
                             return (
-                                <div key={card.title} className={`relative overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-transform duration-300 hover:-translate-y-0.5 ${a.card}`}>
-                                    <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/10" />
+                                <div key={card.title} className={`relative overflow-hidden rounded-2xl border border-white/70 p-5 shadow-sm transition-transform duration-300 hover:-translate-y-0.5 dark:border-white/10 ${a.card}`}>
                                     <div className="relative flex items-center justify-between gap-3">
-                                        <span className="text-sm font-medium text-white/85">{card.title}</span>
-                                        <div className="rounded-full bg-white/20 p-2.5">
+                                        <span className="text-sm font-semibold">{card.title}</span>
+                                        <div className="rounded-xl border border-white/90 bg-white/65 p-2.5 dark:border-white/10 dark:bg-white/10">
                                             <Icon className="h-5 w-5" />
                                         </div>
                                     </div>
-                                    {loading ? <Skeleton className="relative mt-3 h-8 w-36 bg-white/25" /> : (
+                                    {loading ? <Skeleton className="relative mt-3 h-8 w-36" /> : (
                                         <p className="relative mt-3 text-2xl font-bold tracking-tight tabular-nums">{card.value}</p>
                                     )}
                                     {'share' in card ? (
                                         <div className="relative mt-4">
-                                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/25">
-                                                <div className="h-full rounded-full bg-white transition-[width] duration-700" style={{ width: `${loading ? 0 : card.share}%` }} />
+                                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/15">
+                                                <div className="h-full rounded-full bg-[#16142E] transition-[width] duration-700 dark:bg-white" style={{ width: `${loading ? 0 : card.share}%` }} />
                                             </div>
-                                            <p className="mt-1.5 text-xs text-white/80">{loading ? '\u00a0' : `${card.share}% of total volume`}</p>
+                                            <p className="mt-1.5 text-xs opacity-70">{loading ? '\u00a0' : `${card.share}% of total volume`}</p>
                                         </div>
                                     ) : (
-                                        <p className="relative mt-4 text-xs text-white/80">{card.hint}</p>
+                                        <p className="relative mt-4 text-xs opacity-70">{card.hint}</p>
                                     )}
                                 </div>
                             );
