@@ -18,6 +18,7 @@ import {
   fetchProviderBeneficiaries,
   addBeneficiary,
   sendBeneficiaryOtp,
+  sendBeneficiaryDeleteOtp,
   verifyBeneficiary,
   deleteBeneficiary,
 } from './dmt.controller.js';
@@ -117,6 +118,7 @@ export const addSettlementBank = async (req, res) => {
 };
 
 export const sendSettlementBankOtp = sendBeneficiaryOtp;
+export const sendSettlementBankDeleteOtp = sendBeneficiaryDeleteOtp;
 export const verifySettlementBank = verifyBeneficiary;
 
 /** Deletes one of this retailer's own payout beneficiaries; the provider wants the OTP from /bank-otp. */

@@ -287,9 +287,14 @@ export const sendBeneficiaryDeleteOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Beneficiary id is required' });
     }
 
-    const data = await icchhamatiPost('/api/v2/beneficiaries/get-beneficiary-otp', {
+    let data = await icchhamatiPost('/api/v2/beneficiaries/get-beneficiary-otp', {
       beneficiary_id: String(id),
     });
+    // The beneficiary OTP is refused once a beneficiary is active ("already verified or
+    // active"); deleting an active one takes the provider's generic send-otp instead.
+    if (!isOk(data) && /already verified|active/i.test(String(data?.message || ''))) {
+      data = await icchhamatiPost('/api/v2/beneficiaries/send-otp', {});
+    }
     if (!isOk(data)) {
       return res
         .status(400)

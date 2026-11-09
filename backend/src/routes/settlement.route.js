@@ -5,6 +5,7 @@ import {
   syncSavedBanks,
   addSettlementBank,
   sendSettlementBankOtp,
+  sendSettlementBankDeleteOtp,
   verifySettlementBank,
   deleteSettlementBank,
   getSettlementAccountStatus,
@@ -24,6 +25,7 @@ router.get('/saved-banks', getSavedBanks);
 router.get('/sync-banks', syncSavedBanks);
 router.post('/add-bank', addSettlementBank);
 router.post('/bank-otp', sendSettlementBankOtp);
+router.post('/bank-delete-otp', sendSettlementBankDeleteOtp);
 router.post('/bank-verify', verifySettlementBank);
 router.delete('/bank/:id', deleteSettlementBank);
 router.get('/account-status/:id', getSettlementAccountStatus);

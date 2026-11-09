@@ -671,8 +671,8 @@ const DeleteSettlementBank = ({ bank, headers, onClose, onDeleted }: { bank: any
     const sendOtp = async () => {
         setBusy(true);
         try {
-            const res = await axios.post(`${api}/bank-otp`, { beneficiary_id: bank._id }, headers);
-            toast.success(res.data.message || 'OTP sent to your registered mobile');
+            const res = await axios.post(`${api}/bank-delete-otp`, { beneficiary_id: bank._id }, headers);
+            toast.success(res.data.message || 'OTP sent');
             setOtpSent(true);
         } catch (err) { fail(err, 'Could not send the OTP'); }
         setBusy(false);
@@ -702,7 +702,7 @@ const DeleteSettlementBank = ({ bank, headers, onClose, onDeleted }: { bank: any
                 {otpSent ? (
                     <form onSubmit={remove} className="flex flex-col gap-4">
                         <label className="flex flex-col gap-1.5 text-sm font-medium">
-                            OTP sent to your registered mobile
+                            Enter the OTP
                             <input required inputMode="numeric" autoComplete="one-time-code" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} className={INPUT} />
                         </label>
                         <button type="submit" disabled={busy} className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50">{busy ? 'Deleting...' : 'Delete Account'}</button>
