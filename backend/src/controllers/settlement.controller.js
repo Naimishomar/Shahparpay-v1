@@ -19,6 +19,7 @@ import {
   addBeneficiary,
   sendBeneficiaryOtp,
   verifyBeneficiary,
+  deleteBeneficiary,
 } from './dmt.controller.js';
 
 // Accepted and held: shown as submitted, and as Pending in history until the
@@ -83,11 +84,6 @@ const settlementBanks = async (req) => {
   return { mobile, banks };
 };
 
-const DMT_ONLY = (mobile) =>
-  `Settlement accounts are the payout beneficiaries of your registered mobile${
-    mobile ? ` (******${mobile.slice(-4)})` : ''
-  }. Contact support to remove it.`;
-
 export const getSavedBanks = async (req, res) => {
   try {
     const { banks, error } = await settlementBanks(req);
@@ -123,8 +119,22 @@ export const addSettlementBank = async (req, res) => {
 export const sendSettlementBankOtp = sendBeneficiaryOtp;
 export const verifySettlementBank = verifyBeneficiary;
 
-export const deleteSettlementBank = async (req, res) =>
-  res.status(400).json({ success: false, message: DMT_ONLY(await registeredMobile(req).catch(() => null)) });
+/** Deletes one of this retailer's own payout beneficiaries; the provider wants the OTP from /bank-otp. */
+export const deleteSettlementBank = async (req, res) => {
+  try {
+    const { banks, error } = await settlementBanks(req);
+    if (error) return res.status(error.status).json({ success: false, message: error.message });
+    if (!banks.some((b) => b._id === String(req.params.id))) {
+      return res.status(404).json({ success: false, message: 'This account is not one of your settlement banks.' });
+    }
+    if (!req.body?.otp) return res.status(400).json({ success: false, message: 'OTP is required' });
+    req.body = { beneficiary_id: req.params.id, otp: req.body.otp };
+    return deleteBeneficiary(req, res);
+  } catch (error) {
+    console.error('Delete settlement bank error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
 
 export const uploadSettlementDocument = async (req, res) =>
   res.status(400).json({ success: false, message: 'No document is needed: DMT beneficiaries are verified by OTP.' });

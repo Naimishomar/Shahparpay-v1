@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Plus, Building2, Clock, RefreshCw, SearchCheck, Landmark, Phone, KeyRound, IndianRupee, ShieldCheck, CheckCircle2, XCircle, Download, X } from 'lucide-react';
+import { Send, Plus, Building2, Clock, RefreshCw, SearchCheck, Landmark, Phone, KeyRound, IndianRupee, ShieldCheck, CheckCircle2, XCircle, Download, X, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import html2canvas from 'html2canvas-pro';
 import { useAuth } from '../context/AuthContext';
@@ -34,6 +34,7 @@ const AepsSettlement = () => {
     const [mode, setMode] = useState('IMPS');
     const [receipt, setReceipt] = useState<SettlementReceiptData | null>(null);
     const [addingBank, setAddingBank] = useState(false);
+    const [deletingBank, setDeletingBank] = useState<any>(null);
 
     const getHeaders = () => ({ headers: { 'Authorization': `Bearer ${token}` } });
 
@@ -282,6 +283,17 @@ const AepsSettlement = () => {
                                         )}
                                     </select>
                                 </div>
+                                {selectedBank && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setDeletingBank(selectedBank)}
+                                        title="Delete this bank account"
+                                        aria-label="Delete this bank account"
+                                        className="rounded-xl border bg-background px-3 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -474,6 +486,14 @@ const AepsSettlement = () => {
                     onAdded={() => { setAddingBank(false); fetchSavedBanks(); }}
                 />
             )}
+            {deletingBank && (
+                <DeleteSettlementBank
+                    bank={deletingBank}
+                    headers={getHeaders()}
+                    onClose={() => setDeletingBank(null)}
+                    onDeleted={() => { setDeletingBank(null); fetchSavedBanks(); }}
+                />
+            )}
         </div>
     );
 };
@@ -633,6 +653,63 @@ const AddSettlementBank = ({ headers, onClose, onAdded }: { headers: object; onC
                         <p className="text-xs text-muted-foreground">A ₹4 account verification charge is debited from your Utility Wallet.</p>
                         <button type="submit" disabled={busy} className={`rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50 ${ACTIVE_BUTTON}`}>{busy ? 'Adding...' : 'Add Bank'}</button>
                     </form>
+                )}
+            </div>
+        </div>
+    );
+};
+
+/** Sends an OTP to the registered mobile, then deletes the payout beneficiary with it. */
+const DeleteSettlementBank = ({ bank, headers, onClose, onDeleted }: { bank: any; headers: object; onClose: () => void; onDeleted: () => void }) => {
+    const api = `${import.meta.env.VITE_BACKEND_URL}/api/settlement`;
+    const [otpSent, setOtpSent] = useState(false);
+    const [otp, setOtp] = useState('');
+    const [busy, setBusy] = useState(false);
+    const fail = (e: unknown, fallback: string) =>
+        toast.error((e as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback);
+
+    const sendOtp = async () => {
+        setBusy(true);
+        try {
+            const res = await axios.post(`${api}/bank-otp`, { beneficiary_id: bank._id }, headers);
+            toast.success(res.data.message || 'OTP sent to your registered mobile');
+            setOtpSent(true);
+        } catch (err) { fail(err, 'Could not send the OTP'); }
+        setBusy(false);
+    };
+
+    const remove = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setBusy(true);
+        try {
+            const res = await axios.delete(`${api}/bank/${encodeURIComponent(bank._id)}`, { ...headers, data: { otp } });
+            toast.success(res.data.message || 'Bank account deleted');
+            return onDeleted();
+        } catch (err) { fail(err, 'Could not delete this bank account'); }
+        setBusy(false);
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+            <div className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Delete Bank Account</h2>
+                    <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1 hover:bg-muted"><X className="h-5 w-5" /></button>
+                </div>
+                <p className="mb-4 text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground">{bank.accountHolderName || 'Account'}</span> · {bank.bankName} · •••• {String(bank.accountNumber || '').slice(-4)}
+                </p>
+                {otpSent ? (
+                    <form onSubmit={remove} className="flex flex-col gap-4">
+                        <label className="flex flex-col gap-1.5 text-sm font-medium">
+                            OTP sent to your registered mobile
+                            <input required inputMode="numeric" autoComplete="one-time-code" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} className={INPUT} />
+                        </label>
+                        <button type="submit" disabled={busy} className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50">{busy ? 'Deleting...' : 'Delete Account'}</button>
+                        <button type="button" disabled={busy} onClick={sendOtp} className="text-sm font-medium text-muted-foreground hover:text-foreground">Resend OTP</button>
+                    </form>
+                ) : (
+                    <button type="button" disabled={busy} onClick={sendOtp} className="w-full rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50">{busy ? 'Sending...' : 'Send OTP to delete'}</button>
                 )}
             </div>
         </div>

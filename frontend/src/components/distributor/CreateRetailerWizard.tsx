@@ -133,7 +133,8 @@ const CreateRetailerWizard = ({
             body.append('image', file);
             const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/aadhaar-address`, { method: 'POST', body });
             const json = await res.json().catch(() => ({}));
-            if (!json.success) return setQrState({ error: json.message || 'Could not read the QR. Type the address instead.' });
+            // A failed read never blocks signup: the address is typed in by hand instead.
+            if (!json.success) return setQrState({ error: 'Could not read the QR. No problem: type the shop address below.' });
             const a = json.data || {};
             const filled = Object.fromEntries(
                 Object.entries({ businessAddress: a.businessAddress, city: a.city, district: a.district, state: knownState(a.state || ''), landmark: a.landmark })
@@ -142,7 +143,7 @@ const CreateRetailerWizard = ({
             setFormData({ ...latestForm.current, ...filled });
             setQrState({ ok: 'Address filled from the Aadhaar QR. Check it before continuing.' });
         } catch {
-            setQrState({ error: 'Could not reach the server. Type the address instead.' });
+            setQrState({ error: 'Could not read the QR. No problem: type the shop address below.' });
         }
     };
 
@@ -350,7 +351,7 @@ const CreateRetailerWizard = ({
                             <FilePicker label="Aadhaar photo" required={isRetailer} file={aadhaarPicture} onChange={setAadhaarPicture} error={err('aadhaarPicture')} />
                             <FilePicker label="PAN photo" required={isRetailer} file={panPicture} onChange={setPanPicture} error={err('panPicture')} />
                             <div className="space-y-1.5">
-                                <FilePicker label="Aadhaar back photo" file={aadhaarBack} onChange={readAadhaarBack} />
+                                <FilePicker label="Aadhaar back photo (optional)" file={aadhaarBack} onChange={readAadhaarBack} />
                                 {/* Blocks the form while the QR is read: anything typed meanwhile would be overwritten by the fill. */}
                                 {qrState.reading && (
                                     <div role="alertdialog" aria-modal="true" aria-live="polite" aria-label="Reading your Aadhaar QR" className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -361,9 +362,9 @@ const CreateRetailerWizard = ({
                                         </div>
                                     </div>
                                 )}
-                                <p className={`text-xs ${qrState.error ? 'text-red-600 dark:text-red-400' : qrState.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                                <p className={`text-xs ${qrState.error ? 'text-amber-600 dark:text-amber-400' : qrState.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
                                     {qrState.reading ? <span className="inline-flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Reading the QR…</span>
-                                        : qrState.error || qrState.ok || 'Optional. The side with the QR code; the shop address is filled from it.'}
+                                        : qrState.error || qrState.ok || 'Optional. Upload the side with the QR to fill the address, or type it below.'}
                                 </p>
                             </div>
 
