@@ -6,6 +6,10 @@ import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import logo from '../assets/logo.png';
 
+// Payout charge from the retailer rate card; the backend debits the same (getSettlementFee).
+const SETTLEMENT_BASE_CHARGE = 5;
+const SETTLEMENT_GST_RATE = 18;
+const SETTLEMENT_FEE = Math.round(SETTLEMENT_BASE_CHARGE * (1 + SETTLEMENT_GST_RATE / 100) * 100) / 100;
 // Icchhamati refuses payouts of ₹500 or less.
 const SETTLEMENT_MIN = 501;
 const SETTLEMENT_MAX = 25000;
@@ -127,6 +131,7 @@ const AepsSettlement = () => {
                 transactionId,
                 utr: body?.data?.response?.rrn || body?.data?.response?.utr || '',
                 amount: amt,
+                fee: SETTLEMENT_FEE,
                 mode,
                 bankName: bank?.bankName || '',
                 accountNumber: String(bank?.accountNumber || ''),
@@ -370,12 +375,16 @@ const AepsSettlement = () => {
                             <span className="font-semibold tabular-nums">₹{amountValid ? amt.toFixed(2) : '0.00'}</span>
                         </div>
                         <div className="flex justify-between gap-3">
+                            <span className="text-muted-foreground">Charge (₹{SETTLEMENT_BASE_CHARGE} + {SETTLEMENT_GST_RATE}% GST)</span>
+                            <span className="font-semibold tabular-nums">₹{SETTLEMENT_FEE.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between gap-3">
                             <span className="text-muted-foreground">Mode</span>
                             <span className="font-semibold">{mode}</span>
                         </div>
                         <div className="flex items-end justify-between gap-3 border-t pt-3">
                             <span className="text-muted-foreground">Total deduction from Trade Wallet</span>
-                            <span className="text-2xl font-bold tracking-tight tabular-nums">₹{amountValid ? amt.toFixed(2) : '0.00'}</span>
+                            <span className="text-2xl font-bold tracking-tight tabular-nums">₹{amountValid ? (amt + SETTLEMENT_FEE).toFixed(2) : '0.00'}</span>
                         </div>
                     </div>
 
@@ -496,6 +505,7 @@ type SettlementReceiptData = {
     transactionId: string;
     utr: string;
     amount: number;
+    fee: number;
     mode: string;
     bankName: string;
     accountNumber: string;
@@ -514,7 +524,8 @@ const SettlementReceipt = ({ receipt, onClose }: { receipt: SettlementReceiptDat
     const rows = ([
         ['Type', 'Trade Wallet Settlement'],
         ['Amount', inr(receipt.amount)],
-        ['Total debited', status === 'FAILED' ? `${inr(0)} (refunded)` : inr(receipt.amount)],
+        ['Charges (incl. GST)', inr(receipt.fee)],
+        ['Total debited', status === 'FAILED' ? `${inr(0)} (refunded)` : inr(receipt.amount + receipt.fee)],
         ['Mode', receipt.mode],
         ['Account holder', receipt.accountHolderName],
         ['Bank', receipt.bankName],

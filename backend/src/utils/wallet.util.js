@@ -15,7 +15,9 @@ const formatAmount = (amount) => {
 };
 
 /*
- * Commission rate card — "Proposal all service Final 6-10-2026".
+ * Commission rate card — retailer rates from "Retailer Service Commission Structure"
+ * (Shahparpay, Nov 2026); distributor rates from "Proposal all service Final 6-10-2026".
+ * No onboarding (retailer ID) fee is charged.
  *
  * Every service pays three parties:
  *   merchant (retailer)   — the MARCHENT column
@@ -28,39 +30,42 @@ const formatAmount = (amount) => {
  * AEPS cash-withdrawal retailer commission.
  *   below ₹300     → ₹0
  *   ₹300–₹2,999    → 0.30%
- *   ₹3,000–₹10,000 → flat ₹12
+ *   ₹3,000–₹7,999  → flat ₹11
+ *   ₹8,000–₹10,000 → flat ₹12
  */
 export const getAepsWithdrawalCommission = (amount) => {
   const amt = Number(amount) || 0;
   if (amt < 300) return 0;
   if (amt < 3000) return formatAmount(amt * 0.003);
+  if (amt < 8000) return 11;
   return 12;
 };
 
 /**
  * AEPS cash-deposit retailer commission.
- *   below ₹500     → ₹0
- *   ₹500–₹2,999    → flat ₹2
- *   ₹3,000–₹10,000 → flat ₹5
+ *   below ₹300     → ₹0
+ *   ₹300–₹2,999    → 0.20%
+ *   ₹3,000–₹10,000 → flat ₹8
  */
 export const getAepsDepositCommission = (amount) => {
   const amt = Number(amount) || 0;
-  if (amt < 500) return 0;
-  if (amt < 3000) return 2;
-  return 5;
+  if (amt < 300) return 0;
+  if (amt < 3000) return formatAmount(amt * 0.002);
+  return 8;
 };
 
 /**
  * Micro ATM cash-withdrawal retailer commission.
- *   below ₹500     → ₹0
- *   ₹500–₹2,999    → 0.30%
- *   ₹3,000–₹10,000 → flat ₹11
+ *   below ₹300     → ₹0
+ *   ₹300–₹2,999    → 0.30%
+ *   ₹3,000–₹10,000 → flat ₹9 (the card prints "9.00%"; read as ₹9 flat, since 9%
+ *                    of ₹10,000 is ₹900 against the provider's ₹13.50)
  */
 export const getMatmCommission = (amount) => {
   const amt = Number(amount) || 0;
-  if (amt < 500) return 0;
+  if (amt < 300) return 0;
   if (amt < 3000) return formatAmount(amt * 0.003);
-  return 11;
+  return 9;
 };
 
 /**
@@ -91,9 +96,9 @@ export const getRechargeCommissionRate = (operator, mode) => {
 
   if (type === 'dth') {
     if (has('airtel')) return 3;
-    if (has('videocon', 'd2h')) return 3;
+    if (has('videocon', 'd2h')) return 2.5;
     if (has('dish')) return 3;
-    if (has('tatasky', 'tataplay', 'tata')) return 2;
+    if (has('tatasky', 'tataplay', 'tata')) return 2.5;
     if (has('sundirect', 'sun')) return 3;
     return 0;
   }
@@ -101,7 +106,7 @@ export const getRechargeCommissionRate = (operator, mode) => {
   if (has('airtel')) return 1;
   if (has('jio')) return 0.5;
   if (has('vodafone', 'idea', 'vi')) return 2;
-  if (has('bsnl')) return 3;
+  if (has('bsnl')) return 2;
   // Not on the rate card; keeps its previous rate.
   if (has('mtnl')) return 4;
   return 0;
@@ -152,7 +157,7 @@ export const getBbpsCharge = (service) =>
  */
 export const getDmtCharge = (amount) => {
   const amt = Number(amount) || 0;
-  const fee = amt <= 1000 ? 5 : amt <= 2000 ? 6 : amt <= 3000 ? 7 : amt <= 4000 ? 8 : 8.5;
+  const fee = amt <= 2000 ? 6 : amt <= 3000 ? 7 : amt <= 4000 ? 8 : 9;
   const gst = formatAmount(fee * 0.18);
   return { fee, gst, total: formatAmount(fee + gst) };
 };

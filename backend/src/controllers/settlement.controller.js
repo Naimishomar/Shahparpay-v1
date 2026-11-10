@@ -171,11 +171,10 @@ export const getSettlementAccountStatus = async (req, res) => {
   }
 };
 
-// Settlements go out as Icchhamati payouts, which carry no charge, so neither does
-// the settlement by default. A fee can still be set with AEPS_SETTLEMENT_BASE_CHARGE
-// (plus AEPS_SETTLEMENT_GST_RATE on it).
-const getSettlementFee = () => {
-  const baseCharge = Number(process.env.AEPS_SETTLEMENT_BASE_CHARGE || 0);
+// Payout (move to bank) charge from the retailer rate card: ₹5 + 18% GST = ₹5.90.
+// Configurable with AEPS_SETTLEMENT_BASE_CHARGE and AEPS_SETTLEMENT_GST_RATE.
+export const getSettlementFee = () => {
+  const baseCharge = Number(process.env.AEPS_SETTLEMENT_BASE_CHARGE ?? 5);
   const gstRate = Number(process.env.AEPS_SETTLEMENT_GST_RATE || 18) / 100;
   const gstAmount = Math.round(baseCharge * gstRate * 100) / 100;
   return {
@@ -231,7 +230,7 @@ export const initiateSettlement = async (req, res) => {
     const pinError = await checkWalletPin(aepsWallet, pin);
     if (pinError) return res.status(pinError.status).json({ success: false, message: pinError.message });
 
-    // ₹0 unless AEPS_SETTLEMENT_BASE_CHARGE is set (see getSettlementFee).
+    // ₹5 + 18% GST by default (see getSettlementFee).
     const { baseCharge, gstAmount, total: fee } = getSettlementFee();
     const totalDeduction = Number(amount) + fee;
 

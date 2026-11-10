@@ -10,6 +10,7 @@ import {
   PAN_RATES,
   LEAD_RATES,
 } from '../utils/wallet.util.js';
+import { getSettlementFee } from './settlement.controller.js';
 
 /**
  * The published commission rates.
@@ -25,18 +26,19 @@ import {
 const AEPS_WITHDRAWAL_SLABS = [
   { label: 'Below ₹300', sample: 200 },
   { label: '₹300 – ₹2,999', sample: 2000 },
-  { label: '₹3,000 – ₹10,000', sample: 5000 },
+  { label: '₹3,000 – ₹7,999', sample: 5000 },
+  { label: '₹8,000 – ₹10,000', sample: 10000 },
 ];
 
 const AEPS_DEPOSIT_SLABS = [
-  { label: 'Below ₹500', sample: 300 },
-  { label: '₹500 – ₹2,999', sample: 2000 },
+  { label: 'Below ₹300', sample: 200 },
+  { label: '₹300 – ₹2,999', sample: 2000 },
   { label: '₹3,000 – ₹10,000', sample: 5000 },
 ];
 
 const MATM_SLABS = [
-  { label: 'Below ₹500', sample: 300 },
-  { label: '₹500 – ₹2,999', sample: 2000 },
+  { label: 'Below ₹300', sample: 200 },
+  { label: '₹300 – ₹2,999', sample: 2000 },
   { label: '₹3,000 – ₹10,000', sample: 5000 },
 ];
 
@@ -107,6 +109,7 @@ export const getPublicCommissionRates = async (req, res) => {
         plusGst: true,
       })),
       { name: 'Credit card bill payment', fee: getBbpsCharge('creditcard'), plusGst: false },
+      { name: 'Payout (move to bank)', fee: getSettlementFee().baseCharge, plusGst: true },
     ];
 
     // Sorted rather than hand-ordered: a rate change in wallet.util.js would

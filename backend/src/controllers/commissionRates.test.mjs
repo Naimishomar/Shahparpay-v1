@@ -61,7 +61,7 @@ for (const slab of data.matm) {
 // The no-commission floors must stay visible rather than quietly disappear: a
 // retailer who does not know about them reads every small withdrawal as a loss.
 assert.strictEqual(data.aeps.withdrawal[0].earns, 0, 'the sub-₹300 floor must be shown as ₹0');
-assert.strictEqual(data.aeps.deposit[0].earns, 0, 'the sub-₹500 floor must be shown as ₹0');
+assert.strictEqual(data.aeps.deposit[0].earns, 0, 'the sub-₹300 floor must be shown as ₹0');
 
 // TDS is netted off AEPS commission before it reaches the wallet, so the page
 // has to carry the rate or the advertised figure overstates the earnings.
@@ -102,7 +102,7 @@ assert.strictEqual(electricity.value, rule.value);
 
 // ---------------------------------------------------------------- charges
 // DMT is a charge the retailer pays, not a commission, and must say so.
-assert.strictEqual(data.charges.find((c) => c.name.includes('₹100 – ₹1,000')).fee, 5);
+assert.strictEqual(data.charges.find((c) => c.name.includes('₹100 – ₹1,000')).fee, 6);
 assert.ok(
   !data.bbps.some((b) => b.name === 'Credit card bill'),
   'a charge must not be listed as earnings'
