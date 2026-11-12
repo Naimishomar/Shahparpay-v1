@@ -28,6 +28,16 @@ module.exports = function withPaysprintMatm(config) {
       const libs = path.join(cfg.modRequest.platformProjectRoot, 'app', 'libs');
       fs.mkdirSync(libs, { recursive: true });
       AARS.forEach((f) => fs.copyFileSync(path.join(LIB_DIR, f), path.join(libs, f)));
+      // finosdk's manifest brings xml/network_security_config with cleartext
+      // allowed for every host, which beats usesCleartextTraffic. Every SDK
+      // endpoint is https, so release builds shadow it with an HTTPS-only one;
+      // debug keeps finosdk's so the dev build still reaches Metro over http.
+      const xml = path.join(cfg.modRequest.platformProjectRoot, 'app', 'src', 'release', 'res', 'xml');
+      fs.mkdirSync(xml, { recursive: true });
+      fs.writeFileSync(
+        path.join(xml, 'network_security_config.xml'),
+        '<?xml version="1.0" encoding="utf-8"?>\n<network-security-config>\n    <base-config cleartextTrafficPermitted="false">\n        <trust-anchors>\n            <certificates src="system" />\n        </trust-anchors>\n    </base-config>\n</network-security-config>\n'
+      );
       return cfg;
     },
   ]);

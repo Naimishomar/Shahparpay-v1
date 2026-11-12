@@ -32,7 +32,7 @@ export const pickImage = async (
   if (!permission.granted) return null;
 
   const options: ImagePicker.ImagePickerOptions = {
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    mediaTypes: ["images"],
     quality: 0.7,
     allowsEditing: source === 'library',
   };
@@ -54,7 +54,7 @@ export const recordVideo = async (fallbackName = 'video-kyc'): Promise<PickedFil
   const permission = await ImagePicker.requestCameraPermissionsAsync();
   if (!permission.granted) return null;
   const result = await ImagePicker.launchCameraAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+    mediaTypes: ["videos"],
     videoMaxDuration: 30,
     videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium,
   });
@@ -65,7 +65,7 @@ export const recordVideo = async (fallbackName = 'video-kyc'): Promise<PickedFil
 export const pickVideo = async (fallbackName = 'video-kyc'): Promise<PickedFile | null> => {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) return null;
-  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Videos });
+  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["videos"] });
   return videoFile(result, fallbackName);
 };
 
