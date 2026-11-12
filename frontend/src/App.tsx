@@ -62,6 +62,7 @@ const Terms = page(() => import("./pages/Terms"))
 const AepsPermission = page(() => import("./pages/AepsPermission"))
 const AepsTerms = page(() => import("./pages/AepsTerms"))
 const RefundPolicy = page(() => import("./pages/RefundPolicy"))
+const PrivacyPolicy = page(() => import("./pages/PrivacyPolicy"))
 const RetailerTerms = page(() => import("./pages/RetailerTerms"))
 const Profile = page(() => import("./pages/Profile"))
 const IcchhamatiMATM = page(() => import("./pages/IcchhamatiMATM"))
@@ -130,7 +131,7 @@ function App() {
       <Route path="/aeps-terms" element={<AepsTerms />} />
       <Route path="/aeps-permission" element={<AepsPermission />} />
       <Route path="/refund-policy" element={<RefundPolicy />} />
-      <Route path="/privacy-policy" element={<Terms defaultTab="grievance" />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       <Route element={<Layout/>}>
         {/* Retailer Dashboard */}
         <Route path="/dashboard" element={<Dashboard/>}/>
