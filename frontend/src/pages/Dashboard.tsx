@@ -33,7 +33,7 @@ const QUICK_ACTIONS = [
     { title: 'AEPS Services', hint: 'Cash withdrawal & inquiry', url: '/aeps', service: 'aeps' as const, icon: Fingerprint, accent: 'emerald' },
     { title: 'Lead Generation', hint: 'Credit cards & loans', url: '/lead-generation', service: 'lead' as const, icon: Users, accent: 'violet' },
     { title: 'PAN Card', hint: 'Apply NSDL PAN', url: '/pan', service: 'pan' as const, icon: CreditCard, accent: 'orange' },
-    { title: 'ITR Filing', hint: 'Income tax return', url: '/itr', service: 'itr' as const, icon: FileText, accent: 'blue' },
+    { title: 'TaxSuite Filing', hint: 'Income tax return', url: '/itr', service: 'itr' as const, icon: FileText, accent: 'blue' },
 ] as const;
 
 const STATUS_PILL: Record<string, string> = {

@@ -131,7 +131,7 @@ export const getNarration = (tx) => {
     case 'STD_PAN_CARD':
       return `PAN Application ${m.name || ''}`.trim();
     case 'ITR':
-      return `ITR Filing ${m.name || ''}`.trim();
+      return `TaxSuite Filing ${m.name || ''}`.trim();
     case 'GST_REGISTRATION':
       return `GST Registration ${m.name || ''}`.trim();
     case 'DAILY_AUTH_CHARGE':

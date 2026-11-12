@@ -106,7 +106,7 @@ export const SERVICE_ITEMS: MenuEntry[] = [
   { name: 'Fund Request', route: 'FundRequest', icon: 'hand-coin-outline', hint: 'Top up by bank transfer or cash', group: 'Payments' },
 
   { name: 'PAN Card', route: 'PAN', icon: 'card-account-details-outline', hint: 'PSA & applications', group: 'Government' },
-  { name: 'ITR Filing', route: 'ITR', icon: 'file-document-outline', hint: 'Income tax returns', group: 'Government' },
+  { name: 'TaxSuite Filing', route: 'ITR', icon: 'file-document-outline', hint: 'Income tax returns', group: 'Government' },
   { name: 'Lead Generation', route: 'LeadGeneration', icon: 'account-plus-outline', hint: 'Loans & cards', group: 'Government' },
 
   { name: 'Support Center', route: 'Support', icon: 'headset', hint: 'Raise an issue', group: 'Account' },

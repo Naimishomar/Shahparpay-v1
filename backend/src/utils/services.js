@@ -12,7 +12,7 @@ export const SERVICES = {
   bbps: 'BBPS',
   collect: 'Collect Payments',
   pan: 'PAN Card',
-  itr: 'ITR Filing',
+  itr: 'TaxSuite Filing',
   lead: 'Lead Generation',
 };
 

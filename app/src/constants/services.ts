@@ -10,7 +10,7 @@ export const SERVICE_LABELS = {
   bbps: 'BBPS',
   collect: 'Collect Payments',
   pan: 'PAN Card',
-  itr: 'ITR Filing',
+  itr: 'TaxSuite Filing',
   lead: 'Lead Generation',
 } as const;
 
@@ -26,7 +26,7 @@ export const SERVICES = [
   { key: 'bbps', label: 'BBPS', hint: 'Utility bill payments' },
   { key: 'collect', label: 'Collect Payments', hint: 'Payment links' },
   { key: 'pan', label: 'PAN Card', hint: 'PSA & PAN applications' },
-  { key: 'itr', label: 'ITR Filing', hint: 'Income tax returns' },
+  { key: 'itr', label: 'TaxSuite Filing', hint: 'Income tax returns' },
   { key: 'lead', label: 'Lead Generation', hint: 'Loans & credit cards' },
 ] as const;
 

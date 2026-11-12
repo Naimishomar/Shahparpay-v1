@@ -177,7 +177,7 @@ const FAQ_DATA = {
     support: [
         {
             q: 'How much can I actually earn from this?',
-            a: 'You earn a commission on every transaction — AEPS withdrawals, money transfers, recharges, bill payments, PAN applications and ITR filings each carry their own rate. Your dashboard shows the exact commission on every transaction, and the full rate card is shared before you sign up.',
+            a: 'You earn a commission on every transaction — AEPS withdrawals, money transfers, recharges, bill payments, PAN applications and TaxSuite filings each carry their own rate. Your dashboard shows the exact commission on every transaction, and the full rate card is shared before you sign up.',
         },
         {
             q: 'How do I get my earnings out?',
@@ -451,7 +451,7 @@ const Landing: React.FC = () => {
 
                         {/* PAN and ITR */}
                         <article id="identity" className={`${CARD} scroll-mt-16 p-6 sm:p-8 lg:col-span-5`}>
-                            <h3 className={H3}>PAN card and ITR filing</h3>
+                            <h3 className={H3}>PAN card and TaxSuite filing</h3>
                             <p className={`${BODY} mt-3`}>
                                 Apply for a new PAN card, file a correction, or file an income tax return for a customer. Higher value work than a recharge, and nobody in the area is offering it.
                             </p>

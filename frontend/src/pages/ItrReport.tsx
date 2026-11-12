@@ -125,7 +125,7 @@ const ItrReport = () => {
 
     const handleDownloadPDF = () => {
         const doc = new jsPDF();
-        doc.text("ITR Filing Reports", 14, 15);
+        doc.text("TaxSuite Filing Reports", 14, 15);
 
         const tableColumn = ["S.No.", "App ID", "Txn ID", "Amount", "Status", "Date"];
         const tableRows: (string | number)[][] = [];
@@ -166,7 +166,7 @@ const ItrReport = () => {
                             <FileText className="w-6 h-6 text-current" />
                         </div>
                         <div>
-                            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">ITR Filing Reports</h1>
+                            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">TaxSuite Filing Reports</h1>
                             <p className="text-xs md:text-sm text-muted-foreground">View all Income Tax Return filings and transactions.</p>
                         </div>
                     </div>
@@ -291,14 +291,14 @@ const ItrReport = () => {
                                         <TableCell colSpan={9} className="h-64 text-center">
                                             <div className="flex flex-col items-center justify-center text-muted-foreground gap-2">
                                                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-                                                <span>Loading ITR filings...</span>
+                                                <span>Loading TaxSuite filings...</span>
                                             </div>
                                         </TableCell>
                                     </TableRow>
                                 ) : paginatedHistory.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={9} className="h-64 text-center text-muted-foreground">
-                                            No ITR filings found.
+                                            No TaxSuite filings found.
                                         </TableCell>
                                     </TableRow>
                                 ) : (

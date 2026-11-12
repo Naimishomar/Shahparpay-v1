@@ -10,7 +10,7 @@ const BILLS: [string, string][] = [
     ['BBPS Bill Payments', '#payouts'],
     ['FASTag Recharge', '#payouts'],
     ['PAN Card Services', '#identity'],
-    ['ITR Filing', '#identity'],
+    ['TaxSuite Filing', '#identity'],
     ['Lead Generation', '#identity'],
 ];
 const LEGAL: [string, string][] = [

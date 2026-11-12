@@ -80,7 +80,7 @@ const QUICK_ACTIONS = [
   { title: 'AEPS Services', hint: 'Cash withdrawal & inquiry', route: 'AEPS', icon: 'fingerprint' },
   { title: 'Lead Generation', hint: 'Credit cards & loans', route: 'LeadGeneration', icon: 'account-group-outline' },
   { title: 'PAN Card', hint: 'Apply NSDL PAN', route: 'PAN', icon: 'card-account-details-outline' },
-  { title: 'ITR Filing', hint: 'Income tax return', route: 'ITR', icon: 'file-document-outline' },
+  { title: 'TaxSuite Filing', hint: 'Income tax return', route: 'ITR', icon: 'file-document-outline' },
 ];
 
 const SALE_ICON: Record<string, string> = {

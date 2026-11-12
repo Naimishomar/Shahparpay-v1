@@ -35,7 +35,7 @@ const GROUPS: { title: string; items: { label: string; route: string; icon: stri
     title: 'Government',
     items: [
       { label: 'PAN card', route: 'PAN', icon: 'card-account-details-outline' },
-      { label: 'ITR filing', route: 'ITR', icon: 'file-document-outline' },
+      { label: 'TaxSuite filing', route: 'ITR', icon: 'file-document-outline' },
       { label: 'Leads', route: 'LeadGeneration', icon: 'account-plus-outline' },
     ],
   },

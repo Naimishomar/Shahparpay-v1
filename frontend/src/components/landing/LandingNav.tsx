@@ -52,7 +52,7 @@ const PRODUCT_MENU_CATEGORIES = [
         title: 'Documents and earnings',
         items: [
             { title: 'PAN Card Services', desc: 'New PAN, corrections and reprints', icon: FileText },
-            { title: 'ITR Filing', desc: 'File income tax returns for your customers', icon: FileCode },
+            { title: 'TaxSuite Filing', desc: 'File income tax returns for your customers', icon: FileCode },
             { title: 'Lead Generation', desc: 'Earn on loan and insurance referrals', icon: Building },
             { title: 'Wallet & Reports', desc: 'Every transaction and commission, itemised', icon: Layers },
         ],

@@ -142,7 +142,7 @@ export const getPublicCommissionRates = async (req, res) => {
         // Services with no published rate card yet. Listed explicitly rather
         // than silently omitted, so the page can say "on request" instead of
         // leaving a retailer to assume they earn nothing.
-        onRequest: ['ITR filing', 'Personal & business loan leads', 'UPI QR collections'],
+        onRequest: ['TaxSuite filing', 'Personal & business loan leads', 'UPI QR collections'],
       },
     });
   } catch (error) {

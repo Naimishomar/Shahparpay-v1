@@ -69,7 +69,7 @@ export const AppSplashScreen: React.FC<AppSplashScreenProps> = ({ onFinish }) =>
     { title: 'Recharge', icon: 'cellphone', route: 'Recharge' },
     { title: 'Bills', icon: 'receipt', route: 'BBPS' },
     { title: 'PAN card', icon: 'card-account-details-outline', route: 'PAN' },
-    { title: 'ITR filing', icon: 'file-document-outline', route: 'ITR' },
+    { title: 'TaxSuite filing', icon: 'file-document-outline', route: 'ITR' },
     { title: 'Loans', icon: 'account-plus-outline', route: 'LeadGeneration' },
   ].filter((tile) => isRouteEnabled(user, tile.route));
 

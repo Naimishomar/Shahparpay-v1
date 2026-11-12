@@ -57,7 +57,7 @@ export const ItrScreen: React.FC = () => {
           <View style={styles.heroTop}>
             <IconTile icon="file-document-outline" size={48} iconSize={22} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.title}>ITR Filing Services</Text>
+              <Text style={styles.title}>TaxSuite Filing Services</Text>
               <Text style={styles.tag}>eSevaTech partner</Text>
             </View>
           </View>
@@ -107,7 +107,7 @@ export const ItrScreen: React.FC = () => {
           <View style={styles.heroTop}>
             <IconTile icon="shield-check-outline" size={44} iconSize={20} />
             <Text style={[styles.help, { flex: 1 }]}>
-              ITR filing through eSevaTech uses secure single-use tokens. Your Utility Wallet is only charged upon
+              TaxSuite filing through eSevaTech uses secure single-use tokens. Your Utility Wallet is only charged upon
               successful submission.
             </Text>
           </View>

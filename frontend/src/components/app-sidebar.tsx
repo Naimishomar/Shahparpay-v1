@@ -38,7 +38,7 @@ const retailerGroups: NavGroup[] = [
     label: "Services",
     items: [
       { name: "PAN Card", url: "/pan", service: "pan", icon: IdCard },
-      { name: "ITR Filing", url: "/itr", service: "itr", icon: FileText },
+      { name: "TaxSuite Filing", url: "/itr", service: "itr", icon: FileText },
       { name: "Lead Generation", url: "/lead-generation", service: "lead", icon: UserPlus },
     ],
   },
@@ -138,7 +138,7 @@ const ICON_TONES = [
 // Main pages get a fixed colour each, so neighbours never match; others fall back to a hash.
 const NAME_TONE: Record<string, number> = {
   Dashboard: 0, Overview: 0, AEPS: 1, 'Micro ATM': 2, DMT: 3, 'Trade Wallet Settlement': 4,
-  Recharge: 5, BBPS: 6, 'Fund Request': 7, 'PAN Card': 8, 'ITR Filing': 1, 'Lead Generation': 2,
+  Recharge: 5, BBPS: 6, 'Fund Request': 7, 'PAN Card': 8, 'TaxSuite Filing': 1, 'Lead Generation': 2,
   'Support Center': 3, 'Customer Support': 3,
 };
 const iconTone = (name: string) =>

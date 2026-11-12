@@ -54,7 +54,7 @@ const ITR: React.FC = () => {
                         </div>
                         <div>
                             <div className="flex flex-wrap items-center gap-2">
-                                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">ITR Filing Services</h1>
+                                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">TaxSuite Filing Services</h1>
                                 <span className="rounded-full border bg-background/60 px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground">eSevaTech partner</span>
                             </div>
                             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
@@ -135,7 +135,7 @@ const ITR: React.FC = () => {
                         <div>
                             <h4 className="text-lg font-semibold">Secure filing</h4>
                             <p className="mt-2 text-sm leading-relaxed opacity-80">
-                                ITR filing through eSevaTech uses secure single-use tokens. Your Utility Wallet is only charged upon successful submission.
+                                TaxSuite filing through eSevaTech uses secure single-use tokens. Your Utility Wallet is only charged upon successful submission.
                             </p>
                         </div>
                         <p className="mt-auto flex items-center gap-2 border-t border-white/15 pt-4 text-xs opacity-70">

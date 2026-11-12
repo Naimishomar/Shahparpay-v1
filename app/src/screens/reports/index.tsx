@@ -534,7 +534,7 @@ export const ItrReport: React.FC = () => {
         ],
       }}
       emptyIcon="file-document-outline"
-      emptyTitle="No ITR filings found."
+      emptyTitle="No TaxSuite filings found."
     />
   );
 };
