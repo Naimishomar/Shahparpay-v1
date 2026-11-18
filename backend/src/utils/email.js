@@ -5,6 +5,9 @@ import nodemailer from 'nodemailer';
 // fresh DNS + TCP + TLS + SMTP AUTH handshake to Gmail on every login, which is
 // why POST /api/auth/login measured ~2.7s. `pool` keeps the authenticated
 // connection open so later sends reuse it.
+// Every mail goes out from ETHEREAL_USERNAME (a Gmail account + App Password).
+// Env is read at container start: after changing .env, recreate the container
+// (`docker compose up -d --force-recreate backend-api`); a plain restart keeps the old values.
 let transporter;
 const getTransporter = () => {
   if (!transporter) {
