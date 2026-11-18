@@ -114,3 +114,40 @@ export const sendContactEnquiryEmail = async (enquiry) => {
     return false;
   }
 };
+
+/**
+ * Tells the admins a self-signed-up account is waiting for approval.
+ * Best-effort: the account is already saved, so a mail failure only loses the alert.
+ */
+export const sendSignupAlertEmail = async (role, user) => {
+  try {
+    const to = process.env.SIGNUP_ALERT_EMAILS || 'shahparpay@gmail.com,naimishomar@gmail.com';
+    const row = (label, value) =>
+      value
+        ? `<tr><td style="padding:6px 12px 6px 0;color:#64748b;font-size:14px;">${label}</td><td style="padding:6px 0;color:#0f172a;font-size:14px;font-weight:600;">${escapeHtml(value)}</td></tr>`
+        : '';
+
+    await getTransporter().sendMail({
+      from: `"${process.env.EMAIL_SENDER_NAME || 'ShahparPay'}" <${process.env.ETHEREAL_USERNAME}>`,
+      to,
+      subject: `New ${role} signup: ${String(user.name).replace(/[\r\n]+/g, ' ').slice(0, 80)} — approval pending`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:10px;">
+          <h2 style="color:#0f172a;margin:0 0 16px;">New ${escapeHtml(role)} signed up</h2>
+          <table style="border-collapse:collapse;width:100%;">
+            ${row('ID', user.id)}
+            ${row('Name', user.name)}
+            ${row('Business', user.businessName)}
+            ${row('Mobile', user.contactNumber)}
+            ${row('Email', user.email)}
+          </table>
+          <p style="color:#0f172a;font-size:15px;margin-top:20px;">Please review and approve this ID from the admin panel.</p>
+        </div>
+      `,
+    });
+    return true;
+  } catch (error) {
+    console.error('[Signup] Could not send signup alert:', error.message);
+    return false;
+  }
+};

@@ -14,7 +14,7 @@ import bcrypt from 'bcrypt';
 import Otp from '../models/otp.model.js';
 import { parseDisabledServices } from '../utils/services.js';
 import { logActivity } from '../utils/activity.js';
-import { sendEmailOTP } from '../utils/email.js';
+import { sendEmailOTP, sendSignupAlertEmail } from '../utils/email.js';
 
 export const registerAdmin = async (req, res) => {
   try {
@@ -628,6 +628,8 @@ export const createRetailer = async (req, res) => {
     await Otp.deleteOne({ email });
     if (self) {
       logActivity({ req, actor: target, action: 'retailer.signup', target, summary: `Retailer ${newRetailer.name} (${newRetailer.retailerId}) signed up; awaiting admin verification` });
+      // Not awaited: the alert must not slow or fail the signup.
+      sendSignupAlertEmail('retailer', { id: newRetailer.retailerId, name: newRetailer.name, businessName, contactNumber, email });
       return res.status(201).json({
         success: true,
         message: 'Account created. An admin will verify it; you can sign in to check the status.',
