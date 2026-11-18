@@ -141,7 +141,7 @@ export const UpiCashWithdrawalScreen: React.FC = () => {
             keyboardType="number-pad"
             placeholder="e.g. 500"
           />
-          <Text style={styles.hint}>₹{MIN} – ₹{MAX.toLocaleString('en-IN')} · Commission ₹1 (up to ₹1,000), ₹3 (up to ₹3,000), ₹6 (up to ₹5,000)</Text>
+          <Text style={styles.hint}>₹{MIN} – ₹{MAX.toLocaleString('en-IN')}</Text>
           <Input
             label="Customer Mobile"
             required

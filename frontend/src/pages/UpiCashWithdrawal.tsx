@@ -162,7 +162,7 @@ const UpiCashWithdrawal = () => {
                             <label className="flex flex-col gap-1.5 text-sm font-medium">
                                 <span className="flex items-center gap-1.5"><IndianRupee className="h-3.5 w-3.5" />Amount</span>
                                 <input required inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))} placeholder="e.g. 500" className={INPUT} />
-                                <span className="text-xs font-normal text-muted-foreground">₹{MIN} – ₹{MAX.toLocaleString('en-IN')} · Commission ₹1 (up to ₹1,000), ₹3 (up to ₹3,000), ₹6 (up to ₹5,000)</span>
+                                <span className="text-xs font-normal text-muted-foreground">₹{MIN} – ₹{MAX.toLocaleString('en-IN')}</span>
                             </label>
                             <label className="flex flex-col gap-1.5 text-sm font-medium">
                                 <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" />Customer Mobile</span>

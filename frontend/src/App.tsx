@@ -28,6 +28,7 @@ const Dashboard = page(() => import("./pages/Dashboard"))
 const AepsSettlement = page(() => import("./pages/AepsSettlement"))
 const IcchhamatiAEPS = page(() => import("./pages/IcchhamatiAEPS"))
 const UpiCashWithdrawal = page(() => import("./pages/UpiCashWithdrawal"))
+const CommissionSlab = page(() => import("./pages/CommissionSlab"))
 const DMT = page(() => import("./pages/DMT"))
 const Recharge = page(() => import("./pages/Recharge"))
 const BBPS = page(() => import("./pages/BBPS"))
@@ -154,6 +155,7 @@ function App() {
         <Route path="/distributor/:tab" element={<DistributorPortal/>}/>
  
         <Route path="/aeps" element={<ServiceGate service="aeps"><IcchhamatiAEPS/></ServiceGate>}/>
+        <Route path="/commission-slab" element={<CommissionSlab/>}/>
         <Route path="/upi-cash-withdrawal" element={<ServiceGate service="aeps"><UpiCashWithdrawal/></ServiceGate>}/>
         <Route path="/aeps-settlement" element={<AepsSettlement/>}/>
         <Route path="/matm" element={<ServiceGate service="matm"><IcchhamatiMATM/></ServiceGate>}/>

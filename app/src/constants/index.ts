@@ -110,6 +110,7 @@ export const SERVICE_ITEMS: MenuEntry[] = [
   { name: 'TaxSuite Filing', route: 'ITR', icon: 'file-document-outline', hint: 'Income tax returns', group: 'Government' },
   { name: 'Lead Generation', route: 'LeadGeneration', icon: 'account-plus-outline', hint: 'Loans & cards', group: 'Government' },
 
+  { name: 'Commission Slab', route: 'CommissionSlab', icon: 'percent-outline', hint: 'What you earn on every service', group: 'Account' },
   { name: 'Support Center', route: 'Support', icon: 'headset', hint: 'Raise an issue', group: 'Account' },
 ];
 

@@ -12,6 +12,7 @@ import { DashboardScreen } from '@/screens/retailer/DashboardScreen';
 import { AepsScreen } from '@/screens/retailer/AepsScreen';
 import { AepsSettlementScreen } from '@/screens/retailer/AepsSettlementScreen';
 import { UpiCashWithdrawalScreen } from '@/screens/retailer/UpiCashWithdrawalScreen';
+import { CommissionSlabScreen } from '@/screens/retailer/CommissionSlabScreen';
 import { PanCardScreen } from '@/screens/retailer/PanCardScreen';
 import { LeadGenerationScreen } from '@/screens/retailer/LeadGenerationScreen';
 import { ItrScreen } from '@/screens/retailer/ItrScreen';
@@ -104,6 +105,7 @@ const RETAILER_SCREENS: [string, React.ComponentType<any>][] = ([
   ['AEPS', AepsScreen],
   ['AepsSettlement', AepsSettlementScreen],
   ['UpiCashWithdrawal', UpiCashWithdrawalScreen],
+  ['CommissionSlab', CommissionSlabScreen],
   ['PAN', PanCardScreen],
   ['LeadGeneration', LeadGenerationScreen],
   ['ITR', ItrScreen],

@@ -117,7 +117,7 @@ export const fetchBeneficiaries = async (req, res) => {
 };
 
 /** What Icchhamati charges per bank-account verification (penny drop). */
-const ACCOUNT_VERIFICATION_CHARGE = Number(process.env.ACCOUNT_VERIFICATION_CHARGE || 4);
+export const ACCOUNT_VERIFICATION_CHARGE = Number(process.env.ACCOUNT_VERIFICATION_CHARGE || 4);
 // ponytail: fixed 30-day reuse; an account closed inside it fails at payout and refunds.
 const VERIFICATION_REUSE_MS = 30 * 24 * 60 * 60 * 1000;
 

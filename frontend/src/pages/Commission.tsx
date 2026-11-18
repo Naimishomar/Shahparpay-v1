@@ -6,24 +6,7 @@ import LandingFooter from '@/components/landing/LandingFooter';
 import { ALERT_ERROR, BTN_SECONDARY, CARD, H1, LEAD, SECTION, WRAP } from '@/components/landing/ui';
 import './landing.css';
 
-type Slab = { label: string; sample: number; earns: number };
-type Operator = { name: string; percent: number };
-type Biller = { name: string; kind: 'flat' | 'percent'; value: number };
-
-type Rates = {
-    aeps: { withdrawal: Slab[]; deposit: Slab[]; tdsPercent: number };
-    matm: Slab[];
-    pan: { fee: number; earns: number };
-    charges: { name: string; fee: number; plusGst: boolean }[];
-    leads: { name: string; earns: number }[];
-    prepaid: Operator[];
-    dth: Operator[];
-    bbps: Biller[];
-    onRequest: string[];
-};
-
-const rupees = (value: number) =>
-    `₹${value.toLocaleString('en-IN', { minimumFractionDigits: value % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
+import { rupees, type Rates } from '@/lib/rateCard';
 
 const Card: React.FC<{
     icon: React.ElementType;
@@ -150,6 +133,16 @@ const Commission: React.FC = () => {
                                             right={slab.earns ? `${rupees(slab.earns)} on ${rupees(slab.sample)}` : 'No commission'}
                                             muted={!slab.earns}
                                         />
+                                    ))}
+                                </Card>
+
+                                <Card
+                                    icon={Banknote}
+                                    title="UPI cash withdrawal"
+                                    note={`Flat per transaction, ₹500 to ₹5,000. ${rates.aeps.tdsPercent}% TDS is deducted.`}
+                                >
+                                    {(rates.upiCashWithdrawal ?? []).map((slab) => (
+                                        <RateRow key={slab.label} left={slab.label} right={rupees(slab.earns)} />
                                     ))}
                                 </Card>
 

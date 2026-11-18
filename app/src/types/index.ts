@@ -97,6 +97,7 @@ export interface NavigationParams {
     AEPS: undefined;
     AepsSettlement: undefined;
     UpiCashWithdrawal: undefined;
+    CommissionSlab: undefined;
     PAN: undefined;
     LeadGeneration: undefined;
     ITR: undefined;

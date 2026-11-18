@@ -40,6 +40,10 @@ const GROUPS: { title: string; items: { label: string; route: string; icon: stri
       { label: 'Leads', route: 'LeadGeneration', icon: 'account-plus-outline' },
     ],
   },
+  {
+    title: 'Account',
+    items: [{ label: 'Commission slab', route: 'CommissionSlab', icon: 'percent-outline' }],
+  },
 ];
 
 export const ServicesScreen: React.FC = () => {

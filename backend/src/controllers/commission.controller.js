@@ -2,6 +2,7 @@ import {
   getAepsWithdrawalCommission,
   getAepsDepositCommission,
   getMatmCommission,
+  getUpiCashWithdrawalCommission,
   getRechargeCommissionRate,
   getBbpsCommissionRule,
   getBbpsCharge,
@@ -11,6 +12,7 @@ import {
   LEAD_RATES,
 } from '../utils/wallet.util.js';
 import { getSettlementFee } from './settlement.controller.js';
+import { ACCOUNT_VERIFICATION_CHARGE } from './dmt.controller.js';
 
 /**
  * The published commission rates.
@@ -40,6 +42,13 @@ const MATM_SLABS = [
   { label: 'Below ₹300', sample: 200 },
   { label: '₹300 – ₹2,999', sample: 2000 },
   { label: '₹3,000 – ₹10,000', sample: 5000 },
+];
+
+// Flat per slab; probed at the top of each.
+const UPI_CW_SLABS = [
+  { label: '₹500 – ₹1,000', sample: 1000 },
+  { label: '₹1,001 – ₹3,000', sample: 3000 },
+  { label: '₹3,001 – ₹5,000', sample: 5000 },
 ];
 
 // Probed at the top of each DMT charge slab.
@@ -101,6 +110,12 @@ export const getPublicCommissionRates = async (req, res) => {
       earns: getMatmCommission(sample),
     }));
 
+    const upiCashWithdrawal = UPI_CW_SLABS.map(({ label, sample }) => ({
+      label,
+      sample,
+      earns: getUpiCashWithdrawalCommission(sample),
+    }));
+
     // Charges the retailer pays, rather than earns.
     const charges = [
       ...DMT_SLABS.map(({ label, sample }) => ({
@@ -110,6 +125,7 @@ export const getPublicCommissionRates = async (req, res) => {
       })),
       { name: 'Credit card bill payment', fee: getBbpsCharge('creditcard'), plusGst: false },
       { name: 'Payout (move to bank)', fee: getSettlementFee().baseCharge, plusGst: true },
+      { name: 'Bank account verification', fee: ACCOUNT_VERIFICATION_CHARGE, plusGst: false },
     ];
 
     // Sorted rather than hand-ordered: a rate change in wallet.util.js would
@@ -129,6 +145,7 @@ export const getPublicCommissionRates = async (req, res) => {
       data: {
         aeps: { withdrawal, deposit, tdsPercent },
         matm,
+        upiCashWithdrawal,
         pan: { fee: PAN_RATES.fee, earns: PAN_RATES.retailer },
         charges,
         leads: [

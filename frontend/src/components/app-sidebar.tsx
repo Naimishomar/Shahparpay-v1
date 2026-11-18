@@ -4,7 +4,7 @@ import { useState } from "react"
 import {
   History, BookOpen, BarChart3, Send, Smartphone, Receipt, Fingerprint, Landmark, ArrowRightLeft, LayoutDashboard, Users,
   Store, UserPlus, UserCircle, FileText, IdCard, CreditCard, Bell, Headset, UserCheck, Wallet, ChevronDown, LineChart, Server,
-  QrCode, type LucideIcon,
+  QrCode, BadgePercent, type LucideIcon,
 } from "lucide-react"
 import logo from "../assets/logo.png"
 import { useAuth } from "../context/AuthContext"
@@ -15,7 +15,7 @@ type NavGroup = { label?: string; items: NavItem[]; collapsible?: boolean };
 
 /** The retailer's pages, grouped by task. Support Center is pinned to the bottom instead. */
 const retailerGroups: NavGroup[] = [
-  { items: [{ name: "Dashboard", url: "/dashboard", icon: LayoutDashboard }] },
+  { items: [{ name: "Dashboard", url: "/dashboard", icon: LayoutDashboard }, { name: "Commission Slab", url: "/commission-slab", icon: BadgePercent }] },
   {
     label: "Banking",
     items: [

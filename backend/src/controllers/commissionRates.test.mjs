@@ -8,6 +8,7 @@ import {
   getAepsWithdrawalCommission,
   getAepsDepositCommission,
   getMatmCommission,
+  getUpiCashWithdrawalCommission,
   getRechargeCommissionRate,
   getBbpsCommissionRule,
 } from '../utils/wallet.util.js';
@@ -112,5 +113,12 @@ assert.ok(
 // Services without a rate card must be named, not omitted.
 assert.ok(!data.onRequest.includes('Domestic Money Transfer (DMT)'));
 assert.ok(data.onRequest.length > 0);
+
+// UPI cash withdrawal: the rate card's three flat slabs, read from the paying function.
+assert.deepStrictEqual(data.upiCashWithdrawal.map((s) => s.earns), [1, 3, 6]);
+for (const slab of data.upiCashWithdrawal) {
+  assert.strictEqual(slab.earns, getUpiCashWithdrawalCommission(slab.sample), `UPI CW slab "${slab.label}" is out of step`);
+}
+assert.ok(data.charges.some((c) => c.name === 'Bank account verification' && c.fee === 4));
 
 console.log('commissionRates: published rates match the wallet functions that pay them');
