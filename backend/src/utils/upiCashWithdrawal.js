@@ -60,6 +60,19 @@ export const upiCwOutcome = (data) => {
 };
 
 /**
+ * True when a check-status answer is about this withdrawal. Ids the provider
+ * echoes back must be ours: an answer for another retailer's QR never credits.
+ */
+export const answerIsFor = (txn, data) => {
+  const result = data?.data || {};
+  const { partnerRequestId, fingpayTxnId } = txn.metadata || {};
+  if (!partnerRequestId || !fingpayTxnId) return false;
+  if (result.partnerRequestId !== undefined && String(result.partnerRequestId) !== String(partnerRequestId)) return false;
+  if (result.fingpayTxnId !== undefined && String(result.fingpayTxnId) !== String(fingpayTxnId)) return false;
+  return true;
+};
+
+/**
  * Asks Icchhamati about one UPI cash withdrawal and settles it: SUCCESS credits
  * the Trade wallet, FAILED closes it, anything else leaves it PENDING. Used by
  * the retailer's poll and by the reconciliation worker.
@@ -68,8 +81,15 @@ export const syncUpiCashWithdrawal = async (txn) => {
   if (txn.status !== 'PENDING' && txn.status !== 'PROCESSING') return txn;
   const { partnerRequestId, fingpayTxnId } = txn.metadata || {};
   const data = await icchhamatiPost('/api/v2/upicw/check-status', { partnerRequestId, fingpayTxnId });
-  const outcome = upiCwOutcome(data);
   const result = data?.data || {};
+  if (!answerIsFor(txn, data)) {
+    await Transaction.updateOne(
+      { _id: txn._id },
+      { $set: { 'metadata.needsReconciliation': true, 'metadata.gatewayMessage': 'Status answer was for another transaction' } }
+    );
+    return Transaction.findById(txn._id);
+  }
+  const outcome = upiCwOutcome(data);
 
   if (outcome === 'SUCCESS') {
     // The QR fixed the amount; a different paid amount is not credited blind.

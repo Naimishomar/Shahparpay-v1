@@ -94,6 +94,12 @@ const transactionSchema = new mongoose.Schema(
 // Per-retailer history and the distributor analytics both filter on userId
 // and a createdAt range.
 transactionSchema.index({ userId: 1, createdAt: -1 });
+// One provider UPI cash withdrawal belongs to exactly one row, so one payment can
+// never be credited to two retailers (or twice to one).
+transactionSchema.index(
+  { 'metadata.partnerRequestId': 1 },
+  { unique: true, partialFilterExpression: { type: 'UPI_CASH_WITHDRAWAL' } }
+);
 
 transactionSchema.post('save', function (doc) {
   // Fire and forget broadcast

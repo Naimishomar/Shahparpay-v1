@@ -1,7 +1,7 @@
 // Run: node src/utils/upiCashWithdrawal.test.mjs
 // Only a definite bank answer settles a UPI cash withdrawal, and the ledger reads it as a Trade credit.
 import assert from 'node:assert';
-import { upiCwOutcome } from './upiCashWithdrawal.js';
+import { upiCwOutcome, answerIsFor } from './upiCashWithdrawal.js';
 import { getWalletDeltas, getWalletLabel } from '../controllers/walletLedger.controller.js';
 import { getUpiCashWithdrawalCommission } from './wallet.util.js';
 
@@ -21,5 +21,13 @@ assert.deepEqual(getWalletDeltas(tx), { main: 0, aeps: 500 });
 const paid = getWalletDeltas({ ...tx, commissions: { retailerEarned: 1, retailerTds: 0.02 } });
 assert.equal(paid.aeps, 500.98);
 assert.equal(getWalletLabel(tx), 'Trade');
+
+// A status answer only settles the withdrawal it names.
+const mine = { metadata: { partnerRequestId: 'UPICW1', fingpayTxnId: 'FP1' } };
+assert.equal(answerIsFor(mine, { data: { partnerRequestId: 'UPICW1', fingpayTxnId: 'FP1', txnStatus: 'SUCCESS' } }), true);
+assert.equal(answerIsFor(mine, { data: { txnStatus: 'SUCCESS' } }), true);
+assert.equal(answerIsFor(mine, { data: { partnerRequestId: 'UPICW2', fingpayTxnId: 'FP1', txnStatus: 'SUCCESS' } }), false);
+assert.equal(answerIsFor(mine, { data: { partnerRequestId: 'UPICW1', fingpayTxnId: 'FP9', txnStatus: 'SUCCESS' } }), false);
+assert.equal(answerIsFor({ metadata: {} }, { data: { txnStatus: 'SUCCESS' } }), false);
 
 console.log('upi cash withdrawal tests passed');
