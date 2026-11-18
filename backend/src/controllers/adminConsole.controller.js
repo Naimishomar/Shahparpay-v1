@@ -11,6 +11,7 @@ import ActivityLog from '../models/activityLog.model.js';
 import { SERVICE_TYPES, ALLOWED_DAYS, windowFor } from './distributorAnalytics.controller.js';
 import { parseServicesUpdate, aepsKycDoneFilter, aepsKycPendingFilter } from '../utils/services.js';
 import { logActivity } from '../utils/activity.js';
+import { sendAccountApprovedEmail } from '../utils/email.js';
 import { refreshAepsStep, correctDraftDetails } from './icchhamatiAeps.controller.js';
 
 const TZ = 'Asia/Kolkata';
@@ -500,7 +501,7 @@ export const setRetailerVerification = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Give the reason for rejecting; the retailer sees it.' });
     }
 
-    const retailer = await Retailer.findById(req.params.id).select('name retailerId distributorId signupSource verificationStatus');
+    const retailer = await Retailer.findById(req.params.id).select('name email retailerId distributorId signupSource verificationStatus');
     if (!retailer) return res.status(404).json({ success: false, message: 'Retailer not found' });
 
     let distributor = null;
@@ -510,6 +511,7 @@ export const setRetailerVerification = async (req, res) => {
       if (!distributor) return res.status(404).json({ success: false, message: 'Distributor not found' });
     }
 
+    const wasApproved = retailer.verificationStatus === 'approved';
     retailer.verificationStatus = status;
     retailer.verificationNote = status === 'rejected' ? reason : reason || null;
     retailer.verifiedAt = new Date();
@@ -523,6 +525,11 @@ export const setRetailerVerification = async (req, res) => {
       if (distributor) await Distributor.updateOne({ _id: distributor._id }, { $addToSet: { retailers: retailer._id } });
     }
     await retailer.save();
+
+    // Only on the change to approved, so re-saving an approved account sends nothing. Not awaited.
+    if (status === 'approved' && !wasApproved) {
+      sendAccountApprovedEmail({ id: retailer.retailerId, name: retailer.name, email: retailer.email });
+    }
 
     logActivity({
       req,

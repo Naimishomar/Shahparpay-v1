@@ -170,3 +170,30 @@ export const sendSignupAlertEmail = async (role, user) => {
     return false;
   }
 };
+
+/**
+ * Tells a retailer the admin approved their account and they can sign in.
+ * Best-effort: the approval is already saved, so a mail failure only loses the note.
+ */
+export const sendAccountApprovedEmail = async (user) => {
+  if (!user?.email) return false;
+  try {
+    const name = escapeHtml(user.name || 'there');
+    await getTransporter().sendMail({
+      from: `"${process.env.EMAIL_SENDER_NAME || 'ShahparPay'}" <${process.env.ETHEREAL_USERNAME}>`,
+      to: user.email,
+      subject: 'Your ShahparPay account is approved',
+      text: `Hello ${user.name || 'there'},\n\nYour ShahparPay account${user.id ? ` (ID ${user.id})` : ''} has been approved. Sign in with your Retailer ID, registered email or mobile number and your password to start working.\n\n${SITE_URL}/login`,
+      html: emailShell('Your account is approved', 'Your ShahparPay account is approved. Sign in to start working.', `
+        ${headingRow('Your account is approved', `Hi ${name}, your ShahparPay account has been approved.<br>Sign in with your Retailer ID, registered email or mobile number and your password to start working.`)}
+        ${detailsRow([['Retailer ID', user.id], ['Name', user.name]])}
+        <tr><td align="center" style="padding:32px 48px 0;font-family:${FONT};">
+          <a href="${SITE_URL}/login" style="display:inline-block;padding:14px 32px;background:#4B2BD6;border-radius:10px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">Sign in to ShahparPay</a>
+        </td></tr>`),
+    });
+    return true;
+  } catch (error) {
+    console.error('[Approval] Could not send approval email:', error.message);
+    return false;
+  }
+};
