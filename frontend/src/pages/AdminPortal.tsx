@@ -14,6 +14,8 @@ import DistributorProfile from '../components/distributor/DistributorProfile';
 import AdminFundRequests from '../components/admin/AdminFundRequests';
 import IcchhamatiAccount from '../components/admin/IcchhamatiAccount';
 import RetailerSignups from '../components/admin/RetailerSignups';
+import SiteAnalytics from '../components/admin/SiteAnalytics';
+import ServerConsole from '../components/admin/ServerConsole';
 
 const AdminPortal = () => {
     const { user, token, isInitializing } = useAuth();
@@ -359,6 +361,10 @@ const AdminPortal = () => {
                 )}
 
                 {activeTab === 'signups' && <RetailerSignups token={token} onOpenUser={openUser} />}
+
+                {activeTab === 'analytics' && <SiteAnalytics token={token} />}
+
+                {activeTab === 'server' && <ServerConsole token={token} />}
 
                 {activeTab === 'activity' && <ActivityLog token={token} onOpenUser={openUser} />}
 

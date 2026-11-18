@@ -74,6 +74,14 @@ function ScrollToTopWrapper() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    // Page-view beacon for the admin's visitor stats. Admin pages are left out so
+    // the admin's own browsing never counts. No cookies, so `credentials: 'omit'`.
+    if (pathname.startsWith('/admin')) return
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/track`, {
+      method: 'POST', keepalive: true, credentials: 'omit',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: pathname, ref: document.referrer }),
+    }).catch(() => {})
   }, [pathname])
 
   return (

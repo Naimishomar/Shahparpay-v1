@@ -20,6 +20,18 @@ import {
   getActivity,
 } from '../controllers/adminConsole.controller.js';
 import { getWallets, getPayouts, selfTransfer } from '../controllers/adminIcchhamati.controller.js';
+import {
+  getAnalytics,
+  getHealth,
+  getLogs,
+  sendActionOtp,
+  restartServer,
+  getDeploys,
+  triggerDeploy,
+  getPlatformServices,
+  setPlatformService,
+} from '../controllers/system.controller.js';
+import { authLimiter } from '../middlewares/rateLimit.middleware.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 import { upload } from '../middlewares/multer.middleware.js';
 
@@ -47,6 +59,18 @@ router.get('/console/activity', getActivity);
 router.get('/icchhamati/wallets', getWallets);
 router.get('/icchhamati/payouts', getPayouts);
 router.post('/icchhamati/self-transfer', selfTransfer);
+// System: visitors, server health and logs, restart, deploy, platform-wide service switches.
+// Restart and deploy need an emailed code (authLimiter caps the guesses).
+router.get('/system/analytics', getAnalytics);
+router.get('/system/health', getHealth);
+router.get('/system/logs', getLogs);
+router.post('/system/otp', authLimiter, sendActionOtp);
+router.post('/system/restart', authLimiter, restartServer);
+router.get('/system/deploys', getDeploys);
+router.post('/system/deploy', authLimiter, triggerDeploy);
+router.get('/system/services', getPlatformServices);
+router.put('/system/services/:key', setPlatformService);
+
 router.get('/distributors', getDistributors);
 router.get('/profile', getAdminProfile);
 router.put(

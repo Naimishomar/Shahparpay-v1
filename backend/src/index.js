@@ -1,3 +1,5 @@
+// First import: captures every console line for the admin portal's live logs.
+import './utils/logBuffer.js';
 import express from 'express';
 import compression from 'compression';
 import cors from 'cors';
@@ -175,6 +177,9 @@ import contactRouter from './routes/contact.route.js';
 import commissionRouter from './routes/commission.route.js';
 import { checkAgentWallet } from './controllers/itr.controller.js';
 import { startReconciliationWorker } from './workers/reconciliation.worker.js';
+import { trackVisit } from './controllers/system.controller.js';
+import { rateLimit } from './middlewares/rateLimit.middleware.js';
+import { loadPlatformDisabled } from './middlewares/service.middleware.js';
 
 app.use('/api/aeps', aepsRoutes);
 app.use('/api/recharge', rechargeRoutes);
@@ -201,6 +206,8 @@ app.use('/api/paysprint', paysprintRouter);
 app.use('/api/icchhamati', icchhamatiRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api/commission', commissionRouter);
+// Page-view beacon from the website, for the admin's visitor stats. Public.
+app.post('/api/track', rateLimit({ windowMs: 60 * 1000, max: 120 }), trackVisit);
 
 // eSevaTech may call /api/check-agent-wallet at root level by convention
 app.all('/api/check-agent-wallet', checkAgentWallet);
@@ -208,6 +215,7 @@ app.all('/api/check-agent-wallet', checkAgentWallet);
 const startServer = async () => {
   try {
     await connectDB();
+    await loadPlatformDisabled();
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}✅`);
       startReconciliationWorker();

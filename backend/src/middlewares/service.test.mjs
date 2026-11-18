@@ -2,7 +2,7 @@
 // A switched-off service must be refused on the server, not just hidden in
 // the UI — and only for the retailer it was switched off for.
 import assert from 'node:assert';
-import { requireService } from './service.middleware.js';
+import { requireService, setPlatformDisabled } from './service.middleware.js';
 import { parseDisabledServices } from '../utils/services.js';
 
 const run = (mw, { method = 'POST', role = 'retailer', disabled = [], path = '/', body = {} } = {}) => {
@@ -21,6 +21,12 @@ assert.ok(run(requireService('dmt'), { disabled: ['dmt'], role: 'distributor' })
 const pick = (req) => (req.path === '/fetch-bill' ? 'bbps' : req.path === '/do-recharge' ? (req.body.type === 'electricity' ? 'bbps' : 'recharge') : 'recharge');
 assert.ok(run(requireService(pick), { disabled: ['bbps'], path: '/do-recharge', body: { type: 'prepaid' } }).passed);
 assert.strictEqual(run(requireService(pick), { disabled: ['bbps'], path: '/fetch-bill' }).status, 403);
+
+// Admin's platform-wide pause refuses every retailer, whatever their own list says.
+setPlatformDisabled(['dmt']);
+assert.strictEqual(run(requireService('dmt')).status, 503, 'paused service refused for all');
+assert.ok(run(requireService('aeps')).passed, 'other services still run');
+setPlatformDisabled([]);
 
 assert.deepStrictEqual(parseDisabledServices('["dmt","bogus","dmt"]'), ['dmt'], 'unknown keys and duplicates dropped');
 assert.strictEqual(parseDisabledServices('not json'), null);
