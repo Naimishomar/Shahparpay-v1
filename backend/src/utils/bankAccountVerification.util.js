@@ -11,11 +11,8 @@ const nameMatches = (entered, returned) => {
   return left.split(' ').every((token) => returnedTokens.has(token));
 };
 
-export const verifyBankAccountWithProvider = async ({ name, accountNumber, ifsc }) => {
-  const response = await icchhamatiPost('/api/v2/verify/bank-account', {
-    accountno: accountNumber,
-    ifsccode: ifsc,
-  });
+/** Reads a provider penny-drop answer against what the retailer entered. */
+export const evaluateBankVerification = ({ name, accountNumber, response }) => {
   const providerData = response?.data || null;
   const accountMatches = String(providerData?.AccountNumber || '').replace(/\D/g, '') === accountNumber;
   const nameMatch = nameMatches(name, providerData?.AccountName);
@@ -27,9 +24,18 @@ export const verifyBankAccountWithProvider = async ({ name, accountNumber, ifsc 
   return {
     response,
     providerData,
+    providerValid,
     accountMatches,
     nameMatch,
     verified: Boolean(providerValid && accountMatches && nameMatch),
     message: providerMessage(response, 'Bank account verification failed.'),
   };
+};
+
+export const verifyBankAccountWithProvider = async ({ name, accountNumber, ifsc }) => {
+  const response = await icchhamatiPost('/api/v2/verify/bank-account', {
+    accountno: accountNumber,
+    ifsccode: ifsc,
+  });
+  return evaluateBankVerification({ name, accountNumber, response });
 };

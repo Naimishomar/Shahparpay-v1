@@ -11,7 +11,7 @@ import { getDmtCharge, lockFundsForTransaction, resolveTransaction, updateWallet
 import DmtTransaction from '../models/dmtTransaction.model.js';
 import Transaction from '../models/transaction.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
-import { verifyBankAccountWithProvider } from '../utils/bankAccountVerification.util.js';
+import { evaluateBankVerification, verifyBankAccountWithProvider } from '../utils/bankAccountVerification.util.js';
 import { checkWalletPin } from '../utils/walletPin.js';
 
 /**
@@ -118,6 +118,8 @@ export const fetchBeneficiaries = async (req, res) => {
 
 /** What Icchhamati charges per bank-account verification (penny drop). */
 const ACCOUNT_VERIFICATION_CHARGE = Number(process.env.ACCOUNT_VERIFICATION_CHARGE || 4);
+// ponytail: fixed 30-day reuse; an account closed inside it fails at payout and refunds.
+const VERIFICATION_REUSE_MS = 30 * 24 * 60 * 60 * 1000;
 
 export const addBeneficiary = async (req, res) => {
   try {
@@ -146,47 +148,89 @@ export const addBeneficiary = async (req, res) => {
     // server-side ICCHHAMATI_MID / ICCHHAMATI_MKEY environment variables.
     // Icchhamati debits ₹4 from its Utility Wallet for every account
     // verification, so the retailer's Utility (MAIN) wallet pays it here too.
-    const chargeId = makeReferenceId('ACV');
-    try {
-      await updateWalletAtomically(req.user.id, 'MAIN', -ACCOUNT_VERIFICATION_CHARGE, {
-        transactionId: chargeId,
-        userId: req.user.id,
-        type: 'ACCOUNT_VERIFICATION',
-        amount: ACCOUNT_VERIFICATION_CHARGE,
-        status: 'SUCCESS',
-        metadata: { beneficiaryAccount: beneAccount, ifsc: normalizedIfsc, provider: 'ICCHHAMATI' },
-      });
-    } catch (walletError) {
-      return res.status(400).json({
-        success: false,
-        message: `Insufficient Utility Wallet balance for account verification (₹${ACCOUNT_VERIFICATION_CHARGE}).`,
-      });
-    }
-    // A refused or unreachable call verified nothing, so it costs nothing.
-    const refundCharge = (reason) =>
-      updateWalletAtomically(req.user.id, 'MAIN', ACCOUNT_VERIFICATION_CHARGE, {
-        transactionId: `REF-${chargeId}`,
-        userId: req.user.id,
-        type: 'ACCOUNT_VERIFICATION',
-        amount: ACCOUNT_VERIFICATION_CHARGE,
-        status: 'SUCCESS',
-        metadata: { originalTxn: chargeId, note: reason },
-      }).catch((e) => console.error('[DMT] verification refund failed', chargeId, e?.message));
+    // A penny drop already paid for and answered (account VALID) is reused for
+    // the same account, so a retry after a name typo or a failed create is free.
+    const paidCheck = await Transaction.findOne({
+      userId: req.user.id,
+      type: 'ACCOUNT_VERIFICATION',
+      'metadata.beneficiaryAccount': beneAccount,
+      'metadata.ifsc': normalizedIfsc,
+      'metadata.verification.providerValid': true,
+      createdAt: { $gte: new Date(Date.now() - VERIFICATION_REUSE_MS) },
+    })
+      .sort({ createdAt: -1 })
+      .lean();
 
+    let chargeId;
     let verification;
-    try {
-      verification = await verifyBankAccountWithProvider({
+    if (paidCheck) {
+      chargeId = paidCheck.transactionId;
+      verification = evaluateBankVerification({
         name: beneName,
         accountNumber: beneAccount,
-        ifsc: normalizedIfsc,
+        response: paidCheck.metadata.verification.response,
       });
-    } catch (error) {
-      await refundCharge('Refund: account verification did not reach the provider');
-      throw error;
+    } else {
+      chargeId = makeReferenceId('ACV');
+      try {
+        await updateWalletAtomically(req.user.id, 'MAIN', -ACCOUNT_VERIFICATION_CHARGE, {
+          transactionId: chargeId,
+          userId: req.user.id,
+          type: 'ACCOUNT_VERIFICATION',
+          amount: ACCOUNT_VERIFICATION_CHARGE,
+          status: 'SUCCESS',
+          metadata: { beneficiaryAccount: beneAccount, ifsc: normalizedIfsc, provider: 'ICCHHAMATI' },
+        });
+      } catch (walletError) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient Utility Wallet balance for account verification (₹${ACCOUNT_VERIFICATION_CHARGE}).`,
+        });
+      }
+      // A refused or unreachable call verified nothing, so it costs nothing.
+      const refundCharge = (reason) =>
+        updateWalletAtomically(req.user.id, 'MAIN', ACCOUNT_VERIFICATION_CHARGE, {
+          transactionId: `REF-${chargeId}`,
+          userId: req.user.id,
+          type: 'ACCOUNT_VERIFICATION',
+          amount: ACCOUNT_VERIFICATION_CHARGE,
+          status: 'SUCCESS',
+          metadata: { originalTxn: chargeId, note: reason },
+        }).catch((e) => console.error('[DMT] verification refund failed', chargeId, e?.message));
+
+      try {
+        verification = await verifyBankAccountWithProvider({
+          name: beneName,
+          accountNumber: beneAccount,
+          ifsc: normalizedIfsc,
+        });
+      } catch (error) {
+        await refundCharge('Refund: account verification did not reach the provider');
+        throw error;
+      }
+      if (!isOk(verification.response)) {
+        await refundCharge('Refund: provider refused the account verification');
+      }
     }
-    if (!isOk(verification.response)) {
-      await refundCharge('Refund: provider refused the account verification');
-    }
+
+    // The outcome lives on the charge itself, so a failed add can be explained
+    // from the DB after the container's logs are gone.
+    const recordOutcome = (fields) =>
+      Transaction.updateOne({ transactionId: chargeId }, { $set: fields }).catch((e) =>
+        console.error('[DMT] verification outcome not saved', chargeId, e?.message)
+      );
+    await recordOutcome({
+      'metadata.verification': {
+        ...(paidCheck ? paidCheck.metadata.verification : { response: verification.response }),
+        providerValid: verification.providerValid,
+        enteredName: beneName,
+        accountMatch: verification.accountMatches,
+        nameMatch: verification.nameMatch,
+        verified: verification.verified,
+        reused: Boolean(paidCheck),
+        at: new Date(),
+      },
+    });
 
     if (!verification.verified) {
       return res.status(400).json({
@@ -215,6 +259,9 @@ export const addBeneficiary = async (req, res) => {
       ...(String(req.body.type) === '3' && { type: 3 }),
     });
 
+    await recordOutcome({
+      'metadata.beneficiaryCreate': { ok: isOk(data), message: data?.message ?? null, at: new Date() },
+    });
     if (!isOk(data)) {
       return res.status(400).json({
         success: false,
