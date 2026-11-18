@@ -107,7 +107,10 @@ const UpiCashWithdrawal = () => {
 
     const reset = () => { setQr(null); setResult(null); setAmount(''); setMobile(''); };
     const secondsLeft = qr ? Math.max(0, Math.round((qr.expiresAt - now) / 1000)) : 0;
-    const valid = Number(amount) >= MIN && Number(amount) <= MAX && /^[6-9]\d{9}$/.test(mobile);
+    // Why Generate QR is off, shown once the field has something in it.
+    const amountError = amount && (Number(amount) < MIN || Number(amount) > MAX) ? `Amount must be between ₹${MIN} and ₹${MAX.toLocaleString('en-IN')}.` : '';
+    const mobileError = mobile && !/^[6-9]\d{9}$/.test(mobile) ? 'Enter a valid 10-digit mobile number starting with 6, 7, 8 or 9.' : '';
+    const valid = !!amount && !!mobile && !amountError && !mobileError;
 
     return (
         <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
@@ -162,11 +165,12 @@ const UpiCashWithdrawal = () => {
                             <label className="flex flex-col gap-1.5 text-sm font-medium">
                                 <span className="flex items-center gap-1.5"><IndianRupee className="h-3.5 w-3.5" />Amount</span>
                                 <input required inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))} placeholder="e.g. 500" className={INPUT} />
-                                <span className="text-xs font-normal text-muted-foreground">₹{MIN} – ₹{MAX.toLocaleString('en-IN')}</span>
+                                <span className={`text-xs font-normal ${amountError ? 'text-red-600' : 'text-muted-foreground'}`}>{amountError || `₹${MIN} – ₹${MAX.toLocaleString('en-IN')}`}</span>
                             </label>
                             <label className="flex flex-col gap-1.5 text-sm font-medium">
                                 <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" />Customer Mobile</span>
                                 <input required inputMode="numeric" value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile" className={INPUT} />
+                                {mobileError && <span className="text-xs font-normal text-red-600">{mobileError}</span>}
                             </label>
                             <button disabled={busy || !valid} className="flex items-center justify-center gap-2 btn-primary rounded-xl py-3 text-sm font-semibold disabled:opacity-60">
                                 <QrCode className="h-4 w-4" />{busy ? 'Generating…' : 'Generate QR'}

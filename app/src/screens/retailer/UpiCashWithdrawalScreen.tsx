@@ -82,7 +82,10 @@ export const UpiCashWithdrawalScreen: React.FC = () => {
     setMobile('');
   };
   const secondsLeft = qr ? Math.max(0, Math.round((qr.expiresAt - now) / 1000)) : 0;
-  const valid = Number(amount) >= MIN && Number(amount) <= MAX && MOBILE_RE.test(mobile);
+  // Why Generate QR is off, shown once the field has something in it.
+  const amountError = amount && (Number(amount) < MIN || Number(amount) > MAX) ? `Amount must be between ₹${MIN} and ₹${MAX.toLocaleString('en-IN')}.` : '';
+  const mobileError = mobile && !MOBILE_RE.test(mobile) ? 'Enter a valid 10-digit mobile number starting with 6, 7, 8 or 9.' : '';
+  const valid = !!amount && !!mobile && !amountError && !mobileError;
 
   return (
     <Screen refreshing={history.refreshing} onRefresh={history.refresh}>
@@ -141,7 +144,7 @@ export const UpiCashWithdrawalScreen: React.FC = () => {
             keyboardType="number-pad"
             placeholder="e.g. 500"
           />
-          <Text style={styles.hint}>₹{MIN} – ₹{MAX.toLocaleString('en-IN')}</Text>
+          <Text style={[styles.hint, !!amountError && styles.error]}>{amountError || `₹${MIN} – ₹${MAX.toLocaleString('en-IN')}`}</Text>
           <Input
             label="Customer Mobile"
             required
@@ -150,6 +153,7 @@ export const UpiCashWithdrawalScreen: React.FC = () => {
             keyboardType="number-pad"
             placeholder="10-digit mobile"
           />
+          {!!mobileError && <Text style={[styles.hint, styles.error]}>{mobileError}</Text>}
           {!!start.error && <ErrorBanner message={start.error} />}
           <Button icon="qrcode" onPress={() => start.run()} loading={start.pending} disabled={!valid} fullWidth>
             {start.pending ? 'Generating…' : 'Generate QR'}
@@ -197,6 +201,7 @@ const styles = themed((c) => ({
   muted: { fontSize: t.small, color: c.mutedForeground, textAlign: 'center' },
   warning: { fontSize: t.small, fontWeight: '600', color: c.warning, textAlign: 'center' },
   hint: { fontSize: t.small, color: c.mutedForeground },
+  error: { color: c.destructive },
   link: { fontSize: t.small, fontWeight: '600', color: c.foreground, textDecorationLine: 'underline' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
 }));
