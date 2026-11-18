@@ -25,7 +25,8 @@ const getTransporter = () => {
 };
 
 // Mail clients can't load local files or SVGs, so images come from the live site
-// (frontend/public/email-logo.png). Fixed URL, not FRONTEND_URL: that is localhost in dev.
+// (frontend/public/email-hero.png: dark banner with the logo baked in).
+// Fixed URL, not FRONTEND_URL: that is localhost in dev.
 const SITE_URL = 'https://www.shahparpay.in';
 const FONT = `-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif`;
 
@@ -33,50 +34,31 @@ const FONT = `-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial
 // Callers pass already-escaped name and otp.
 const otpEmailHtml = (name, otp) => `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>Your ShahparPay verification code</title></head>
-<body style="margin:0;padding:0;background:#F1EFF8;">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Your code is ${otp}. It expires in 5 minutes. Never share it with anyone.</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F1EFF8;">
-<tr><td align="center" style="padding:40px 16px;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+<body style="margin:0;padding:0;background:#F4F4F5;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Your code is ${otp}. It expires in 5 minutes.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F4F4F5;">
+<tr><td align="center" style="padding:32px 12px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#FFFFFF;border-radius:16px;overflow:hidden;">
+    <tr><td style="background:#090816;"><a href="${SITE_URL}"><img src="${SITE_URL}/email-hero.png" width="600" alt="ShahparPay" style="display:block;width:100%;max-width:600px;height:auto;border:0;"></a></td></tr>
 
-    <tr><td align="center" style="padding:0 0 28px;">
-      <a href="${SITE_URL}" style="text-decoration:none;"><img src="${SITE_URL}/email-logo.png" width="230" alt="ShahparPay" style="display:block;width:230px;max-width:100%;height:auto;border:0;"></a>
+    <tr><td align="center" style="padding:24px 48px 0;font-family:${FONT};">
+      <h1 style="margin:0 0 12px;font-size:22px;line-height:1.35;font-weight:600;color:#111111;">Your verification code</h1>
+      <p style="margin:0;font-size:15px;line-height:1.6;color:#6B6B76;">Hi ${name}, use this code to sign in to ShahparPay.<br>It expires in 5 minutes.</p>
     </td></tr>
 
-    <tr><td style="background:#FFFFFF;border-radius:20px;overflow:hidden;box-shadow:0 12px 40px rgba(22,20,46,0.10);">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr><td height="6" style="height:6px;line-height:6px;font-size:0;background:#2A2556;background-image:linear-gradient(90deg,#2A2556 0%,#863BFF 50%,#F5B9A0 100%);">&nbsp;</td></tr>
-        <tr><td style="padding:44px 44px 8px;font-family:${FONT};">
-          <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#863BFF;">Verification code</p>
-          <h1 style="margin:0 0 18px;font-size:26px;line-height:1.3;font-weight:700;color:#16142E;">Confirm it's you</h1>
-          <p style="margin:0 0 8px;font-size:16px;line-height:1.6;color:#3F3D56;">Hello <strong style="color:#16142E;">${name}</strong>,</p>
-          <p style="margin:0;font-size:16px;line-height:1.6;color:#3F3D56;">Use the code below to continue signing in to your ShahparPay account.</p>
-        </td></tr>
-
-        <tr><td style="padding:28px 44px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#16142E;background-image:linear-gradient(135deg,#2A2556 0%,#16142E 100%);border-radius:16px;">
-            <tr><td align="center" style="padding:30px 16px 12px;font-family:'SF Mono',Menlo,Consolas,'Courier New',monospace;font-size:40px;line-height:1;font-weight:700;letter-spacing:12px;color:#FFFFFF;">${otp}</td></tr>
-            <tr><td align="center" style="padding:6px 16px 26px;font-family:${FONT};">
-              <span style="display:inline-block;padding:6px 14px;border-radius:999px;background:rgba(185,168,240,0.18);color:#D9CCFF;font-size:13px;font-weight:600;">&#9201; Expires in 5 minutes</span>
-            </td></tr>
-          </table>
-        </td></tr>
-
-        <tr><td style="padding:0 44px 36px;font-family:${FONT};">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FFF6F1;border:1px solid #FBE2D4;border-radius:12px;">
-            <tr><td width="44" valign="top" style="padding:16px 0 16px 16px;font-size:20px;line-height:1;">&#128274;</td>
-                <td style="padding:16px 16px 16px 8px;font-size:14px;line-height:1.55;color:#5B3A2E;"><strong style="color:#3D2418;">Keep this code private.</strong> ShahparPay will never ask for your OTP by call, SMS or WhatsApp. Anyone asking for it is trying to access your account.</td></tr>
-          </table>
-          <p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:#6B6880;">Didn't request this? You can safely ignore this email &mdash; your account stays secure.</p>
-        </td></tr>
-      </table>
+    <tr><td align="center" style="padding:32px 48px;">
+      <div style="display:inline-block;padding:16px 28px;background:#F4F2FF;border-radius:12px;font-family:'SF Mono',Menlo,Consolas,'Courier New',monospace;font-size:32px;line-height:1;font-weight:600;letter-spacing:10px;color:#4B2BD6;">${otp}</div>
     </td></tr>
 
-    <tr><td align="center" style="padding:28px 24px 0;font-family:${FONT};">
-      <p style="margin:0 0 10px;font-size:13px;color:#6B6880;"><a href="${SITE_URL}" style="color:#863BFF;text-decoration:none;font-weight:600;">shahparpay.in</a></p>
-      <p style="margin:0;font-size:12px;line-height:1.6;color:#9A97AD;">This is an automated message, please don't reply.<br>&copy; ${new Date().getFullYear()} ShahparPay. All rights reserved.</p>
+    <tr><td align="center" style="padding:0 48px;font-family:${FONT};">
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#8A8A94;">Never share this code. ShahparPay will never ask for it by call, SMS or WhatsApp. Didn't request it? Ignore this email.</p>
     </td></tr>
 
+    <tr><td style="padding:32px 48px 0;"><div style="border-top:1px dashed #DCDCE0;height:0;line-height:0;font-size:0;">&nbsp;</div></td></tr>
+
+    <tr><td align="center" style="padding:28px 48px 36px;font-family:${FONT};">
+      <a href="${SITE_URL}" style="font-size:13px;color:#6B6B76;text-decoration:underline;">shahparpay.in</a>
+    </td></tr>
   </table>
 </td></tr>
 </table>
