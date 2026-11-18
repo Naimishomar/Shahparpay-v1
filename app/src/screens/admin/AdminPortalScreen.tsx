@@ -9,7 +9,6 @@ import {
   Screen,
   EmptyState,
   ErrorBanner,
-  Grid,
   Row,
   Segmented,
   StatusPill,
@@ -25,12 +24,15 @@ import { Sheet } from '@/components/ui/Sheet';
 import { OnboardMemberSheet } from '@/components/network/OnboardMemberSheet';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
+import { OverviewPanel, VisitorsPanel, ServerPanel } from './AdminConsole';
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
   { key: 'requests', label: 'Fund requests' },
   { key: 'distributors', label: 'Distributors' },
   { key: 'notifications', label: 'Notifications' },
+  { key: 'visitors', label: 'Visitors' },
+  { key: 'server', label: 'Server' },
 ];
 
 const NOTIFICATION_KINDS = [
@@ -118,14 +120,7 @@ export const AdminPortalScreen: React.FC = () => {
 
       {tab === 'overview' && (
         <>
-          <Grid columns={2}>
-            <Tile label="Distributors" value={String(stats.data?.totalDistributors ?? 0)} />
-            <Tile label="Retailers" value={String(stats.data?.totalRetailers ?? 0)} />
-            <Tile label="Transactions" value={String(stats.data?.totalTransactions ?? 0)} />
-            <Tile label="Volume" value={money(stats.data?.totalTrxVolume)} />
-            <Tile label="Admin wallet" value={money(stats.data?.adminWalletBalance)} />
-            <Tile label="Pending requests" value={String(pending.length)} tone="warning" />
-          </Grid>
+          <OverviewPanel onTab={setTab} />
 
           <Card>
             <CardHeader>
@@ -161,6 +156,9 @@ export const AdminPortalScreen: React.FC = () => {
           </Card>
         </>
       )}
+
+      {tab === 'visitors' && <VisitorsPanel />}
+      {tab === 'server' && <ServerPanel />}
 
       {tab === 'requests' && (
         <Card>
@@ -439,25 +437,6 @@ export const AdminPortalScreen: React.FC = () => {
   );
 };
 
-const Tile: React.FC<{ label: string; value: string; tone?: 'warning' }> = ({
-  label,
-  value,
-  tone,
-}) => (
-  <View style={styles.tile}>
-    <Text style={styles.tileLabel} numberOfLines={1}>
-      {label}
-    </Text>
-    <Text
-      style={[styles.tileValue, tone === 'warning' && { color: colors.warning }]}
-      numberOfLines={1}
-      adjustsFontSizeToFit
-    >
-      {value}
-    </Text>
-  </View>
-);
-
 const styles = themed((c) => ({
   help: { fontSize: t.caption, color: c.mutedForeground, lineHeight: 18 },
   textarea: { minHeight: 90, textAlignVertical: 'top', paddingTop: space.sm },
@@ -467,21 +446,6 @@ const styles = themed((c) => ({
     borderWidth: 1,
     borderColor: c.border,
     backgroundColor: c.card,
-  },
-  tile: {
-    padding: space.md,
-    borderRadius: radius.md,
-    backgroundColor: c.card,
-    borderWidth: 1,
-    borderColor: c.border,
-    gap: 3,
-  },
-  tileLabel: { fontSize: t.micro, fontWeight: '600', color: c.mutedForeground },
-  tileValue: {
-    fontSize: t.bodyLg,
-    fontWeight: '700',
-    color: c.foreground,
-    fontVariant: ['tabular-nums'],
   },
   form: { gap: space.lg },
   requestItem: { paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: c.border },
