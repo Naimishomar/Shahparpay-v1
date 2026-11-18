@@ -4,6 +4,7 @@ import { resolveTransaction } from '../utils/wallet.util.js';
 import { fetchRechargeStatus } from '../utils/icchhamati.util.js';
 import { reconcileIcchhamatiPayout } from '../utils/icchhamatiPayout.js';
 import { syncCollectionTransaction } from '../controllers/collect.controller.js';
+import { syncUpiCashWithdrawal } from '../utils/upiCashWithdrawal.js';
 
 /**
  * The main Reconciliation Job
@@ -37,6 +38,8 @@ export const startReconciliationWorker = () => {
         $or: [
           { status: 'PROCESSING' },
           { status: 'PENDING', type: 'PG_COLLECTION', createdAt: { $gt: collectionWindow } },
+          // A UPI cash withdrawal QR lives 3 minutes; the bank's answer is final within the day.
+          { status: 'PENDING', type: 'UPI_CASH_WITHDRAWAL', createdAt: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
         ],
         createdAt: { $lt: fiveMinutesAgo },
       });
@@ -97,6 +100,18 @@ export const startReconciliationWorker = () => {
               `CRON: AEPS reconciliation failed for ${txn.transactionId}:`,
               error.message
             );
+          }
+          continue;
+        }
+
+        if (txn.type === 'UPI_CASH_WITHDRAWAL') {
+          // An inflow: only a confirmed SUCCESS credits, a confirmed FAILED closes it,
+          // and anything else waits for the next pass. Never the default auto-FAIL.
+          try {
+            const synced = await syncUpiCashWithdrawal(txn);
+            console.log(`CRON: UPI cash withdrawal ${txn.transactionId} is ${synced?.status}.`);
+          } catch (error) {
+            console.error(`CRON: UPI cash withdrawal sync failed for ${txn.transactionId}:`, error.message);
           }
           continue;
         }

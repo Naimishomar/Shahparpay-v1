@@ -30,7 +30,8 @@ import { DoneBody, type PayReceipt } from './RechargeScreen';
 const SETTLEMENT_BASE_CHARGE = 5;
 const SETTLEMENT_GST_RATE = 18;
 const SETTLEMENT_FEE = SETTLEMENT_BASE_CHARGE + Math.round(SETTLEMENT_BASE_CHARGE * (SETTLEMENT_GST_RATE / 100) * 100) / 100;
-const SETTLEMENT_MIN = 100;
+// Icchhamati refuses payouts of ₹500 or less.
+const SETTLEMENT_MIN = 501;
 const SETTLEMENT_MAX = 25000;
 const MODES = [
   { key: 'IMPS', label: 'IMPS · Instant' },
@@ -105,6 +106,9 @@ export const AepsSettlementScreen: React.FC = () => {
   const [bankName, setBankName] = useState('');
   const [accountHolderName, setAccountHolderName] = useState('');
   const [showBankNames, setShowBankNames] = useState(false);
+  // A new payout bank is activated, and a saved one removed, with an OTP to the registered mobile.
+  const [otpStep, setOtpStep] = useState<{ id: string; purpose: 'add' | 'delete' } | null>(null);
+  const [otp, setOtp] = useState('');
 
   const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
   const banks = useAsync<any[]>(async () => {
@@ -171,11 +175,41 @@ export const AepsSettlementScreen: React.FC = () => {
     return { ok, receipt: false };
   });
 
-  const addBank = useAction(() =>
-    call(() => api.addSettlementBank({ bankName, accountNumber, ifscCode, accountHolderName }), 'Failed to add bank account')
-  );
+  const askOtp = (id: string, purpose: 'add' | 'delete') => {
+    setOtp('');
+    setOtpStep({ id, purpose });
+  };
+
+  /** Resolves true when the bank is already active, false when it now waits for the OTP. */
+  const addBank = useAction(async () => {
+    const res = await call(
+      () => api.addSettlementBank({ benename: accountHolderName.trim(), beneaccount: accountNumber, ifsc: ifscCode }),
+      'Failed to add bank account'
+    );
+    const id = res.data?.id;
+    if (!id || res.data?.verified) return true;
+    try {
+      await call(() => api.sendSettlementBankOtp(id), 'Could not send the OTP');
+    } catch (err: any) {
+      if (/already verified|active/i.test(err?.message || '')) return true;
+      throw err;
+    }
+    askOtp(id, 'add');
+    return false;
+  });
+  const confirmOtp = useAction(async () => {
+    if (!otpStep) return null;
+    await (otpStep.purpose === 'add'
+      ? call(() => api.verifySettlementBank(otpStep.id, otp), 'Could not verify that OTP')
+      : call(() => api.deleteSettlementBank(otpStep.id, otp), 'Failed to remove bank account'));
+    return otpStep.purpose;
+  });
   const syncBanks = useAction(() => call(() => api.syncSavedBanks(), 'Failed to sync banks'));
-  const removeBank = useAction((id: string) => call(() => api.deleteSettlementBank(id), 'Failed to remove bank account'));
+  const removeBank = useAction(async (id: string) => {
+    await call(() => api.sendSettlementBankDeleteOtp(id), 'Could not send the deletion OTP');
+    askOtp(id, 'delete');
+    return true;
+  });
   const checkStatus = useAction((transactionId: string) =>
     call(() => api.checkSettlementStatus(transactionId), 'Failed to check settlement status', 'Status enquiry failed')
   );
@@ -201,13 +235,42 @@ export const AepsSettlementScreen: React.FC = () => {
     }
   };
 
+  const finishAdd = (message: string) => {
+    setNotice(message);
+    setAccountNumber('');
+    setIfscCode('');
+    setBankName('');
+    setAccountHolderName('');
+    setShowAddBank(false);
+    setOtpStep(null);
+    banks.reload();
+  };
+
+  const submitAdd = async () => {
+    setNotice('');
+    if ((await addBank.run()) === true) finishAdd('Bank account added successfully!');
+  };
+
+  const submitOtp = async () => {
+    const purpose = await confirmOtp.run();
+    if (purpose === 'add') finishAdd('Bank account activated for settlement');
+    if (purpose === 'delete') {
+      setNotice('Bank account removed successfully!');
+      setOtpStep(null);
+      banks.refresh();
+    }
+  };
+
   const confirmRemove = (bank: any) =>
     Alert.alert('Remove bank account?', 'Are you sure you want to remove this bank account?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
         style: 'destructive',
-        onPress: () => run(() => removeBank.run(bank._id), 'Bank account removed successfully!', banks.refresh),
+        onPress: () => {
+          setNotice('');
+          removeBank.run(bank._id);
+        },
       },
     ]);
 
@@ -231,6 +294,28 @@ export const AepsSettlementScreen: React.FC = () => {
 
       {!!notice && <SuccessBanner message={notice} />}
       {!!removeBank.error && <ErrorBanner message={removeBank.error} />}
+      {!!otpStep && (
+        <View style={[styles.card, styles.form]}>
+          <Text style={styles.bankName}>{otpStep.purpose === 'add' ? 'Activate Bank Account' : 'Remove Bank Account'}</Text>
+          <Text style={styles.muted}>Enter the OTP sent to your registered mobile number.</Text>
+          <Input
+            label="OTP"
+            required
+            value={otp}
+            onChangeText={(v) => setOtp(v.replace(/\D/g, ''))}
+            keyboardType="number-pad"
+            maxLength={6}
+            placeholder="6-digit OTP"
+          />
+          {!!confirmOtp.error && <ErrorBanner message={confirmOtp.error} />}
+          <Button onPress={submitOtp} loading={confirmOtp.pending} disabled={otp.length < 4} fullWidth>
+            {otpStep.purpose === 'add' ? 'Verify & Activate' : 'Verify & Remove'}
+          </Button>
+          <Button variant="ghost" onPress={() => setOtpStep(null)} fullWidth>
+            Cancel
+          </Button>
+        </View>
+      )}
       {!!checkStatus.error && <ErrorBanner message={checkStatus.error} />}
       {!!checkAccount.error && <ErrorBanner message={checkAccount.error} />}
 
@@ -372,16 +457,14 @@ export const AepsSettlementScreen: React.FC = () => {
               )}
             </View>
             <Text style={styles.muted}>
-              NPCI Strict Rule: For self (savings) accounts the Account Holder Name must match your official KYC PAN/Aadhaar Name and is used automatically.
-            </Text>
-            <Text style={styles.muted}>
-              For a business / current account, enter the exact Account Holder Name below (as per bank records) so the penny-drop validates it.
+              Enter the Account Holder Name exactly as per bank records: a penny-drop checks it (₹4 from your Utility Wallet), then an OTP to your registered mobile activates the account.
             </Text>
             <Input
-              label="Account Holder Name (current/business accounts)"
+              label="Account Holder Name"
+              required
               value={accountHolderName}
               onChangeText={setAccountHolderName}
-              placeholder="Leave blank for self (KYC name) account"
+              placeholder="As per bank records"
             />
             <Input
               label="Account Number"
@@ -401,18 +484,9 @@ export const AepsSettlementScreen: React.FC = () => {
             />
             {!!addBank.error && <ErrorBanner message={addBank.error} />}
             <Button
-              onPress={() =>
-                run(addBank.run, 'Bank account added successfully!', () => {
-                  setAccountNumber('');
-                  setIfscCode('');
-                  setBankName('');
-                  setAccountHolderName('');
-                  setShowAddBank(false);
-                  banks.reload();
-                })
-              }
+              onPress={submitAdd}
               loading={addBank.pending}
-              disabled={!bankName || !accountNumber || !ifscCode}
+              disabled={!bankName || !accountHolderName.trim() || !accountNumber || !ifscCode || !!otpStep}
               fullWidth
             >
               {addBank.pending ? 'Adding...' : 'Add Bank'}

@@ -31,6 +31,7 @@ const TITLES: Record<string, string> = {
   BBPS: 'Pay bills',
   AddMoney: 'Add money',
   AepsSettlement: 'Withdraw',
+  UpiCashWithdrawal: 'UPI cash withdrawal',
   AdminPortal: 'Overview',
   DistributorPortal: 'Overview',
   DistributorRetailers: 'Retailers',

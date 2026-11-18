@@ -37,6 +37,7 @@ const transactionSchema = new mongoose.Schema(
         'MERCHANT_ONBOARDING_CHARGE',
         'ACCOUNT_VERIFICATION',
         'AADHAAR_PAY',
+        'UPI_CASH_WITHDRAWAL',
         'STD_PAN_CARD',
         'FUND_REQUEST',
         'FUND_TRANSFER',

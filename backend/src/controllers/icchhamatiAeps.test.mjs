@@ -16,6 +16,14 @@ import { parseServicesUpdate } from '../utils/services.js';
   // Docs shape still reads.
   assert.equal(txnFields({ status: 1, data: { status: true, balanceAmount: '10', fpTransactionId: 'FP2' } }).fpTransactionId, 'FP2');
   assert.deepEqual(txnFields(null), {});
+  // The documented cash-deposit answer: data.status is a word, the fields have other names.
+  const cd = { status: 1, message: 'Transaction Successful', data: { merchant_tran_id: 'CDTXN1', amount: 2000, rrn: '4318', status: 'Success', balance: '14500.00' } };
+  assert.equal(transactionOutcome(cd), 'SUCCESS');
+  assert.equal(txnFields(cd).bankRRN, '4318');
+  assert.equal(txnFields(cd).balanceAmount, '14500.00');
+  assert.equal(txnFields(cd).fpTransactionId, 'CDTXN1');
+  assert.equal(transactionOutcome({ status: 1, data: { status: 'Failed' } }), 'FAILED');
+  assert.equal(transactionOutcome({ status: 1, data: { status: 'Pending' } }), 'PROCESSING');
 }
 
 // --- Correcting a draft ----------------------------------------------------

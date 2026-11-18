@@ -19,6 +19,7 @@ const GROUPS: { title: string; items: { label: string; route: string; icon: stri
       { label: 'AEPS', route: 'AEPS', icon: 'fingerprint' },
       { label: 'Micro ATM', route: 'MATM', icon: 'credit-card-outline' },
       { label: 'DMT', route: 'DMT', icon: 'bank-transfer' },
+      { label: 'UPI cash withdrawal', route: 'UpiCashWithdrawal', icon: 'qrcode-scan' },
     ],
   },
   {

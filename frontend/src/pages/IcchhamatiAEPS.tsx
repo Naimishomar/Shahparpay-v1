@@ -598,7 +598,13 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
     const [result, setResult] = useState<TxnResult | null>(null);
     const [showReceipt, setShowReceipt] = useState(false);
 
-    useEffect(() => { call('/banks', undefined, 'get').then((r) => r.success && setBanks(r.data || [])); }, []);
+    // Cash deposit has its own bank list; the rest share the AEPS one.
+    const deposit = tab === 'CD';
+    useEffect(() => {
+        setBanks([]);
+        setBankID('');
+        call(deposit ? '/banks?service=CD' : '/banks', undefined, 'get').then((r) => r.success && setBanks(r.data || []));
+    }, [deposit]);
 
     const moves = tab === 'CW' || tab === 'M' || tab === 'CD';
     // Cash deposit takes no customer OTP on Icchhamati.

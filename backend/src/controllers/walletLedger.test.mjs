@@ -53,6 +53,7 @@ const EXPECTED = {
   AEPS_WITHDRAWAL: ['aeps', +1],
   MATM: ['aeps', +1],
   AADHAAR_PAY: ['aeps', +1],
+  UPI_CASH_WITHDRAWAL: ['aeps', +1],
   AEPS_SETTLEMENT: ['aeps', -1],
   WALLET_TOPUP: ['main', +1],
   FUND_REQUEST: ['main', +1],

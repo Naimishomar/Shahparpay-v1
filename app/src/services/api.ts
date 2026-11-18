@@ -288,9 +288,9 @@ class ApiService {
     return response.data;
   }
 
-  async delete<T = any>(url: string) {
+  async delete<T = any>(url: string, data?: Record<string, any>) {
     this.invalidateCache();
-    const response = await this.client.delete<T>(url);
+    const response = await this.client.delete<T>(url, data ? { data } : undefined);
     return response.data;
   }
 
@@ -440,8 +440,9 @@ class ApiService {
     return this.envelope(this.get(API_ENDPOINTS.icchAeps.settlementBanks));
   }
 
-  async icchAepsBanks() {
-    return this.envelope(this.get(API_ENDPOINTS.icchAeps.banks));
+  /** Cash deposit (CD) has its own bank list; every other AEPS service shares one. */
+  async icchAepsBanks(service?: 'CD') {
+    return this.envelope(this.get(API_ENDPOINTS.icchAeps.banks, service ? { service } : undefined));
   }
 
   /** Any onboarding step, by path under /api/aeps/icchhamati (e.g. `pan/verify`). */
@@ -467,6 +468,19 @@ class ApiService {
     return this.envelope(this.post(API_ENDPOINTS.icchAeps.transaction, data));
   }
 
+  // UPI cash withdrawal: refusals throw, so the screen shows the server's message.
+  async upiCwInitiate(data: { amount: number; customerMobile: string; latitude: string; longitude: string }) {
+    return this.post(API_ENDPOINTS.icchAeps.upiCwInitiate, data);
+  }
+
+  async upiCwStatus(transactionId: string) {
+    return this.post(API_ENDPOINTS.icchAeps.upiCwStatus, { transactionId });
+  }
+
+  async upiCwHistory() {
+    return this.get(API_ENDPOINTS.icchAeps.upiCwHistory);
+  }
+
   // ---------------------------------------------------- Settlement / payout
   async getSettlementHistory(params?: { type?: string }) {
     return this.get(API_ENDPOINTS.settlement.history, params);
@@ -480,18 +494,25 @@ class ApiService {
     return this.get(API_ENDPOINTS.settlement.syncBanks);
   }
 
-  async addSettlementBank(data: {
-    accountNumber: string;
-    ifscCode: string;
-    bankName: string;
-    accountHolderName: string;
-    accountType?: string;
-  }) {
+  async addSettlementBank(data: { benename: string; beneaccount: string; ifsc: string }) {
     return this.post(API_ENDPOINTS.settlement.addBank, data);
   }
 
-  async deleteSettlementBank(id: string) {
-    return this.delete(`${API_ENDPOINTS.settlement.deleteBank}/${id}`);
+  /** Settlement banks are activated, and removed, with an OTP to the registered mobile. */
+  async sendSettlementBankOtp(beneficiary_id: string) {
+    return this.post(API_ENDPOINTS.settlement.bankOtp, { beneficiary_id });
+  }
+
+  async verifySettlementBank(beneficiary_id: string, otp: string) {
+    return this.post(API_ENDPOINTS.settlement.bankVerify, { beneficiary_id, otp });
+  }
+
+  async sendSettlementBankDeleteOtp(beneficiary_id: string) {
+    return this.post(API_ENDPOINTS.settlement.bankDeleteOtp, { beneficiary_id });
+  }
+
+  async deleteSettlementBank(id: string, otp: string) {
+    return this.delete(`${API_ENDPOINTS.settlement.deleteBank}/${encodeURIComponent(id)}`, { otp });
   }
 
   async getSettlementAccountStatus(id: string) {

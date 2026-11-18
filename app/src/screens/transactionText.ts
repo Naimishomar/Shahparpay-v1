@@ -7,6 +7,7 @@
 export const CREDIT_TYPES = new Set([
   'AEPS_WITHDRAWAL',
   'AADHAAR_PAY',
+  'UPI_CASH_WITHDRAWAL',
   'WALLET_TOPUP',
   'FUND_REQUEST',
   'FUND_TRANSFER',
@@ -19,6 +20,7 @@ export const CREDIT_TYPES = new Set([
 export const ICON_FOR: Record<string, string> = {
   AEPS: 'fingerprint',
   AADHAAR_PAY: 'fingerprint',
+  UPI_CASH_WITHDRAWAL: 'qrcode-scan',
   AEPS_SETTLEMENT: 'cash-fast',
   DMT: 'bank-transfer',
   RECHARGE: 'cellphone',
@@ -61,6 +63,7 @@ export const txnSubtitle = (i: any) => {
     const last4 = String(m.aadhaar ?? '').replace(/\D/g, '').slice(-4);
     return [m.bankName, last4 && `·· ${last4}`].filter(Boolean).join(' ') || 'AEPS';
   }
+  if (type === 'UPI_CASH_WITHDRAWAL') return join('UPI cash withdrawal', m.mobile);
   if (type.startsWith('DMT')) return join('DMT', m.mode);
   if (type === 'RECHARGE') return 'Recharge';
   if (type === 'BILL_PAYMENT') return 'BBPS';

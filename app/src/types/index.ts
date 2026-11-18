@@ -96,6 +96,7 @@ export interface NavigationParams {
     Dashboard: undefined;
     AEPS: undefined;
     AepsSettlement: undefined;
+    UpiCashWithdrawal: undefined;
     PAN: undefined;
     LeadGeneration: undefined;
     ITR: undefined;

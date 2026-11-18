@@ -18,7 +18,7 @@ export type ServiceKey = keyof typeof SERVICE_LABELS;
 
 /** The switches shown when onboarding a retailer; mirrors frontend/src/lib/services.ts. */
 export const SERVICES = [
-  { key: 'aeps', label: 'AEPS', hint: 'Cash withdrawal, deposit, Aadhaar Pay' },
+  { key: 'aeps', label: 'AEPS', hint: 'Cash withdrawal, deposit, Aadhaar Pay, UPI cash withdrawal' },
   { key: 'matm', label: 'Micro ATM', hint: 'Card withdrawals on a mATM device' },
   { key: 'dmt', label: 'DMT', hint: 'Domestic money transfer' },
   { key: 'payout', label: 'Direct Payout', hint: 'Pay any bank account' },
@@ -33,6 +33,7 @@ export const SERVICES = [
 /** Which service each navigator route belongs to. Routes not listed are never gated. */
 export const ROUTE_SERVICE: Record<string, ServiceKey> = {
   AEPS: 'aeps',
+  UpiCashWithdrawal: 'aeps',
   MATM: 'matm',
   DMT: 'dmt',
   Recharge: 'recharge',

@@ -1,0 +1,209 @@
+import { useEffect, useRef, useState } from 'react';
+import { QrCode, Phone, IndianRupee, RefreshCw, CheckCircle2, XCircle, Clock, Banknote } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import axios from 'axios';
+import { toast } from 'sonner';
+import { useAuth } from '../context/AuthContext';
+import { useLocationContext } from '../context/LocationContext';
+
+const SILVER_TILE = 'icon-chip';
+const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500';
+const POLL_MS = 4000;
+// Rate card range; the backend refuses anything outside it.
+const MIN = 500;
+const MAX = 5000;
+
+type Txn = { transactionId: string; amount: number; status: string; customerMobile?: string; bankRRN?: string; payerName?: string; message?: string; createdAt?: string };
+type Qr = { transactionId: string; qrCode: string; amount: number; expiresAt: number };
+
+const StatusPill = ({ status }: { status: string }) => {
+    const [cls, Icon] = status === 'SUCCESS'
+        ? ['bg-emerald-500/10 text-emerald-600 ring-emerald-500/20', CheckCircle2]
+        : status === 'FAILED'
+            ? ['bg-red-500/10 text-red-600 ring-red-500/20', XCircle]
+            : ['bg-amber-500/10 text-amber-600 ring-amber-500/20', Clock];
+    return (
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${cls}`}>
+            <Icon className="w-3.5 h-3.5" />
+            {status === 'SUCCESS' ? 'SUCCESS' : status === 'FAILED' ? 'FAILED' : 'PENDING'}
+        </span>
+    );
+};
+
+/**
+ * UPI cash withdrawal: the customer scans a QR for the amount and pays from their
+ * UPI app; the Trade wallet is credited when the bank confirms, and only then is
+ * the cash handed over.
+ */
+const UpiCashWithdrawal = () => {
+    const { token } = useAuth();
+    const { location } = useLocationContext();
+    const api = `${import.meta.env.VITE_BACKEND_URL}/api/aeps/icchhamati/upicw`;
+    const headers = { headers: { Authorization: `Bearer ${token}` } };
+
+    const [amount, setAmount] = useState('');
+    const [mobile, setMobile] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [qr, setQr] = useState<Qr | null>(null);
+    const [result, setResult] = useState<Txn | null>(null);
+    const [now, setNow] = useState(Date.now());
+    const [history, setHistory] = useState<Txn[]>([]);
+    const polling = useRef(false);
+
+    const loadHistory = () =>
+        axios.get(`${api}/history`, headers).then((r) => setHistory(r.data?.data || [])).catch(() => {});
+    useEffect(() => { loadHistory(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const checkStatus = async (transactionId: string, quiet = false) => {
+        try {
+            const res = await axios.post(`${api}/status`, { transactionId }, headers);
+            const txn: Txn = res.data?.data;
+            if (txn?.status === 'SUCCESS' || txn?.status === 'FAILED') {
+                setQr(null);
+                setResult(txn);
+                loadHistory();
+            } else if (!quiet) toast.info('Payment not received yet.');
+            return txn;
+        } catch (err: any) {
+            if (!quiet) toast.error(err?.response?.data?.message || 'Could not check the status');
+            return null;
+        }
+    };
+
+    // While a QR is up: tick the countdown and ask the bank every few seconds.
+    useEffect(() => {
+        if (!qr) return;
+        const tick = setInterval(() => setNow(Date.now()), 1000);
+        const poll = setInterval(async () => {
+            if (polling.current) return;
+            polling.current = true;
+            await checkStatus(qr.transactionId, true);
+            polling.current = false;
+        }, POLL_MS);
+        return () => { clearInterval(tick); clearInterval(poll); };
+    }, [qr]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const start = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!location) return toast.error('Allow location access to continue.');
+        setBusy(true);
+        setResult(null);
+        try {
+            const res = await axios.post(`${api}/initiate`, {
+                amount: Number(amount),
+                customerMobile: mobile,
+                latitude: location.latitude,
+                longitude: location.longitude,
+            }, headers);
+            const d = res.data.data;
+            setQr({ transactionId: d.transactionId, qrCode: d.qrCode, amount: d.amount, expiresAt: Date.now() + d.expiresIn * 1000 });
+            setNow(Date.now());
+            loadHistory();
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Could not start the UPI cash withdrawal');
+        }
+        setBusy(false);
+    };
+
+    const reset = () => { setQr(null); setResult(null); setAmount(''); setMobile(''); };
+    const secondsLeft = qr ? Math.max(0, Math.round((qr.expiresAt - now) / 1000)) : 0;
+    const valid = Number(amount) >= MIN && Number(amount) <= MAX && /^[6-9]\d{9}$/.test(mobile);
+
+    return (
+        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
+                <div className="flex items-center gap-4">
+                    <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><QrCode className="h-7 w-7" /></div>
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">UPI Cash Withdrawal</h1>
+                        <p className="text-sm text-muted-foreground">The customer scans a QR and pays from any UPI app; you hand over cash once it is confirmed.</p>
+                    </div>
+                </div>
+            </section>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+                <section className="rounded-3xl border bg-card p-6 shadow-sm">
+                    {result ? (
+                        <div className="flex flex-col items-center gap-3 text-center py-6">
+                            {result.status === 'SUCCESS'
+                                ? <CheckCircle2 className="h-14 w-14 text-emerald-500" />
+                                : <XCircle className="h-14 w-14 text-red-500" />}
+                            <h2 className="text-xl font-bold">
+                                {result.status === 'SUCCESS' ? `Received ₹${result.amount.toLocaleString('en-IN')}` : 'Payment failed'}
+                            </h2>
+                            <p className="text-sm text-muted-foreground">
+                                {result.status === 'SUCCESS'
+                                    ? <>Credited to your Trade Wallet. <b className="text-foreground">Hand over ₹{result.amount.toLocaleString('en-IN')} cash now.</b></>
+                                    : result.message || 'No money was received. Do not give cash.'}
+                            </p>
+                            {result.bankRRN && <p className="text-xs text-muted-foreground">RRN {result.bankRRN}{result.payerName ? ` · ${result.payerName}` : ''}</p>}
+                            <button onClick={reset} className="mt-2 btn-primary rounded-xl px-5 py-2.5 text-sm font-semibold">New withdrawal</button>
+                        </div>
+                    ) : qr ? (
+                        <div className="flex flex-col items-center gap-4 text-center">
+                            <p className="text-sm text-muted-foreground">Ask the customer to scan and pay</p>
+                            <p className="text-3xl font-bold tabular-nums">₹{qr.amount.toLocaleString('en-IN')}</p>
+                            <div className={`rounded-2xl bg-white p-4 ${secondsLeft ? '' : 'opacity-30'}`}>
+                                <QRCodeSVG value={qr.qrCode} size={220} />
+                            </div>
+                            <p className="text-sm font-medium">
+                                {secondsLeft
+                                    ? `Expires in ${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')} · waiting for payment…`
+                                    : 'QR expired. If the customer already paid, check the status.'}
+                            </p>
+                            <p className="text-xs font-semibold text-amber-600">Do not give cash until this screen shows success.</p>
+                            <div className="flex gap-2">
+                                <button onClick={() => checkStatus(qr.transactionId)} className="flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold"><RefreshCw className="h-4 w-4" />Check status</button>
+                                <button onClick={reset} className="rounded-xl px-4 py-2 text-sm text-muted-foreground">Cancel</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <form onSubmit={start} className="flex flex-col gap-4">
+                            <label className="flex flex-col gap-1.5 text-sm font-medium">
+                                <span className="flex items-center gap-1.5"><IndianRupee className="h-3.5 w-3.5" />Amount</span>
+                                <input required inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))} placeholder="e.g. 500" className={INPUT} />
+                                <span className="text-xs font-normal text-muted-foreground">₹{MIN} – ₹{MAX.toLocaleString('en-IN')} · Commission ₹1 (up to ₹1,000), ₹3 (up to ₹3,000), ₹6 (up to ₹5,000)</span>
+                            </label>
+                            <label className="flex flex-col gap-1.5 text-sm font-medium">
+                                <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" />Customer Mobile</span>
+                                <input required inputMode="numeric" value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile" className={INPUT} />
+                            </label>
+                            <button disabled={busy || !valid} className="flex items-center justify-center gap-2 btn-primary rounded-xl py-3 text-sm font-semibold disabled:opacity-60">
+                                <QrCode className="h-4 w-4" />{busy ? 'Generating…' : 'Generate QR'}
+                            </button>
+                        </form>
+                    )}
+                </section>
+
+                <section className="rounded-3xl border bg-card p-6 shadow-sm">
+                    <div className="mb-4 flex items-center justify-between">
+                        <h2 className="flex items-center gap-2 font-semibold"><Banknote className="h-4 w-4" />Recent withdrawals</h2>
+                        <button onClick={loadHistory} className="text-muted-foreground" aria-label="Refresh"><RefreshCw className="h-4 w-4" /></button>
+                    </div>
+                    {history.length === 0 ? (
+                        <p className="py-8 text-center text-sm text-muted-foreground">No UPI cash withdrawals yet.</p>
+                    ) : (
+                        <ul className="divide-y">
+                            {history.map((t) => (
+                                <li key={t.transactionId} className="flex items-center justify-between gap-3 py-3">
+                                    <div className="min-w-0">
+                                        <p className="font-semibold tabular-nums">₹{t.amount.toLocaleString('en-IN')}</p>
+                                        <p className="truncate text-xs text-muted-foreground">{t.customerMobile} · {t.createdAt ? new Date(t.createdAt).toLocaleString('en-IN') : ''}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {t.status !== 'SUCCESS' && t.status !== 'FAILED' && (
+                                            <button onClick={() => checkStatus(t.transactionId)} className="text-xs font-semibold underline underline-offset-2">Check</button>
+                                        )}
+                                        <StatusPill status={t.status} />
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </section>
+            </div>
+        </div>
+    );
+};
+
+export default UpiCashWithdrawal;

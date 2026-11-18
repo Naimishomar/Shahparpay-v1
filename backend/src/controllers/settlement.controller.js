@@ -18,9 +18,9 @@ import {
   beneficiaryMobile,
   getBeneficiaryId,
   addBeneficiary,
-  sendBeneficiaryOtp,
+  sendPayoutBeneficiaryOtp,
   sendBeneficiaryDeleteOtp,
-  verifyBeneficiary,
+  verifyPayoutBeneficiary,
   deleteBeneficiary,
 } from './dmt.controller.js';
 
@@ -47,8 +47,8 @@ const getUser = async (req) => {
  * saved under the retailer's registered mobile number. Nothing else can be
  * picked: the beneficiary is looked up again from the provider at payout time,
  * so an id from the browser is never trusted. Accounts are added here with
- * type 3 (penny drop, then active at once); the provider decides payout vs DMT
- * by the beneficiary's type, not by anything sent with the payout.
+ * type 3 on the payout API: penny drop, /payout/create, then the OTP from
+ * /payout/get-beneficiary-otp activates it. Payouts go to /payout/beneficiary-payout.
  */
 /** A provider beneficiary in the shape the settlement screens already read. */
 export const toSettlementBank = (row) => {
@@ -70,8 +70,8 @@ export const toSettlementBank = (row) => {
 
 /**
  * { mobile, banks } for this user, or { error: { status, message } }.
- * Settlements go out as payouts only, to type 3 beneficiaries. The provider's list
- * endpoint never returns those, so each id saved on the user is fetched on its own;
+ * Settlements go out as payouts only, to type 3 beneficiaries. GET /payout lists only
+ * type 2 rows in practice, so each id saved on the user is fetched from /payout/:id;
  * ids the provider no longer knows (deleted) are dropped from the user.
  */
 const settlementBanks = async (req) => {
@@ -82,7 +82,7 @@ const settlementBanks = async (req) => {
   }
   const ids = user.payoutBeneficiaryIds || [];
   const results = await Promise.all(
-    ids.map((id) => icchhamatiGet(`/api/v2/beneficiaries/${encodeURIComponent(id)}`).catch(() => null))
+    ids.map((id) => icchhamatiGet(`/api/v2/payout/${encodeURIComponent(id)}`).catch(() => null))
   );
   if (results.some((d) => d === null)) {
     return { error: { status: 502, message: 'Could not load your bank accounts right now.' } };
@@ -133,9 +133,9 @@ export const addSettlementBank = async (req, res) => {
   return addBeneficiary(req, res);
 };
 
-export const sendSettlementBankOtp = sendBeneficiaryOtp;
+export const sendSettlementBankOtp = sendPayoutBeneficiaryOtp;
 export const sendSettlementBankDeleteOtp = sendBeneficiaryDeleteOtp;
-export const verifySettlementBank = verifyBeneficiary;
+export const verifySettlementBank = verifyPayoutBeneficiary;
 
 /** Deletes one of this retailer's own payout beneficiaries; the provider wants the OTP from /bank-otp. */
 export const deleteSettlementBank = async (req, res) => {
@@ -274,12 +274,11 @@ export const initiateSettlement = async (req, res) => {
 
     let data;
     try {
-      data = await icchhamatiPost('/api/v2/beneficiaries/beneficiary-payout', {
+      data = await icchhamatiPost('/api/v2/payout/beneficiary-payout', {
         beneficiary_id: Number(bank.beneId),
         amount: Number(amount),
         transfer_mode: mode,
         transaction_id: transactionId,
-        type: '3',
         details: `Trade wallet settlement ${transactionId}`,
       });
     } catch (providerError) {

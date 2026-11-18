@@ -17,6 +17,7 @@ export const SERVICE_LABELS: Record<string, string> = {
     AEPS_WITHDRAWAL: 'AEPS Withdrawal',
     AEPS_DEPOSIT: 'AEPS Deposit',
     AADHAAR_PAY: 'Aadhaar Pay',
+    UPI_CASH_WITHDRAWAL: 'UPI Cash Withdrawal',
     MATM: 'Micro ATM',
     DMT: 'DMT',
     DIRECT_PAYOUT: 'Direct Payout',

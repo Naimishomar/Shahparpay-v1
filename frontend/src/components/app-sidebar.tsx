@@ -4,7 +4,7 @@ import { useState } from "react"
 import {
   History, BookOpen, BarChart3, Send, Smartphone, Receipt, Fingerprint, Landmark, ArrowRightLeft, LayoutDashboard, Users,
   Store, UserPlus, UserCircle, FileText, IdCard, CreditCard, Bell, Headset, UserCheck, Wallet, ChevronDown, LineChart, Server,
-  type LucideIcon,
+  QrCode, type LucideIcon,
 } from "lucide-react"
 import logo from "../assets/logo.png"
 import { useAuth } from "../context/AuthContext"
@@ -20,6 +20,7 @@ const retailerGroups: NavGroup[] = [
     label: "Banking",
     items: [
       { name: "AEPS", url: "/aeps", service: "aeps", icon: Fingerprint },
+      { name: "UPI Cash Withdrawal", url: "/upi-cash-withdrawal", service: "aeps", icon: QrCode },
       { name: "Micro ATM", url: "/matm", service: "matm", icon: CreditCard },
       { name: "DMT", url: "/dmt", service: "dmt", icon: Send },
       { name: "Trade Wallet Settlement", url: "/aeps-settlement", icon: Landmark },

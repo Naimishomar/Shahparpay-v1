@@ -7,6 +7,7 @@ export { ReportsScreen } from './ReportsScreen';
 export { DashboardScreen } from './retailer/DashboardScreen';
 export { AepsScreen } from './retailer/AepsScreen';
 export { AepsSettlementScreen } from './retailer/AepsSettlementScreen';
+export { UpiCashWithdrawalScreen } from './retailer/UpiCashWithdrawalScreen';
 export { PanCardScreen } from './retailer/PanCardScreen';
 export { LeadGenerationScreen } from './retailer/LeadGenerationScreen';
 export { ItrScreen } from './retailer/ItrScreen';

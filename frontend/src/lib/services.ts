@@ -3,7 +3,7 @@
  * backend/src/utils/services.js, which refuses a switched-off service.
  */
 export const SERVICES = [
-    { key: 'aeps', label: 'AEPS', hint: 'Cash withdrawal, deposit, Aadhaar Pay' },
+    { key: 'aeps', label: 'AEPS', hint: 'Cash withdrawal, deposit, Aadhaar Pay, UPI cash withdrawal' },
     { key: 'matm', label: 'Micro ATM', hint: 'Card withdrawals on a mATM device' },
     { key: 'dmt', label: 'DMT', hint: 'Domestic money transfer' },
     { key: 'payout', label: 'Direct Payout', hint: 'Pay any bank account' },

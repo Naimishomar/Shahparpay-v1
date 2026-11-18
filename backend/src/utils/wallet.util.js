@@ -41,6 +41,23 @@ export const getAepsWithdrawalCommission = (amount) => {
   return 12;
 };
 
+/** UPI cash withdrawal is accepted from ₹500 to ₹5,000 (rate card slabs). */
+export const UPI_CW_LIMITS = { min: 500, max: 5000 };
+
+/**
+ * UPI cash-withdrawal retailer commission (rate card, flat).
+ *   ₹500–₹1,000   → ₹1
+ *   ₹1,001–₹3,000 → ₹3
+ *   ₹3,001–₹5,000 → ₹6
+ */
+export const getUpiCashWithdrawalCommission = (amount) => {
+  const amt = Number(amount) || 0;
+  if (amt < UPI_CW_LIMITS.min || amt > UPI_CW_LIMITS.max) return 0;
+  if (amt <= 1000) return 1;
+  if (amt <= 3000) return 3;
+  return 6;
+};
+
 /**
  * AEPS cash-deposit retailer commission.
  *   below ₹300     → ₹0

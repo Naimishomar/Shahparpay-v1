@@ -249,14 +249,15 @@ export const addBeneficiary = async (req, res) => {
       });
     }
 
-    const data = await icchhamatiPost('/api/v2/beneficiaries/create', {
+    // Icchhamati: type 3 = payout (settlement) beneficiary, created on the payout API; no type = DMT.
+    const isPayout = String(req.body.type) === '3';
+    const data = await icchhamatiPost(isPayout ? '/api/v2/payout/create' : '/api/v2/beneficiaries/create', {
       name: beneName,
       mobile,
       account: beneAccount,
       confirmAccount: beneAccount,
       ifsc: normalizedIfsc,
-      // Icchhamati: type 3 = payout (settlement) beneficiary; no type = DMT.
-      ...(String(req.body.type) === '3' && { type: 3 }),
+      ...(isPayout && { type: 3 }),
     });
 
     await recordOutcome({
@@ -293,7 +294,7 @@ export const addBeneficiary = async (req, res) => {
 };
 
 /** Sends the activation OTP to the sender's registered mobile. */
-export const sendBeneficiaryOtp = async (req, res) => {
+const sendOtpVia = (path) => async (req, res) => {
   try {
     const { beneficiary_id, beneid } = req.body;
     const id = beneficiary_id || beneid;
@@ -301,7 +302,7 @@ export const sendBeneficiaryOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Beneficiary id is required' });
     }
 
-    const data = await icchhamatiPost('/api/v2/beneficiaries/get-beneficiary-otp', {
+    const data = await icchhamatiPost(path, {
       beneficiary_id: String(id),
     });
 
@@ -321,6 +322,8 @@ export const sendBeneficiaryOtp = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Failed to send OTP' });
   }
 };
+export const sendBeneficiaryOtp = sendOtpVia('/api/v2/beneficiaries/get-beneficiary-otp');
+export const sendPayoutBeneficiaryOtp = sendOtpVia('/api/v2/payout/get-beneficiary-otp');
 
 /**
  * Deletion must be authorised by the sender/remitter who owns the beneficiary,
@@ -364,7 +367,7 @@ export const sendBeneficiaryDeleteOtp = async (req, res) => {
   }
 };
 
-export const verifyBeneficiary = async (req, res) => {
+const verifyVia = (path) => async (req, res) => {
   try {
     const { beneficiary_id, beneid, otp } = req.body;
     const id = beneficiary_id || beneid;
@@ -374,7 +377,7 @@ export const verifyBeneficiary = async (req, res) => {
         .json({ success: false, message: 'Beneficiary id and OTP are required' });
     }
 
-    const data = await icchhamatiPost('/api/v2/beneficiaries/otp-verify-beneficiary', {
+    const data = await icchhamatiPost(path, {
       beneficiary_id: String(id),
       otp: String(otp),
     });
@@ -394,6 +397,8 @@ export const verifyBeneficiary = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Failed to verify beneficiary' });
   }
 };
+export const verifyBeneficiary = verifyVia('/api/v2/beneficiaries/otp-verify-beneficiary');
+export const verifyPayoutBeneficiary = verifyVia('/api/v2/payout/otp-verify-beneficiary');
 
 /** Deleting a beneficiary is OTP-protected at the provider, same as adding one. */
 export const deleteBeneficiary = async (req, res) => {

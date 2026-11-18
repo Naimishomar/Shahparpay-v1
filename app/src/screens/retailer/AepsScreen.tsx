@@ -218,7 +218,10 @@ export const AepsScreen: React.FC = () => {
     if (!response?.success) throw new Error(response?.message || 'Could not load AEPS status.');
     return response.data;
   }, []);
-  const banks = useAsync<Bank[]>(async () => (await api.icchAepsBanks()).data ?? [], []);
+  const isDeposit = service === 'deposit';
+  const banks = useAsync<Bank[]>(async () => (await api.icchAepsBanks(isDeposit ? 'CD' : undefined)).data ?? [], [isDeposit]);
+  // A bank picked from one list may not be on the other.
+  useEffect(() => setBank(null), [isDeposit]);
 
   const icchStatus: IcchStatus | null = status.data?.step ? status.data : null;
 

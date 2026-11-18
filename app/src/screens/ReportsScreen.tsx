@@ -105,14 +105,14 @@ const startsWith = (...prefixes: string[]) => (i: any) => prefixes.some((p) => t
 /** The server-side type filter behind each chip (prefixes, comma-separated). */
 const CHIP_TYPES: Record<string, string | undefined> = {
   all: undefined,
-  aeps: 'AEPS,AADHAAR_PAY',
+  aeps: 'AEPS,AADHAAR_PAY,UPI_CASH_WITHDRAWAL',
   dmt: 'DMT',
   bills: 'BILL_PAYMENT,RECHARGE',
 };
 
 const HISTORY_CHIPS = [
   { key: 'all', label: 'All', match: () => true },
-  { key: 'aeps', label: 'AEPS', match: startsWith('AEPS', 'AADHAAR_PAY') },
+  { key: 'aeps', label: 'AEPS', match: startsWith('AEPS', 'AADHAAR_PAY', 'UPI_CASH_WITHDRAWAL') },
   { key: 'dmt', label: 'DMT', match: startsWith('DMT') },
   { key: 'bills', label: 'Bills', match: startsWith('BILL_PAYMENT', 'RECHARGE') },
 ];

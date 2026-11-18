@@ -18,10 +18,15 @@ import {
 import {
   applyAepsWithdrawalSuccess,
   applyAepsDepositSuccess,
+  UPI_CW_LIMITS,
   lockFundsForTransaction,
   resolveTransaction,
 } from '../utils/wallet.util.js';
 import { recordAepsEnquiry } from '../utils/aepsEnquiry.js';
+import {
+  creditTradeInflow as applyAadhaarPaySuccess,
+  syncUpiCashWithdrawal,
+} from '../utils/upiCashWithdrawal.js';
 import { aepsKycDone } from '../utils/services.js';
 import { uploadOnR2 } from '../utils/r2.js';
 import { loggableResponse } from '../utils/integrationLogger.js';
@@ -165,7 +170,10 @@ export const transactionOutcome = (data) => {
   if (envelope === 2) return 'PROCESSING';
   if (isOk(data)) {
     const inner = data.data?.status;
-    return inner === false || inner === 'false' ? 'FAILED' : 'SUCCESS';
+    // Fingpay answers false; the documented cash-deposit answer a word ("Success", "Failed", "Pending").
+    if (inner === false || inner === 'false' || /^fail/i.test(String(inner))) return 'FAILED';
+    if (/^pending|^process/i.test(String(inner))) return 'PROCESSING';
+    return 'SUCCESS';
   }
   return 'FAILED';
 };
@@ -180,7 +188,12 @@ export const txnFields = (data) => {
   const outer = data?.data && typeof data.data === 'object' ? data.data : {};
   const inner = outer.data && typeof outer.data === 'object' && !Array.isArray(outer.data) ? outer.data : {};
   const { data: _nested, ...rest } = outer;
-  return { ...rest, ...inner };
+  const fields = { ...rest, ...inner };
+  // The documented cash-deposit answer names the same fields differently.
+  for (const [ours, theirs] of [['bankRRN', 'rrn'], ['balanceAmount', 'balance'], ['fpTransactionId', 'merchant_tran_id']]) {
+    if (fields[ours] === undefined && fields[theirs] !== undefined) fields[ours] = fields[theirs];
+  }
+  return fields;
 };
 
 /**
@@ -886,30 +899,32 @@ export const changeDevice = async (req, res) => {
 
 // --- Transactions ----------------------------------------------------------
 
-let cachedBanks = null;
-let banksCachedAt = 0;
+// Cash deposit has its own, shorter list (101 banks against AEPS's 128, with
+// different IINs for some): a bank picked from the AEPS list can be one CD refuses.
+const bankCache = {};
 
-/** GET /banks — [{ iinno, bankName }], cached for a day. */
+/** GET /banks — the AEPS bank list; ?service=CD for the cash-deposit one. */
 export const getBanks = async (req, res) => {
+  const path = req.query.service === 'CD' ? '/api/v2/cash-deposit/bank-list' : '/api/v2/aeps/bank-list';
+  const cached = bankCache[path];
   try {
-    if (cachedBanks && Date.now() - banksCachedAt < 24 * 3600 * 1000) {
-      return res.status(200).json({ success: true, data: cachedBanks });
+    if (cached && Date.now() - cached.at < 24 * 3600 * 1000) {
+      return res.status(200).json({ success: true, data: cached.banks });
     }
     // The list is the same for every outlet, but an API partner must name one.
     const retailer = await loadRetailer(req, res);
     if (!retailer || needOutlet(retailer, res)) return;
-    const data = await icchhamatiPost('/api/v2/aeps/bank-list', { outletId: outletOf(retailer) });
+    const data = await icchhamatiPost(path, { outletId: outletOf(retailer) });
     if (isOk(data) && Array.isArray(data.data)) {
-      cachedBanks = normaliseBanks(data.data);
-      banksCachedAt = Date.now();
-      return res.status(200).json({ success: true, data: cachedBanks });
+      bankCache[path] = { banks: normaliseBanks(data.data), at: Date.now() };
+      return res.status(200).json({ success: true, data: bankCache[path].banks });
     }
-    if (cachedBanks) return res.status(200).json({ success: true, data: cachedBanks });
+    if (cached) return res.status(200).json({ success: true, data: cached.banks });
     return res
       .status(502)
       .json({ success: false, message: providerMessage(data, 'Could not load banks.') });
   } catch (error) {
-    if (cachedBanks) return res.status(200).json({ success: true, data: cachedBanks });
+    if (cached) return res.status(200).json({ success: true, data: cached.banks });
     return fail(res, 'banks', error);
   }
 };
@@ -983,35 +998,6 @@ export const sendTxnOtp = async (req, res) => {
   }
 };
 
-/** Credits an Aadhaar Pay once: the full amount to the AEPS wallet. */
-const applyAadhaarPaySuccess = async ({ transactionId, userId, amount, providerRef, message }) => {
-  const session = await mongoose.startSession();
-  try {
-    let claimed = null;
-    await session.withTransaction(async () => {
-      claimed = await Transaction.findOneAndUpdate(
-        { _id: transactionId, status: { $in: ['PENDING', 'PROCESSING'] } },
-        {
-          $set: {
-            status: 'SUCCESS',
-            'metadata.providerRef': providerRef,
-            'metadata.gatewayMessage': message,
-          },
-        },
-        { session, new: true }
-      );
-      if (!claimed) return;
-      await AepsWallet.findOneAndUpdate(
-        { userId, userModel: 'Retailer' },
-        { $inc: { balance: Number(amount) } },
-        { upsert: true, session }
-      );
-    });
-    return claimed;
-  } finally {
-    session.endSession();
-  }
-};
 
 /**
  * POST /transaction — CW, BE, MS or Aadhaar Pay (M). Withdrawals and Aadhaar
@@ -1320,5 +1306,110 @@ export const updateDetails = async (req, res) => {
     return res.status(status).json(body);
   } catch (error) {
     return fail(res, 'details', error);
+  }
+};
+
+// ---------------------------------------------------------------------------
+// UPI cash withdrawal: the customer scans a QR for the amount from their UPI app,
+// the bank confirms, the Trade wallet is credited, and only then is cash handed over.
+
+/** POST /upicw/initiate { amount, customerMobile, latitude, longitude } */
+export const initiateUpiCashWithdrawal = async (req, res) => {
+  try {
+    const retailer = await loadRetailer(req, res);
+    if (!retailer || needOutlet(retailer, res)) return;
+    const amount = Number(req.body?.amount);
+    const customerMobile = String(req.body?.customerMobile || '').trim();
+    const { latitude, longitude } = req.body || {};
+    if (!Number.isInteger(amount) || amount < UPI_CW_LIMITS.min || amount > UPI_CW_LIMITS.max)
+      return res.status(400).json({
+        success: false,
+        message: `Enter a whole-rupee amount from ₹${UPI_CW_LIMITS.min} to ₹${UPI_CW_LIMITS.max}.`,
+      });
+    if (!/^[6-9]\d{9}$/.test(customerMobile))
+      return res.status(400).json({ success: false, message: 'Enter the customer’s 10-digit mobile number.' });
+    if (!latitude || !longitude)
+      return res.status(400).json({ success: false, message: 'Allow location access to start a UPI cash withdrawal.' });
+
+    const data = await icchhamatiPost('/api/v2/upicw/initiate-payment', {
+      outletId: outletOf(retailer),
+      amount,
+      customer_mobile: customerMobile,
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+      remarks: 'UPI Cash Withdrawal',
+    });
+    const qr = data?.data || {};
+    if (!isOk(data) || !qr.qrCode || !data.partnerRequestId || !qr.fingpayTxnId) {
+      return res.status(400).json({ success: false, message: providerMessage(data, 'Could not start the UPI cash withdrawal.') });
+    }
+
+    // Nothing has moved yet: the row waits PENDING until the bank confirms the UPI payment.
+    const record = await Transaction.create({
+      transactionId: makeReferenceId('UCW'),
+      userId: retailer._id,
+      type: 'UPI_CASH_WITHDRAWAL',
+      amount,
+      status: 'PENDING',
+      metadata: {
+        provider: 'icchhamati',
+        outletId: outletOf(retailer),
+        mobile: customerMobile,
+        partnerRequestId: data.partnerRequestId,
+        fingpayTxnId: qr.fingpayTxnId,
+        providerTxnId: data.transaction_id,
+      },
+    });
+    return res.status(200).json({
+      success: true,
+      message: providerMessage(data, 'Ask the customer to scan the QR and pay.'),
+      data: {
+        transactionId: record.transactionId,
+        qrCode: qr.qrCode,
+        amount,
+        expiresIn: Number(qr.expiryTime) || 180,
+      },
+    });
+  } catch (error) {
+    return fail(res, 'UPI cash withdrawal', error);
+  }
+};
+
+const upiCwView = (txn) => ({
+  transactionId: txn.transactionId,
+  amount: txn.amount,
+  status: txn.status,
+  customerMobile: txn.metadata?.mobile,
+  bankRRN: txn.metadata?.bankRRN,
+  payerName: txn.metadata?.payerName,
+  message: txn.metadata?.gatewayMessage,
+  createdAt: txn.createdAt,
+});
+
+/** POST /upicw/status { transactionId } — one of this retailer's own. */
+export const upiCashWithdrawalStatus = async (req, res) => {
+  try {
+    const txn = await Transaction.findOne({
+      transactionId: String(req.body?.transactionId || ''),
+      userId: req.user.id,
+      type: 'UPI_CASH_WITHDRAWAL',
+    });
+    if (!txn) return res.status(404).json({ success: false, message: 'Transaction not found' });
+    const synced = await syncUpiCashWithdrawal(txn);
+    return res.status(200).json({ success: true, data: upiCwView(synced) });
+  } catch (error) {
+    return fail(res, 'UPI cash withdrawal status', error);
+  }
+};
+
+/** GET /upicw/history — this retailer's last 50. */
+export const upiCashWithdrawalHistory = async (req, res) => {
+  try {
+    const rows = await Transaction.find({ userId: req.user.id, type: 'UPI_CASH_WITHDRAWAL' })
+      .sort({ createdAt: -1 })
+      .limit(50);
+    return res.status(200).json({ success: true, data: rows.map(upiCwView) });
+  } catch (error) {
+    return fail(res, 'UPI cash withdrawal history', error);
   }
 };

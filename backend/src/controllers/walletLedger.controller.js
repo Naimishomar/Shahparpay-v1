@@ -5,7 +5,7 @@ import { ENQUIRY_TYPES } from '../utils/aepsEnquiry.js';
 
 // Credit types where the wallet receives the transaction amount PLUS the
 // retailer's commission (verified against applyAepsWithdrawalSuccess).
-const CREDIT_WITH_COMMISSION = new Set(['AEPS_WITHDRAWAL', 'MATM']);
+const CREDIT_WITH_COMMISSION = new Set(['AEPS_WITHDRAWAL', 'MATM', 'UPI_CASH_WITHDRAWAL']);
 
 // Credit types where the wallet receives only the transaction amount
 // (topups, refunds and AadhaarPay never earn commission on the ledger).
@@ -39,6 +39,7 @@ const MONEY_MOVING_STATUSES = ['SUCCESS', 'REFUNDED', 'APPROVED'];
 const WALLET_LABELS = {
   AEPS_WITHDRAWAL: 'Trade',
   AADHAAR_PAY: 'Trade',
+  UPI_CASH_WITHDRAWAL: 'Trade',
   MATM: 'Trade',
   AEPS_SETTLEMENT: 'Trade',
   AEPSTOMAIN: 'Trade→Utility',
@@ -55,6 +56,7 @@ const TXNTYPE_LABELS = {
   AEPS_WITHDRAWAL: 'AEPS Withdrawal',
   MATM: 'MATM Withdrawal',
   AADHAAR_PAY: 'AadhaarPay',
+  UPI_CASH_WITHDRAWAL: 'UPI Cash Withdrawal',
   WALLET_TOPUP: 'Wallet Topup',
   RECHARGE: 'Recharge',
   BILL_PAYMENT: 'BBPS',
@@ -105,6 +107,8 @@ export const getNarration = (tx) => {
     case 'AEPS_WITHDRAWAL':
     case 'AADHAAR_PAY':
       return `Aadhaar *${m.aadhaar ? String(m.aadhaar).slice(-4) : 'N/A'} withdrawal`;
+    case 'UPI_CASH_WITHDRAWAL':
+      return `UPI cash withdrawal${m.mobile ? ' from ' + m.mobile : ''}${m.bankRRN ? ' RRN ' + m.bankRRN : ''}`;
     case 'MATM':
       return `MATM cash withdrawal${m.bankRRN ? ' RRN ' + m.bankRRN : ''}`;
     case 'WALLET_TOPUP':

@@ -98,6 +98,7 @@ export const SERVICE_ITEMS: MenuEntry[] = [
   { name: 'AEPS', route: 'AEPS', icon: 'fingerprint', hint: 'Aadhaar banking', group: 'Banking' },
   { name: 'MATM', route: 'MATM', icon: 'credit-card-outline', hint: 'Micro ATM withdrawal', group: 'Banking' },
   { name: 'DMT', route: 'DMT', icon: 'bank-transfer', hint: 'Money transfer', group: 'Banking' },
+  { name: 'UPI Cash Withdrawal', route: 'UpiCashWithdrawal', icon: 'qrcode-scan', hint: 'Customer pays by UPI QR', group: 'Banking' },
 
   { name: 'Recharge', route: 'Recharge', icon: 'cellphone', hint: 'Mobile & DTH', group: 'Payments' },
   { name: 'BBPS', route: 'BBPS', icon: 'receipt', hint: 'Utility bills', group: 'Payments' },
@@ -198,11 +199,17 @@ export const API_ENDPOINTS = {
     banks: '/api/aeps/icchhamati/banks',
     txnOtp: '/api/aeps/icchhamati/txn-otp',
     transaction: '/api/aeps/icchhamati/transaction',
+    upiCwInitiate: '/api/aeps/icchhamati/upicw/initiate',
+    upiCwStatus: '/api/aeps/icchhamati/upicw/status',
+    upiCwHistory: '/api/aeps/icchhamati/upicw/history',
   },
   settlement: {
     savedBanks: '/api/settlement/saved-banks',
     syncBanks: '/api/settlement/sync-banks',
     addBank: '/api/settlement/add-bank',
+    bankOtp: '/api/settlement/bank-otp',
+    bankVerify: '/api/settlement/bank-verify',
+    bankDeleteOtp: '/api/settlement/bank-delete-otp',
     deleteBank: '/api/settlement/bank', // append /:id
     accountStatus: '/api/settlement/account-status', // append /:id
     initiate: '/api/settlement/initiate',

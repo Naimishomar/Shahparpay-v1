@@ -21,6 +21,9 @@ import {
   getBanks,
   sendTxnOtp,
   doTransaction,
+  initiateUpiCashWithdrawal,
+  upiCashWithdrawalStatus,
+  upiCashWithdrawalHistory,
 } from '../controllers/icchhamatiAeps.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 import { upload } from '../middlewares/multer.middleware.js';
@@ -94,5 +97,8 @@ router.get('/banks', getBanks);
 router.get('/settlement-banks', getSettlementBanks);
 router.post('/txn-otp', requireService('aeps'), sendTxnOtp);
 router.post('/transaction', requireService('aeps'), doTransaction);
+router.post('/upicw/initiate', requireService('aeps'), initiateUpiCashWithdrawal);
+router.post('/upicw/status', upiCashWithdrawalStatus);
+router.get('/upicw/history', upiCashWithdrawalHistory);
 
 export default router;
