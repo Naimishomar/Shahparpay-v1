@@ -31,31 +31,18 @@ const SITE_URL = 'https://www.shahparpay.in';
 const FONT = `-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif`;
 
 // Tables + inline styles because Gmail/Outlook ignore <style> blocks and flexbox.
-// Callers pass already-escaped name and otp.
-const otpEmailHtml = (name, otp) => `<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>Your ShahparPay verification code</title></head>
+// Shared frame for every mail: hero banner, `body` rows, dashed divider, footer.
+// Callers pass already-escaped values.
+const emailShell = (title, preheader, body) => `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${title}</title></head>
 <body style="margin:0;padding:0;background:#F4F4F5;">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Your code is ${otp}. It expires in 5 minutes.</div>
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${preheader}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F4F4F5;">
 <tr><td align="center" style="padding:32px 12px;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#FFFFFF;border-radius:16px;overflow:hidden;">
     <tr><td style="background:#090816;"><a href="${SITE_URL}"><img src="${SITE_URL}/email-hero.png" width="600" alt="ShahparPay" style="display:block;width:100%;max-width:600px;height:auto;border:0;"></a></td></tr>
-
-    <tr><td align="center" style="padding:24px 48px 0;font-family:${FONT};">
-      <h1 style="margin:0 0 12px;font-size:22px;line-height:1.35;font-weight:600;color:#111111;">Your verification code</h1>
-      <p style="margin:0;font-size:15px;line-height:1.6;color:#6B6B76;">Hi ${name}, use this code to sign in to ShahparPay.<br>It expires in 5 minutes.</p>
-    </td></tr>
-
-    <tr><td align="center" style="padding:32px 48px;">
-      <div style="display:inline-block;padding:16px 28px;background:#F4F2FF;border-radius:12px;font-family:'SF Mono',Menlo,Consolas,'Courier New',monospace;font-size:32px;line-height:1;font-weight:600;letter-spacing:10px;color:#4B2BD6;">${otp}</div>
-    </td></tr>
-
-    <tr><td align="center" style="padding:0 48px;font-family:${FONT};">
-      <p style="margin:0;font-size:13px;line-height:1.6;color:#8A8A94;">Never share this code. ShahparPay will never ask for it by call, SMS or WhatsApp. Didn't request it? Ignore this email.</p>
-    </td></tr>
-
+    ${body}
     <tr><td style="padding:32px 48px 0;"><div style="border-top:1px dashed #DCDCE0;height:0;line-height:0;font-size:0;">&nbsp;</div></td></tr>
-
     <tr><td align="center" style="padding:28px 48px 36px;font-family:${FONT};">
       <a href="${SITE_URL}" style="font-size:13px;color:#6B6B76;text-decoration:underline;">shahparpay.in</a>
     </td></tr>
@@ -63,6 +50,29 @@ const otpEmailHtml = (name, otp) => `<!DOCTYPE html>
 </td></tr>
 </table>
 </body></html>`;
+
+const headingRow = (heading, text) => `<tr><td align="center" style="padding:24px 48px 0;font-family:${FONT};">
+      <h1 style="margin:0 0 12px;font-size:22px;line-height:1.35;font-weight:600;color:#111111;">${heading}</h1>
+      <p style="margin:0;font-size:15px;line-height:1.6;color:#6B6B76;">${text}</p>
+    </td></tr>`;
+
+// Label/value list for the admin mails. Escapes values; empty ones are skipped.
+const detailsRow = (pairs) => `<tr><td style="padding:28px 48px 0;font-family:${FONT};">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FAFAFB;border-radius:12px;">
+        ${pairs.filter(([, value]) => value).map(([label, value], i) => `<tr>
+          <td style="padding:12px 20px;${i ? 'border-top:1px solid #EEEEF1;' : ''}font-size:13px;color:#8A8A94;width:110px;">${label}</td>
+          <td style="padding:12px 20px;${i ? 'border-top:1px solid #EEEEF1;' : ''}font-size:14px;color:#111111;font-weight:500;">${escapeHtml(value)}</td></tr>`).join('')}
+      </table>
+    </td></tr>`;
+
+const otpEmailHtml = (name, otp) => emailShell('Your ShahparPay verification code', `Your code is ${otp}. It expires in 5 minutes.`, `
+    ${headingRow('Your verification code', `Hi ${name}, use this code to sign in to ShahparPay.<br>It expires in 5 minutes.`)}
+    <tr><td align="center" style="padding:32px 48px;">
+      <div style="display:inline-block;padding:16px 28px;background:#F4F2FF;border-radius:12px;font-family:'SF Mono',Menlo,Consolas,'Courier New',monospace;font-size:32px;line-height:1;font-weight:600;letter-spacing:10px;color:#4B2BD6;">${otp}</div>
+    </td></tr>
+    <tr><td align="center" style="padding:0 48px;font-family:${FONT};">
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#8A8A94;">Never share this code. ShahparPay will never ask for it by call, SMS or WhatsApp. Didn't request it? Ignore this email.</p>
+    </td></tr>`);
 
 export const sendEmailOTP = async (toEmail, toName, otp) => {
   try {
@@ -114,11 +124,6 @@ export const sendContactEnquiryEmail = async (enquiry) => {
       return false;
     }
 
-    const row = (label, value) =>
-      value
-        ? `<tr><td style="padding:6px 12px 6px 0;color:#64748b;font-size:14px;">${label}</td><td style="padding:6px 0;color:#0f172a;font-size:14px;font-weight:600;">${escapeHtml(value)}</td></tr>`
-        : '';
-
     await getTransporter().sendMail({
       from: `"${process.env.EMAIL_SENDER_NAME || 'ShahparPay'}" <${process.env.ETHEREAL_USERNAME}>`,
       to,
@@ -126,19 +131,13 @@ export const sendContactEnquiryEmail = async (enquiry) => {
       // Newlines in a header are how header injection starts; the name is a
       // free-text field, so it is flattened to a single line first.
       subject: `New enquiry from ${String(enquiry.name).replace(/[\r\n]+/g, ' ').slice(0, 80)}`,
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:10px;">
-          <h2 style="color:#0f172a;margin:0 0 16px;">New contact enquiry</h2>
-          <table style="border-collapse:collapse;width:100%;">
-            ${row('Name', enquiry.name)}
-            ${row('Mobile', enquiry.mobile)}
-            ${row('Email', enquiry.email)}
-            ${row('City', enquiry.city)}
-          </table>
-          <p style="color:#64748b;font-size:14px;margin:20px 0 6px;">Message</p>
-          <div style="white-space:pre-wrap;color:#0f172a;font-size:15px;line-height:1.6;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;">${escapeHtml(enquiry.message)}</div>
-        </div>
-      `,
+      html: emailShell('New contact enquiry', `${escapeHtml(enquiry.name)} sent an enquiry from the website.`, `
+        ${headingRow('New contact enquiry', 'Someone reached out from the website. Reply to this email to answer them directly.')}
+        ${detailsRow([['Name', enquiry.name], ['Mobile', enquiry.mobile], ['Email', enquiry.email], ['City', enquiry.city]])}
+        <tr><td style="padding:20px 48px 0;font-family:${FONT};">
+          <p style="margin:0 0 8px;font-size:13px;color:#8A8A94;">Message</p>
+          <div style="white-space:pre-wrap;padding:16px 20px;background:#FAFAFB;border-radius:12px;font-size:15px;line-height:1.6;color:#111111;">${escapeHtml(enquiry.message)}</div>
+        </td></tr>`),
     });
     return true;
   } catch (error) {
@@ -154,28 +153,16 @@ export const sendContactEnquiryEmail = async (enquiry) => {
 export const sendSignupAlertEmail = async (role, user) => {
   try {
     const to = process.env.SIGNUP_ALERT_EMAILS || 'shahparpay@gmail.com,naimishomar@gmail.com';
-    const row = (label, value) =>
-      value
-        ? `<tr><td style="padding:6px 12px 6px 0;color:#64748b;font-size:14px;">${label}</td><td style="padding:6px 0;color:#0f172a;font-size:14px;font-weight:600;">${escapeHtml(value)}</td></tr>`
-        : '';
-
     await getTransporter().sendMail({
       from: `"${process.env.EMAIL_SENDER_NAME || 'ShahparPay'}" <${process.env.ETHEREAL_USERNAME}>`,
       to,
       subject: `New ${role} signup: ${String(user.name).replace(/[\r\n]+/g, ' ').slice(0, 80)} — approval pending`,
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:10px;">
-          <h2 style="color:#0f172a;margin:0 0 16px;">New ${escapeHtml(role)} signed up</h2>
-          <table style="border-collapse:collapse;width:100%;">
-            ${row('ID', user.id)}
-            ${row('Name', user.name)}
-            ${row('Business', user.businessName)}
-            ${row('Mobile', user.contactNumber)}
-            ${row('Email', user.email)}
-          </table>
-          <p style="color:#0f172a;font-size:15px;margin-top:20px;">Please review and approve this ID from the admin panel.</p>
-        </div>
-      `,
+      html: emailShell(`New ${escapeHtml(role)} signup`, `${escapeHtml(user.name)} is waiting for approval.`, `
+        ${headingRow(`New ${escapeHtml(role)} signed up`, 'This account is waiting for your approval.')}
+        ${detailsRow([['ID', user.id], ['Name', user.name], ['Business', user.businessName], ['Mobile', user.contactNumber], ['Email', user.email]])}
+        <tr><td align="center" style="padding:32px 48px 0;font-family:${FONT};">
+          <a href="${SITE_URL}/admin" style="display:inline-block;padding:14px 32px;background:#4B2BD6;border-radius:10px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">Review in admin panel</a>
+        </td></tr>`),
     });
     return true;
   } catch (error) {
