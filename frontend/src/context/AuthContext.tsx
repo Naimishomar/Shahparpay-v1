@@ -31,7 +31,17 @@ interface AuthContextType {
     login: (token: string, user: User, refreshToken?: string) => void;
     logout: (everywhere?: boolean) => void;
     checkSession: () => Promise<void>;
+    /** Admin's name while the admin is signed in as someone else. */
+    impersonatedBy: string | null;
+    startImpersonation: (token: string, user: User) => void;
+    stopImpersonation: () => void;
 }
+
+/** The admin's own session, parked while they are signed in as a retailer or distributor. */
+const ADMIN_SESSION = 'adminSession';
+const parkedAdmin = () => {
+    try { return JSON.parse(localStorage.getItem(ADMIN_SESSION) || 'null'); } catch { return null; }
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -54,6 +64,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
     const [isInitializing, setIsInitializing] = useState(false);
+    const [impersonatedBy, setImpersonatedBy] = useState<string | null>(() => parkedAdmin()?.user?.name ?? null);
+
+    const save = (newToken: string, newUser: User, refreshToken?: string | null) => {
+        setToken(newToken);
+        setUser(newUser);
+        localStorage.setItem('token', newToken);
+        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+        else localStorage.removeItem('refreshToken');
+        localStorage.setItem('user', JSON.stringify(newUser));
+    };
+
+    const stopImpersonation = () => {
+        const admin = parkedAdmin();
+        localStorage.removeItem(ADMIN_SESSION);
+        setImpersonatedBy(null);
+        if (admin) save(admin.token, admin.user, admin.refreshToken);
+        window.location.assign('/admin');
+    };
+
+    const startImpersonation = (newToken: string, newUser: User) => {
+        localStorage.setItem(ADMIN_SESSION, JSON.stringify({ token, user, refreshToken: localStorage.getItem('refreshToken') }));
+        setImpersonatedBy(user?.name ?? 'Admin');
+        // No refresh token: the session ends with the 1-hour access token.
+        save(newToken, newUser, null);
+        window.location.assign('/dashboard');
+    };
 
     const refreshAuthToken = async () => {
         // No stored session means nothing to refresh; skip the guaranteed 401 for visitors.
@@ -100,6 +136,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // hidden tab makes no calls and catches up when it becomes visible.
         const maybeRefresh = () => {
             if (document.visibilityState !== 'visible') return;
+            // Signed in as someone else: never refresh (the refresh cookie is the
+            // admin's); hand the admin their own session back when it runs out.
+            if (parkedAdmin()) {
+                if (accessTokenMsLeft() <= 0) stopImpersonation();
+                return;
+            }
             if (accessTokenMsLeft() > 5 * 60000) return;
             refreshAuthToken();
         };
@@ -113,15 +155,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
     }, []);
 
-    const login = (newToken: string, newUser: User, refreshToken?: string) => {
-        setToken(newToken);
-        setUser(newUser);
-        localStorage.setItem('token', newToken);
-        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
-        localStorage.setItem('user', JSON.stringify(newUser));
-    };
+    const login = (newToken: string, newUser: User, refreshToken?: string) => save(newToken, newUser, refreshToken);
 
     const logout = async (everywhere = false) => {
+        if (parkedAdmin()) return stopImpersonation();
         try {
             await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/logout`, {
                 method: 'POST',
@@ -140,7 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, isInitializing, login, logout, checkSession: refreshAuthToken }}>
+        <AuthContext.Provider value={{ user, token, isInitializing, login, logout, checkSession: refreshAuthToken, impersonatedBy, startImpersonation, stopImpersonation }}>
             {children}
         </AuthContext.Provider>
     );

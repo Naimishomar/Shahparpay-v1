@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Banknote, ChevronLeft, Clock, History, Loader2, Mail, MapPin, Package, Phone, Power, Receipt, RefreshCcw, ShieldCheck, Store, UserCheck, Users, XCircle } from 'lucide-react';
+import { ArrowRight, Banknote, ChevronLeft, Clock, History, Loader2, Mail, MapPin, Package, Phone, Power, Receipt, RefreshCcw, ShieldCheck, LogIn, Store, UserCheck, Users, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { CARD, INPUT, LABEL, PENDING_PILL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, STATUS_PILL, ago, inr, inrShort, serviceLabel, useApiGet } from '../distributor/shared';
 import { Avatar, Skeleton } from '../distributor/ui';
 import { SERVICES, aepsKycDone, aepsStepLabel, type ServiceKey } from '../../lib/services';
 import { ActivityList, type Activity } from './ActivityLog';
+import { useAuth } from '../../context/AuthContext';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -62,6 +63,24 @@ const UserDetail = ({
         } catch (e) {
             toast.error(e instanceof Error && e.message ? e.message : 'Action failed');
         } finally {
+            setBusy(null);
+        }
+    };
+
+    const { startImpersonation } = useAuth();
+    // Opens this user's own portal to fix a problem for them; logged against the admin.
+    const loginAs = async () => {
+        setBusy('loginAs');
+        try {
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/console/users/${role}/${id}/impersonate`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.message);
+            startImpersonation(json.token, json.user);
+        } catch (e) {
+            toast.error(e instanceof Error && e.message ? e.message : 'Could not sign in as this user');
             setBusy(null);
         }
     };
@@ -149,6 +168,11 @@ const UserDetail = ({
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                             <button onClick={() => onOpenTransactions(txnFilter)} className={`${SECONDARY_BUTTON} py-2`}><Receipt size={16} /> All transactions</button>
+                            {active && (
+                                <button onClick={loginAs} disabled={busy === 'loginAs'} className={`${SECONDARY_BUTTON} py-2`} title="Open their portal to fix a problem; ends after 1 hour">
+                                    {busy === 'loginAs' ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />} Login as {role}
+                                </button>
+                            )}
                             <button
                                 onClick={() => setConfirmStatus(true)}
                                 disabled={busy === 'status'}

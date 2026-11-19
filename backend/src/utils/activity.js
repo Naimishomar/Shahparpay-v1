@@ -20,7 +20,7 @@ export const logActivity = ({ req, actor, action, target, summary, meta }) => {
     targetRole: target?.role,
     targetName: target?.name,
     summary,
-    meta,
+    meta: req?.impersonator ? { ...meta, impersonatedBy: req.impersonator } : meta,
     ip: clientIp(req),
   }).catch((error) => console.error('[activity] could not record', action, error?.message));
 };

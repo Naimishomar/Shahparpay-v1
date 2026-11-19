@@ -18,6 +18,7 @@ import {
   getRetailerAepsStatus,
   updateRetailerAepsAddress,
   getActivity,
+  impersonateUser,
 } from '../controllers/adminConsole.controller.js';
 import { getWallets, getPayouts, selfTransfer } from '../controllers/adminIcchhamati.controller.js';
 import {
@@ -48,6 +49,7 @@ router.get('/console/transactions', getTransactions);
 router.get('/console/users', getUsers);
 router.get('/console/users/:role/:id', getUserDetail);
 router.patch('/console/users/:role/:id/status', setUserStatus);
+router.post('/console/users/:role/:id/impersonate', impersonateUser);
 router.put('/console/retailers/:id/services', setRetailerServices);
 router.patch('/console/retailers/:id/verification', setRetailerVerification);
 router.get('/console/retailers/:id/aeps-status', getRetailerAepsStatus);

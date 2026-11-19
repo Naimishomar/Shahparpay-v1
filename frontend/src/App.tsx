@@ -71,6 +71,18 @@ const IcchhamatiMATM = page(() => import("./pages/IcchhamatiMATM"))
 const Support = page(() => import("./pages/Support"))
 const NotFound = page(() => import("./pages/NotFound"))
 
+/** Shown on every page while the admin is signed in as a retailer or distributor. */
+function ImpersonationBanner() {
+  const { impersonatedBy, user, stopImpersonation } = useAuth()
+  if (!impersonatedBy) return null
+  return (
+    <div className="sticky top-0 z-[100] flex items-center justify-center gap-3 bg-amber-500 px-4 py-2 text-sm font-semibold text-black">
+      <span>Signed in as {user?.name} ({user?.role}) by {impersonatedBy}. Everything you do is logged.</span>
+      <button onClick={stopImpersonation} className="rounded-lg bg-black px-3 py-1 text-xs text-white">Back to admin</button>
+    </div>
+  )
+}
+
 function ScrollToTopWrapper() {
   const { pathname } = useLocation()
 
@@ -88,6 +100,7 @@ function ScrollToTopWrapper() {
 
   return (
     <Suspense fallback={<div className="min-h-screen" />}>
+      <ImpersonationBanner />
       <Outlet />
     </Suspense>
   )

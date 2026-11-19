@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
 import Retailer from '../models/users/retailer.model.js';
 import Distributor from '../models/users/distributor.model.js';
 import Transaction from '../models/transaction.model.js';
@@ -546,6 +547,46 @@ export const setRetailerVerification = async (req, res) => {
     });
   } catch (error) {
     console.error('Admin retailer verification error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+/** How long an admin may stay signed in as someone else; no refresh token is issued. */
+export const IMPERSONATION_TTL = '1h';
+
+/**
+ * POST /api/admin/console/users/:role/:id/impersonate
+ * Signs the admin in as a retailer or distributor to fix a problem from their
+ * portal. The token carries `imp` (the admin's id): the auth middleware keeps
+ * account changes (password, logout everywhere) off-limits and every activity
+ * logged during it names the admin.
+ */
+export const impersonateUser = async (req, res) => {
+  try {
+    if (forbid(req, res)) return;
+    const { role, id } = req.params;
+    const Model = MODELS[role];
+    if (!Model || !mongoose.isValidObjectId(id)) return res.status(400).json({ success: false, message: 'Invalid user' });
+    let query = Model.findById(id).select('-password');
+    if (role === 'retailer') query = query.populate('distributorId', 'distributorId name');
+    const user = await query;
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (user.isActive === false) return res.status(400).json({ success: false, message: 'Account is inactive; activate it first.' });
+
+    const token = jwt.sign(
+      { id: user._id, role, code: user.retailerId || user.distributorId, imp: String(req.user._id) },
+      process.env.JWT_SECRET,
+      { expiresIn: IMPERSONATION_TTL }
+    );
+    logActivity({
+      req,
+      action: 'admin.impersonate',
+      target: { _id: user._id, role, name: user.name },
+      summary: `Signed in as ${user.name}`,
+    });
+    return res.status(200).json({ success: true, token, role, user: { ...user.toObject(), role } });
+  } catch (error) {
+    console.error('Admin impersonate error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

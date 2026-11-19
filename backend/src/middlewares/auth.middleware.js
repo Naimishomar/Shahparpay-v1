@@ -53,6 +53,15 @@ export const authMiddlewares = async (req, res, next) => {
       });
     }
 
+    // An admin signed in as this user (adminConsole impersonateUser) may work in
+    // their portal but not change the account itself: password, logout everywhere.
+    if (decodedToken.imp) {
+      if (req.originalUrl.startsWith('/api/auth/') && req.method !== 'GET') {
+        return res.status(403).json({ success: false, message: 'Not allowed while signed in as this user.' });
+      }
+      req.impersonator = decodedToken.imp;
+    }
+
     req.user = user;
     req.user.role = decodedToken.role; // Attach role for route guarding
     next();
