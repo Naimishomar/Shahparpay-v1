@@ -89,18 +89,23 @@ const settlementBanks = async (req) => {
   }
   const gone = ids.filter((id, i) => !isOk(results[i]) && /not found/i.test(String(results[i]?.message || '')));
   if (gone.length) await user.updateOne({ $pull: { payoutBeneficiaryIds: { $in: gone } } });
-  const banks = results
+  const mine = results
     .map((d) => (isOk(d) ? d.data : null))
-    .filter((row) => row && String(row.type) === '3' && beneficiaryMobile(row) === mobile && String(row.status) === '1')
-    .map(toSettlementBank);
-  return { mobile, banks };
+    .filter((row) => row && String(row.type) === '3' && beneficiaryMobile(row) === mobile);
+  const banks = mine.filter((row) => String(row.status) === '1').map(toSettlementBank);
+  // Created (penny drop passed) but the activation OTP was never entered: listed
+  // so the retailer can finish it instead of paying for a second penny drop.
+  const pending = mine
+    .filter((row) => String(row.status) !== '1')
+    .map((row) => ({ ...toSettlementBank(row), status: 'PENDING_OTP' }));
+  return { mobile, banks, pending };
 };
 
 export const getSavedBanks = async (req, res) => {
   try {
-    const { banks, error } = await settlementBanks(req);
+    const { banks, pending, error } = await settlementBanks(req);
     if (error) return res.status(error.status).json({ success: false, message: error.message });
-    return res.status(200).json({ success: true, data: banks });
+    return res.status(200).json({ success: true, data: banks, pending });
   } catch (error) {
     console.error('Error fetching saved banks:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -109,9 +114,9 @@ export const getSavedBanks = async (req, res) => {
 
 export const syncSavedBanks = async (req, res) => {
   try {
-    const { banks, error } = await settlementBanks(req);
+    const { banks, pending, error } = await settlementBanks(req);
     if (error) return res.status(error.status).json({ success: false, message: error.message });
-    return res.status(200).json({ success: true, synced: banks.length, data: banks });
+    return res.status(200).json({ success: true, synced: banks.length, data: banks, pending });
   } catch (error) {
     console.error('Error syncing settlement banks:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -133,9 +138,19 @@ export const addSettlementBank = async (req, res) => {
   return addBeneficiary(req, res);
 };
 
-export const sendSettlementBankOtp = sendPayoutBeneficiaryOtp;
-export const sendSettlementBankDeleteOtp = sendBeneficiaryDeleteOtp;
-export const verifySettlementBank = verifyPayoutBeneficiary;
+/** Activation OTPs only for a beneficiary this user added; any other id is refused. */
+const ownBeneficiary = (handler) => async (req, res) => {
+  const user = await getUser(req).catch(() => null);
+  const id = String(req.body?.beneficiary_id || req.body?.beneid || '');
+  if (!user || !(user.payoutBeneficiaryIds || []).includes(id)) {
+    return res.status(404).json({ success: false, message: 'This account is not one of your settlement banks.' });
+  }
+  return handler(req, res);
+};
+
+export const sendSettlementBankOtp = ownBeneficiary(sendPayoutBeneficiaryOtp);
+export const sendSettlementBankDeleteOtp = ownBeneficiary(sendBeneficiaryDeleteOtp);
+export const verifySettlementBank = ownBeneficiary(verifyPayoutBeneficiary);
 
 /** Deletes one of this retailer's own payout beneficiaries; the provider wants the OTP from /bank-otp. */
 export const deleteSettlementBank = async (req, res) => {

@@ -35,6 +35,9 @@ const AepsSettlement = () => {
     const [mode, setMode] = useState('IMPS');
     const [receipt, setReceipt] = useState<SettlementReceiptData | null>(null);
     const [addingBank, setAddingBank] = useState(false);
+    /** Banks created on the provider whose activation OTP was never entered. */
+    const [pendingBanks, setPendingBanks] = useState<any[]>([]);
+    const [resumeId, setResumeId] = useState('');
     const [deletingBank, setDeletingBank] = useState<any>(null);
 
     const getHeaders = () => ({ headers: { 'Authorization': `Bearer ${token}` } });
@@ -61,6 +64,7 @@ const AepsSettlement = () => {
             if (res.data.success) {
                 const banks: any[] = res.data.data;
                 setSavedBanks(banks);
+                setPendingBanks(res.data.pending || []);
                 setSelectedBankId(prevId => {
                     if (banks.length === 0) return '';
                     if (prevId && banks.some(b => b._id === prevId)) return prevId;
@@ -263,6 +267,12 @@ const AepsSettlement = () => {
                     </div>
 
                     <div className="mt-6 flex flex-col gap-4">
+                        {pendingBanks.map((bank) => (
+                            <div key={bank._id} className="flex items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">
+                                <span><b>{bank.bankName} · {String(bank.accountNumber || '').slice(-4)}</b> is added but not active yet. Verify it with the OTP.</span>
+                                <button type="button" onClick={() => setResumeId(bank._id)} className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold ${ACTIVE_BUTTON}`}>Verify with OTP</button>
+                            </div>
+                        ))}
                         <div className="flex flex-col gap-1.5">
                             <label className="text-sm font-medium text-foreground">Settlement Account</label>
                             <div className="flex gap-2">
@@ -480,11 +490,12 @@ const AepsSettlement = () => {
             </section>
 
             {receipt && <SettlementReceipt receipt={receipt} onClose={() => setReceipt(null)} />}
-            {addingBank && (
+            {(addingBank || resumeId) && (
                 <AddSettlementBank
                     headers={getHeaders()}
-                    onClose={() => setAddingBank(false)}
-                    onAdded={() => { setAddingBank(false); fetchSavedBanks(); }}
+                    resumeId={resumeId}
+                    onClose={() => { setAddingBank(false); setResumeId(''); fetchSavedBanks(); }}
+                    onAdded={() => { setAddingBank(false); setResumeId(''); fetchSavedBanks(); }}
                 />
             )}
             {deletingBank && (
@@ -582,10 +593,11 @@ const SettlementReceipt = ({ receipt, onClose }: { receipt: SettlementReceiptDat
 };
 
 /** Adds a payout (type 3) beneficiary on the registered mobile, then activates it by OTP. */
-const AddSettlementBank = ({ headers, onClose, onAdded }: { headers: object; onClose: () => void; onAdded: () => void }) => {
+const AddSettlementBank = ({ headers, resumeId = '', onClose, onAdded }: { headers: object; resumeId?: string; onClose: () => void; onAdded: () => void }) => {
     const api = `${import.meta.env.VITE_BACKEND_URL}/api/settlement`;
     const [form, setForm] = useState({ benename: '', beneaccount: '', confirm: '', ifsc: '' });
-    const [beneId, setBeneId] = useState('');
+    // resumeId: an account added earlier whose OTP was never entered; start at the OTP step.
+    const [beneId, setBeneId] = useState(resumeId);
     const [otp, setOtp] = useState('');
     const [busy, setBusy] = useState(false);
     const fail = (e: unknown, fallback: string) =>
@@ -603,7 +615,7 @@ const AddSettlementBank = ({ headers, onClose, onAdded }: { headers: object; onC
         try {
             const res = await axios.post(`${api}/add-bank`, { benename: form.benename.trim(), beneaccount: form.beneaccount.trim(), ifsc: form.ifsc.trim() }, headers);
             const id = res.data?.data?.id;
-            // Payout beneficiaries are active as soon as they are created: no OTP step.
+            // Active only once the OTP is verified; `verified` is that, not the penny drop.
             if (!id || res.data?.data?.verified) { toast.success('Bank account added for settlement'); return onAdded(); }
             setBeneId(id);
             try {
@@ -627,6 +639,10 @@ const AddSettlementBank = ({ headers, onClose, onAdded }: { headers: object; onC
         } catch (err) { fail(err, 'Could not verify that OTP'); }
         setBusy(false);
     };
+
+    useEffect(() => {
+        if (resumeId) sendOtp(resumeId).catch((err) => fail(err, 'Could not send the OTP'));
+    }, [resumeId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const field = (key: keyof typeof form, label: string, extra: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
         <label className="flex flex-col gap-1.5 text-sm font-medium">

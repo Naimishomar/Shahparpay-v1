@@ -65,7 +65,7 @@ export const fetchProviderBeneficiaries = async () => {
   return { rows, error: null };
 };
 
-const toBeneficiary = (row) => ({
+export const toBeneficiary = (row) => ({
   id: String(getBeneficiaryId(row) ?? ''),
   beneid: String(getBeneficiaryId(row) ?? ''), // the name the existing screens read
   name: row.name,
@@ -78,13 +78,14 @@ const toBeneficiary = (row) => ({
   bankname: row.bank || null,
   branch: row.branch || null,
   status: row.status || null,
+  // Active = OTP-verified (status 1); only then can it be paid. A passed penny
+  // drop (account_verified) leaves it at status 0, still waiting for the OTP.
   verified:
     row.verified === true ||
-    row.account_verified === true ||
-    row.ifsc_verified === true ||
     ['verified', 'active', 'approved', '1', 'success'].includes(
-      String(row.status || '').toLowerCase()
+      String(row.status ?? '').toLowerCase()
     ),
+  accountVerified: row.account_verified === true,
 });
 
 export const fetchBeneficiaries = async (req, res) => {

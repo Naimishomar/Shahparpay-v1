@@ -111,8 +111,12 @@ export const AepsSettlementScreen: React.FC = () => {
   const [otp, setOtp] = useState('');
 
   const balances = useAsync<any>(async () => (await api.getWalletBalance()).data, []);
+  /** Banks created on the provider whose activation OTP was never entered. */
+  const [pendingBanks, setPendingBanks] = useState<any[]>([]);
   const banks = useAsync<any[]>(async () => {
-    const list = (await api.getSavedBanks()).data ?? [];
+    const res = await api.getSavedBanks();
+    const list = res.data ?? [];
+    setPendingBanks((res as any).pending ?? []);
     setBankId((prev) => (prev && list.some((b: any) => b._id === prev) ? prev : list[0]?._id ?? null));
     return list;
   }, []);
@@ -203,6 +207,12 @@ export const AepsSettlementScreen: React.FC = () => {
       ? call(() => api.verifySettlementBank(otpStep.id, otp), 'Could not verify that OTP')
       : call(() => api.deleteSettlementBank(otpStep.id, otp), 'Failed to remove bank account'));
     return otpStep.purpose;
+  });
+  /** Picks up an earlier add at the OTP step instead of paying for a second penny drop. */
+  const resumeBank = useAction(async (id: string) => {
+    await call(() => api.sendSettlementBankOtp(id), 'Could not send the OTP');
+    askOtp(id, 'add');
+    return true;
   });
   const syncBanks = useAction(() => call(() => api.syncSavedBanks(), 'Failed to sync banks'));
   const removeBank = useAction(async (id: string) => {
@@ -321,6 +331,17 @@ export const AepsSettlementScreen: React.FC = () => {
 
       <View>
         <SectionTitle>Settlement Account</SectionTitle>
+        {pendingBanks.map((bank: any) => (
+          <View key={bank._id} style={[styles.card, styles.pendingRow]}>
+            <Text style={styles.pendingText}>
+              {bank.bankName} · {String(bank.accountNumber || '').slice(-4)} is added but not active yet. Verify it with the OTP.
+            </Text>
+            <Button size="sm" onPress={() => resumeBank.run(bank._id)} loading={resumeBank.pending}>
+              Verify with OTP
+            </Button>
+          </View>
+        ))}
+        {!!resumeBank.error && <ErrorBanner message={resumeBank.error} />}
         {banks.data?.length ? (
           <View style={styles.list}>
             {banks.data.map((bank: any, index: number) => {
@@ -680,6 +701,8 @@ const styles = themed((c) => ({
   bankLinks: { flexDirection: 'row', alignItems: 'center', gap: space.lg, paddingLeft: 44 + space.md },
   spacer: { flex: 1 },
   link: { minHeight: 32, justifyContent: 'center' },
+  pendingRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginBottom: space.sm, borderColor: c.warning },
+  pendingText: { flex: 1, fontSize: t.small, color: c.foreground },
   linkText: { fontSize: t.small, fontWeight: '500', color: c.accent, textDecorationLine: 'underline' },
   linkMuted: { fontSize: t.small, color: c.mutedForeground },
   addRow: {

@@ -2,7 +2,7 @@
 // AEPS settlement pays Icchhamati beneficiaries of the registered mobile only.
 import assert from 'node:assert';
 import { toSettlementBank } from './settlement.controller.js';
-import { beneficiaryMobile } from './dmt.controller.js';
+import { beneficiaryMobile, toBeneficiary } from './dmt.controller.js';
 import { payoutOutcome } from '../utils/icchhamati.util.js';
 
 // --- A provider beneficiary reads as a saved bank --------------------------
@@ -35,5 +35,11 @@ assert.equal(payoutOutcome({ status: 1, message: 'Transaction Accepted', data: {
 assert.equal(payoutOutcome({ status: 1, data: { status: 'success' } }), 'PENDING');
 assert.equal(payoutOutcome({ status: 1, data: { status: 'Pending' } }), 'PENDING');
 assert.equal(payoutOutcome({ status: 0, message: 'Insufficient balance' }), 'FAILED');
+
+// --- A passed penny drop is not an active beneficiary: the OTP still has to run.
+// (Payout beneficiary 1396: account_verified true, status 0, hidden from the list.)
+assert.equal(toBeneficiary({ id: 1, status: 0, account_verified: true, ifsc_verified: true }).verified, false);
+assert.equal(toBeneficiary({ id: 1, status: 0, account_verified: true }).accountVerified, true);
+assert.equal(toBeneficiary({ id: 1, status: 1 }).verified, true);
 
 console.log('settlement tests passed');
