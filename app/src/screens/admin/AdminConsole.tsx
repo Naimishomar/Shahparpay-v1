@@ -7,6 +7,7 @@ import { EmptyState, ErrorBanner, Segmented, SkeletonRows, SuccessBanner } from 
 import { useAsync, useAction } from '@/hooks/useAsync';
 import { useInterval, useDebounce } from '@/hooks';
 import { useAuth } from '@/context/AuthContext';
+import { Sheet } from '@/components/ui/Sheet';
 import { labelFor } from '@/screens/transactionText';
 import api from '@/services/api';
 
@@ -159,6 +160,62 @@ const TopList: React.FC<{ title: string; rows: { key: string; label: string; sub
         ))
       )}
     </Section>
+  );
+};
+
+/** Pick a reason; the backend emails the matching template (web: UserDetail NoticeEmail). */
+const NoticeSheet: React.FC<{ role: string; user: any; onClose: () => void }> = ({ role, user, onClose }) => {
+  const reasons = useAsync<any[]>(() => fetchData('/api/admin/console/notice-reasons'), []);
+  const [reason, setReason] = useState('');
+  const [note, setNote] = useState('');
+  const picked = reasons.data?.find((r) => r.key === reason);
+  const [sent, setSent] = useState('');
+  const send = useAction(async () => {
+    let res: any;
+    try {
+      res = await api.post(`/api/admin/console/users/${role}/${user._id}/notice`, { reason, note });
+    } catch (err) {
+      throw new Error(failure(err, 'Could not send the email'));
+    }
+    if (!res?.success) throw new Error(res?.message || 'Could not send the email');
+    setSent(res.message || 'Email sent');
+    return true;
+  });
+
+  return (
+    <Sheet visible onClose={onClose} title={`Email ${user.name}`} subtitle={user.email}>
+      <View style={{ gap: space.md }}>
+        {sent ? (
+          <>
+            <SuccessBanner message={sent} />
+            <Button onPress={onClose} fullWidth>Done</Button>
+          </>
+        ) : (
+          <>
+            {reasons.loading ? <SkeletonRows count={3} /> : (
+              <View style={usersStyles.chips}>
+                {(reasons.data ?? []).map((r) => (
+                  <Pressable key={r.key} onPress={() => setReason(r.key)} accessibilityRole="button" style={[usersStyles.chip, reason === r.key && usersStyles.chipOn]}>
+                    <Text style={[usersStyles.chipText, reason === r.key && usersStyles.chipTextOn]}>{r.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+            {!!picked && (
+              <View style={usersStyles.preview}>
+                <Text style={usersStyles.name}>{picked.subject}</Text>
+                <Text style={usersStyles.meta}>{picked.body}</Text>
+              </View>
+            )}
+            <Input label="Note (optional)" value={note} onChangeText={setNote} maxLength={500} multiline placeholder="e.g. which document is missing" />
+            {!!send.error && <ErrorBanner message={send.error} />}
+            <Button icon="email-send-outline" onPress={() => send.run()} loading={send.pending} disabled={!reason} fullWidth>
+              Send email
+            </Button>
+          </>
+        )}
+      </View>
+    </Sheet>
   );
 };
 
@@ -644,6 +701,7 @@ export const UsersPanel: React.FC = () => {
   const term = useDebounce(q.trim(), 1000);
   const users = useAsync<any>(() => fetchData('/api/admin/console/users', { role, q: term, limit: 50 }), [role, term]);
   const rows: any[] = users.data?.rows ?? [];
+  const [mailTo, setMailTo] = useState<any | null>(null);
 
   const loginAs = useAction(async (id: string) => {
     let res: any;
@@ -658,7 +716,7 @@ export const UsersPanel: React.FC = () => {
   });
 
   return (
-    <Section title="Login as a user" note="Open their portal to fix a problem. Ends after 1 hour; everything is logged.">
+    <Section title="Users" note="Login as opens their portal to fix a problem (ends after 1 hour, logged). Email sends a ready notice.">
       <Segmented options={ROLES} value={role} onChange={setRole} />
       <Input value={q} onChangeText={setQ} placeholder="Search name, ID, mobile or email" leftIcon="magnify" autoCapitalize="none" />
       {!!loginAs.error && <ErrorBanner message={loginAs.error} />}
@@ -677,6 +735,11 @@ export const UsersPanel: React.FC = () => {
                 {u.isActive === false ? ' · Inactive' : ''}
               </Text>
             </View>
+            {!!u.email && (
+              <Button size="sm" variant="ghost" icon="email-outline" onPress={() => setMailTo(u)}>
+                Email
+              </Button>
+            )}
             {u.isActive !== false && (
               <Button size="sm" variant="outline" icon="login" loading={loginAs.pending} onPress={() => loginAs.run(u._id)}>
                 Login as
@@ -685,6 +748,7 @@ export const UsersPanel: React.FC = () => {
           </View>
         ))
       )}
+      {!!mailTo && <NoticeSheet role={role} user={mailTo} onClose={() => setMailTo(null)} />}
     </Section>
   );
 };
@@ -693,4 +757,10 @@ const usersStyles = themed((c) => ({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm, borderBottomWidth: 1, borderBottomColor: c.border },
   name: { fontSize: t.body, fontWeight: '600', color: c.foreground },
   meta: { fontSize: t.small, color: c.mutedForeground },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  chip: { borderWidth: 1, borderColor: c.border, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 12 },
+  chipOn: { backgroundColor: c.foreground, borderColor: c.foreground },
+  chipText: { fontSize: t.small, fontWeight: '600', color: c.foreground },
+  chipTextOn: { color: c.background },
+  preview: { gap: 4, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, padding: space.md },
 }));

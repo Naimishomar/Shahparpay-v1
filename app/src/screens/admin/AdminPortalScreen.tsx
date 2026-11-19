@@ -30,7 +30,7 @@ const TABS = [
   { key: 'overview', label: 'Overview' },
   { key: 'requests', label: 'Fund requests' },
   { key: 'distributors', label: 'Distributors' },
-  { key: 'users', label: 'Login as' },
+  { key: 'users', label: 'Users' },
   { key: 'notifications', label: 'Notifications' },
   { key: 'visitors', label: 'Visitors' },
   { key: 'server', label: 'Server' },

@@ -31,6 +31,69 @@ const DocTile = ({ label, number, picture }: { label: string; number?: string; p
     </div>
 );
 
+type Reason = { key: string; label: string; subject: string; body: string };
+
+/** Pick a reason and the backend emails the user a ready template; the note is optional. */
+const NoticeEmail = ({ token, role, id, email, onDone }: { token: string | null; role: string; id: string; email?: string; onDone: () => void }) => {
+    const { data: reasons } = useApiGet<Reason[]>(token, '/api/admin/console/notice-reasons');
+    const [reason, setReason] = useState('');
+    const [note, setNote] = useState('');
+    const [sending, setSending] = useState(false);
+    const picked = reasons?.find((r) => r.key === reason);
+
+    const send = async () => {
+        setSending(true);
+        try {
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/console/users/${role}/${id}/notice`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ reason, note }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.message);
+            toast.success(json.message || 'Email sent');
+            onDone();
+        } catch (e) {
+            toast.error(e instanceof Error && e.message ? e.message : 'Could not send the email');
+        } finally {
+            setSending(false);
+        }
+    };
+
+    if (!email) return <div className={`${CARD} p-4 text-sm text-muted-foreground`}>This user has no email on file.</div>;
+    return (
+        <div className={`${CARD} p-5 flex flex-col gap-4`}>
+            <div>
+                <p className="font-semibold">Send an email</p>
+                <p className="text-sm text-muted-foreground">To {email}. Pick a reason; the email is written for you.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+                {(reasons || []).map((r) => (
+                    <button key={r.key} onClick={() => setReason(r.key)} className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${reason === r.key ? 'border-transparent bg-foreground text-background' : 'bg-background hover:bg-black/5 dark:hover:bg-white/10'}`}>
+                        {r.label}
+                    </button>
+                ))}
+            </div>
+            {picked && (
+                <div className="rounded-xl border bg-background/60 p-4 text-sm">
+                    <p className="font-semibold">{picked.subject}</p>
+                    <p className="mt-1 text-muted-foreground">{picked.body}</p>
+                </div>
+            )}
+            <label className="flex flex-col gap-1.5">
+                <span className={LABEL}>Note (optional)</span>
+                <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} rows={2} placeholder="Anything specific to add, e.g. which document is missing" className={INPUT} />
+            </label>
+            <div className="flex gap-2">
+                <button onClick={send} disabled={!reason || sending} className={PRIMARY_BUTTON}>
+                    {sending ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />} Send email
+                </button>
+                <button onClick={onDone} className={SECONDARY_BUTTON}>Cancel</button>
+            </div>
+        </div>
+    );
+};
+
 const UserDetail = ({
     token, role, id, onBack, onOpenUser, onOpenTransactions,
 }: {
@@ -68,6 +131,7 @@ const UserDetail = ({
     };
 
     const { startImpersonation } = useAuth();
+    const [emailing, setEmailing] = useState(false);
     // Opens this user's own portal to fix a problem for them; logged against the admin.
     const loginAs = async () => {
         setBusy('loginAs');
@@ -168,6 +232,7 @@ const UserDetail = ({
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                             <button onClick={() => onOpenTransactions(txnFilter)} className={`${SECONDARY_BUTTON} py-2`}><Receipt size={16} /> All transactions</button>
+                            <button onClick={() => setEmailing((v) => !v)} className={`${SECONDARY_BUTTON} py-2`}><Mail size={16} /> Send email</button>
                             {active && (
                                 <button onClick={loginAs} disabled={busy === 'loginAs'} className={`${SECONDARY_BUTTON} py-2`} title="Open their portal to fix a problem; ends after 1 hour">
                                     {busy === 'loginAs' ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />} Login as {role}
@@ -201,6 +266,8 @@ const UserDetail = ({
                     </div>
                 </div>
             </section>
+
+            {emailing && <NoticeEmail token={token} role={role} id={id} email={user.email} onDone={() => setEmailing(false)} />}
 
             {confirmStatus && (
                 <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">

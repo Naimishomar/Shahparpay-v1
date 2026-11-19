@@ -12,7 +12,7 @@ import ActivityLog from '../models/activityLog.model.js';
 import { SERVICE_TYPES, ALLOWED_DAYS, windowFor } from './distributorAnalytics.controller.js';
 import { parseServicesUpdate, aepsKycDoneFilter, aepsKycPendingFilter } from '../utils/services.js';
 import { logActivity } from '../utils/activity.js';
-import { sendAccountApprovedEmail } from '../utils/email.js';
+import { sendAccountApprovedEmail, sendUserNoticeEmail, USER_NOTICE_REASONS } from '../utils/email.js';
 import { refreshAepsStep, correctDraftDetails } from './icchhamatiAeps.controller.js';
 
 const TZ = 'Asia/Kolkata';
@@ -587,6 +587,50 @@ export const impersonateUser = async (req, res) => {
     return res.status(200).json({ success: true, token, role, user: { ...user.toObject(), role } });
   } catch (error) {
     console.error('Admin impersonate error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+/** GET /api/admin/console/notice-reasons — the emails the admin can send, for the picker. */
+export const getNoticeReasons = (req, res) => {
+  if (forbid(req, res)) return;
+  const data = Object.entries(USER_NOTICE_REASONS).map(([key, r]) => ({ key, label: r.label, subject: r.subject, body: r.body }));
+  return res.status(200).json({ success: true, data });
+};
+
+/** POST /api/admin/console/users/:role/:id/notice { reason, note? } — emails a templated notice. */
+export const sendUserNotice = async (req, res) => {
+  try {
+    if (forbid(req, res)) return;
+    const { role, id } = req.params;
+    const Model = MODELS[role];
+    if (!Model || !mongoose.isValidObjectId(id)) return res.status(400).json({ success: false, message: 'Invalid user' });
+    const reason = USER_NOTICE_REASONS[req.body?.reason];
+    if (!reason) return res.status(400).json({ success: false, message: 'Pick a reason' });
+    const note = typeof req.body?.note === 'string' ? req.body.note.trim().slice(0, 500) : '';
+
+    const user = await Model.findById(id).select('name email retailerId distributorId');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!user.email) return res.status(400).json({ success: false, message: 'This user has no email on file' });
+
+    const sent = await sendUserNoticeEmail({
+      name: user.name,
+      email: user.email,
+      id: role === 'retailer' ? user.retailerId : user.distributorId,
+      idLabel: role === 'retailer' ? 'Retailer ID' : 'Distributor ID',
+    }, req.body.reason, note);
+    if (!sent) return res.status(502).json({ success: false, message: 'Could not send the email. Try again.' });
+
+    logActivity({
+      req,
+      action: 'admin.notice_email',
+      target: { _id: user._id, role, name: user.name },
+      summary: `Emailed: ${reason.label}`,
+      meta: { reason: req.body.reason, ...(note && { note }) },
+    });
+    return res.status(200).json({ success: true, message: `Email sent to ${user.email}` });
+  } catch (error) {
+    console.error('Admin notice email error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

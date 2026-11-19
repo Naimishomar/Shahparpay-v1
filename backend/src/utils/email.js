@@ -197,3 +197,79 @@ export const sendAccountApprovedEmail = async (user) => {
     return false;
   }
 };
+
+/**
+ * Notices the admin sends a retailer or distributor by picking a reason
+ * (admin console "Send email"). Each is one template; the admin may add a note.
+ * `cta` is a path on the site; the body is plain text, escaped when rendered.
+ */
+export const USER_NOTICE_REASONS = {
+  registration_incomplete: {
+    label: 'Registration incomplete',
+    subject: 'Complete your ShahparPay registration',
+    heading: 'Your registration is not complete',
+    body: 'We could not finish setting up your ShahparPay account because some registration details are missing. Sign in and complete your profile so we can activate your services.',
+    cta: ['Complete registration', '/profile'],
+  },
+  kyc_pending: {
+    label: 'KYC pending',
+    subject: 'Your ShahparPay KYC is pending',
+    heading: 'Your KYC is still pending',
+    body: 'AEPS and cash services stay locked until your KYC is complete. Sign in, open AEPS and finish the KYC steps (shop details, bank and biometric eKYC). It takes only a few minutes.',
+    cta: ['Complete KYC', '/aeps'],
+  },
+  documents_required: {
+    label: 'Documents required',
+    subject: 'Documents needed for your ShahparPay account',
+    heading: 'We need your documents',
+    body: 'Some of your documents are missing or could not be verified. Please upload a clear photo of your Aadhaar and PAN from your profile so we can continue.',
+    cta: ['Upload documents', '/profile'],
+  },
+  settlement_bank: {
+    label: 'Add settlement bank',
+    subject: 'Add your settlement bank account',
+    heading: 'Add a settlement bank account',
+    body: 'To withdraw your Trade Wallet balance to your bank, add and verify a settlement bank account from the Settlement page.',
+    cta: ['Add bank account', '/aeps-settlement'],
+  },
+  account_inactive: {
+    label: 'Account inactive',
+    subject: 'Your ShahparPay account is inactive',
+    heading: 'Your account is inactive',
+    body: 'Your ShahparPay account is currently inactive, so you cannot use services right now. Please contact our support team to know the reason and get it reactivated.',
+    cta: ['Contact support', '/contact'],
+  },
+  start_transacting: {
+    label: 'No activity yet',
+    subject: 'Start earning with ShahparPay',
+    heading: 'Your account is ready to use',
+    body: 'Your ShahparPay account is active but we have not seen any transactions yet. Sign in to start AEPS, money transfer, recharge and bill payments and earn commission on every transaction.',
+    cta: ['Sign in to ShahparPay', '/login'],
+  },
+};
+
+export const sendUserNoticeEmail = async (user, reasonKey, note) => {
+  const r = USER_NOTICE_REASONS[reasonKey];
+  if (!r || !user?.email) return false;
+  const name = user.name || 'there';
+  const extra = note ? `\n\nNote from our team: ${note}` : '';
+  try {
+    await getTransporter().sendMail({
+      from: `"${process.env.EMAIL_SENDER_NAME || 'ShahparPay'}" <${process.env.ETHEREAL_USERNAME}>`,
+      to: user.email,
+      subject: r.subject,
+      text: `Hello ${name},\n\n${r.body}${extra}\n\n${SITE_URL}${r.cta[1]}`,
+      html: emailShell(r.heading, r.body, `
+        ${headingRow(r.heading, `Hi ${escapeHtml(name)},<br>${escapeHtml(r.body)}`)}
+        ${note ? `<tr><td style="padding:20px 48px 0;font-family:${FONT};"><div style="padding:14px 16px;background:#F4F1FF;border-radius:10px;font-size:14px;line-height:21px;color:#3B3B4F;"><b>Note from our team:</b> ${escapeHtml(note)}</div></td></tr>` : ''}
+        ${detailsRow([[user.idLabel, user.id], ['Name', user.name]])}
+        <tr><td align="center" style="padding:32px 48px 0;font-family:${FONT};">
+          <a href="${SITE_URL}${r.cta[1]}" style="display:inline-block;padding:14px 32px;background:#4B2BD6;border-radius:10px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">${r.cta[0]}</a>
+        </td></tr>`),
+    });
+    return true;
+  } catch (error) {
+    console.error('[Notice] Could not send notice email:', error.message);
+    return false;
+  }
+};
