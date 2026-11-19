@@ -321,6 +321,8 @@ export const STORAGE_KEYS = {
   refreshToken: 'refreshToken',
   user: 'user',
   theme: 'theme',
+  /** The admin's own session, parked while they are signed in as someone else. */
+  adminSession: 'adminSession',
 };
 
 export const DATE_FILTER_OPTIONS = [

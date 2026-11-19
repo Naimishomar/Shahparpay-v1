@@ -1,4 +1,6 @@
 import React from 'react';
+import { View, Text, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createStackNavigator, TransitionPresets, CardStyleInterpolators } from '@react-navigation/stack';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
@@ -176,6 +178,23 @@ const buildNavigator = (
   </Stack.Navigator>
 );
 
+/** Floats over every screen while the admin is signed in as someone else. */
+const ImpersonationBar: React.FC = () => {
+  const { impersonatedBy, user, stopImpersonation } = useAuth();
+  const insets = useSafeAreaInsets();
+  if (!impersonatedBy) return null;
+  return (
+    <View style={{ position: 'absolute', left: 12, right: 12, bottom: insets.bottom + 72, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F59E0B', borderRadius: 14, paddingVertical: 8, paddingHorizontal: 12 }}>
+      <Text style={{ flex: 1, color: '#000', fontSize: 12, fontWeight: '600' }} numberOfLines={2}>
+        Signed in as {user?.name} ({user?.role}). Everything is logged.
+      </Text>
+      <Pressable onPress={stopImpersonation} accessibilityRole="button" style={{ backgroundColor: '#000', borderRadius: 10, paddingVertical: 6, paddingHorizontal: 10 }}>
+        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>Back to admin</Text>
+      </Pressable>
+    </View>
+  );
+};
+
 export const AppNavigator: React.FC = () => {
   const [showSplash, setShowSplash] = React.useState(true);
   const [startRoute, setStartRoute] = React.useState<string | undefined>();
@@ -219,7 +238,9 @@ export const AppNavigator: React.FC = () => {
   const pending = !!token && !screens;
 
   return (
-    <NavigationContainer theme={navTheme}>
+    <View style={{ flex: 1 }}>
+    {/* Keyed by account: switching to a signed-in-as user starts a fresh stack. */}
+    <NavigationContainer key={`${user?.role}:${user?._id ?? user?.id}`} theme={navTheme}>
       {screens ? (
         buildNavigator(screens, palette.background, startRoute)
       ) : (
@@ -241,6 +262,8 @@ export const AppNavigator: React.FC = () => {
         </Stack.Navigator>
       )}
     </NavigationContainer>
+    <ImpersonationBar />
+    </View>
   );
 };
 

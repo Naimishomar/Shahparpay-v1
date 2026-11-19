@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { EmptyState, ErrorBanner, Segmented, SkeletonRows, SuccessBanner } from '@/components/ui/Screen';
 import { useAsync, useAction } from '@/hooks/useAsync';
-import { useInterval } from '@/hooks';
+import { useInterval, useDebounce } from '@/hooks';
+import { useAuth } from '@/context/AuthContext';
 import { labelFor } from '@/screens/transactionText';
 import api from '@/services/api';
 
@@ -622,4 +623,74 @@ const styles = themed((c) => ({
   link: { fontSize: t.small, fontWeight: '600', color: c.foreground },
   logBox: { height: 360, borderRadius: radius.md, backgroundColor: '#0E0D18', padding: space.md },
   logLine: { fontSize: 11, lineHeight: 16, color: '#D4D4D8', fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }) },
+}));
+
+// ---------------------------------------------------------------- users
+
+const ROLES = [
+  { key: 'retailer', label: 'Retailers' },
+  { key: 'distributor', label: 'Distributors' },
+];
+
+/**
+ * Find a retailer or distributor and sign in as them to fix a problem from
+ * their own portal (web: UserDetail "Login as"). Ends after an hour or on
+ * "Back to admin"; the backend logs it against the admin.
+ */
+export const UsersPanel: React.FC = () => {
+  const { startImpersonation } = useAuth();
+  const [role, setRole] = useState('retailer');
+  const [q, setQ] = useState('');
+  const term = useDebounce(q.trim(), 1000);
+  const users = useAsync<any>(() => fetchData('/api/admin/console/users', { role, q: term, limit: 50 }), [role, term]);
+  const rows: any[] = users.data?.rows ?? [];
+
+  const loginAs = useAction(async (id: string) => {
+    let res: any;
+    try {
+      res = await api.post(`/api/admin/console/users/${role}/${id}/impersonate`);
+    } catch (err) {
+      throw new Error(failure(err, 'Could not sign in as this user'));
+    }
+    if (!res?.success) throw new Error(res?.message || 'Could not sign in as this user');
+    await startImpersonation(res.token, res.user);
+    return true;
+  });
+
+  return (
+    <Section title="Login as a user" note="Open their portal to fix a problem. Ends after 1 hour; everything is logged.">
+      <Segmented options={ROLES} value={role} onChange={setRole} />
+      <Input value={q} onChangeText={setQ} placeholder="Search name, ID, mobile or email" leftIcon="magnify" autoCapitalize="none" />
+      {!!loginAs.error && <ErrorBanner message={loginAs.error} />}
+      {!!users.error && <ErrorBanner message={users.error} />}
+      {users.loading ? (
+        <SkeletonRows count={4} />
+      ) : !rows.length ? (
+        <EmptyState title="No one found" />
+      ) : (
+        rows.map((u) => (
+          <View key={u._id} style={usersStyles.row}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={usersStyles.name} numberOfLines={1}>{u.name}</Text>
+              <Text style={usersStyles.meta} numberOfLines={1}>
+                {[u.retailerId || u.distributorId, u.contactNumber].filter((v) => typeof v === 'string').join(' · ')}
+                {u.isActive === false ? ' · Inactive' : ''}
+              </Text>
+            </View>
+            {u.isActive !== false && (
+              <Button size="sm" variant="outline" icon="login" loading={loginAs.pending} onPress={() => loginAs.run(u._id)}>
+                Login as
+              </Button>
+            )}
+          </View>
+        ))
+      )}
+    </Section>
+  );
+};
+
+const usersStyles = themed((c) => ({
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm, borderBottomWidth: 1, borderBottomColor: c.border },
+  name: { fontSize: t.body, fontWeight: '600', color: c.foreground },
+  meta: { fontSize: t.small, color: c.mutedForeground },
 }));

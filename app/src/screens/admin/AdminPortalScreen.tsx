@@ -24,12 +24,13 @@ import { Sheet } from '@/components/ui/Sheet';
 import { OnboardMemberSheet } from '@/components/network/OnboardMemberSheet';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
-import { OverviewPanel, VisitorsPanel, ServerPanel } from './AdminConsole';
+import { OverviewPanel, VisitorsPanel, ServerPanel, UsersPanel } from './AdminConsole';
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
   { key: 'requests', label: 'Fund requests' },
   { key: 'distributors', label: 'Distributors' },
+  { key: 'users', label: 'Login as' },
   { key: 'notifications', label: 'Notifications' },
   { key: 'visitors', label: 'Visitors' },
   { key: 'server', label: 'Server' },
@@ -289,6 +290,8 @@ export const AdminPortalScreen: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      {tab === 'users' && <UsersPanel />}
 
       {tab === 'notifications' && (
         <>

@@ -20,10 +20,39 @@ const accessTokenMsLeft = (token: string) => {
   }
 };
 
+type ParkedAdmin = { token: string; user: User; refreshToken: string | null };
+const parkedAdmin = async (): Promise<ParkedAdmin | null> => {
+  try {
+    return JSON.parse((await AsyncStorage.getItem(STORAGE_KEYS.adminSession)) || 'null');
+  } catch {
+    return null;
+  }
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [impersonatedBy, setImpersonatedBy] = useState<string | null>(null);
+
+  /** Puts the admin's own session back; the signed-in-as one simply ends. */
+  const stopImpersonation = useCallback(async () => {
+    const admin = await parkedAdmin();
+    await AsyncStorage.removeItem(STORAGE_KEYS.adminSession);
+    setImpersonatedBy(null);
+    if (!admin) return;
+    api.invalidateCache();
+    api.setToken(admin.token);
+    await Promise.all([
+      AsyncStorage.setItem(STORAGE_KEYS.token, admin.token),
+      AsyncStorage.setItem(STORAGE_KEYS.user, JSON.stringify(admin.user)),
+      admin.refreshToken
+        ? AsyncStorage.setItem(STORAGE_KEYS.refreshToken, admin.refreshToken)
+        : AsyncStorage.removeItem(STORAGE_KEYS.refreshToken),
+    ]);
+    setToken(admin.token);
+    setUser(admin.user);
+  }, []);
 
   const loadStoredAuth = useCallback(async () => {
     try {
@@ -34,6 +63,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ]);
 
       if (!storedToken || !storedUser) return;
+
+      // Signed in as someone else: that token is never refreshed (no refresh
+      // token is issued). Live while it lasts, then the admin's own session.
+      const admin = await parkedAdmin();
+      if (admin) {
+        if (accessTokenMsLeft(storedToken) > 0) {
+          setToken(storedToken);
+          setUser(JSON.parse(storedUser));
+          setImpersonatedBy(admin.user?.name ?? 'Admin');
+          api.setToken(storedToken);
+          return;
+        }
+        await stopImpersonation();
+        return loadStoredAuth();
+      }
 
       // Restore first so the UI has a session immediately, even offline.
       setToken(storedToken);
@@ -127,7 +171,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadStoredAuth();
 
     // Keeps the axios 401 handler and the React tree in sync.
-    api.setUnauthorizedHandler(() => {
+    api.setUnauthorizedHandler(async () => {
+      if (await parkedAdmin()) return stopImpersonation();
       console.warn('[auth] Refresh token rejected by the server; signing out.');
       setToken(null);
       setUser(null);
@@ -154,6 +199,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // to cost a refresh call. A 401 is still refreshed by the axios interceptor.
     const refreshIfStale = async () => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.token);
+      if (await parkedAdmin()) {
+        if (stored && accessTokenMsLeft(stored) <= 0) stopImpersonation();
+        return;
+      }
       if (stored && accessTokenMsLeft(stored) > 5 * 60000) return;
       refreshAuthToken();
     };
@@ -169,7 +218,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearInterval(intervalId);
       appStateSub.remove();
     };
-  }, [loadStoredAuth, refreshAuthToken]);
+  }, [loadStoredAuth, refreshAuthToken, stopImpersonation]);
+
+  const startImpersonation = async (newToken: string, newUser: User) => {
+    const parked: ParkedAdmin = { token: token!, user: user!, refreshToken: await AsyncStorage.getItem(STORAGE_KEYS.refreshToken) };
+    await AsyncStorage.setItem(STORAGE_KEYS.adminSession, JSON.stringify(parked));
+    api.invalidateCache();
+    api.setToken(newToken);
+    await Promise.all([
+      AsyncStorage.setItem(STORAGE_KEYS.token, newToken),
+      AsyncStorage.setItem(STORAGE_KEYS.user, JSON.stringify(newUser)),
+      AsyncStorage.removeItem(STORAGE_KEYS.refreshToken),
+    ]);
+    setImpersonatedBy(user?.name ?? 'Admin');
+    setToken(newToken);
+    setUser(newUser);
+  };
 
   const login = async (newToken: string, newUser: User, newRefreshToken?: string) => {
     if (!newRefreshToken) {
@@ -190,6 +254,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async (everywhere = false) => {
+    if (await parkedAdmin()) return stopImpersonation();
     try {
       await api.logout(everywhere);
     } catch (error) {
@@ -201,7 +266,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkSession = refreshAuthToken;
 
   return (
-    <AuthContext.Provider value={{ user, token, isInitializing, login, logout, checkSession }}>
+    <AuthContext.Provider value={{ user, token, isInitializing, login, logout, checkSession, impersonatedBy, startImpersonation, stopImpersonation }}>
       {children}
     </AuthContext.Provider>
   );

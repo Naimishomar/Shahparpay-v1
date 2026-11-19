@@ -46,6 +46,10 @@ export interface AuthState {
   login: (token: string, user: User, refreshToken?: string) => Promise<void>;
   logout: (everywhere?: boolean) => Promise<void>;
   checkSession: () => Promise<void>;
+  /** Admin's name while the admin is signed in as a retailer or distributor. */
+  impersonatedBy: string | null;
+  startImpersonation: (token: string, user: User) => Promise<void>;
+  stopImpersonation: () => Promise<void>;
 }
 
 export interface ApiResponse<T> {
