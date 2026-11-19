@@ -314,7 +314,7 @@ const UserDetail = ({
                                         onClick={() => toggleService(svc.key)}
                                         className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60 ${on ? 'bg-primary' : 'bg-black/15 dark:bg-white/15'}`}
                                     >
-                                        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform dark:bg-zinc-900 ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+                                        <span className={`absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform dark:bg-zinc-900 ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
                                     </button>
                                 </div>
                             );
