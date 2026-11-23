@@ -38,6 +38,7 @@ const isFailed = (r: LedgerRow) => /FAIL|REJECT/i.test(r.remarks || '');
 const getTxnTypeColor = (type: string) => {
     const map: Record<string, string> = {
         'AEPS Withdrawal': 'bg-sky-500/10 text-sky-700 dark:text-sky-400 ring-sky-500/20 border-blue-500/30',
+        'UPI Cash Withdrawal': 'bg-violet-500/10 text-violet-700 dark:text-violet-400 ring-violet-500/20 border-violet-500/30',
         'AadhaarPay': 'bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/30',
         'Recharge': 'bg-cyan-500/10 text-cyan-500 border-cyan-500/30',
         'BBPS': 'bg-teal-500/10 text-teal-500 border-teal-500/30',

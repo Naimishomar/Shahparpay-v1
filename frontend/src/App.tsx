@@ -41,6 +41,7 @@ const DmtReport = page(() => import("./pages/DmtReport"))
 const AepsReport = page(() => import("./pages/AepsReport"))
 const PayoutReport = page(() => import("./pages/PayoutReport"))
 const UpiReport = page(() => import("./pages/UpiReport"))
+const UpiCashWithdrawalReport = page(() => import("./pages/ServiceReport"))
 const PanReport = page(() => import("./pages/PanReport"))
 const ItrReport = page(() => import("./pages/ItrReport"))
 const LeadGenerationReport = page(() => import("./pages/LeadGenerationReport"))
@@ -187,6 +188,7 @@ function App() {
         <Route path="/reports/dmt" element={<DmtReport/>}/>
         <Route path="/reports/payout" element={<PayoutReport/>}/>
         <Route path="/reports/upi" element={<UpiReport/>}/>
+        <Route path="/reports/upi-cash-withdrawal" element={<UpiCashWithdrawalReport kind="upiCashWithdrawal" title="UPI Cash Withdrawal Reports" description="UPI cash withdrawal transactions, customer details, status, and commission."/>}/>
         <Route path="/reports/pan" element={<PanReport/>}/>
         <Route path="/reports/itr" element={<ItrReport/>}/>
         <Route path="/reports/lead-generation" element={<LeadGenerationReport/>}/>

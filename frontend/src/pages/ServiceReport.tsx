@@ -6,13 +6,14 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useAuth } from "../context/AuthContext";
 
-type ServiceKind = "recharge" | "bbps" | "collect";
+type ServiceKind = "recharge" | "bbps" | "collect" | "upiCashWithdrawal";
 
 /** What each report lists and how its columns read a transaction. */
 const KINDS: Record<ServiceKind, { type: string; label: string; party: string; number: string; service: (tx: any) => string; partyOf: (tx: any) => string; numberOf: (tx: any) => string }> = {
     recharge: { type: "RECHARGE", label: "Recharge", party: "Operator / Biller", number: "Customer Number", service: (tx) => tx.metadata?.mode || "Recharge", partyOf: (tx) => tx.metadata?.operator, numberOf: (tx) => tx.metadata?.caNumber || tx.metadata?.mobile },
     bbps: { type: "BILL_PAYMENT", label: "BBPS", party: "Operator / Biller", number: "Customer Number", service: (tx) => tx.metadata?.mode || "BBPS", partyOf: (tx) => tx.metadata?.operator, numberOf: (tx) => tx.metadata?.caNumber || tx.metadata?.mobile },
     collect: { type: "PG_COLLECTION", label: "CollectPayments", party: "Customer", number: "Customer Mobile", service: (tx) => (tx.metadata?.collectionChannel === "QR" ? "QR" : "Link"), partyOf: (tx) => tx.metadata?.payerName, numberOf: (tx) => tx.metadata?.payerMobile },
+    upiCashWithdrawal: { type: "UPI_CASH_WITHDRAWAL", label: "UpiCashWithdrawal", party: "Customer", number: "Customer Mobile", service: () => "UPI Cash Withdrawal", partyOf: (tx) => tx.metadata?.payerName || "N/A", numberOf: (tx) => tx.metadata?.mobile || tx.metadata?.customerMobile },
 };
 
 interface ServiceReportProps {
@@ -150,9 +151,9 @@ const ServiceReport = ({ kind, title, description }: ServiceReportProps) => {
                         <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="px-3 py-2 bg-background border rounded-xl text-sm shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500">
                             <option value="ALL">All Status</option>
                             <option value="SUCCESS">Success</option>
-                            <option value={kind === "collect" ? "PENDING" : "PROCESSING"}>Pending</option>
+                            <option value={kind === "collect" || kind === "upiCashWithdrawal" ? "PENDING" : "PROCESSING"}>Pending</option>
                             <option value="FAILED">Failed</option>
-                            {kind !== "collect" && <option value="REFUNDED">Refunded</option>}
+                            {kind !== "collect" && kind !== "upiCashWithdrawal" && <option value="REFUNDED">Refunded</option>}
                         </select>
                         <button onClick={downloadCsv} className="flex items-center gap-2 px-3 py-2 rounded-xl border bg-background hover:bg-black/5 dark:hover:bg-white/5 text-sm font-medium"><Download className="w-4 h-4" /> CSV</button>
                         <button onClick={downloadPdf} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium btn-primary"><FileDown className="w-4 h-4" /> PDF</button>

@@ -359,6 +359,7 @@ export const getWalletLedger = async (req, res) => {
         gross > 0 &&
         [
           'AEPS_WITHDRAWAL',
+          'UPI_CASH_WITHDRAWAL',
           'AEPS_DEPOSIT',
           'RECHARGE',
           'BILL_PAYMENT',

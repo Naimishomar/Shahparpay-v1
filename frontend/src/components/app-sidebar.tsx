@@ -53,6 +53,7 @@ const retailerGroups: NavGroup[] = [
       { name: "DMT Reports", url: "/reports/dmt", icon: Send },
       { name: "Payout Reports", url: "/reports/payout", icon: Landmark },
       { name: "UPI Reports", url: "/reports/upi", icon: Wallet },
+      { name: "UPI Cash Withdrawal Reports", url: "/reports/upi-cash-withdrawal", icon: Wallet },
       { name: "PAN Reports", url: "/reports/pan", icon: IdCard },
       { name: "ITR Reports", url: "/reports/itr", icon: FileText },
       { name: "Lead Generation Reports", url: "/reports/lead-generation", icon: UserPlus },

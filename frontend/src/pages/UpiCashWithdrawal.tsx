@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { QrCode, Phone, IndianRupee, RefreshCw, CheckCircle2, XCircle, Clock, Banknote } from 'lucide-react';
+import { QrCode, Phone, IndianRupee, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -15,20 +15,6 @@ const MAX = 5000;
 
 type Txn = { transactionId: string; amount: number; status: string; customerMobile?: string; bankRRN?: string; payerName?: string; accountNumber?: string; message?: string; createdAt?: string };
 type Qr = { transactionId: string; qrCode?: string; qrImage?: string; amount: number; expiresAt: number };
-
-const StatusPill = ({ status }: { status: string }) => {
-    const [cls, Icon] = status === 'SUCCESS'
-        ? ['bg-emerald-500/10 text-emerald-600 ring-emerald-500/20', CheckCircle2]
-        : status === 'FAILED'
-            ? ['bg-red-500/10 text-red-600 ring-red-500/20', XCircle]
-            : ['bg-amber-500/10 text-amber-600 ring-amber-500/20', Clock];
-    return (
-        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${cls}`}>
-            <Icon className="w-3.5 h-3.5" />
-            {status === 'SUCCESS' ? 'SUCCESS' : status === 'FAILED' ? 'FAILED' : 'PENDING'}
-        </span>
-    );
-};
 
 /**
  * UPI cash withdrawal: the customer scans a QR for the amount and pays from their
@@ -47,12 +33,7 @@ const UpiCashWithdrawal = () => {
     const [qr, setQr] = useState<Qr | null>(null);
     const [result, setResult] = useState<Txn | null>(null);
     const [now, setNow] = useState(Date.now());
-    const [history, setHistory] = useState<Txn[]>([]);
     const polling = useRef(false);
-
-    const loadHistory = () =>
-        axios.get(`${api}/history`, headers).then((r) => setHistory(r.data?.data || [])).catch(() => {});
-    useEffect(() => { loadHistory(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const checkStatus = async (transactionId: string, quiet = false) => {
         try {
@@ -61,7 +42,6 @@ const UpiCashWithdrawal = () => {
             if (txn?.status === 'SUCCESS' || txn?.status === 'FAILED') {
                 setQr(null);
                 setResult(txn);
-                loadHistory();
             } else if (!quiet) toast.info('Payment not received yet.');
             return txn;
         } catch (err: any) {
@@ -98,7 +78,6 @@ const UpiCashWithdrawal = () => {
             const d = res.data.data;
             setQr({ transactionId: d.transactionId, qrCode: d.qrCode || undefined, qrImage: d.qrImage || undefined, amount: d.amount, expiresAt: Date.now() + d.expiresIn * 1000 });
             setNow(Date.now());
-            loadHistory();
         } catch (err: any) {
             toast.error(err?.response?.data?.message || 'Could not start the UPI cash withdrawal');
         }
@@ -124,8 +103,8 @@ const UpiCashWithdrawal = () => {
                 </div>
             </section>
 
-            <div className="grid gap-6 lg:grid-cols-2">
-                <section className="rounded-3xl border bg-card p-6 shadow-sm">
+            <div className="w-full">
+                <section className="rounded-3xl border bg-card p-6 shadow-sm md:p-8">
                     {result ? (
                         <div className="flex flex-col items-center gap-3 text-center py-6">
                             {result.status === 'SUCCESS'
@@ -148,9 +127,9 @@ const UpiCashWithdrawal = () => {
                             <p className="text-3xl font-bold tabular-nums">₹{qr.amount.toLocaleString('en-IN')}</p>
                             <div className={`rounded-2xl bg-white p-4 ${secondsLeft ? '' : 'opacity-30'}`}>
                                 {qr.qrImage ? (
-                                    <img src={qr.qrImage} alt="UPI payment QR code" width={220} height={220} className="h-[220px] w-[220px] object-contain" />
+                                    <img src={qr.qrImage} alt="UPI payment QR code" width={320} height={320} className="h-auto w-full max-w-[320px] object-contain" />
                                 ) : qr.qrCode ? (
-                                    <QRCodeSVG value={qr.qrCode} size={220} />
+                                    <QRCodeSVG value={qr.qrCode} size={320} className="h-auto w-full max-w-[320px]" />
                                 ) : null}
                             </div>
                             <p className="text-sm font-medium">
@@ -180,33 +159,6 @@ const UpiCashWithdrawal = () => {
                                 <QrCode className="h-4 w-4" />{busy ? 'Generating…' : 'Generate QR'}
                             </button>
                         </form>
-                    )}
-                </section>
-
-                <section className="rounded-3xl border bg-card p-6 shadow-sm">
-                    <div className="mb-4 flex items-center justify-between">
-                        <h2 className="flex items-center gap-2 font-semibold"><Banknote className="h-4 w-4" />Recent withdrawals</h2>
-                        <button onClick={loadHistory} className="text-muted-foreground" aria-label="Refresh"><RefreshCw className="h-4 w-4" /></button>
-                    </div>
-                    {history.length === 0 ? (
-                        <p className="py-8 text-center text-sm text-muted-foreground">No UPI cash withdrawals yet.</p>
-                    ) : (
-                        <ul className="divide-y">
-                            {history.map((t) => (
-                                <li key={t.transactionId} className="flex items-center justify-between gap-3 py-3">
-                                    <div className="min-w-0">
-                                        <p className="font-semibold tabular-nums">₹{t.amount.toLocaleString('en-IN')}</p>
-                                        <p className="truncate text-xs text-muted-foreground">{t.customerMobile} · {t.createdAt ? new Date(t.createdAt).toLocaleString('en-IN') : ''}</p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        {t.status !== 'SUCCESS' && t.status !== 'FAILED' && (
-                                            <button onClick={() => checkStatus(t.transactionId)} className="text-xs font-semibold underline underline-offset-2">Check</button>
-                                        )}
-                                        <StatusPill status={t.status} />
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
                     )}
                 </section>
             </div>
