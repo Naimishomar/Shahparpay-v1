@@ -1340,7 +1340,9 @@ export const initiateUpiCashWithdrawal = async (req, res) => {
       remarks: 'UPI Cash Withdrawal',
     });
     const qr = data?.data || {};
-    if (!isOk(data) || !qr.qrCode || !data.partnerRequestId || !qr.fingpayTxnId) {
+    const partnerRequestId = data.partnerRequestId || qr.partnerRequestId;
+    const fingpayTxnId = qr.fingpayTxnId || data.fingpayTxnId;
+    if (!isOk(data) || !qr.qrCode || !partnerRequestId || !fingpayTxnId) {
       return res.status(400).json({ success: false, message: providerMessage(data, 'Could not start the UPI cash withdrawal.') });
     }
 
@@ -1355,8 +1357,8 @@ export const initiateUpiCashWithdrawal = async (req, res) => {
         provider: 'icchhamati',
         outletId: outletOf(retailer),
         mobile: customerMobile,
-        partnerRequestId: data.partnerRequestId,
-        fingpayTxnId: qr.fingpayTxnId,
+        partnerRequestId,
+        fingpayTxnId,
         providerTxnId: data.transaction_id,
       },
     });
@@ -1382,6 +1384,7 @@ const upiCwView = (txn) => ({
   customerMobile: txn.metadata?.mobile,
   bankRRN: txn.metadata?.bankRRN,
   payerName: txn.metadata?.payerName,
+  accountNumber: txn.metadata?.accountNumber,
   message: txn.metadata?.gatewayMessage,
   createdAt: txn.createdAt,
 });

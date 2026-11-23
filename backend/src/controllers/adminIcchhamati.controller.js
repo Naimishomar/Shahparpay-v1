@@ -159,3 +159,22 @@ export const selfTransfer = async (req, res) => {
     return unreachable(res, 'self-transfer', error);
   }
 };
+
+/** GET /api/admin/icchhamati/upicw/history?page&search */
+export const getProviderUpiCwHistory = async (req, res) => {
+  if (forbid(req, res)) return;
+  try {
+    const params = {
+      page: Math.max(1, Number(req.query.page) || 1),
+    };
+    if (req.query.search) params.search = String(req.query.search).trim();
+    const data = await icchhamatiGet('/api/v2/upicw/history', params);
+    if (!isOk(data)) {
+      return res.status(502).json({ success: false, message: providerMessage(data, 'Could not load Icchhamati UPI CW history.') });
+    }
+    return res.status(200).json({ success: true, data: data.data || {} });
+  } catch (error) {
+    return unreachable(res, 'UPI CW history', error);
+  }
+};
+

@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import Transaction from '../models/transaction.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
-import { icchhamatiPost } from './icchhamati.util.js';
+import { icchhamatiGet, icchhamatiPost } from './icchhamati.util.js';
 import { getUpiCashWithdrawalCommission, settleCommissions, setCommissions } from './wallet.util.js';
 
 /**
@@ -102,13 +102,20 @@ export const syncUpiCashWithdrawal = async (txn) => {
     }
     await Transaction.updateOne(
       { _id: txn._id },
-      { $set: { 'metadata.bankRRN': result.bankRrn, 'metadata.payerName': result.payerName, 'metadata.paymentDate': result.paymentDate } }
+      {
+        $set: {
+          'metadata.bankRRN': result.bankRrn || result.bankRRN,
+          'metadata.accountNumber': result.accountNumber,
+          'metadata.payerName': result.payerName,
+          'metadata.paymentDate': result.paymentDate,
+        },
+      }
     );
     await creditTradeInflow({
       transactionId: txn._id,
       userId: txn.userId,
       amount: txn.amount,
-      providerRef: result.bankRrn || fingpayTxnId,
+      providerRef: result.bankRrn || result.bankRRN || fingpayTxnId,
       message: data?.message,
       retailerGross: getUpiCashWithdrawalCommission(txn.amount),
     });
@@ -120,3 +127,12 @@ export const syncUpiCashWithdrawal = async (txn) => {
   }
   return Transaction.findById(txn._id);
 };
+
+/**
+ * Asks Icchhamati for its account-level UPI cash withdrawal history.
+ * GET /api/v2/upicw/history
+ */
+export const fetchProviderUpiCwHistory = async (params = {}) => {
+  return icchhamatiGet('/api/v2/upicw/history', params);
+};
+

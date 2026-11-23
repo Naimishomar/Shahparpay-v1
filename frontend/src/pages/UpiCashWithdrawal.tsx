@@ -13,7 +13,7 @@ const POLL_MS = 4000;
 const MIN = 500;
 const MAX = 5000;
 
-type Txn = { transactionId: string; amount: number; status: string; customerMobile?: string; bankRRN?: string; payerName?: string; message?: string; createdAt?: string };
+type Txn = { transactionId: string; amount: number; status: string; customerMobile?: string; bankRRN?: string; payerName?: string; accountNumber?: string; message?: string; createdAt?: string };
 type Qr = { transactionId: string; qrCode: string; amount: number; expiresAt: number };
 
 const StatusPill = ({ status }: { status: string }) => {
@@ -139,7 +139,7 @@ const UpiCashWithdrawal = () => {
                                     ? <>Credited to your Trade Wallet. <b className="text-foreground">Hand over ₹{result.amount.toLocaleString('en-IN')} cash now.</b></>
                                     : result.message || 'No money was received. Do not give cash.'}
                             </p>
-                            {result.bankRRN && <p className="text-xs text-muted-foreground">RRN {result.bankRRN}{result.payerName ? ` · ${result.payerName}` : ''}</p>}
+                            {result.bankRRN && <p className="text-xs text-muted-foreground">RRN {result.bankRRN}{result.payerName ? ` · ${result.payerName}` : ''}{result.accountNumber ? ` · A/C ${result.accountNumber}` : ''}</p>}
                             <button onClick={reset} className="mt-2 btn-primary rounded-xl px-5 py-2.5 text-sm font-semibold">New withdrawal</button>
                         </div>
                     ) : qr ? (

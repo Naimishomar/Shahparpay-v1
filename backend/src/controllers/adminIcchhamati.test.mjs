@@ -1,6 +1,6 @@
 // Run: node src/controllers/adminIcchhamati.test.mjs
 import assert from 'node:assert';
-import { toWallet, getWallets } from './adminIcchhamati.controller.js';
+import { toWallet, getWallets, getProviderUpiCwHistory } from './adminIcchhamati.controller.js';
 
 // Shape as the live /api/accounts answers.
 const wallet = toWallet({
@@ -18,5 +18,9 @@ assert.ok(!('full_number' in wallet) && !('upi' in wallet), 'full account number
 let code;
 await getWallets({ user: { role: 'retailer' } }, { status: (c) => ((code = c), { json: () => {} }) });
 assert.equal(code, 403);
+
+let cwCode;
+await getProviderUpiCwHistory({ user: { role: 'retailer' } }, { status: (c) => ((cwCode = c), { json: () => {} }) });
+assert.equal(cwCode, 403);
 
 console.log('adminIcchhamati tests passed');

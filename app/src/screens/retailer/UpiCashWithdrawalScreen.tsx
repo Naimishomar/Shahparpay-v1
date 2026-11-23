@@ -17,7 +17,7 @@ const MIN = 500;
 const MAX = 5000;
 const MOBILE_RE = /^[6-9]\d{9}$/;
 
-type Txn = { transactionId: string; amount: number; status: string; customerMobile?: string; bankRRN?: string; payerName?: string; message?: string; createdAt?: string };
+type Txn = { transactionId: string; amount: number; status: string; customerMobile?: string; bankRRN?: string; payerName?: string; accountNumber?: string; message?: string; createdAt?: string };
 type Qr = { transactionId: string; qrCode: string; amount: number; expiresAt: number };
 
 const failure = (err: any, fallback: string) => err?.response?.data?.message || err?.message || fallback;
@@ -106,6 +106,7 @@ export const UpiCashWithdrawalScreen: React.FC = () => {
             <Text style={styles.muted}>
               RRN {result.bankRRN}
               {result.payerName ? ` · ${result.payerName}` : ''}
+              {result.accountNumber ? ` · A/C ${result.accountNumber}` : ''}
             </Text>
           )}
           <Button onPress={reset} fullWidth>

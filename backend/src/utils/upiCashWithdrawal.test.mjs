@@ -30,4 +30,24 @@ assert.equal(answerIsFor(mine, { data: { partnerRequestId: 'UPICW2', fingpayTxnI
 assert.equal(answerIsFor(mine, { data: { partnerRequestId: 'UPICW1', fingpayTxnId: 'FP9', txnStatus: 'SUCCESS' } }), false);
 assert.equal(answerIsFor({ metadata: {} }, { data: { txnStatus: 'SUCCESS' } }), false);
 
+// Exact provider check-status response match
+const userTxn = { metadata: { partnerRequestId: 'UPICW20261113153500123', fingpayTxnId: 'FP9817263541' } };
+const userResponse = {
+  status: true,
+  message: 'Transaction Successful',
+  statusCode: 10000,
+  data: {
+    partnerRequestId: 'UPICW20261113153500123',
+    fingpayTxnId: 'FP9817263541',
+    bankRrn: '431819283716',
+    amount: '500.00',
+    txnStatus: 'SUCCESS',
+    accountNumber: 'XXXXXXXX1234',
+    payerName: 'Rahul Sharma',
+    paymentDate: '13/11/2026 15:36:20',
+  },
+};
+assert.equal(answerIsFor(userTxn, userResponse), true);
+assert.equal(upiCwOutcome(userResponse), 'SUCCESS');
+
 console.log('upi cash withdrawal tests passed');

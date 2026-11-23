@@ -22,7 +22,7 @@ import {
   getNoticeReasons,
   sendUserNotice,
 } from '../controllers/adminConsole.controller.js';
-import { getWallets, getPayouts, selfTransfer } from '../controllers/adminIcchhamati.controller.js';
+import { getWallets, getPayouts, selfTransfer, getProviderUpiCwHistory } from '../controllers/adminIcchhamati.controller.js';
 import {
   getAnalytics,
   getHealth,
@@ -64,6 +64,7 @@ router.get('/console/activity', getActivity);
 // transfers between its wallets. Admin only.
 router.get('/icchhamati/wallets', getWallets);
 router.get('/icchhamati/payouts', getPayouts);
+router.get('/icchhamati/upicw/history', getProviderUpiCwHistory);
 router.post('/icchhamati/self-transfer', selfTransfer);
 // System: visitors, server health and logs, restart, deploy, platform-wide service switches.
 // Restart and deploy need an emailed code (authLimiter caps the guesses).
