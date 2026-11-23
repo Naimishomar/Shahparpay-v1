@@ -14,7 +14,7 @@ const MIN = 500;
 const MAX = 5000;
 
 type Txn = { transactionId: string; amount: number; status: string; customerMobile?: string; bankRRN?: string; payerName?: string; accountNumber?: string; message?: string; createdAt?: string };
-type Qr = { transactionId: string; qrCode: string; amount: number; expiresAt: number };
+type Qr = { transactionId: string; qrCode?: string; qrImage?: string; amount: number; expiresAt: number };
 
 const StatusPill = ({ status }: { status: string }) => {
     const [cls, Icon] = status === 'SUCCESS'
@@ -96,7 +96,7 @@ const UpiCashWithdrawal = () => {
                 longitude: location.longitude,
             }, headers);
             const d = res.data.data;
-            setQr({ transactionId: d.transactionId, qrCode: d.qrCode, amount: d.amount, expiresAt: Date.now() + d.expiresIn * 1000 });
+            setQr({ transactionId: d.transactionId, qrCode: d.qrCode || undefined, qrImage: d.qrImage || undefined, amount: d.amount, expiresAt: Date.now() + d.expiresIn * 1000 });
             setNow(Date.now());
             loadHistory();
         } catch (err: any) {
@@ -147,7 +147,11 @@ const UpiCashWithdrawal = () => {
                             <p className="text-sm text-muted-foreground">Ask the customer to scan and pay</p>
                             <p className="text-3xl font-bold tabular-nums">₹{qr.amount.toLocaleString('en-IN')}</p>
                             <div className={`rounded-2xl bg-white p-4 ${secondsLeft ? '' : 'opacity-30'}`}>
-                                <QRCodeSVG value={qr.qrCode} size={220} />
+                                {qr.qrImage ? (
+                                    <img src={qr.qrImage} alt="UPI payment QR code" width={220} height={220} className="h-[220px] w-[220px] object-contain" />
+                                ) : qr.qrCode ? (
+                                    <QRCodeSVG value={qr.qrCode} size={220} />
+                                ) : null}
                             </div>
                             <p className="text-sm font-medium">
                                 {secondsLeft

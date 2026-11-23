@@ -1313,6 +1313,30 @@ export const updateDetails = async (req, res) => {
 // UPI cash withdrawal: the customer scans a QR for the amount from their UPI app,
 // the bank confirms, the Trade wallet is credited, and only then is cash handed over.
 
+/**
+ * Icchhamati has returned two UPI-CW initiation shapes in production:
+ * the older qrCode/fingpayTxnId/partnerRequestId shape and the current
+ * intentLink/fpTxnId/refId shape. Keep the provider-specific differences at
+ * this boundary so status checks and the frontend use one stable contract.
+ */
+export const normaliseUpiCashWithdrawalResponse = (data) => {
+  const provider = data?.data || {};
+  const intentLink = String(provider.intentLink || '').trim();
+  const qrCode = provider.qrCode || (intentLink.startsWith('upi://') ? intentLink : null);
+  const qrImage = intentLink && !intentLink.startsWith('upi://') && !intentLink.startsWith('http')
+    ? (intentLink.startsWith('data:image/') ? intentLink : `data:image/png;base64,${intentLink}`)
+    : null;
+
+  return {
+    qrCode,
+    qrImage,
+    partnerRequestId: data?.partnerRequestId || provider.partnerRequestId || provider.refId || data?.refId,
+    fingpayTxnId: provider.fingpayTxnId || provider.fpTxnId || data?.fingpayTxnId || data?.fpTxnId,
+    amount: Number(provider.amount ?? data?.amount),
+    expiresIn: Number(provider.expiryTime ?? provider.qrExpiryIn ?? data?.expiryTime) || 180,
+  };
+};
+
 /** POST /upicw/initiate { amount, customerMobile, latitude, longitude } */
 export const initiateUpiCashWithdrawal = async (req, res) => {
   try {
@@ -1339,10 +1363,10 @@ export const initiateUpiCashWithdrawal = async (req, res) => {
       longitude: Number(longitude),
       remarks: 'UPI Cash Withdrawal',
     });
-    const qr = data?.data || {};
-    const partnerRequestId = data.partnerRequestId || qr.partnerRequestId;
-    const fingpayTxnId = qr.fingpayTxnId || data.fingpayTxnId;
-    if (!isOk(data) || !qr.qrCode || !partnerRequestId || !fingpayTxnId) {
+    const qr = normaliseUpiCashWithdrawalResponse(data);
+    const partnerRequestId = qr.partnerRequestId;
+    const fingpayTxnId = qr.fingpayTxnId;
+    if (!isOk(data) || (!qr.qrCode && !qr.qrImage) || !partnerRequestId || !fingpayTxnId) {
       return res.status(400).json({ success: false, message: providerMessage(data, 'Could not start the UPI cash withdrawal.') });
     }
 
@@ -1368,8 +1392,9 @@ export const initiateUpiCashWithdrawal = async (req, res) => {
       data: {
         transactionId: record.transactionId,
         qrCode: qr.qrCode,
-        amount,
-        expiresIn: Number(qr.expiryTime) || 180,
+        qrImage: qr.qrImage,
+        amount: Number.isFinite(qr.amount) ? qr.amount : amount,
+        expiresIn: qr.expiresIn,
       },
     });
   } catch (error) {

@@ -1,7 +1,7 @@
 // Run: node src/controllers/icchhamatiAeps.test.mjs
 // The two calls that decide what a retailer sees and whether money moves.
 import assert from 'node:assert';
-import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks, recordStep, fingpayFailed, failureReason, correctedDraft, draftDetails, txnFields, readTxnRequest, aadhaarAddress } from './icchhamatiAeps.controller.js';
+import { onboardingStep, transactionOutcome, normaliseStates, normaliseBanks, recordStep, fingpayFailed, failureReason, correctedDraft, draftDetails, txnFields, readTxnRequest, aadhaarAddress, normaliseUpiCashWithdrawalResponse } from './icchhamatiAeps.controller.js';
 import { parseServicesUpdate } from '../utils/services.js';
 
 // --- Receipt fields from /doAeps ------------------------------------------
@@ -24,6 +24,27 @@ import { parseServicesUpdate } from '../utils/services.js';
   assert.equal(txnFields(cd).fpTransactionId, 'CDTXN1');
   assert.equal(transactionOutcome({ status: 1, data: { status: 'Failed' } }), 'FAILED');
   assert.equal(transactionOutcome({ status: 1, data: { status: 'Pending' } }), 'PROCESSING');
+
+  // UPI-CW initiation: current Icchhamati shape returns a base64 PNG and uses
+  // refId/fpTxnId instead of qrCode/partnerRequestId/fingpayTxnId.
+  {
+    const current = normaliseUpiCashWithdrawalResponse({
+      status: true,
+      data: {
+        intentLink: 'iVBORw0KGgoAAAANSUhEUg==',
+        fpTxnId: 'QCWA123',
+        refId: 'UPICW123',
+        amount: 500,
+        expiryDate: '30',
+        qrExpiryIn: 30,
+      },
+    });
+    assert.equal(current.partnerRequestId, 'UPICW123');
+    assert.equal(current.fingpayTxnId, 'QCWA123');
+    assert.equal(current.qrCode, null);
+    assert.match(current.qrImage, /^data:image\/png;base64,/);
+    assert.equal(current.expiresIn, 30);
+  }
 }
 
 // --- Correcting a draft ----------------------------------------------------

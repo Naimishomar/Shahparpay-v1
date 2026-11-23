@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, Image } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import QRCode from 'react-native-qrcode-svg';
 import { colors, themed, radius, space, type as t } from '../../theme/colors';
@@ -18,7 +18,7 @@ const MAX = 5000;
 const MOBILE_RE = /^[6-9]\d{9}$/;
 
 type Txn = { transactionId: string; amount: number; status: string; customerMobile?: string; bankRRN?: string; payerName?: string; accountNumber?: string; message?: string; createdAt?: string };
-type Qr = { transactionId: string; qrCode: string; amount: number; expiresAt: number };
+type Qr = { transactionId: string; qrCode?: string; qrImage?: string; amount: number; expiresAt: number };
 
 const failure = (err: any, fallback: string) => err?.response?.data?.message || err?.message || fallback;
 const settled = (txn?: Txn | null) => txn?.status === 'SUCCESS' || txn?.status === 'FAILED';
@@ -47,7 +47,7 @@ export const UpiCashWithdrawalScreen: React.FC = () => {
     }
     const d = res.data;
     setResult(null);
-    setQr({ transactionId: d.transactionId, qrCode: d.qrCode, amount: d.amount, expiresAt: Date.now() + d.expiresIn * 1000 });
+    setQr({ transactionId: d.transactionId, qrCode: d.qrCode || undefined, qrImage: d.qrImage || undefined, amount: d.amount, expiresAt: Date.now() + d.expiresIn * 1000 });
     setNow(Date.now());
     history.refresh();
     return true;
@@ -119,7 +119,11 @@ export const UpiCashWithdrawalScreen: React.FC = () => {
           <Text style={styles.amount}>{money(qr.amount)}</Text>
           {/* White in both themes: UPI apps need dark-on-light to read it. */}
           <View style={[styles.qrFrame, !secondsLeft && { opacity: 0.3 }]}>
-            <QRCode value={qr.qrCode} size={220} color="#000" backgroundColor="#fff" />
+            {qr.qrImage ? (
+              <Image source={{ uri: qr.qrImage }} style={{ width: 220, height: 220 }} resizeMode="contain" />
+            ) : qr.qrCode ? (
+              <QRCode value={qr.qrCode} size={220} color="#000" backgroundColor="#fff" />
+            ) : null}
           </View>
           <Text style={styles.label}>
             {secondsLeft
