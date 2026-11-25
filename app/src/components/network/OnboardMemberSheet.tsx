@@ -70,7 +70,7 @@ export const OnboardMemberSheet: React.FC<{
   // Retailers may be onboarded remotely and cannot read out an OTP, so only
   // distributors (and a retailer signing up themselves) verify their email.
   const needsOtp = kind !== 'retailer';
-  const { user } = useAuth();
+  const { user, login } = useAuth();
   const parentName = (user as { name?: string } | null)?.name || 'you';
   const steps = ['Account', 'KYC & business', isRetailer && !self ? 'Services & branding' : 'Branding', 'Review'];
 
@@ -191,6 +191,12 @@ export const OnboardMemberSheet: React.FC<{
       }
     );
     if (!res.success) throw new Error(res.message || 'Failed to create the account.');
+    // A self signup is signed straight in; the pending screen asks for the ₹199 fee.
+    if (self && res.token) {
+      await login(res.token, { ...res.user, role: res.role }, res.refreshToken);
+      onClose();
+      return res;
+    }
     setDone(true);
     onCreated();
     return res;

@@ -2,6 +2,7 @@ import Transaction from '../models/transaction.model.js';
 import MainWallet from '../models/mainWallet.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
 import Retailer from '../models/users/retailer.model.js';
+import { sendSignupAlertEmail } from '../utils/email.js';
 import {
   razorpayPost,
   razorpayGet,
@@ -81,7 +82,23 @@ const creditTopup = async (txn, { paymentId, paidPaise, method, vpa }) => {
 
   try {
     if (isFee) {
-      await Retailer.updateOne({ _id: claimed.userId }, { $set: { signupFeePaidAt: new Date() } });
+      // Paying is what sends the signup to the admin: the queue lists only paid
+      // self signups, and the alert email goes out here rather than at signup.
+      const r = await Retailer.findByIdAndUpdate(
+        claimed.userId,
+        { $set: { signupFeePaidAt: new Date() } },
+        { new: true }
+      );
+      if (r) {
+        // Not awaited: the alert must not slow or fail the credit.
+        sendSignupAlertEmail('retailer', {
+          id: r.retailerId,
+          name: r.name,
+          businessName: r.businessName,
+          contactNumber: r.contactNumber,
+          email: r.email,
+        });
+      }
     }
     const Wallet = claimed.metadata.walletType === 'MAIN' ? MainWallet : AepsWallet;
     await Wallet.findOneAndUpdate(

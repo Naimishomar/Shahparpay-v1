@@ -9,6 +9,12 @@ import AdminWallet from '../models/adminWallet.model.js';
 import FundRequest from '../models/fundRequest.model.js';
 import SupportTicket from '../models/supportTicket.model.js';
 import ActivityLog from '../models/activityLog.model.js';
+import QrWallet from '../models/qrWallet.model.js';
+import BankAccount from '../models/bankAccount.model.js';
+import Lead from '../models/lead.model.js';
+import MoneyTransfer from '../models/moneyTransfer.model.js';
+import DmtTransaction from '../models/dmtTransaction.model.js';
+import Otp from '../models/otp.model.js';
 import { SERVICE_TYPES, ALLOWED_DAYS, windowFor } from './distributorAnalytics.controller.js';
 import { parseServicesUpdate, aepsKycDoneFilter, aepsKycPendingFilter } from '../utils/services.js';
 import { logActivity } from '../utils/activity.js';
@@ -299,6 +305,9 @@ export const getUsers = async (req, res) => {
       if (req.query.distributor && mongoose.isValidObjectId(req.query.distributor)) filter.distributorId = req.query.distributor;
       // Self signups waiting for (or refused) admin verification.
       if (['pending', 'rejected'].includes(req.query.verification)) filter.verificationStatus = req.query.verification;
+      // A self signup reaches the admin only once its ₹199 fee is paid.
+      // Only self signups are ever pending, so this hides just the unpaid ones.
+      if (req.query.verification === 'pending') filter.signupFeePaidAt = { $ne: null };
     }
     const sort = { newest: { createdAt: -1 }, oldest: { createdAt: 1 }, name: { name: 1 } }[req.query.sort] || { createdAt: -1 };
 
@@ -740,5 +749,57 @@ export const updateRetailerAepsAddress = async (req, res) => {
   } catch (error) {
     console.error('Admin AEPS address error:', error.message);
     return res.status(502).json({ success: false, message: 'Could not reach Icchhamati. Please try again.' });
+  }
+};
+
+/**
+ * DELETE /admin/console/retailers/:id: wipes a retailer that is still waiting
+ * for approval (or was rejected), with everything stored against them, so the
+ * same email, mobile, Aadhaar and PAN can sign up again. An approved retailer
+ * has real money history and is refused.
+ * ponytail: the Aadhaar/PAN/profile images stay in R2; there is no R2 delete
+ * helper yet. Add one if storage or privacy needs them gone.
+ */
+export const deletePendingRetailer = async (req, res) => {
+  try {
+    if (forbid(req, res)) return;
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid retailer' });
+    }
+    const retailer = await Retailer.findById(req.params.id).select('name email retailerId verificationStatus');
+    if (!retailer) return res.status(404).json({ success: false, message: 'Retailer not found' });
+    if (!['pending', 'rejected'].includes(retailer.verificationStatus)) {
+      return res.status(400).json({ success: false, message: 'Only a retailer awaiting approval can be deleted.' });
+    }
+
+    const id = retailer._id;
+    const byUser = { userId: id };
+    await Promise.all([
+      Transaction.deleteMany(byUser),
+      MainWallet.deleteMany(byUser),
+      AepsWallet.deleteMany(byUser),
+      QrWallet.deleteMany(byUser),
+      BankAccount.deleteMany(byUser),
+      Lead.deleteMany(byUser),
+      MoneyTransfer.deleteMany(byUser),
+      SupportTicket.deleteMany(byUser),
+      DmtTransaction.deleteMany({ retailerId: id }),
+      FundRequest.deleteMany({ retailerId: id }),
+      ActivityLog.deleteMany({ $or: [{ actorId: id }, { targetId: id }] }),
+      Otp.deleteMany({ email: retailer.email }),
+      Distributor.updateMany({ retailers: id }, { $pull: { retailers: id } }),
+    ]);
+    await Retailer.deleteOne({ _id: id });
+
+    // Logged without a target id, so it survives as the only trace of who deleted whom.
+    logActivity({
+      req,
+      action: 'retailer.delete',
+      summary: `Deleted pending retailer ${retailer.name} (${retailer.retailerId}, ${retailer.email}) and all their data`,
+    });
+    return res.status(200).json({ success: true, message: 'Retailer and all their data deleted' });
+  } catch (error) {
+    console.error('Admin delete retailer error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import { ArrowLeft, CheckCircle2, IdCard, Mail, Phone, Store } from 'lucide-react';
 import CreateRetailerWizard, { type RetailerForm } from '../components/distributor/CreateRetailerWizard';
@@ -43,6 +44,8 @@ const Signup: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [done, setDone] = useState(false);
+    const { login } = useAuth();
+    const navigate = useNavigate();
 
     const post = async (path: string, body: unknown) => {
         try {
@@ -100,6 +103,12 @@ const Signup: React.FC = () => {
             const json = await res.json();
             if (json.success) {
                 setMessage('Account created successfully.');
+                // Signed straight in: the pending screen is where the ₹199 fee is paid.
+                if (json.token) {
+                    login(json.token, { ...json.user, role: json.role }, json.refreshToken);
+                    navigate('/dashboard');
+                    return;
+                }
                 setDone(true);
             } else {
                 setMessage(json.message || 'Could not create the account.');

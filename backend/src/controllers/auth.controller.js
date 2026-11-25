@@ -14,7 +14,7 @@ import bcrypt from 'bcrypt';
 import Otp from '../models/otp.model.js';
 import { parseDisabledServices } from '../utils/services.js';
 import { logActivity } from '../utils/activity.js';
-import { sendEmailOTP, sendSignupAlertEmail } from '../utils/email.js';
+import { sendEmailOTP } from '../utils/email.js';
 
 export const registerAdmin = async (req, res) => {
   try {
@@ -137,6 +137,38 @@ const signRefreshToken = (user, role) =>
     expiresIn: '7d',
   });
 
+/**
+ * Signs the access and refresh tokens, sets the refresh cookie, and returns the
+ * body fields a client signs in with. Shared by login and self signup.
+ */
+const issueSession = (req, res, user, role) => {
+  const token = jwt.sign(
+    {
+      id: user._id,
+      role: role,
+      code:
+        user.adminId ||
+        user.retailerId ||
+        (user.distributorId && user.distributorId._id
+          ? user.distributorId.distributorId
+          : user.distributorId),
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '15m' }
+  );
+  const refreshToken = signRefreshToken(user, role);
+  // `secure: true` makes the browser drop the cookie entirely over plain
+  // HTTP, and `sameSite: 'none'` is only legal alongside it — so a server
+  // reachable over http:// silently issued no refresh cookie at all. Follow
+  // the actual protocol instead of assuming TLS.
+  res.cookie('refreshToken', refreshToken, refreshCookieOptions(req));
+  const userObj = user.toObject();
+  delete userObj.password;
+  // Native clients have no cookie jar for a `Secure; SameSite=None` cookie,
+  // so they get the refresh token in the body instead.
+  return { token, refreshToken, role, user: userObj };
+};
+
 const MODEL_BY_ROLE = { admin: Admin, distributor: Distributor, retailer: Retailer };
 
 const refreshCookieOptions = (req) => {
@@ -182,44 +214,8 @@ export const verifyLoginOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid or expired OTP.' });
     }
 
-    const accessToken = jwt.sign(
-      {
-        id: user._id,
-        role: role,
-        code:
-          user.adminId ||
-          user.retailerId ||
-          (user.distributorId && user.distributorId._id
-            ? user.distributorId.distributorId
-            : user.distributorId),
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '15m' }
-    );
-
-    const refreshToken = signRefreshToken(user, role);
-
     logActivity({ req, actor: { _id: user._id, role, name: user.name }, action: 'auth.login', summary: 'Signed in' });
-
-    const userObj = user.toObject();
-    delete userObj.password;
-
-    // `secure: true` makes the browser drop the cookie entirely over plain
-    // HTTP, and `sameSite: 'none'` is only legal alongside it — so a server
-    // reachable over http:// silently issued no refresh cookie at all. Follow
-    // the actual protocol instead of assuming TLS.
-    res.cookie('refreshToken', refreshToken, refreshCookieOptions(req));
-
-    return res.status(200).json({
-      success: true,
-      message: 'Login successful',
-      token: accessToken,
-      // Native clients have no cookie jar for a `Secure; SameSite=None`
-      // cookie, so they get the refresh token in the body instead.
-      refreshToken,
-      role,
-      user: userObj,
-    });
+    return res.status(200).json({ success: true, message: 'Login successful', ...issueSession(req, res, user, role) });
   } catch (error) {
     console.error('Verify OTP Error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -627,13 +623,15 @@ export const createRetailer = async (req, res) => {
     const target = { _id: newRetailer._id, role: 'retailer', name: newRetailer.name };
     await Otp.deleteOne({ email });
     if (self) {
-      logActivity({ req, actor: target, action: 'retailer.signup', target, summary: `Retailer ${newRetailer.name} (${newRetailer.retailerId}) signed up; awaiting admin verification` });
-      // Not awaited: the alert must not slow or fail the signup.
-      sendSignupAlertEmail('retailer', { id: newRetailer.retailerId, name: newRetailer.name, businessName, contactNumber, email });
+      // The admin alert goes out once the ₹199 fee is paid (topup.controller creditTopup).
+      logActivity({ req, actor: target, action: 'retailer.signup', target, summary: `Retailer ${newRetailer.name} (${newRetailer.retailerId}) signed up; awaiting the ₹199 fee` });
+      // Signed straight in: the email OTP was just proven, and the pending
+      // screen is where the ₹199 signup fee is paid.
       return res.status(201).json({
         success: true,
-        message: 'Account created. An admin will verify it; you can sign in to check the status.',
+        message: 'Account created. Pay the ₹199 signup fee; an admin will then verify it.',
         data: { retailerId: newRetailer.retailerId, verificationStatus: newRetailer.verificationStatus },
+        ...issueSession(req, res, newRetailer, 'retailer'),
       });
     }
 

@@ -50,6 +50,7 @@ const UnderVerification = () => {
     const { user, checkSession, logout } = useAuth();
     const [checking, setChecking] = useState(false);
     const rejected = user?.verificationStatus === 'rejected';
+    const feeDue = !rejected && user?.signupSource === 'self' && !user.signupFeePaidAt;
 
     const checkAgain = async () => {
         setChecking(true);
@@ -68,14 +69,16 @@ const UnderVerification = () => {
                     {rejected ? <XCircle size={40} /> : <Clock size={40} />}
                 </div>
                 <div className="space-y-2">
-                    <h2 className="text-2xl font-bold">{rejected ? 'Account not approved' : 'Account under verification'}</h2>
+                    <h2 className="text-2xl font-bold">{rejected ? 'Account not approved' : feeDue ? 'Pay to submit your signup' : 'Account under verification'}</h2>
                     <p className="text-muted-foreground text-sm">
                         {rejected
                             ? 'An admin reviewed your signup and could not approve it.'
+                            : feeDue
+                            ? `Thanks for signing up${user?.name ? `, ${user.name}` : ''}. Pay the ₹199 signup fee to send your account to an admin for verification.`
                             : `Thanks for signing up${user?.name ? `, ${user.name}` : ''}. An admin is checking your details and documents; you can use the portal once they approve your account.`}
                     </p>
                 </div>
-                {!rejected && user?.signupSource === 'self' && !user.signupFeePaidAt && <SignupFee onPaid={checkSession} />}
+                {feeDue && <SignupFee onPaid={checkSession} />}
                 {rejected && (
                     <div className="space-y-3 text-left">
                         {user?.verificationNote && (
@@ -113,7 +116,7 @@ const SignupFee = ({ onPaid }: { onPaid: () => Promise<void> }) => {
 
     const paid = async () => {
         if (pollRef.current) clearInterval(pollRef.current);
-        toast.success('Payment received. ₹10 added to your Utility Wallet.');
+        toast.success('Payment received. Your signup is sent to the admin, and ₹10 is added to your Utility Wallet.');
         await onPaid();
     };
 
@@ -147,7 +150,7 @@ const SignupFee = ({ onPaid }: { onPaid: () => Promise<void> }) => {
         <div className="rounded-2xl border p-4 text-left space-y-3">
             <div>
                 <p className="font-semibold">Pay the ₹199 signup fee</p>
-                <p className="text-xs text-muted-foreground">Required before an admin can approve you. ₹10 of it is added to your Utility Wallet for the AEPS onboarding fee.</p>
+                <p className="text-xs text-muted-foreground">Your signup reaches the admin only after this payment. ₹10 of it is added to your Utility Wallet for the AEPS onboarding fee.</p>
             </div>
             {qr ? (
                 <div className="text-center space-y-2">

@@ -62,10 +62,14 @@ state.utilityWallets = [];
 const utilityWallet = mockModel(state.utilityWallets, (row, q) => row.userId === q.userId);
 state.retailers = [];
 const Retailer = {
-  updateOne: async (q, update) => {
-    state.retailers.push({ _id: q._id, ...update.$set });
+  findByIdAndUpdate: async (_id, update) => {
+    const row = { _id, retailerId: 'RT1', ...update.$set };
+    state.retailers.push(row);
+    return row;
   },
 };
+state.alerts = [];
+const sendSignupAlertEmail = (role, info) => state.alerts.push(info.id);
 
 // The shipped handler, with only its two collections swapped for the fakes
 // above. Standing a Mongo up for one function is not worth it, and evaluating
@@ -85,9 +89,9 @@ const { topupWebhook, creditTopup } = await (async () => {
   const { verifyWebhookSignature, toRupees } = await import('../utils/razorpay.util.js');
   const constants = cut('const SIGNUP_FEE = ', 'const SIGNUP_FEE = ').split('\nconst userModelFor')[0];
   return new Function(
-    'Transaction', 'MainWallet', 'AepsWallet', 'Retailer', 'verifyWebhookSignature', 'toRupees',
+    'Transaction', 'MainWallet', 'AepsWallet', 'Retailer', 'sendSignupAlertEmail', 'verifyWebhookSignature', 'toRupees',
     `${constants}\n${helper}\n${handler}\nreturn { topupWebhook, creditTopup };`
-  )(Transaction, utilityWallet, MainWallet, Retailer, verifyWebhookSignature, toRupees);
+  )(Transaction, utilityWallet, MainWallet, Retailer, sendSignupAlertEmail, verifyWebhookSignature, toRupees);
 })();
 
 const sign = (raw, secret) => crypto.createHmac('sha256', secret).update(raw).digest('hex');
@@ -265,7 +269,9 @@ const feeRow = state.transactions.find((t) => t.transactionId === 'SUF1');
 assert.equal(feeRow.amount, 10, 'the row books the ₹10 credit, which the ledger reads');
 assert.equal(feeRow.metadata.paidAmount, 199);
 assert.ok(state.retailers.some((r) => r._id === 'ret_1' && r.signupFeePaidAt), 'the retailer is marked paid');
+assert.deepEqual(state.alerts, ['RT1'], 'paying sends the signup to the admin');
 assert.equal((await post(fee(19900))).body.credited, false, 'a replayed fee does not credit again');
+assert.deepEqual(state.alerts, ['RT1'], 'once');
 assert.equal(utility(), 10);
 
 console.log('topupWebhook: forged, replayed, mismatched, over-claimed and failed-write notifications credit nothing OK');

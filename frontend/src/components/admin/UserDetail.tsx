@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Banknote, ChevronLeft, Clock, History, Loader2, Mail, MapPin, Package, Phone, Power, Receipt, RefreshCcw, ShieldCheck, LogIn, Store, UserCheck, Users, XCircle } from 'lucide-react';
+import { ArrowRight, Banknote, ChevronLeft, Clock, History, Loader2, Mail, MapPin, Package, Phone, Power, Receipt, RefreshCcw, ShieldCheck, LogIn, Trash2, Store, UserCheck, Users, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { CARD, INPUT, LABEL, PENDING_PILL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, STATUS_PILL, ago, inr, inrShort, serviceLabel, useApiGet } from '../distributor/shared';
 import { Avatar, Skeleton } from '../distributor/ui';
@@ -286,7 +286,7 @@ const UserDetail = ({
             )}
 
             {role === 'retailer' && (user.verificationStatus === 'pending' || user.verificationStatus === 'rejected') && (
-                <VerificationCard token={token} user={user} busy={busy === 'verify'} onDecide={(body, ok) => call('verify', `/api/admin/console/retailers/${id}/verification`, 'PATCH', body, ok)} />
+                <VerificationCard token={token} user={user} busy={busy === 'verify'} onDecide={(body, ok) => call('verify', `/api/admin/console/retailers/${id}/verification`, 'PATCH', body, ok)} onDeleted={onBack} id={id} />
             )}
 
             {role === 'retailer' && (
@@ -460,8 +460,30 @@ export default UserDetail;
  * chosen distributor, or directly under the admin; the reject reason is shown
  * to the retailer.
  */
-const VerificationCard = ({ token, user, busy, onDecide }: { token: string | null; user: any; busy: boolean; onDecide: (body: object, ok: string) => void }) => {
+const VerificationCard = ({ id, token, user, busy, onDecide, onDeleted }: { id: string; token: string | null; user: any; busy: boolean; onDecide: (body: object, ok: string) => void; onDeleted: () => void }) => {
     const { data: distributors } = useApiGet<any[]>(token, '/api/admin/distributors');
+    const [deleting, setDeleting] = useState(false);
+    const [typed, setTyped] = useState('');
+    const [removing, setRemoving] = useState(false);
+
+    // Irreversible: the admin types the retailer ID to confirm.
+    const remove = async () => {
+        setRemoving(true);
+        try {
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/console/retailers/${id}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.message);
+            toast.success('Retailer and all their data deleted');
+            onDeleted();
+        } catch (e) {
+            toast.error(e instanceof Error && e.message ? e.message : 'Delete failed');
+        } finally {
+            setRemoving(false);
+        }
+    };
     const [distributorId, setDistributorId] = useState('');
     const [rejecting, setRejecting] = useState(false);
     const [note, setNote] = useState('');
@@ -513,6 +535,19 @@ const VerificationCard = ({ token, user, busy, onDecide }: { token: string | nul
                     {user.verificationStatus !== 'rejected' && (
                         <button onClick={() => setRejecting(true)} disabled={busy} className={SECONDARY_BUTTON}><XCircle size={16} /> Reject</button>
                     )}
+                    <button onClick={() => setDeleting(true)} disabled={busy || removing} className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-500/15 disabled:opacity-50 dark:text-red-400"><Trash2 size={16} /> Delete</button>
+                </div>
+            )}
+            {deleting && (
+                <div className="mt-4 flex flex-col gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4">
+                    <p className="text-sm text-red-700 dark:text-red-400">This permanently deletes {user.name}'s account, wallets, transactions (including the signup fee), banks, tickets and logs. It cannot be undone. Type <span className="font-mono font-semibold">{user.retailerId}</span> to confirm.</p>
+                    <input className={INPUT} value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={user.retailerId} autoFocus />
+                    <div className="flex flex-wrap gap-2">
+                        <button onClick={remove} disabled={removing || typed.trim() !== user.retailerId} className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+                            {removing ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />} Delete everything
+                        </button>
+                        <button onClick={() => { setDeleting(false); setTyped(''); }} className={SECONDARY_BUTTON}>Cancel</button>
+                    </div>
                 </div>
             )}
         </section>

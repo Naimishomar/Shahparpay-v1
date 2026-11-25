@@ -46,10 +46,12 @@ export const AccountPendingScreen: React.FC = () => {
     <Screen contentStyle={{ paddingTop: insets.top + space.xl }}>
       <EmptyState
         icon={rejected ? 'account-cancel-outline' : 'account-clock-outline'}
-        title="Account under verification"
+        title={feeDue ? 'Pay to submit your signup' : 'Account under verification'}
         subtitle={
           rejected
             ? 'Your account was not approved.'
+            : feeDue
+            ? 'Pay the ₹199 signup fee to send your account to an admin for verification.'
             : 'Your account is waiting for admin verification. You can start once it is approved.'
         }
       />
@@ -58,7 +60,7 @@ export const AccountPendingScreen: React.FC = () => {
       )}
       {feeDue && (
         <View style={{ gap: space.sm, alignItems: 'center' }}>
-          <Banner tone="info" message="Pay the ₹199 signup fee so an admin can approve you. ₹10 of it is added to your Utility Wallet for the AEPS onboarding fee." />
+          <Banner tone="info" message="Your signup reaches the admin only after this payment. ₹10 of it is added to your Utility Wallet for the AEPS onboarding fee." />
           {qr ? (
             <>
               <Image source={{ uri: qr.qrImage }} style={{ width: 220, height: Math.round((220 * 1644) / 674) }} resizeMode="contain" />

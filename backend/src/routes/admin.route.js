@@ -15,6 +15,7 @@ import {
   setUserStatus,
   setRetailerServices,
   setRetailerVerification,
+  deletePendingRetailer,
   getRetailerAepsStatus,
   updateRetailerAepsAddress,
   getActivity,
@@ -56,6 +57,7 @@ router.get('/console/notice-reasons', getNoticeReasons);
 router.post('/console/users/:role/:id/notice', sendUserNotice);
 router.put('/console/retailers/:id/services', setRetailerServices);
 router.patch('/console/retailers/:id/verification', setRetailerVerification);
+router.delete('/console/retailers/:id', deletePendingRetailer);
 router.get('/console/retailers/:id/aeps-status', getRetailerAepsStatus);
 router.put('/console/retailers/:id/aeps-address', updateRetailerAepsAddress);
 router.get('/console/activity', getActivity);
