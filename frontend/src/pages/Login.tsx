@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff, Loader2, ShieldCheck, Zap } from 'lucide-react';
 import logo from '../assets/logo.png';
-import AepsReceipt from '@/components/landing/AepsReceipt';
+import { TodayDemo } from '@/components/landing/AuthDemos';
+import ThemeToggle from '@/components/landing/ThemeToggle';
 import { ALERT_ERROR, ALERT_OK, BTN_PRIMARY, INPUT, LABEL } from '@/components/landing/ui';
 import './landing.css';
 
@@ -221,7 +222,7 @@ const Login: React.FC = () => {
             <aside className="hidden flex-col justify-between border-r border-[var(--lp-border)] p-10 lg:flex xl:p-14">
                 <div className="flex items-center justify-between">
                     <Link to="/" aria-label="Shahparpay home">
-                        <img src={logo} alt="Shahparpay" className="h-9 w-auto object-contain" />
+                        <img src={logo} alt="Shahparpay" className="lp-logo h-9 w-auto object-contain" />
                     </Link>
                     <Link to="/" className={`${BACK} inline-flex items-center gap-1.5`}>
                         <ArrowLeft aria-hidden strokeWidth={1.5} className="size-4" /> Back to website
@@ -236,7 +237,7 @@ const Login: React.FC = () => {
                         Serve your neighbourhood with AEPS, Micro ATM, money transfer, recharge, bill payments and PAN services, all from one dashboard.
                     </p>
                     <div className="mt-10">
-                        <AepsReceipt />
+                        <TodayDemo />
                     </div>
                 </div>
 
@@ -250,12 +251,15 @@ const Login: React.FC = () => {
             <main className="flex flex-col p-6 sm:p-10 xl:p-14">
                 <div className="flex items-center justify-between lg:justify-end">
                     <Link to="/" aria-label="Shahparpay home" className="lg:hidden">
-                        <img src={logo} alt="Shahparpay" className="h-8 w-auto object-contain" />
+                        <img src={logo} alt="Shahparpay" className="lp-logo h-8 w-auto object-contain" />
                     </Link>
-                    <span className="hidden text-sm text-[var(--lp-muted)] lg:inline">Retailer, distributor and admin portal</span>
-                    <Link to="/" className={`${BACK} inline-flex items-center gap-1.5 lg:hidden`}>
-                        <ArrowLeft aria-hidden strokeWidth={1.5} className="size-4" /> Home
-                    </Link>
+                    <span className="flex items-center gap-3">
+                        <span className="hidden text-sm text-[var(--lp-muted)] lg:inline">Retailer, distributor and admin portal</span>
+                        <Link to="/" className={`${BACK} inline-flex items-center gap-1.5 lg:hidden`}>
+                            <ArrowLeft aria-hidden strokeWidth={1.5} className="size-4" /> Home
+                        </Link>
+                        <ThemeToggle />
+                    </span>
                 </div>
 
                 <div className="mx-auto my-auto w-full max-w-sm py-12">

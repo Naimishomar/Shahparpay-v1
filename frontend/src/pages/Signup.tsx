@@ -6,6 +6,8 @@ import { ArrowLeft, CheckCircle2, IdCard, Mail, Phone, Store } from 'lucide-reac
 import CreateRetailerWizard, { type RetailerForm } from '../components/distributor/CreateRetailerWizard';
 import { BTN_PRIMARY, H1, LEAD, WRAP } from '@/components/landing/ui';
 import logo from '../assets/logo.png';
+import { SignupDemo } from '@/components/landing/AuthDemos';
+import ThemeToggle from '@/components/landing/ThemeToggle';
 import './landing.css';
 
 /** What the form asks for, so nobody stops halfway to fetch a document. */
@@ -126,12 +128,15 @@ const Signup: React.FC = () => {
             <header className="border-b border-[var(--lp-border)]">
                 <div className={`${WRAP} flex h-16 items-center justify-between`}>
                     <Link to="/" aria-label="Shahparpay home">
-                        <img src={logo} alt="Shahparpay" className="h-8 w-auto object-contain sm:h-9" />
+                        <img src={logo} alt="Shahparpay" className="lp-logo h-8 w-auto object-contain sm:h-9" />
                     </Link>
-                    <p className="text-sm text-[var(--lp-fg-2)]">
-                        <span className="hidden sm:inline">Already have an account? </span>
-                        <Link to="/login" className="text-[var(--lp-accent-ink)] hover:underline">Sign in</Link>
-                    </p>
+                    <div className="flex items-center gap-3">
+                        <p className="text-sm text-[var(--lp-fg-2)]">
+                            <span className="hidden sm:inline">Already have an account? </span>
+                            <Link to="/login" className="text-[var(--lp-accent-ink)] hover:underline">Sign in</Link>
+                        </p>
+                        <ThemeToggle />
+                    </div>
                 </div>
             </header>
 
@@ -151,17 +156,15 @@ const Signup: React.FC = () => {
             ) : (
                 <main>
                     <section className="border-b border-[var(--lp-border)]">
-                        <div className={`${WRAP} grid gap-10 py-12 sm:py-16 lg:grid-cols-12 lg:items-end`}>
-                            <div className="lg:col-span-7">
+                        <div className={`${WRAP} grid gap-10 py-12 sm:py-16 lg:grid-cols-12 lg:items-center`}>
+                            <div className="lg:col-span-6">
                                 <p className="lp-eyebrow">Retailer signup</p>
                                 <h1 className={`${H1} mt-3`}>Open your banking point</h1>
                                 <p className={`${LEAD} mt-5 max-w-xl`}>
                                     Four short steps, then a ₹199 registration fee by UPI. Your signup goes to an admin for approval only after the fee is paid.
                                 </p>
-                            </div>
-                            <div className="lg:col-span-5">
-                                <p className="text-sm text-[var(--lp-muted)]">Keep these ready</p>
-                                <ul className="mt-3 divide-y divide-[var(--lp-border)] border-y border-[var(--lp-border)]">
+                                <p className="mt-8 text-sm text-[var(--lp-muted)]">Keep these ready</p>
+                                <ul className="mt-3 max-w-xl divide-y divide-[var(--lp-border)] border-y border-[var(--lp-border)]">
                                     {NEEDS.map(({ icon: Icon, label }) => (
                                         <li key={label} className="flex h-12 items-center gap-3 text-[15px] text-[var(--lp-fg)]">
                                             <Icon aria-hidden strokeWidth={1.5} className="size-[18px] shrink-0 text-[var(--lp-muted)]" /> {label}
@@ -171,6 +174,9 @@ const Signup: React.FC = () => {
                                 <p className="mt-3 flex items-center gap-2 text-sm text-[var(--lp-fg-2)]">
                                     <Phone aria-hidden strokeWidth={1.5} className="size-4 text-[var(--lp-muted)]" /> Stuck? Call <a href="tel:+918240039776" className="lp-figure text-[var(--lp-fg)] hover:text-[var(--lp-accent-ink)]">+91 8240039776</a>
                                 </p>
+                            </div>
+                            <div className="lg:col-span-6">
+                                <SignupDemo />
                             </div>
                         </div>
                     </section>

@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { Roll } from './motion';
+import { ARRIVE, TRAVEL } from './beats';
 import { Check, CheckCircle2, Fingerprint, Loader2, Wallet } from 'lucide-react';
 
 /**
@@ -14,8 +16,6 @@ const COMPACT = { w: 358, h: 600 };
 const AMOUNT = '3000';
 const COMMISSION = 11;
 const START_BALANCE = 48250;
-const TRAVEL = [0.45, 0, 0.1, 1] as const;
-const ARRIVE = [0.25, 0.8, 0.25, 1] as const;
 
 type Btn = 'idle' | 'scanning' | 'done';
 type Scene = { amount: string; focused: boolean; btn: Btn; slip: boolean; balance: number };
@@ -25,31 +25,6 @@ const OPENING: Scene = { amount: '', focused: false, btn: 'idle', slip: false, b
 
 const inr = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const grouped = (digits: string) => (digits ? Number(digits).toLocaleString('en-IN') : '');
-
-/** Changed digits roll; unchanged ones stay still. Keyed from the right so places line up. */
-function Roll({ value }: { value: string }) {
-    const chars = value.split('');
-    return (
-        <span className="inline-flex overflow-hidden align-bottom">
-            {chars.map((c, i) => (
-                <span key={chars.length - i} className="relative inline-block">
-                    <AnimatePresence initial={false} mode="popLayout">
-                        <motion.span
-                            key={c}
-                            className="inline-block"
-                            initial={{ y: '100%', opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: '-100%', opacity: 0 }}
-                            transition={{ duration: 0.45, ease: TRAVEL, delay: (chars.length - i) * 0.04 }}
-                        >
-                            {c}
-                        </motion.span>
-                    </AnimatePresence>
-                </span>
-            ))}
-        </span>
-    );
-}
 
 const Bar = ({ w, className = '' }: { w: number; className?: string }) => (
     <span aria-hidden className={`block h-[6px] rounded-full bg-[var(--hd-bar)] ${className}`} style={{ width: w }} />
@@ -66,7 +41,7 @@ function Cursor({ x, y, pressed, visible }: { x: number; y: number; pressed: boo
             style={{ transformOrigin: '2px 2px' }}
         >
             <svg width="22" height="22" viewBox="0 0 24 24" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,.25))' }}>
-                <path d="M3 2.5v17.2l4.6-4.4 2.9 6.6 3-1.3-2.9-6.5h6.3z" fill="#16142e" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
+                <path d="M3 2.5v17.2l4.6-4.4 2.9 6.6 3-1.3-2.9-6.5h6.3z" fill="var(--hd-cursor)" stroke="var(--hd-cursor-edge)" strokeWidth="1.4" strokeLinejoin="round" />
             </svg>
         </motion.div>
     );
@@ -77,8 +52,8 @@ const Field = ({ label, children, focused = false, fieldRef }: { label: string; 
         <div className="text-[12px] leading-[1.3] text-[var(--hd-ink-3)]">{label}</div>
         <div
             ref={fieldRef}
-            className={`mt-1.5 flex h-10 items-center rounded-[9px] border bg-white px-3 text-[14px] text-[var(--hd-ink)] transition-[border-color,box-shadow] duration-150 ${
-                focused ? 'border-[var(--hd-primary)] shadow-[0_0_0_3px_rgba(22,20,46,0.08)]' : 'border-[var(--hd-line-strong)]'
+            className={`mt-1.5 flex h-10 items-center rounded-[9px] border bg-[var(--hd-surface)] px-3 text-[14px] text-[var(--hd-ink)] transition-[border-color,box-shadow] duration-150 ${
+                focused ? 'border-[var(--hd-primary)] shadow-[0_0_0_3px_var(--hd-focus)]' : 'border-[var(--hd-line-strong)]'
             }`}
         >
             {children}
@@ -209,21 +184,21 @@ export default function HeroDemo() {
                 style={{ width: D.w, height: D.h, transform: `scale(${scale})` }}
             >
                 {/* Window */}
-                <div className="hd-window absolute flex flex-col overflow-hidden rounded-[14px] bg-white" style={win}>
-                    <div className="flex h-[38px] flex-none items-center gap-2 border-b border-[var(--hd-line)] bg-[#f7f6f3] px-3.5">
+                <div className="hd-window absolute flex flex-col overflow-hidden rounded-[14px] bg-[var(--hd-surface)]" style={win}>
+                    <div className="flex h-[38px] flex-none items-center gap-2 border-b border-[var(--hd-line)] bg-[var(--hd-chrome)] px-3.5">
                         <span className="flex gap-1.5" aria-hidden>
                             {['#ff5f57', '#febc2e', '#28c840'].map((c) => <span key={c} className="size-[10px] rounded-full" style={{ background: c }} />)}
                         </span>
-                        <span className="mx-auto flex h-[22px] w-[200px] items-center justify-center rounded-md bg-white text-[11px] text-[var(--hd-ink-3)] ring-1 ring-[var(--hd-line)]" style={{ marginLeft: compact ? 24 : 140 }}>
+                        <span className="mx-auto flex h-[22px] w-[200px] items-center justify-center rounded-md bg-[var(--hd-surface)] text-[11px] text-[var(--hd-ink-3)] ring-1 ring-[var(--hd-line)]" style={{ marginLeft: compact ? 24 : 140 }}>
                             shahparpay.com/aeps
                         </span>
                     </div>
 
                     <div className="flex min-h-0 flex-1">
                         {!compact && (
-                            <div className="flex w-[150px] flex-none flex-col gap-1 border-r border-[var(--hd-line)] bg-[#fbfaf8] px-2.5 py-4">
+                            <div className="flex w-[150px] flex-none flex-col gap-1 border-r border-[var(--hd-line)] bg-[var(--hd-side)] px-2.5 py-4">
                                 <div className="flex h-8 items-center px-2.5"><Bar w={64} /></div>
-                                <div className="flex h-8 items-center gap-2 rounded-lg bg-[var(--hd-primary)] px-2.5 text-[13px] text-white">
+                                <div className="flex h-8 items-center gap-2 rounded-lg bg-[var(--hd-primary)] px-2.5 text-[13px] text-[var(--hd-on-primary)]">
                                     <Fingerprint aria-hidden className="size-4" strokeWidth={1.75} /> AEPS
                                 </div>
                                 {[86, 58, 44, 70, 52, 62].map((w, i) => (
@@ -235,17 +210,17 @@ export default function HeroDemo() {
                         <div className="min-w-0 flex-1 px-6 pt-5">
                             <div className="flex items-center justify-between gap-4" style={{ maxWidth: compact ? 302 : 382 }}>
                                 <div className="text-[18px] font-medium tracking-[-0.01em] text-[var(--hd-ink)]">Cash withdrawal</div>
-                                <div className="flex h-8 flex-none items-center gap-1.5 rounded-full bg-[#f2f0eb] px-3 text-[13px] text-[var(--hd-ink)]">
+                                <div className="flex h-8 flex-none items-center gap-1.5 rounded-full bg-[var(--hd-fill)] px-3 text-[13px] text-[var(--hd-ink)]">
                                     <Wallet aria-hidden className="size-3.5 text-[var(--hd-ink-3)]" strokeWidth={1.75} />
                                     <span className="lp-figure">₹<Roll value={inr(balance)} /></span>
                                 </div>
                             </div>
 
                             <div className="mt-4 flex gap-1.5" aria-hidden>
-                                <span className="flex h-7 items-center rounded-md bg-[#f2f0eb] px-2.5"><Bar w={52} /></span>
-                                <span className="flex h-7 items-center rounded-md bg-white px-2.5 text-[12px] text-[var(--hd-ink)] ring-1 ring-[var(--hd-line-strong)]">Withdraw</span>
-                                <span className="flex h-7 items-center rounded-md bg-[#f2f0eb] px-2.5"><Bar w={40} /></span>
-                                {!compact && <span className="flex h-7 items-center rounded-md bg-[#f2f0eb] px-2.5"><Bar w={46} /></span>}
+                                <span className="flex h-7 items-center rounded-md bg-[var(--hd-fill)] px-2.5"><Bar w={52} /></span>
+                                <span className="flex h-7 items-center rounded-md bg-[var(--hd-surface)] px-2.5 text-[12px] text-[var(--hd-ink)] ring-1 ring-[var(--hd-line-strong)]">Withdraw</span>
+                                <span className="flex h-7 items-center rounded-md bg-[var(--hd-fill)] px-2.5"><Bar w={40} /></span>
+                                {!compact && <span className="flex h-7 items-center rounded-md bg-[var(--hd-fill)] px-2.5"><Bar w={46} /></span>}
                             </div>
 
                             <div className="mt-5 grid gap-3.5" style={{ width: compact ? 290 : 300 }}>
@@ -261,7 +236,7 @@ export default function HeroDemo() {
                                         ref={buttonRef}
                                         type="button"
                                         tabIndex={-1}
-                                        className={`relative grid h-10 flex-none place-items-center rounded-[9px] px-4 text-[14px] font-medium text-white transition-colors duration-200 ${btn === 'done' ? 'bg-[#15803d]' : 'bg-[var(--hd-primary)]'}`}
+                                        className={`relative grid h-10 flex-none place-items-center rounded-[9px] px-4 text-[14px] font-medium transition-colors duration-200 ${btn === 'done' ? 'bg-[#15803d] text-white' : 'bg-[var(--hd-primary)] text-[var(--hd-on-primary)]'}`}
                                     >
                                         {/* All three labels share one slot; the widest sets the footprint. */}
                                         {([

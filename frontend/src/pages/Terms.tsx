@@ -92,7 +92,7 @@ const Terms: React.FC<{ defaultTab?: TabKey }> = ({ defaultTab = 'general' }) =>
     };
 
     return (
-        <div className="landing-page relative overflow-x-clip bg-white text-slate-900 font-sans">
+        <div className="landing-page lp-light relative overflow-x-clip bg-white text-slate-900 font-sans">
             <LandingNav />
 
             {/* ------------------------------------------------------------- HEADER BAND */}

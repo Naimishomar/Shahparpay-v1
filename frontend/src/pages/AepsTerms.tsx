@@ -18,7 +18,7 @@ import './landing.css';
 
 const AepsTerms: React.FC = () => {
     return (
-        <div className="landing-page relative overflow-x-clip bg-white text-slate-900 font-sans">
+        <div className="landing-page lp-light relative overflow-x-clip bg-white text-slate-900 font-sans">
             <LandingNav />
 
             {/* HERO HEADER */}

@@ -79,7 +79,7 @@ const SECTIONS: { title: string; items: string[] }[] = [
 ];
 
 const PrivacyPolicy: React.FC = () => (
-    <div className="landing-page relative overflow-x-clip bg-white text-slate-900 font-sans">
+    <div className="landing-page lp-light relative overflow-x-clip bg-white text-slate-900 font-sans">
         <LandingNav />
         <section className="w-full bg-[#f8fafc] px-4 sm:px-6 py-14 sm:py-20 border-b border-slate-100">
             <div className="mx-auto max-w-4xl space-y-8">

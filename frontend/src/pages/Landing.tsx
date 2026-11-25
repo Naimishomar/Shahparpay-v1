@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
     ArrowRight,
     BadgeCheck,
@@ -11,11 +12,13 @@ import {
     FileText,
     Fingerprint,
     IdCard,
+    Loader2,
     Landmark,
     MessageCircle,
     Phone,
     PiggyBank,
     Plus,
+    QrCode,
     Send,
     ShieldCheck,
     Smartphone,
@@ -28,6 +31,8 @@ import './landing.css';
 import LandingNav from '@/components/landing/LandingNav';
 import LandingFooter from '@/components/landing/LandingFooter';
 import HeroDemo from '@/components/landing/HeroDemo';
+import { Roll, Slot } from '@/components/landing/motion';
+import { TRAVEL, useBeats } from '@/components/landing/beats';
 import { BODY, BTN_PRIMARY, BTN_SECONDARY, CARD, H2, LEAD, SECTION, WRAP } from '@/components/landing/ui';
 
 /*
@@ -49,6 +54,15 @@ const Row = ({ children, className = '' }: { children: React.ReactNode; classNam
     <div className={`flex h-12 items-center gap-3 border-b border-[var(--hd-line)] px-3 text-[14px] last:border-0 ${className}`}>{children}</div>
 );
 
+const PRIMARY_BTN = 'flex h-10 items-center justify-center gap-2 rounded-[9px] bg-[var(--hd-primary)] text-[14px] font-medium text-[var(--hd-on-primary)]';
+const OK_PILL = 'inline-flex h-6 items-center gap-1 rounded-full bg-[var(--hd-ok-bg)] px-2 text-[12px] text-[var(--lp-positive)]';
+const Ok = ({ children }: { children: React.ReactNode }) => (
+    <span className="inline-flex items-center gap-1.5 text-[var(--lp-positive)]"><CheckCircle2 aria-hidden className="size-4" strokeWidth={2} /> {children}</span>
+);
+const Wait = ({ children }: { children: React.ReactNode }) => (
+    <span className="inline-flex items-center gap-1.5 text-[var(--hd-ink-2)]"><Loader2 aria-hidden className="size-4 animate-spin" strokeWidth={2} /> {children}</span>
+);
+
 /** A feature tile: copy at the top, the product pinned beneath it and bled off the bottom edge. */
 function Tile({ title, text, className = '', children }: { title: string; text: string; className?: string; children: React.ReactNode }) {
     return (
@@ -58,7 +72,7 @@ function Tile({ title, text, className = '', children }: { title: string; text: 
                 <p className={`${BODY} mt-2 max-w-md`}>{text}</p>
             </div>
             <div className="hd-tile__shot">
-                <div aria-hidden className="hd-window rounded-t-[14px] bg-white pb-10">{children}</div>
+                <div aria-hidden className="hd-window rounded-t-[14px] bg-[var(--hd-surface)] pb-10">{children}</div>
             </div>
         </article>
     );
@@ -66,23 +80,27 @@ function Tile({ title, text, className = '', children }: { title: string; text: 
 
 /* ------------------------------------------------------------------ tiles */
 
+/** Waiting for the customer's UPI payment, then paid and the commission lands. */
 function UpiShot() {
+    const { ref, step } = useBeats([2400, 3400], 1);
+    const paid = step === 1;
     return (
-        <div className="grid gap-5 p-5 sm:grid-cols-[auto_1fr] sm:items-center">
-            <div className="mx-auto rounded-xl border border-[var(--hd-line)] p-3">
-                <QRCodeSVG value="https://shahparpay.com" size={132} fgColor="#16142e" level="M" />
+        <div ref={ref} className="grid gap-5 p-5 sm:grid-cols-[auto_1fr] sm:items-center">
+            <div className="mx-auto rounded-xl bg-white p-3 ring-1 ring-[var(--hd-line)]">
+                <QRCodeSVG value="https://shahparpay.com" size={132} fgColor="#16142e" bgColor="#ffffff" level="M" />
             </div>
             <div className="min-w-0">
                 <div className="text-[12px] text-[var(--hd-ink-3)]">UPI cash withdrawal</div>
                 <div className="lp-figure mt-1 text-[26px] leading-none tracking-[-0.02em] text-[var(--hd-ink)]">₹2,000.00</div>
                 <div className="mt-4 overflow-hidden rounded-[10px] border border-[var(--hd-line)]">
                     <Row>
-                        <CheckCircle2 aria-hidden className="size-4 text-[var(--lp-positive)]" strokeWidth={2} />
-                        <span className="text-[var(--hd-ink)]">Paid from customer's UPI app</span>
+                        <Slot at={step} states={[[0, <Wait>Waiting for the customer</Wait>], [1, <Ok>Paid from customer's UPI app</Ok>]]} />
                     </Row>
                     <Row>
                         <span className="text-[var(--hd-ink-2)]">Your commission</span>
-                        <span className="lp-figure ml-auto text-[var(--lp-accent-ink)]">+₹3.00</span>
+                        <span className="lp-figure ml-auto text-[var(--lp-accent-ink)] transition-opacity duration-500" style={{ opacity: paid ? 1 : 0.25 }}>
+                            +₹{paid ? '3.00' : '0.00'}
+                        </span>
                     </Row>
                 </div>
             </div>
@@ -90,18 +108,25 @@ function UpiShot() {
     );
 }
 
+/** The account holder's name is checked, then the transfer goes. */
 function DmtShot() {
+    const { ref, step } = useBeats([1600, 1900, 3000], 2);
     return (
-        <div className="p-5">
+        <div ref={ref} className="p-5">
             <div className="flex items-center gap-3">
-                <span className="flex size-10 flex-none items-center justify-center rounded-full bg-[#e9e3f7] text-[13px] font-medium text-[#3b2a6b]">RK</span>
+                <span className="flex size-10 flex-none items-center justify-center rounded-full bg-[var(--hd-violet-bg)] text-[13px] font-medium text-[var(--lp-accent-ink)]">RK</span>
                 <div className="min-w-0">
                     <div className="text-[14px] text-[var(--hd-ink)]">Ravi Kumar</div>
                     <div className="lp-figure mt-0.5 text-[12px] text-[var(--hd-ink-3)]">SBI •••• 4771</div>
                 </div>
-                <span className="ml-auto inline-flex h-6 flex-none items-center gap-1 rounded-full bg-[#e8f5ec] px-2 text-[12px] text-[var(--lp-positive)]">
-                    <BadgeCheck aria-hidden className="size-3.5" strokeWidth={2} /> Verified
-                </span>
+                <Slot
+                    className="ml-auto flex-none justify-items-end"
+                    at={step === 0 ? 0 : 1}
+                    states={[
+                        [0, <span className="inline-flex h-6 items-center gap-1 text-[12px] text-[var(--hd-ink-2)]"><Loader2 aria-hidden className="size-3.5 animate-spin" strokeWidth={2} /> Verifying</span>],
+                        [1, <span className={OK_PILL}><BadgeCheck aria-hidden className="size-3.5" strokeWidth={2} /> Verified</span>],
+                    ]}
+                />
             </div>
             <div className="mt-5 rounded-[10px] border border-[var(--hd-line)]">
                 <Row>
@@ -113,18 +138,26 @@ function DmtShot() {
                     <Bar w={44} className="ml-auto" />
                 </Row>
             </div>
-            <div className="mt-4 flex h-10 items-center justify-center gap-2 rounded-[9px] bg-[var(--hd-primary)] text-[14px] font-medium text-white">
-                <Send aria-hidden className="size-4" strokeWidth={1.75} /> Send ₹5,000
+            <div className={`${PRIMARY_BTN} mt-4 transition-colors duration-300 ${step === 2 ? '!bg-[#15803d] !text-white' : ''}`}>
+                <Slot
+                    at={step === 2 ? 1 : 0}
+                    states={[
+                        [0, <><Send aria-hidden className="size-4" strokeWidth={1.75} /> Send ₹5,000</>],
+                        [1, <><Check aria-hidden className="size-4" strokeWidth={2.25} /> Sent to Ravi Kumar</>],
+                    ]}
+                />
             </div>
         </div>
     );
 }
 
+/** A bill fetched by consumer number, paid, receipt sent. */
 function BillShot() {
+    const { ref, step } = useBeats([2400, 3200], 1);
     return (
-        <div className="p-5">
+        <div ref={ref} className="p-5">
             <div className="flex items-center gap-3">
-                <span className="flex size-10 flex-none items-center justify-center rounded-[10px] bg-[#fdf3dc] text-[#a16207]"><Zap aria-hidden className="size-4" strokeWidth={1.75} /></span>
+                <span className="flex size-10 flex-none items-center justify-center rounded-[10px] bg-[var(--hd-warn-bg)] text-[var(--hd-warn)]"><Zap aria-hidden className="size-4" strokeWidth={1.75} /></span>
                 <div className="min-w-0">
                     <div className="text-[14px] text-[var(--hd-ink)]">WBSEDCL electricity</div>
                     <div className="lp-figure mt-0.5 text-[12px] text-[var(--hd-ink-3)]">Consumer 1023 4567 89</div>
@@ -137,43 +170,49 @@ function BillShot() {
             </div>
             <div className="mt-2 flex items-center gap-2"><Bar w={64} /><Bar w={38} className="ml-auto" /></div>
             <hr className="lp-tear my-4" />
-            <div className="inline-flex items-center gap-1.5 text-[14px] text-[var(--lp-positive)]">
-                <CheckCircle2 aria-hidden className="size-4" strokeWidth={2} /> Paid · receipt sent
+            <div className="text-[14px]">
+                <Slot at={step} states={[[0, <Wait>Paying on Bharat BillPay</Wait>], [1, <Ok>Paid · receipt sent</Ok>]]} />
             </div>
         </div>
     );
 }
 
 const PLANS = [
-    { price: '₹239', detail: '1.5 GB/day · 28 days' },
-    { price: '₹299', detail: '2 GB/day · 28 days', on: true },
-    { price: '₹719', detail: '1.5 GB/day · 84 days' },
+    { price: 239, detail: '1.5 GB/day · 28 days' },
+    { price: 299, detail: '2 GB/day · 28 days' },
+    { price: 719, detail: '1.5 GB/day · 84 days' },
 ];
 
+/** The selection moves through the plans; the button's price follows it. */
 function RechargeShot() {
+    const { ref, step } = useBeats([2200, 2200, 2200], 1);
     return (
-        <div className="grid gap-5 p-5 sm:grid-cols-[1fr_1fr]">
+        <div ref={ref} className="grid gap-5 p-5 sm:grid-cols-[1fr_1fr]">
             <div>
                 <div className="flex items-center gap-3">
-                    <span className="flex size-10 flex-none items-center justify-center rounded-[10px] bg-[#f2f0eb]"><Smartphone aria-hidden className="size-4 text-[var(--hd-ink-2)]" strokeWidth={1.75} /></span>
+                    <span className="flex size-10 flex-none items-center justify-center rounded-[10px] bg-[var(--hd-fill)]"><Smartphone aria-hidden className="size-4 text-[var(--hd-ink-2)]" strokeWidth={1.75} /></span>
                     <div className="min-w-0">
                         <div className="lp-figure text-[14px] text-[var(--hd-ink)]">98XXX XXX21</div>
                         <div className="mt-0.5 text-[12px] text-[var(--hd-ink-3)]">Prepaid · West Bengal</div>
                     </div>
                 </div>
-                <div className="mt-5 flex h-10 items-center justify-center rounded-[9px] bg-[var(--hd-primary)] text-[14px] font-medium text-white">Recharge ₹299</div>
+                <div className={`${PRIMARY_BTN} mt-5`}>Recharge ₹<Roll value={String(PLANS[step].price)} /></div>
             </div>
-            <div className="space-y-2">
-                {PLANS.map((p) => (
-                    <div
-                        key={p.price}
-                        className={`flex h-14 items-center justify-between gap-3 rounded-[10px] border px-3 ${p.on ? 'border-[var(--hd-primary)] bg-[#f6f5fa]' : 'border-[var(--hd-line)]'}`}
-                    >
-                        <div className="min-w-0">
-                            <div className="lp-figure text-[14px] text-[var(--hd-ink)]">{p.price}</div>
+            <div className="relative space-y-2">
+                {PLANS.map((p, i) => (
+                    <div key={p.price} className="relative flex h-14 items-center justify-between gap-3 rounded-[10px] border border-[var(--hd-line)] px-3">
+                        {i === step && (
+                            <motion.span
+                                layoutId="plan-pick"
+                                className="absolute -inset-px rounded-[10px] border border-[var(--hd-primary)] bg-[var(--hd-fill)]"
+                                transition={{ duration: 0.5, ease: TRAVEL }}
+                            />
+                        )}
+                        <div className="relative min-w-0">
+                            <div className="lp-figure text-[14px] text-[var(--hd-ink)]">₹{p.price}</div>
                             <div className="mt-0.5 text-[12px] text-[var(--hd-ink-3)]">{p.detail}</div>
                         </div>
-                        {p.on && <Check aria-hidden className="size-4 flex-none text-[var(--hd-primary)]" strokeWidth={2.25} />}
+                        <Check aria-hidden className="relative size-4 flex-none text-[var(--hd-primary)] transition-opacity duration-300" style={{ opacity: i === step ? 1 : 0 }} strokeWidth={2.25} />
                     </div>
                 ))}
             </div>
@@ -181,9 +220,11 @@ function RechargeShot() {
     );
 }
 
+/** A PAN application earns ₹5; the TaxSuite return beside it finishes filing. */
 function PanShot() {
+    const { ref, step } = useBeats([2000, 3200], 1);
     return (
-        <div className="p-5">
+        <div ref={ref} className="p-5">
             <div className="flex items-center gap-2 text-[14px] text-[var(--hd-ink)]">
                 <Icon icon={IdCard} /> New PAN · Form 49A
             </div>
@@ -201,9 +242,16 @@ function PanShot() {
                     <span className="lp-figure ml-auto text-[var(--lp-accent-ink)]">+₹5.00</span>
                 </Row>
             </div>
-            <div className="mt-4 flex items-center gap-2 rounded-[10px] bg-[#f7f6f3] px-3 py-3 text-[14px] text-[var(--hd-ink)]">
-                <Icon icon={FileText} /> TaxSuite · ITR filed
-                <span className="ml-auto inline-flex h-6 items-center rounded-full bg-[#e8f5ec] px-2 text-[12px] text-[var(--lp-positive)]">Done</span>
+            <div className="mt-4 flex items-center gap-2 rounded-[10px] bg-[var(--hd-fill)] px-3 py-3 text-[14px] text-[var(--hd-ink)]">
+                <Icon icon={FileText} /> TaxSuite · ITR
+                <Slot
+                    className="ml-auto justify-items-end"
+                    at={step}
+                    states={[
+                        [0, <span className="inline-flex h-6 items-center gap-1 text-[12px] text-[var(--hd-ink-2)]"><Loader2 aria-hidden className="size-3.5 animate-spin" strokeWidth={2} /> Filing</span>],
+                        [1, <span className={OK_PILL}>Filed</span>],
+                    ]}
+                />
             </div>
         </div>
     );
@@ -215,17 +263,25 @@ const LEADS = [
     { name: 'Instant loan', earns: '₹100', icon: Landmark },
 ];
 
+/** Leads get approved one at a time; the approved one is lifted and marked. */
 function LeadShot() {
+    const { ref, step } = useBeats([2200, 2200, 2200], 0);
     return (
-        <div className="p-5">
+        <div ref={ref} className="p-5">
             <div className="text-[12px] text-[var(--hd-ink-3)]">Paid once the lead is approved</div>
-            <div className="mt-3 rounded-[10px] border border-[var(--hd-line)]">
-                {LEADS.map((l) => (
-                    <Row key={l.name}>
-                        <Icon icon={l.icon} />
-                        <span className="min-w-0 truncate text-[var(--hd-ink)]">{l.name}</span>
-                        <span className="lp-figure ml-auto flex-none text-[var(--lp-accent-ink)]">{l.earns}</span>
-                    </Row>
+            <div className="mt-3 rounded-[10px] border border-[var(--hd-line)] p-1">
+                {LEADS.map((l, i) => (
+                    <div key={l.name} className="relative flex h-12 items-center gap-3 px-3 text-[14px]">
+                        {i === step && (
+                            <motion.span layoutId="lead-pick" className="absolute inset-0 rounded-[8px] bg-[var(--hd-fill)]" transition={{ duration: 0.5, ease: TRAVEL }} />
+                        )}
+                        <Icon icon={l.icon} className="relative" />
+                        <span className="relative min-w-0 truncate text-[var(--hd-ink)]">{l.name}</span>
+                        <span className="relative ml-auto flex flex-none items-center gap-2">
+                            <span className={`${OK_PILL} transition-opacity duration-300`} style={{ opacity: i === step ? 1 : 0 }}>Approved</span>
+                            <span className="lp-figure text-[var(--lp-accent-ink)]">{l.earns}</span>
+                        </span>
+                    </div>
                 ))}
             </div>
         </div>
@@ -234,46 +290,68 @@ function LeadShot() {
 
 /* ---------------------------------------------------- wallet + phone shot */
 
-const LEDGER = [
-    { what: 'AEPS commission', amt: '+₹11.00', credit: true, when: '11:42' },
-    { what: 'UPI cash withdrawal', amt: '+₹3.00', credit: true, when: '11:18' },
-    { what: 'Transfer to Ravi Kumar', amt: '−₹5,010.62', credit: false, when: '10:55' },
+/** What lands in the wallet, in the order the loop plays it. Commission is credited before 2% TDS here. */
+const CREDITS = [
+    { what: 'AEPS commission', amt: 11, icon: Fingerprint },
+    { what: 'UPI cash withdrawal', amt: 3, icon: QrCode },
+    { what: 'PAN application', amt: 5, icon: IdCard },
 ];
+const BASE_BALANCE = 48250;
 
+/** A ledger that only grows: each beat a new credit arrives on top and the balance rolls. */
 function WalletShot() {
+    const { ref, tick } = useBeats([2600], 0);
+    const n = tick + 1; // credits shown so far; the poster shows the first one
+    const rows = Array.from({ length: Math.min(n, 3) }, (_, k) => {
+        const idx = n - 1 - k;
+        return { id: idx, ...CREDITS[idx % CREDITS.length] };
+    });
+    const balance = BASE_BALANCE + Array.from({ length: n }, (_, i) => CREDITS[i % CREDITS.length].amt).reduce((a, b) => a + b, 0);
+
     return (
-        <div className="relative mx-auto max-w-[1040px]">
-            <div className="hd-window overflow-hidden rounded-[14px] bg-white md:mr-[160px]">
-                <div className="flex h-[38px] items-center gap-2 border-b border-[var(--hd-line)] bg-[#f7f6f3] px-3.5">
+        <div ref={ref} className="relative mx-auto max-w-[1040px]">
+            <div className="hd-window overflow-hidden rounded-[14px] bg-[var(--hd-surface)] md:mr-[160px]">
+                <div className="flex h-[38px] items-center gap-2 border-b border-[var(--hd-line)] bg-[var(--hd-chrome)] px-3.5">
                     <span className="flex gap-1.5" aria-hidden>
                         {['#ff5f57', '#febc2e', '#28c840'].map((c) => <span key={c} className="size-[10px] rounded-full" style={{ background: c }} />)}
                     </span>
-                    <span className="mx-auto flex h-[22px] w-[200px] items-center justify-center rounded-md bg-white text-[11px] text-[var(--hd-ink-3)] ring-1 ring-[var(--hd-line)]">shahparpay.com/ledger</span>
+                    <span className="mx-auto flex h-[22px] w-[200px] items-center justify-center rounded-md bg-[var(--hd-surface)] text-[11px] text-[var(--hd-ink-3)] ring-1 ring-[var(--hd-line)]">shahparpay.com/ledger</span>
                 </div>
                 <div className="p-5 sm:p-7 md:pr-[124px]">
                     <div className="flex flex-wrap items-end justify-between gap-4">
                         <div>
                             <div className="text-[13px] text-[var(--hd-ink-3)]">Wallet balance</div>
-                            <div className="lp-figure mt-1 text-[32px] leading-none tracking-[-0.02em] text-[var(--hd-ink)]">₹48,261.00</div>
+                            <div className="lp-figure mt-1 text-[32px] leading-none tracking-[-0.02em] text-[var(--hd-ink)]">₹<Roll value={balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })} /></div>
                         </div>
                         <div className="flex gap-2" aria-hidden>
                             <span className="flex h-9 items-center rounded-[9px] border border-[var(--hd-line-strong)] px-3"><Bar w={48} /></span>
-                            <span className="flex h-9 items-center gap-2 rounded-[9px] bg-[var(--hd-primary)] px-3.5 text-[13px] font-medium text-white">
+                            <span className="flex h-9 items-center gap-2 rounded-[9px] bg-[var(--hd-primary)] px-3.5 text-[13px] font-medium text-[var(--hd-on-primary)]">
                                 <Landmark aria-hidden className="size-4" strokeWidth={1.75} /> Move to bank
                             </span>
                         </div>
                     </div>
-                    <div className="mt-6 rounded-[10px] border border-[var(--hd-line)]">
-                        {LEDGER.map((r) => (
-                            <Row key={r.what} className="h-[52px]">
-                                <span className="lp-figure w-12 flex-none text-[12px] text-[var(--hd-ink-3)]">{r.when}</span>
-                                <span className="min-w-0 truncate text-[var(--hd-ink)]">{r.what}</span>
-                                <span className={`lp-figure ml-auto flex-none ${r.credit ? 'text-[var(--lp-positive)]' : 'text-[var(--hd-ink)]'}`}>{r.amt}</span>
-                            </Row>
-                        ))}
+                    <div className="mt-6 overflow-hidden rounded-[10px] border border-[var(--hd-line)]">
+                        <AnimatePresence initial={false}>
+                            {rows.map((r) => (
+                                <motion.div
+                                    key={r.id}
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 52, opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ height: { duration: 0.5, ease: TRAVEL }, opacity: { duration: 0.35, delay: 0.15 } }}
+                                    className="overflow-hidden"
+                                >
+                                    <Row className="h-[52px]">
+                                        <Icon icon={r.icon} />
+                                        <span className="min-w-0 truncate text-[var(--hd-ink)]">{r.what}</span>
+                                        <span className="lp-figure ml-auto flex-none text-[var(--lp-positive)]">+₹{r.amt}.00</span>
+                                    </Row>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
                         {[[120, 64], [96, 72]].map(([a, b], i) => (
-                            <Row key={i} className="h-[52px]">
-                                <Bar w={32} className="flex-none" /><Bar w={a} /><Bar w={b} className="ml-auto" />
+                            <Row key={i} className="h-[52px] border-t border-[var(--hd-line)]">
+                                <Bar w={16} className="flex-none" /><Bar w={a} /><Bar w={b} className="ml-auto" />
                             </Row>
                         ))}
                     </div>
@@ -282,9 +360,9 @@ function WalletShot() {
 
             {/* Satellite: the Android app, straddling the window's right edge over its margin. */}
             <div className="absolute right-0 top-16 hidden w-[260px] md:block">
-                <div className="hd-satellite rounded-[34px] bg-[#16142e] p-[7px]">
-                    <div className="relative min-h-[470px] overflow-hidden rounded-[28px] bg-[#faf9f6] px-4 pb-6 pt-10">
-                        <span aria-hidden className="absolute left-1/2 top-3 h-[18px] w-[70px] -translate-x-1/2 rounded-full bg-[#16142e]" />
+                <div className="hd-satellite rounded-[34px] bg-[var(--hd-bezel)] p-[7px]">
+                    <div className="relative min-h-[400px] overflow-hidden rounded-[28px] bg-[var(--lp-bg)] px-4 pb-6 pt-10">
+                        <span aria-hidden className="absolute left-1/2 top-3 h-[18px] w-[70px] -translate-x-1/2 rounded-full bg-[var(--hd-bezel)]" />
                         <div className="flex items-center gap-2 text-[13px] text-[var(--lp-positive)]">
                             <CheckCircle2 aria-hidden className="size-4" strokeWidth={2} /> Settled to your bank
                         </div>
@@ -311,29 +389,32 @@ function WalletShot() {
 
 const SWITCHES = ['AEPS', 'DMT', 'Recharge', 'PAN'];
 const RETAILERS = [
-    { name: 'Sunita General Store', place: 'Howrah', initials: 'SG', tint: '#e3eefb', ink: '#1e4f8a', off: ['PAN'] },
-    { name: 'Maa Tara Telecom', place: 'Bally', initials: 'MT', tint: '#fbe8e3', ink: '#8a3a1e', off: [] as string[] },
+    { name: 'Sunita General Store', place: 'Howrah', initials: 'SG', bg: 'rgba(59,130,246,0.16)', ink: '#5b8fd9', flips: true },
+    { name: 'Maa Tara Telecom', place: 'Bally', initials: 'MT', bg: 'rgba(234,88,12,0.16)', ink: '#d0673f', flips: false },
 ];
 
 const Toggle = ({ on }: { on: boolean }) => (
-    <span className={`relative inline-flex h-[18px] w-[30px] flex-none rounded-full transition-colors ${on ? 'bg-[var(--hd-primary)]' : 'bg-[#dcd8d0]'}`}>
-        <span className={`absolute top-[2px] size-[14px] rounded-full bg-white shadow-sm ${on ? 'left-[14px]' : 'left-[2px]'}`} />
+    <span className={`relative inline-flex h-[18px] w-[30px] flex-none rounded-full transition-colors duration-200 ${on ? 'bg-[var(--hd-primary)]' : 'bg-[var(--hd-off)]'}`}>
+        <span className="absolute top-[2px] size-[14px] rounded-full bg-white shadow-sm transition-[left] duration-200" style={{ left: on ? 14 : 2 }} />
     </span>
 );
 
+/** The distributor switches PAN on for one shop, and a fund request is approved. */
 function NetworkShot() {
+    const { ref, step } = useBeats([2600, 2600], 1);
+    const on = step === 1;
     return (
-        <div className="hd-window overflow-hidden rounded-[14px] bg-white">
+        <div ref={ref} className="hd-window overflow-hidden rounded-[14px] bg-[var(--hd-surface)]">
             <div className="flex items-center justify-between gap-4 border-b border-[var(--hd-line)] px-5 py-4">
                 <div className="text-[15px] font-medium text-[var(--hd-ink)]">Your retailers</div>
-                <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-[#fdf3dc] px-2.5 text-[12px] text-[#8a5a07]">
-                    <Clock3 aria-hidden className="size-3.5" strokeWidth={1.75} /> 2 fund requests
+                <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-[var(--hd-warn-bg)] px-2.5 text-[12px] text-[var(--hd-warn)]">
+                    <Clock3 aria-hidden className="size-3.5" strokeWidth={1.75} /> <Roll value={on ? '1' : '2'} /> {on ? 'fund request' : 'fund requests'}
                 </span>
             </div>
             {RETAILERS.map((r) => (
                 <div key={r.name} className="border-b border-[var(--hd-line)] px-5 py-4 last:border-0">
                     <div className="flex items-center gap-3">
-                        <span className="flex size-9 flex-none items-center justify-center rounded-full text-[12px] font-medium" style={{ background: r.tint, color: r.ink }}>{r.initials}</span>
+                        <span className="flex size-9 flex-none items-center justify-center rounded-full text-[12px] font-medium" style={{ background: r.bg, color: r.ink }}>{r.initials}</span>
                         <div className="min-w-0">
                             <div className="truncate text-[14px] text-[var(--hd-ink)]">{r.name}</div>
                             <div className="text-[12px] text-[var(--hd-ink-3)]">{r.place}</div>
@@ -342,14 +423,14 @@ function NetworkShot() {
                     <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 pl-12">
                         {SWITCHES.map((s) => (
                             <span key={s} className="inline-flex items-center gap-2 text-[12px] text-[var(--hd-ink-2)]">
-                                <Toggle on={!r.off.includes(s)} /> {s}
+                                <Toggle on={s !== 'PAN' || !r.flips || on} /> {s}
                             </span>
                         ))}
                     </div>
                 </div>
             ))}
             <div className="flex items-center gap-3 px-5 py-4" aria-hidden>
-                <span className="size-9 flex-none rounded-full bg-[#f2f0eb]" />
+                <span className="size-9 flex-none rounded-full bg-[var(--hd-fill)]" />
                 <div className="space-y-2"><Bar w={130} /><Bar w={70} /></div>
             </div>
         </div>
@@ -640,7 +721,7 @@ const Landing: React.FC = () => {
                                     Your shop is already busy. Give people one more reason to come in
                                 </h2>
                                 <div className="mt-8 flex flex-wrap gap-3">
-                                    <Link to="/signup" className="inline-flex h-12 items-center rounded-[10px] bg-[#efe9de] px-5 text-base font-medium text-[var(--lp-fg)] transition-colors hover:bg-white">
+                                    <Link to="/signup" className="inline-flex h-12 items-center rounded-[10px] bg-[#efe9de] px-5 text-base font-medium text-[#1c1a17] transition-colors hover:bg-white">
                                         Start your signup
                                     </Link>
                                     <Link to="/contact" className="inline-flex h-12 items-center rounded-[10px] border border-white/20 px-5 text-base font-medium text-white transition-colors hover:bg-white/10">

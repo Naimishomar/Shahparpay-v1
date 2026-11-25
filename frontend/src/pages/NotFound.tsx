@@ -3,7 +3,7 @@ import LandingNav from '@/components/landing/LandingNav';
 import LandingFooter from '@/components/landing/LandingFooter';
 
 const NotFound = () => (
-    <div className="landing-page relative overflow-x-clip bg-white text-slate-900">
+    <div className="landing-page lp-light relative overflow-x-clip bg-white text-slate-900">
         <LandingNav />
         <main className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center px-4 py-20 text-center">
             <p className="text-sm font-bold uppercase tracking-wider text-[#008c46]">404</p>

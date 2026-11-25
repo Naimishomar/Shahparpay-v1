@@ -43,11 +43,10 @@
 
 /*
  * Portal components (the onboarding wizard on /signup) read the shadcn tokens;
- * inside a public page they take the public palette, light whatever the
- * system theme, so a reused component looks like it belongs here.
+ * inside a public page they take the public palette, so a reused component
+ * looks like it belongs here, in either theme.
  */
-.landing-page,
-html.dark .landing-page {
+.landing-page {
   color-scheme: light;
   --background: var(--lp-bg);
   --foreground: var(--lp-fg);
@@ -75,7 +74,32 @@ html.dark .landing-page {
   --glow-strength: 0;
 }
 
-/* The public site is light only. */
+/*
+ * Dark is the default theme (next-themes, see main.tsx) and the visitor can
+ * switch. Legal pages hard-code a light document, so they opt out with .lp-light.
+ */
+html.dark .landing-page:not(.lp-light) {
+  color-scheme: dark;
+  --lp-bg: #0e0d12;
+  --lp-surface: #17161d;
+  --lp-card: #1b1a22;
+  --lp-fg: #f1eee8;
+  --lp-fg-2: #bab4aa;
+  --lp-muted: #918b81;
+  --lp-border: rgba(255, 255, 255, 0.08);
+  --lp-border-strong: rgba(255, 255, 255, 0.16);
+  --lp-accent: #7c4dff;
+  --lp-accent-ink: #c4b5fd;
+  --lp-accent-soft: rgba(124, 77, 255, 0.16);
+  --lp-positive: #4ade80;
+  --lp-ink: #1c1430;
+  --lp-ink-2: #2b1e4a;
+  --lp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --lp-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --lp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.landing-page,
 html.dark .landing-page {
   background-color: var(--lp-bg) !important;
   color: var(--lp-fg) !important;
@@ -84,6 +108,16 @@ html.dark .landing-page {
 html:has(.landing-page) body {
   background: #faf9f6 !important;
   color: #1c1a17 !important;
+}
+
+html.dark:has(.landing-page:not(.lp-light)) body {
+  background: #0e0d12 !important;
+  color: #f1eee8 !important;
+}
+
+/* The wordmark is dark ink; on the dark theme it prints in reverse. */
+html.dark .landing-page:not(.lp-light) .lp-logo {
+  filter: invert(1) hue-rotate(180deg);
 }
 
 /* Typography */
@@ -354,8 +388,60 @@ input[type='range'] {
   --hd-line-strong: rgba(28, 26, 23, 0.14);
   --hd-bar: #e7e4dd;
   --hd-primary: #16142e;
+  --hd-on-primary: #ffffff;
+  --hd-bezel: #16142e;
+  --hd-surface: #ffffff;
+  --hd-chrome: #f7f6f3;
+  --hd-side: #fbfaf8;
+  --hd-fill: #f2f0eb;
+  --hd-off: #dcd8d0;
+  --hd-focus: rgba(22, 20, 46, 0.08);
+  --hd-cursor: #16142e;
+  --hd-cursor-edge: #ffffff;
+  --hd-warn: #8a5a07;
+  --hd-warn-bg: rgba(234, 179, 8, 0.16);
+  --hd-ok-bg: rgba(21, 128, 61, 0.1);
+  --hd-violet-bg: rgba(109, 40, 217, 0.1);
   --hd-shadow-hero: 0 0 0 1px rgba(28, 26, 23, 0.06), 0 2px 4px rgba(28, 26, 23, 0.04), 0 24px 48px -12px rgba(28, 26, 23, 0.16);
   --hd-shadow-satellite: 0 0 0 1px rgba(28, 26, 23, 0.06), 0 6px 16px rgba(28, 26, 23, 0.1);
+}
+
+html.dark .landing-page:not(.lp-light) {
+  --hd-ink: #f1eee8;
+  --hd-ink-2: #bab4aa;
+  --hd-ink-3: #8f897f;
+  --hd-line: rgba(255, 255, 255, 0.07);
+  --hd-line-strong: rgba(255, 255, 255, 0.13);
+  --hd-bar: #2e2c36;
+  --hd-primary: #d9ccff;
+  --hd-on-primary: #16142e;
+  --hd-bezel: #2e2c38;
+  --hd-surface: #1b1a22;
+  --hd-chrome: #22212a;
+  --hd-side: #18171e;
+  --hd-fill: #27262f;
+  --hd-off: #3a3843;
+  --hd-focus: rgba(217, 204, 255, 0.18);
+  --hd-cursor: #ffffff;
+  --hd-cursor-edge: #16142e;
+  --hd-warn: #facc15;
+  --hd-ok-bg: rgba(74, 222, 128, 0.12);
+  --hd-violet-bg: rgba(167, 139, 250, 0.16);
+  --hd-shadow-hero: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 24px 48px -12px rgba(0, 0, 0, 0.6);
+  --hd-shadow-satellite: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 20px rgba(0, 0, 0, 0.5);
+}
+
+/* A printed slip is paper in either theme. */
+.lp-receipt {
+  --hd-ink: #1c1a17;
+  --hd-ink-2: #57524a;
+  --hd-ink-3: #8a847b;
+  --lp-fg: #1c1a17;
+  --lp-fg-2: #57524a;
+  --lp-muted: #736d65;
+  --lp-positive: #15803d;
+  --lp-accent-ink: #5b21b6;
+  --lp-border-strong: rgba(28, 26, 23, 0.16);
 }
 
 .hd-window {
@@ -390,4 +476,9 @@ input[type='range'] {
   margin-top: auto;
   padding: 0 8%;
   margin-bottom: -28px;
+}
+
+/* Legal pages stay a light document, so the theme switch has nothing to change there. */
+.lp-light .lp-theme-toggle {
+  display: none;
 }

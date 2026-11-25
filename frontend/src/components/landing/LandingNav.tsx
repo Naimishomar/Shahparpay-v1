@@ -23,6 +23,7 @@ import { useAuth } from '../../context/AuthContext';
 import logo from '../../assets/logo.png';
 import '../../pages/landing.css';
 import { WRAP } from './ui';
+import ThemeToggle from './ThemeToggle';
 
 const PRODUCT_MENU_CATEGORIES = [
     {
@@ -86,7 +87,7 @@ const LandingNav: React.FC = () => {
         <nav className="sticky top-0 z-50 border-b border-[var(--lp-border)] bg-[var(--lp-bg)]">
             <div className={`${WRAP} flex h-16 items-center justify-between gap-6`}>
                 <Link to="/" aria-label="Shahparpay home" className="shrink-0">
-                    <img src={logo} alt="Shahparpay" className="h-8 w-auto object-contain sm:h-9" />
+                    <img src={logo} alt="Shahparpay" className="lp-logo h-8 w-auto object-contain sm:h-9" />
                 </Link>
 
                 <div className="hidden items-center gap-1 lg:flex">
@@ -131,6 +132,7 @@ const LandingNav: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <ThemeToggle />
                     <Link to="/login" className="lp-btn-primary inline-flex h-10 items-center px-4 text-sm">
                         Sign in
                     </Link>
