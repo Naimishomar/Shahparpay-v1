@@ -289,6 +289,10 @@ const UserDetail = ({
                 <VerificationCard token={token} user={user} busy={busy === 'verify'} onDecide={(body, ok) => call('verify', `/api/admin/console/retailers/${id}/verification`, 'PATCH', body, ok)} onDeleted={onBack} id={id} />
             )}
 
+            {role === 'retailer' && user.verificationStatus !== 'pending' && user.verificationStatus !== 'rejected' && (
+                <DistributorCard token={token} user={user} busy={busy === 'distributor'} onSave={(distributorId) => call('distributor', `/api/admin/console/retailers/${id}/distributor`, 'PATCH', { distributorId }, 'Distributor updated')} />
+            )}
+
             {role === 'retailer' && (
                 <section className={CARD}>
                     <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -454,6 +458,39 @@ const UserDetail = ({
 };
 
 export default UserDetail;
+
+/** Adds or changes an approved retailer's distributor. Only a self signup may be left under the admin. */
+const DistributorCard = ({ token, user, busy, onSave }: { token: string | null; user: any; busy: boolean; onSave: (distributorId: string | null) => void }) => {
+    const { data: distributors } = useApiGet<any[]>(token, '/api/admin/distributors');
+    const current = user.distributorId?._id || '';
+    const [distributorId, setDistributorId] = useState(current);
+    useEffect(() => setDistributorId(current), [current]);
+    const canBeUnderAdmin = user.signupSource === 'self';
+
+    return (
+        <section className={CARD}>
+            <div className="mb-5 flex items-center gap-3">
+                <div className={`rounded-xl p-2 ${SILVER_TILE}`}><Store className="h-4 w-4" /></div>
+                <div>
+                    <h2 className="text-lg font-semibold">Distributor</h2>
+                    <p className="text-sm text-muted-foreground">{current ? 'Move this retailer to another distributor.' : 'This retailer is directly under the admin. Add a distributor any time.'}</p>
+                </div>
+            </div>
+            <div className="flex flex-col gap-3 md:flex-row md:items-end">
+                <label className="flex flex-1 flex-col gap-1.5">
+                    <span className={LABEL}>Place under</span>
+                    <select className={INPUT} value={distributorId} onChange={(e) => setDistributorId(e.target.value)}>
+                        {(canBeUnderAdmin || !current) && <option value="">No distributor (under admin)</option>}
+                        {(distributors || []).map((d) => <option key={d._id} value={d._id}>{d.name} ({d.distributorId})</option>)}
+                    </select>
+                </label>
+                <button onClick={() => onSave(distributorId || null)} disabled={busy || distributorId === current} className={PRIMARY_BUTTON}>
+                    {busy ? <Loader2 size={16} className="animate-spin" /> : <Store size={16} />} Save
+                </button>
+            </div>
+        </section>
+    );
+};
 
 /**
  * Approve or reject a self signup. Approving places the retailer under the

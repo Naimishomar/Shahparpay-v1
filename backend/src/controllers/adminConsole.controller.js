@@ -495,6 +495,62 @@ export const setUserStatus = async (req, res) => {
   }
 };
 
+/** Points the retailer at `distributor` (or the admin when null) and keeps both distributors' retailers lists in step. Caller saves. */
+const placeRetailer = async (retailer, distributor) => {
+  const previous = retailer.distributorId;
+  retailer.distributorId = distributor?._id || null;
+  if (previous && String(previous) !== String(distributor?._id)) {
+    await Distributor.updateOne({ _id: previous }, { $pull: { retailers: retailer._id } });
+  }
+  if (distributor) await Distributor.updateOne({ _id: distributor._id }, { $addToSet: { retailers: retailer._id } });
+};
+
+/**
+ * PATCH /api/admin/console/retailers/:id/distributor  { distributorId: id | null }
+ * Adds or changes the retailer's distributor at any time. Only a self signup
+ * may sit directly under the admin (null); a distributor's retailer needs one.
+ */
+export const setRetailerDistributor = async (req, res) => {
+  try {
+    if (forbid(req, res)) return;
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid retailer id' });
+    const distributorId = req.body?.distributorId || null;
+
+    const retailer = await Retailer.findById(req.params.id).select('name retailerId distributorId signupSource');
+    if (!retailer) return res.status(404).json({ success: false, message: 'Retailer not found' });
+
+    let distributor = null;
+    if (distributorId) {
+      if (!mongoose.isValidObjectId(distributorId)) return res.status(400).json({ success: false, message: 'Invalid distributor' });
+      distributor = await Distributor.findById(distributorId).select('name distributorId');
+      if (!distributor) return res.status(404).json({ success: false, message: 'Distributor not found' });
+    } else if (retailer.signupSource !== 'self') {
+      return res.status(400).json({ success: false, message: 'A retailer added by a distributor must stay under a distributor.' });
+    }
+    if (String(retailer.distributorId || '') === String(distributor?._id || '')) {
+      return res.status(200).json({ success: true, message: 'No change', data: { _id: retailer._id, distributorId: retailer.distributorId } });
+    }
+
+    await placeRetailer(retailer, distributor);
+    await retailer.save();
+
+    logActivity({
+      req,
+      action: 'retailer.distributor',
+      target: { _id: retailer._id, role: 'retailer', name: retailer.name },
+      summary: `Moved retailer ${retailer.name} (${retailer.retailerId}) ${distributor ? `under ${distributor.name}` : 'under the admin'}`,
+    });
+    return res.status(200).json({
+      success: true,
+      message: distributor ? `Retailer placed under ${distributor.name}` : 'Retailer placed under the admin',
+      data: { _id: retailer._id, distributorId: retailer.distributorId },
+    });
+  } catch (error) {
+    console.error('Admin set retailer distributor error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
 /**
  * PATCH /api/admin/console/retailers/:id/verification
  *   { status: 'approved' | 'rejected', distributorId?: id | null, note?: string }
@@ -533,14 +589,7 @@ export const setRetailerVerification = async (req, res) => {
     retailer.verificationNote = status === 'rejected' ? reason : reason || null;
     retailer.verifiedAt = new Date();
     // Placement is only decided here for a self signup; a distributor's retailer keeps theirs.
-    if (status === 'approved' && retailer.signupSource === 'self') {
-      const previous = retailer.distributorId;
-      retailer.distributorId = distributor?._id || null;
-      if (previous && String(previous) !== String(distributor?._id)) {
-        await Distributor.updateOne({ _id: previous }, { $pull: { retailers: retailer._id } });
-      }
-      if (distributor) await Distributor.updateOne({ _id: distributor._id }, { $addToSet: { retailers: retailer._id } });
-    }
+    if (status === 'approved' && retailer.signupSource === 'self') await placeRetailer(retailer, distributor);
     await retailer.save();
 
     // Only on the change to approved, so re-saving an approved account sends nothing. Not awaited.
