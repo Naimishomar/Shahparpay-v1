@@ -502,8 +502,12 @@ export const setRetailerVerification = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Give the reason for rejecting; the retailer sees it.' });
     }
 
-    const retailer = await Retailer.findById(req.params.id).select('name email retailerId distributorId signupSource verificationStatus');
+    const retailer = await Retailer.findById(req.params.id).select('name email retailerId distributorId signupSource verificationStatus signupFeePaidAt');
     if (!retailer) return res.status(404).json({ success: false, message: 'Retailer not found' });
+
+    if (status === 'approved' && retailer.signupSource === 'self' && !retailer.signupFeePaidAt) {
+      return res.status(400).json({ success: false, message: 'This retailer has not paid the ₹199 signup fee yet.' });
+    }
 
     let distributor = null;
     if (status === 'approved' && distributorId) {

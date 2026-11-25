@@ -1,6 +1,7 @@
 import Transaction from '../models/transaction.model.js';
 import MainWallet from '../models/mainWallet.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
+import Retailer from '../models/users/retailer.model.js';
 import {
   razorpayPost,
   razorpayGet,
@@ -30,6 +31,15 @@ const MAX_TOPUP = 100000;
 /** An unpaid QR is closed rather than left standing as a live payment target. */
 const QR_TTL_SECONDS = 30 * 60;
 
+/**
+ * A self-signed-up retailer pays this once, by the same UPI QR, before an admin
+ * reviews them. SIGNUP_FEE_CREDIT of it lands in their Utility (MAIN) wallet so
+ * the AEPS onboarding fee can be paid from it.
+ */
+const SIGNUP_FEE = 199;
+const SIGNUP_FEE_CREDIT = 10;
+const QR_TYPES = ['WALLET_TOPUP', 'SIGNUP_FEE'];
+
 const userModelFor = (role) => (role === 'distributor' ? 'Distributor' : 'Retailer');
 
 /**
@@ -42,8 +52,12 @@ const userModelFor = (role) => (role === 'distributor' ? 'Distributor' : 'Retail
  * never received.
  */
 const creditTopup = async (txn, { paymentId, paidPaise, method, vpa }) => {
-  const amount = toRupees(paidPaise);
-  if (!Number.isFinite(amount) || amount <= 0) return { credited: false, transaction: txn };
+  const paid = toRupees(paidPaise);
+  if (!Number.isFinite(paid) || paid <= 0) return { credited: false, transaction: txn };
+  // The fee row books only the wallet credit; the ₹199 itself stays in metadata.
+  const isFee = txn.type === 'SIGNUP_FEE';
+  if (isFee && paid < SIGNUP_FEE) return { credited: false, transaction: txn };
+  const amount = isFee ? SIGNUP_FEE_CREDIT : paid;
 
   const claimed = await Transaction.findOneAndUpdate(
     { _id: txn._id, status: 'PENDING' },
@@ -54,10 +68,11 @@ const creditTopup = async (txn, { paymentId, paidPaise, method, vpa }) => {
         'metadata.razorpayPaymentId': paymentId,
         'metadata.paymentMethod': method || 'upi',
         'metadata.payerVpa': vpa || null,
+        'metadata.paidAmount': paid,
         'metadata.creditedAt': new Date(),
         // Retailers load money into the Trade (AEPS) wallet, as on Icchhamati;
         // distributors keep theirs in Main, which their fund transfers draw on.
-        'metadata.walletType': txn.metadata?.userModel === 'Distributor' ? 'MAIN' : 'AEPS',
+        'metadata.walletType': isFee || txn.metadata?.userModel === 'Distributor' ? 'MAIN' : 'AEPS',
       },
     },
     { new: true }
@@ -65,6 +80,9 @@ const creditTopup = async (txn, { paymentId, paidPaise, method, vpa }) => {
   if (!claimed) return { credited: false, transaction: await Transaction.findById(txn._id) };
 
   try {
+    if (isFee) {
+      await Retailer.updateOne({ _id: claimed.userId }, { $set: { signupFeePaidAt: new Date() } });
+    }
     const Wallet = claimed.metadata.walletType === 'MAIN' ? MainWallet : AepsWallet;
     await Wallet.findOneAndUpdate(
       { userId: claimed.userId },
@@ -93,14 +111,100 @@ const creditTopup = async (txn, { paymentId, paidPaise, method, vpa }) => {
 };
 
 /**
+ * Records a PENDING row and mints the single-use Razorpay QR it settles against.
+ * Answers the request itself on a provider refusal and returns null; returns the
+ * row on success. Throws are left to the caller, which closes `txn` if set.
+ */
+const openQrTransaction = async (res, { prefix, type, name, amount, user }) => {
+  const referenceId = `${prefix}${Date.now()}${String(Math.floor(Math.random() * 1e4)).padStart(4, '0')}`;
+
+  // Recorded before Razorpay is called: the webhook settles against this row,
+  // and a QR handed out for a payment we have no record of could never be
+  // credited.
+  const txn = await Transaction.create({
+    transactionId: referenceId,
+    userId: user.id,
+    type,
+    amount,
+    status: 'PENDING',
+    metadata: {
+      provider: 'RAZORPAY',
+      channel: 'UPI_QR',
+      userModel: userModelFor(user.role),
+    },
+  });
+
+  let ok, data;
+  try {
+    ({ ok, data } = await razorpayPost('/payments/qr_codes', {
+      type: 'upi_qr',
+      name,
+      usage: 'single_use',
+      fixed_amount: true,
+      payment_amount: toPaise(amount),
+      description: `${name} ${referenceId}`,
+      close_by: Math.floor(Date.now() / 1000) + QR_TTL_SECONDS,
+      // The only link between an incoming payment and a wallet. Razorpay echoes
+      // notes back on the webhook, so nothing has to be provisioned per user.
+      notes: { reference: referenceId, userId: String(user.id) },
+    }));
+  } catch (error) {
+    // A provider call that blows up (bad credentials, a timeout) must not leave
+    // a PENDING row behind that no QR was ever minted for.
+    await Transaction.findOneAndUpdate(
+      { _id: txn._id, status: 'PENDING' },
+      {
+        $set: {
+          status: 'FAILED',
+          'metadata.failureReason': error?.message || 'QR creation failed',
+        },
+      }
+    ).catch(() => {});
+    throw error;
+  }
+
+  if (!ok || !data?.id || !data?.image_url) {
+    await Transaction.findOneAndUpdate(
+      { _id: txn._id, status: 'PENDING' },
+      { $set: { status: 'FAILED', 'metadata.apiResponse': data } }
+    );
+    res.status(400).json({
+      success: false,
+      message: razorpayMessage(data, 'Could not generate the payment QR. Please try again.'),
+    });
+    return null;
+  }
+
+  // Razorpay's QR create response carries no raw `upi://pay?...` string —
+  // `image_url` is the only thing that can be scanned, a hosted poster with
+  // its branding on it. The client shows that image as-is.
+  return Transaction.findOneAndUpdate(
+    { _id: txn._id },
+    {
+      $set: {
+        'metadata.qrCodeId': data.id,
+        'metadata.qrImageUrl': data.image_url,
+        // Recorded so a pending row can be closed once the QR can no longer
+        // be paid, instead of being polled forever.
+        'metadata.expiresAt': new Date((data.close_by || 0) * 1000).toISOString(),
+      },
+    },
+    { new: true }
+  );
+};
+
+const qrView = (txn) => ({
+  transactionId: txn.transactionId,
+  qrCodeId: txn.metadata.qrCodeId,
+  qrImage: txn.metadata.qrImageUrl,
+  amount: txn.amount,
+  expiresAt: txn.metadata.expiresAt,
+});
+
+/**
  * Mints the QR the retailer scans.
  */
 export const createTopupQr = async (req, res) => {
-  // Held outside the try so a throw can still close the row it opened. A
-  // provider call that blows up — bad credentials, a timeout — used to leave a
-  // PENDING top-up behind that no QR was ever minted for and nothing could
-  // ever settle.
-  let txn = null;
   try {
     const amount = Number(req.body?.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -123,103 +227,104 @@ export const createTopupQr = async (req, res) => {
         .json({ success: false, message: 'Only a retailer or distributor can top up a wallet.' });
     }
 
-    const referenceId = `TOP${Date.now()}${String(Math.floor(Math.random() * 1e4)).padStart(4, '0')}`;
-
-    // Recorded before Razorpay is called: the webhook settles against this row,
-    // and a QR handed out for a top-up we have no record of could never be
-    // credited.
-    txn = await Transaction.create({
-      transactionId: referenceId,
-      userId: req.user.id,
+    const txn = await openQrTransaction(res, {
+      prefix: 'TOP',
       type: 'WALLET_TOPUP',
-      amount,
-      status: 'PENDING',
-      metadata: {
-        provider: 'RAZORPAY',
-        channel: 'UPI_QR',
-        userModel: userModelFor(req.user.role),
-      },
-    });
-
-    const { ok, data } = await razorpayPost('/payments/qr_codes', {
-      type: 'upi_qr',
       name: 'Wallet Top-up',
-      usage: 'single_use',
-      fixed_amount: true,
-      payment_amount: toPaise(amount),
-      description: `Wallet top-up ${referenceId}`,
-      close_by: Math.floor(Date.now() / 1000) + QR_TTL_SECONDS,
-      // The only link between an incoming payment and a wallet. Razorpay echoes
-      // notes back on the webhook, so nothing has to be provisioned per user.
-      notes: { reference: referenceId, userId: String(req.user.id) },
+      amount,
+      user: req.user,
     });
-
-    if (!ok || !data?.id || !data?.image_url) {
-      await Transaction.findOneAndUpdate(
-        { _id: txn._id, status: 'PENDING' },
-        { $set: { status: 'FAILED', 'metadata.apiResponse': data } }
-      );
-      return res.status(400).json({
-        success: false,
-        message: razorpayMessage(data, 'Could not generate the payment QR. Please try again.'),
-      });
-    }
-
-    await Transaction.findOneAndUpdate(
-      { _id: txn._id },
-      {
-        $set: {
-          'metadata.qrCodeId': data.id,
-          'metadata.qrImageUrl': data.image_url,
-          // Recorded so a pending row can be closed once the QR can no longer
-          // be paid, instead of being polled forever.
-          'metadata.expiresAt': new Date((data.close_by || 0) * 1000).toISOString(),
-        },
-      }
-    );
-
-    // Razorpay's QR create response carries no raw `upi://pay?...` string —
-    // `image_url` is the only thing that can be scanned, a hosted poster with
-    // its branding on it. The client shows that image as-is.
-
+    if (!txn) return;
     return res.status(200).json({
       success: true,
       message: 'Scan the QR with any UPI app to add money.',
-      data: {
-        transactionId: referenceId,
-        qrCodeId: data.id,
-        qrImage: data.image_url,
-        amount,
-        expiresAt: new Date((data.close_by || 0) * 1000).toISOString(),
-      },
+      data: qrView(txn),
     });
   } catch (error) {
-    if (txn) {
-      await Transaction.findOneAndUpdate(
-        { _id: txn._id, status: 'PENDING' },
-        { $set: { status: 'FAILED', 'metadata.failureReason': error?.message || 'QR creation failed' } }
-      ).catch(() => {});
+    return qrError(res, error);
+  }
+};
+
+/**
+ * The one answer for a QR that could not be minted because of a throw.
+ */
+const qrError = (res, error) => {
+  // A missing key is an operator error, not a provider outage, and the two
+  // look identical in a log that only prints "failed". Say which it is: this
+  // is the difference between checking the server's environment and opening a
+  // ticket with Razorpay.
+  const misconfigured = String(error?.message || '').includes('are not configured');
+  if (misconfigured) {
+    console.error(
+      "[Topup] RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are missing from this server's environment — no QR can be minted until they are set."
+    );
+  } else {
+    console.error('Create Topup QR Error:', error?.response?.data || error?.message);
+  }
+
+  return res.status(misconfigured ? 503 : 500).json({
+    success: false,
+    message: misconfigured
+      ? 'UPI payment is not configured on this server yet. Please contact support.'
+      : 'Failed to generate the payment QR',
+  });
+};
+
+/**
+ * POST /api/auth/signup-fee/qr: the ₹199 QR a self-signed-up retailer pays
+ * while awaiting verification. Under /api/auth because every other route
+ * refuses a pending account.
+ */
+export const createSignupFeeQr = async (req, res) => {
+  try {
+    if (req.user.role !== 'retailer') {
+      return res
+        .status(403)
+        .json({ success: false, message: 'Only a retailer pays the signup fee.' });
+    }
+    const retailer = await Retailer.findById(req.user.id).select('signupSource signupFeePaidAt');
+    if (!retailer || retailer.signupSource !== 'self') {
+      return res
+        .status(400)
+        .json({ success: false, message: 'No signup fee is due on this account.' });
+    }
+    if (retailer.signupFeePaidAt) {
+      return res.status(200).json({ success: true, data: { status: 'SUCCESS' } });
     }
 
-    // A missing key is an operator error, not a provider outage, and the two
-    // look identical in a log that only prints "failed". Say which it is: this
-    // is the difference between checking the server's environment and opening a
-    // ticket with Razorpay.
-    const misconfigured = String(error?.message || '').includes('are not configured');
-    if (misconfigured) {
-      console.error(
-        '[Topup] RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are missing from this server\'s environment — no QR can be minted until they are set.'
-      );
-    } else {
-      console.error('Create Topup QR Error:', error?.response?.data || error?.message);
-    }
-
-    return res.status(misconfigured ? 503 : 500).json({
-      success: false,
-      message: misconfigured
-        ? 'UPI top-up is not configured on this server yet. Please contact support.'
-        : 'Failed to generate the payment QR',
+    // A retailer who paid and closed the app before the poll saw it, or who
+    // asks again while a QR is still live, must not be handed a second QR:
+    // paying both would take ₹398. Settle or reuse the open one first.
+    // ponytail: two simultaneous requests can still mint two QRs; a unique
+    // partial index on (userId, type: SIGNUP_FEE, status: PENDING) closes that.
+    const open = await Transaction.find({
+      userId: req.user.id,
+      type: 'SIGNUP_FEE',
+      status: 'PENDING',
     });
+    for (const row of open) {
+      const synced = await syncTopupTransaction(row);
+      if (synced.status === 'SUCCESS') {
+        return res.status(200).json({ success: true, data: { status: 'SUCCESS' } });
+      }
+      if (synced.status === 'PENDING') {
+        return res
+          .status(200)
+          .json({ success: true, data: { status: 'PENDING', ...qrView(synced) } });
+      }
+    }
+
+    const txn = await openQrTransaction(res, {
+      prefix: 'SUF',
+      type: 'SIGNUP_FEE',
+      name: 'Signup Fee',
+      amount: SIGNUP_FEE,
+      user: req.user,
+    });
+    if (!txn) return;
+    return res.status(200).json({ success: true, data: { status: 'PENDING', ...qrView(txn) } });
+  } catch (error) {
+    return qrError(res, error);
   }
 };
 
@@ -243,7 +348,9 @@ export const syncTopupTransaction = async (txn) => {
     return (
       (await Transaction.findOneAndUpdate(
         { _id: txn._id, status: 'PENDING' },
-        { $set: { status: 'FAILED', 'metadata.failureReason': 'No QR was created for this top-up' } },
+        {
+          $set: { status: 'FAILED', 'metadata.failureReason': 'No QR was created for this top-up' },
+        },
         { new: true }
       )) || txn
     );
@@ -294,7 +401,7 @@ export const getTopupStatus = async (req, res) => {
     const txn = await Transaction.findOne({
       transactionId: reference,
       userId: req.user.id,
-      type: 'WALLET_TOPUP',
+      type: { $in: QR_TYPES },
     });
     if (!txn) {
       return res.status(404).json({ success: false, message: 'Top-up not found' });
@@ -344,13 +451,15 @@ export const topupWebhook = async (req, res) => {
     const reference = String(payment.notes?.reference || qrCode.notes?.reference || '').trim();
     if (!reference) {
       console.error('[Topup Webhook] credited event carries no reference note', body.payload);
-      return res.status(400).json({ success: false, message: 'Payment carries no top-up reference' });
+      return res
+        .status(400)
+        .json({ success: false, message: 'Payment carries no top-up reference' });
     }
     if (payment.status && payment.status !== 'captured') {
       return res.status(200).json({ success: true, credited: false, status: payment.status });
     }
 
-    const txn = await Transaction.findOne({ transactionId: reference, type: 'WALLET_TOPUP' });
+    const txn = await Transaction.findOne({ transactionId: reference, type: { $in: QR_TYPES } });
     if (!txn) {
       return res.status(404).json({ success: false, message: 'Top-up not found' });
     }

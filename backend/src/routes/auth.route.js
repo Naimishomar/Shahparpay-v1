@@ -16,6 +16,7 @@ import {
   readAadhaarAddress,
   signupRetailer,
 } from '../controllers/auth.controller.js';
+import { createSignupFeeQr, getTopupStatus } from '../controllers/topup.controller.js';
 import { authMiddlewares } from '../middlewares/auth.middleware.js';
 import { upload } from '../middlewares/multer.middleware.js';
 import { authLimiter } from '../middlewares/rateLimit.middleware.js';
@@ -67,6 +68,10 @@ router.post(
   ]),
   signupRetailer
 );
+
+// The ₹199 self-signup fee. Under /api/auth because a pending account is refused everywhere else.
+router.post('/signup-fee/qr', authMiddlewares, createSignupFeeQr);
+router.get('/signup-fee/status/:transactionId', authMiddlewares, getTopupStatus);
 
 // Onboarding: the address from the QR on the back of an Aadhaar photo.
 // Public: the self-signup form uses it before there is an account. Reads only, keeps nothing.

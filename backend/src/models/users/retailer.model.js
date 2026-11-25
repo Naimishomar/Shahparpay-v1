@@ -32,6 +32,8 @@ const retailerSchema = new mongoose.Schema(
     verificationStatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'approved' },
     verificationNote: { type: String, trim: true, default: null },
     verifiedAt: { type: Date, default: null },
+    // Set once a self signup's ₹199 fee is captured (topup.controller SIGNUP_FEE).
+    signupFeePaidAt: { type: Date, default: null },
     name: {
       type: String,
       required: true,

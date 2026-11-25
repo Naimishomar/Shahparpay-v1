@@ -40,7 +40,7 @@ const mockModel = (rows, keyOf) => ({
 const Transaction = mockModel(state.transactions, (row, q) =>
   (q.transactionId ? row.transactionId === q.transactionId : true) &&
   (q._id ? row._id === q._id : true) &&
-  (q.type ? row.type === q.type : true) &&
+  (q.type ? (q.type.$in ? q.type.$in.includes(row.type) : row.type === q.type) : true) &&
   (q.status ? row.status === q.status : true)
 );
 let failNextCredit = false;
@@ -53,6 +53,17 @@ const MainWallet = {
       throw new Error('simulated wallet write failure');
     }
     return realMainWallet.findOneAndUpdate(...args);
+  },
+};
+
+// Retailer top-ups land in the Trade (AEPS) wallet, mocked as `MainWallet`
+// above; the signup fee's credit lands in the Utility (MAIN) wallet.
+state.utilityWallets = [];
+const utilityWallet = mockModel(state.utilityWallets, (row, q) => row.userId === q.userId);
+state.retailers = [];
+const Retailer = {
+  updateOne: async (q, update) => {
+    state.retailers.push({ _id: q._id, ...update.$set });
   },
 };
 
@@ -72,10 +83,11 @@ const { topupWebhook, creditTopup } = await (async () => {
   const helper = cut('const creditTopup = async', 'const creditTopup = async');
   const handler = cut('export const topupWebhook', 'const topupWebhook');
   const { verifyWebhookSignature, toRupees } = await import('../utils/razorpay.util.js');
+  const constants = cut('const SIGNUP_FEE = ', 'const SIGNUP_FEE = ').split('\nconst userModelFor')[0];
   return new Function(
-    'Transaction', 'MainWallet', 'AepsWallet', 'verifyWebhookSignature', 'toRupees',
-    `${helper}\n${handler}\nreturn { topupWebhook, creditTopup };`
-  )(Transaction, {}, MainWallet, verifyWebhookSignature, toRupees);
+    'Transaction', 'MainWallet', 'AepsWallet', 'Retailer', 'verifyWebhookSignature', 'toRupees',
+    `${constants}\n${helper}\n${handler}\nreturn { topupWebhook, creditTopup };`
+  )(Transaction, utilityWallet, MainWallet, Retailer, verifyWebhookSignature, toRupees);
 })();
 
 const sign = (raw, secret) => crypto.createHmac('sha256', secret).update(raw).digest('hex');
@@ -229,5 +241,31 @@ assert.equal(balance(), 800);
 const settled = await post(paidFourth);
 assert.equal(settled.body.credited, true, 'the retry settles it');
 assert.equal(balance(), 1000);
+
+// --- the signup fee credits ₹10 to Utility, not the ₹199 paid ----------------
+
+state.transactions.push({
+  _id: 'txn_SUF1', transactionId: 'SUF1', userId: 'ret_1', type: 'SIGNUP_FEE', amount: 199,
+  status: 'PENDING', metadata: { provider: 'RAZORPAY', qrCodeId: 'qr_fee', userModel: 'Retailer' },
+});
+const fee = (paise) => ({
+  event: 'qr_code.credited',
+  payload: {
+    qr_code: { entity: { id: 'qr_fee', notes: { reference: 'SUF1' } } },
+    payment: { entity: { id: 'pay_fee', status: 'captured', amount: paise, notes: { reference: 'SUF1' } } },
+  },
+});
+const utility = () => state.utilityWallets.find((w) => w.userId === 'ret_1')?.balance;
+assert.equal((await post(fee(10000))).body.credited, false, 'less than ₹199 does not settle the fee');
+assert.equal(utility(), undefined);
+assert.equal((await post(fee(19900))).body.credited, true);
+assert.equal(utility(), 10, 'the fee puts ₹10 in the Utility wallet');
+assert.equal(balance(), 1000, 'and nothing in the Trade wallet');
+const feeRow = state.transactions.find((t) => t.transactionId === 'SUF1');
+assert.equal(feeRow.amount, 10, 'the row books the ₹10 credit, which the ledger reads');
+assert.equal(feeRow.metadata.paidAmount, 199);
+assert.ok(state.retailers.some((r) => r._id === 'ret_1' && r.signupFeePaidAt), 'the retailer is marked paid');
+assert.equal((await post(fee(19900))).body.credited, false, 'a replayed fee does not credit again');
+assert.equal(utility(), 10);
 
 console.log('topupWebhook: forged, replayed, mismatched, over-claimed and failed-write notifications credit nothing OK');

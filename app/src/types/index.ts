@@ -37,6 +37,8 @@ export interface User {
   /** The admin's reason when rejected. */
   verificationNote?: string;
   signupSource?: string;
+  /** Set once a self signup's ₹199 fee is paid. */
+  signupFeePaidAt?: string | null;
 }
 
 export interface AuthState {

@@ -213,6 +213,7 @@ const UserDetail = ({
                                     {role === 'retailer' && user.verificationStatus === 'pending' && <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}>Awaiting verification</span>}
                                     {role === 'retailer' && user.verificationStatus === 'rejected' && <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${STATUS_PILL.FAILED}`}>Signup rejected</span>}
                                     {role === 'retailer' && user.signupSource === 'self' && <span className="rounded-full border bg-background/70 px-2.5 py-0.5 text-xs">Self signup</span>}
+                                    {role === 'retailer' && user.signupSource === 'self' && <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${user.signupFeePaidAt ? STATUS_PILL.SUCCESS : PENDING_PILL}`}>{user.signupFeePaidAt ? '₹199 fee paid' : '₹199 fee unpaid'}</span>}
                                     {role === 'retailer' && (aepsKycDone(user)
                                         ? <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20"><ShieldCheck size={12} /> KYC verified</span>
                                         : <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}><Clock size={12} /> {aepsStepLabel(user)}</span>)}

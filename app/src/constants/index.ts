@@ -167,6 +167,8 @@ export const API_ENDPOINTS = {
     changePassword: '/api/auth/change-password',
     createRetailer: '/api/auth/create-retailer',
     signupRetailer: '/api/auth/signup-retailer',
+    signupFeeQr: '/api/auth/signup-fee/qr',
+    signupFeeStatus: '/api/auth/signup-fee/status', // append /:transactionId
     aadhaarAddress: '/api/auth/aadhaar-address',
     createDistributor: '/api/auth/create-distributor',
   },

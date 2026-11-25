@@ -22,6 +22,9 @@ interface User {
     verificationStatus?: 'pending' | 'approved' | 'rejected';
     /** Why the admin rejected the signup. */
     verificationNote?: string;
+    signupSource?: 'distributor' | 'self';
+    /** Set once a self signup's ₹199 fee is paid. */
+    signupFeePaidAt?: string | null;
 }
 
 interface AuthContextType {

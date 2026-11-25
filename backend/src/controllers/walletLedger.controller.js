@@ -12,6 +12,8 @@ const CREDIT_WITH_COMMISSION = new Set(['AEPS_WITHDRAWAL', 'MATM', 'UPI_CASH_WIT
 const CREDIT_AMOUNT_ONLY = new Set([
   'AADHAAR_PAY',
   'WALLET_TOPUP',
+  // The ₹10 of a self signup's ₹199 fee that lands in the Utility wallet; the row's amount is that ₹10.
+  'SIGNUP_FEE',
   'DIRECT_PAYOUT_REFUND',
   'AEPS_DEPOSIT_REFUND',
   'FUND_REQUEST',
@@ -58,6 +60,7 @@ const TXNTYPE_LABELS = {
   AADHAAR_PAY: 'AadhaarPay',
   UPI_CASH_WITHDRAWAL: 'UPI Cash Withdrawal',
   WALLET_TOPUP: 'Wallet Topup',
+  SIGNUP_FEE: 'Signup Credit',
   RECHARGE: 'Recharge',
   BILL_PAYMENT: 'BBPS',
   DMT: 'DMT',
@@ -113,6 +116,8 @@ export const getNarration = (tx) => {
       return `MATM cash withdrawal${m.bankRRN ? ' RRN ' + m.bankRRN : ''}`;
     case 'WALLET_TOPUP':
       return `Wallet Top-up ${m.utr ? 'UTR ' + m.utr : ''}`.trim();
+    case 'SIGNUP_FEE':
+      return `Signup fee ₹${m.paidAmount || 199} paid; onboarding credit`;
     case 'RECHARGE':
       // `operator` is the provider's numeric code ("11"); the name is what a person reads.
       return `${m.operatorName || 'Recharge'} ${m.caNumber || ''}`.trim();

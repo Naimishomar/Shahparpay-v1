@@ -1,8 +1,9 @@
 import { AppSidebar } from "@/components/app-sidebar"
 import Header from "@/components/Header"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { Suspense, useState } from "react"
-import { Clock, Loader2, LogOut, RefreshCcw, XCircle } from "lucide-react"
+import { Suspense, useEffect, useRef, useState } from "react"
+import axios from "axios"
+import { Clock, Loader2, LogOut, QrCode, RefreshCcw, XCircle } from "lucide-react"
 import { toast } from "sonner"
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "../components/distributor/shared"
 import { Outlet, Navigate, useLocation } from "react-router-dom"
@@ -74,6 +75,7 @@ const UnderVerification = () => {
                             : `Thanks for signing up${user?.name ? `, ${user.name}` : ''}. An admin is checking your details and documents; you can use the portal once they approve your account.`}
                     </p>
                 </div>
+                {!rejected && user?.signupSource === 'self' && !user.signupFeePaidAt && <SignupFee onPaid={checkSession} />}
                 {rejected && (
                     <div className="space-y-3 text-left">
                         {user?.verificationNote && (
@@ -95,6 +97,71 @@ const UnderVerification = () => {
                     <button onClick={() => logout()} className={`${SECONDARY_BUTTON} flex-1 justify-center`}><LogOut size={16} /> Logout</button>
                 </div>
             </div>
+        </div>
+    );
+};
+
+type FeeQr = { transactionId: string; qrImage: string; amount: number };
+
+/** The ₹199 signup fee, paid by UPI QR; ₹10 of it lands in the Utility Wallet. */
+const SignupFee = ({ onPaid }: { onPaid: () => Promise<void> }) => {
+    const api = import.meta.env.VITE_BACKEND_URL;
+    const [qr, setQr] = useState<FeeQr | null>(null);
+    const [loading, setLoading] = useState(false);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+
+    const paid = async () => {
+        if (pollRef.current) clearInterval(pollRef.current);
+        toast.success('Payment received. ₹10 added to your Utility Wallet.');
+        await onPaid();
+    };
+
+    const start = async () => {
+        setLoading(true);
+        try {
+            const { data } = await axios.post(`${api}/api/auth/signup-fee/qr`);
+            if (data.data.status === 'SUCCESS') return paid();
+            setQr(data.data);
+            if (pollRef.current) clearInterval(pollRef.current);
+            pollRef.current = setInterval(async () => {
+                try {
+                    const res = await axios.get(`${api}/api/auth/signup-fee/status/${data.data.transactionId}`);
+                    const status = res.data?.data?.status;
+                    if (status === 'SUCCESS') paid();
+                    else if (status === 'FAILED') {
+                        if (pollRef.current) clearInterval(pollRef.current);
+                        setQr(null);
+                        toast.error('The QR expired. Generate a new one.');
+                    }
+                } catch { /* a dropped poll is not a failed payment; the webhook still settles it */ }
+            }, 4000);
+        } catch (e: any) {
+            toast.error(e?.response?.data?.message || 'Could not generate the payment QR.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="rounded-2xl border p-4 text-left space-y-3">
+            <div>
+                <p className="font-semibold">Pay the ₹199 signup fee</p>
+                <p className="text-xs text-muted-foreground">Required before an admin can approve you. ₹10 of it is added to your Utility Wallet for the AEPS onboarding fee.</p>
+            </div>
+            {qr ? (
+                <div className="text-center space-y-2">
+                    <div className="mx-auto w-fit rounded-xl bg-white p-3 shadow-md">
+                        <img src={qr.qrImage} alt="UPI QR" className="w-48 h-auto" />
+                    </div>
+                    <p className="flex items-center justify-center gap-2 text-sm text-amber-600"><Loader2 size={14} className="animate-spin" /> Waiting for payment…</p>
+                    <p className="font-mono text-[11px] opacity-60">Ref {qr.transactionId}</p>
+                </div>
+            ) : (
+                <button onClick={start} disabled={loading} className={`${PRIMARY_BUTTON} w-full`}>
+                    {loading ? <Loader2 size={16} className="animate-spin" /> : <QrCode size={16} />} Pay ₹199 by UPI
+                </button>
+            )}
         </div>
     );
 };

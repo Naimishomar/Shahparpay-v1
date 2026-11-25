@@ -61,6 +61,8 @@ const EXPECTED = {
   AEPS_DEPOSIT_REFUND: ['main', +1],
   // Inflows: the customer paid the retailer, over the gateway or a UPI QR.
   PG_COLLECTION: ['main', +1],
+  // The ₹10 Utility credit from a self signup's fee.
+  SIGNUP_FEE: ['main', +1],
   FUND_TRANSFER: ['main', -1],
   RECHARGE: ['main', -1],
   BILL_PAYMENT: ['main', -1],

@@ -19,6 +19,7 @@ const transactionSchema = new mongoose.Schema(
         'AEPS_WITHDRAWAL',
         'BILL_PAYMENT',
         'WALLET_TOPUP',
+        'SIGNUP_FEE',
         'RECHARGE',
         'AEPSTOMAIN',
         'QRTO_MAIN',
