@@ -341,3 +341,53 @@ input[type='range'] {
     --text-xs: 0.875rem;
   }
 }
+
+/*
+ * Faux product UI (hero demo and feature tiles). The portal's own look: white
+ * surfaces, a deep navy primary, quiet gray filler bars. One shadow per job.
+ */
+.landing-page {
+  --hd-ink: #1c1a17;
+  --hd-ink-2: #57524a;
+  --hd-ink-3: #8a847b;
+  --hd-line: rgba(28, 26, 23, 0.08);
+  --hd-line-strong: rgba(28, 26, 23, 0.14);
+  --hd-bar: #e7e4dd;
+  --hd-primary: #16142e;
+  --hd-shadow-hero: 0 0 0 1px rgba(28, 26, 23, 0.06), 0 2px 4px rgba(28, 26, 23, 0.04), 0 24px 48px -12px rgba(28, 26, 23, 0.16);
+  --hd-shadow-satellite: 0 0 0 1px rgba(28, 26, 23, 0.06), 0 6px 16px rgba(28, 26, 23, 0.1);
+}
+
+.hd-window {
+  box-shadow: var(--hd-shadow-hero);
+}
+
+.hd-satellite {
+  box-shadow: var(--hd-shadow-satellite);
+}
+
+.hd-caret {
+  animation: hd-blink 1s steps(1) infinite;
+}
+
+@keyframes hd-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* A feature tile: copy at the top, the product pinned below and bled off the bottom edge. */
+.hd-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--lp-surface);
+}
+
+.hd-tile__shot {
+  margin-top: auto;
+  padding: 0 8%;
+  margin-bottom: -28px;
+}

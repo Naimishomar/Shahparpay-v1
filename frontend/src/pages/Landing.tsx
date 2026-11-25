@@ -1,187 +1,385 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import {
-    Banknote,
-    Car,
+    ArrowRight,
+    BadgeCheck,
+    Check,
     CheckCircle2,
+    Clock3,
     CreditCard,
-    Droplets,
+    FileText,
     Fingerprint,
-    Flame,
-    Headset,
-    HeartPulse,
     IdCard,
     Landmark,
     MessageCircle,
     Phone,
+    PiggyBank,
     Plus,
-    Receipt,
     Send,
     ShieldCheck,
     Smartphone,
-    Tv,
     Users,
-    Wifi,
+    Wallet,
     Zap,
     type LucideIcon,
 } from 'lucide-react';
 import './landing.css';
 import LandingNav from '@/components/landing/LandingNav';
 import LandingFooter from '@/components/landing/LandingFooter';
+import HeroDemo from '@/components/landing/HeroDemo';
+import { BODY, BTN_PRIMARY, BTN_SECONDARY, CARD, H2, LEAD, SECTION, WRAP } from '@/components/landing/ui';
 
-import AepsReceipt from '@/components/landing/AepsReceipt';
-import { BODY, BTN_PRIMARY, BTN_SECONDARY, CARD, H2, H3, LEAD, ROW, SECTION, WRAP } from '@/components/landing/ui';
+/*
+ * Figures on this page follow the rate card in backend/src/utils/wallet.util.js
+ * (served at /api/commission). Change them together.
+ */
 
 const Icon = ({ icon: I, className = '' }: { icon: LucideIcon; className?: string }) => (
-    <I aria-hidden className={`size-[18px] shrink-0 text-[var(--lp-muted)] ${className}`} strokeWidth={1.5} />
+    <I aria-hidden className={`size-4 shrink-0 text-[var(--hd-ink-3)] ${className}`} strokeWidth={1.75} />
 );
 
-const START_STEPS = [
-    {
-        icon: Users,
-        title: 'Get your retailer ID',
-        text: 'Call us or meet your local distributor with your PAN, Aadhaar and shop details. We create your retailer account.',
-    },
-    {
-        icon: Fingerprint,
-        title: 'Finish KYC and connect a scanner',
-        text: 'Complete e-KYC from the dashboard and plug in an RD-certified fingerprint device. Our team helps you set it up.',
-    },
-    {
-        icon: Banknote,
-        title: 'Serve customers and earn',
-        text: 'Start AEPS, money transfer, recharge and bill payments. Commission lands in your wallet and settles to your bank.',
-    },
-];
+/** Filler where the eye does not land: the product's own gray lines. */
+const Bar = ({ w, className = '' }: { w: number; className?: string }) => (
+    <span aria-hidden className={`block h-[6px] rounded-full bg-[var(--hd-bar)] ${className}`} style={{ width: w }} />
+);
 
-const TRANSFER_AND_BILL_SERVICES = [
-    { label: 'IMPS', icon: Send },
-    { label: 'NEFT', icon: Landmark },
-    { label: 'Electricity', icon: Zap },
-    { label: 'Water', icon: Droplets },
-    { label: 'Gas and LPG', icon: Flame },
-    { label: 'Broadband', icon: Wifi },
-    { label: 'Mobile', icon: Smartphone },
-    { label: 'DTH', icon: Tv },
-    { label: 'FASTag', icon: Car },
-    { label: 'Insurance', icon: HeartPulse },
-    { label: 'Card bills', icon: CreditCard },
-    { label: 'Loan EMIs', icon: Receipt },
-];
+/** A row of a faux list: one line, 12px inset. */
+const Row = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+    <div className={`flex h-12 items-center gap-3 border-b border-[var(--hd-line)] px-3 text-[14px] last:border-0 ${className}`}>{children}</div>
+);
 
-const SERVICES = ['AEPS', 'Micro ATM', 'DMT', 'BBPS', 'UPI', 'Recharge', 'PAN', 'ITR'];
-
-function BillReceiptMockup() {
+/** A feature tile: copy at the top, the product pinned beneath it and bled off the bottom edge. */
+function Tile({ title, text, className = '', children }: { title: string; text: string; className?: string; children: React.ReactNode }) {
     return (
-        <div className={`${CARD} w-full max-w-sm p-5 text-left`}>
-            <div className="flex items-center justify-between text-sm">
-                <span className="text-[var(--lp-fg-2)]">Electricity bill</span>
-                <span className="lp-figure text-xs text-[var(--lp-muted)]">BBPS</span>
+        <article className={`hd-tile min-h-[380px] ${className}`}>
+            <div className="p-6 sm:p-8">
+                <h3 className="text-xl font-medium tracking-[-0.01em] text-[var(--lp-fg)]">{title}</h3>
+                <p className={`${BODY} mt-2 max-w-md`}>{text}</p>
             </div>
-            <div className="mt-4 flex items-center gap-3">
-                <div className="lp-icon-tile"><Icon icon={Zap} /></div>
-                <div>
-                    <p className="text-base font-medium text-[var(--lp-fg)]">WBSEDCL</p>
-                    <p className="lp-figure text-xs text-[var(--lp-muted)]">Consumer no. 1023 4567 89</p>
+            <div className="hd-tile__shot">
+                <div aria-hidden className="hd-window rounded-t-[14px] bg-white pb-10">{children}</div>
+            </div>
+        </article>
+    );
+}
+
+/* ------------------------------------------------------------------ tiles */
+
+function UpiShot() {
+    return (
+        <div className="grid gap-5 p-5 sm:grid-cols-[auto_1fr] sm:items-center">
+            <div className="mx-auto rounded-xl border border-[var(--hd-line)] p-3">
+                <QRCodeSVG value="https://shahparpay.com" size={132} fgColor="#16142e" level="M" />
+            </div>
+            <div className="min-w-0">
+                <div className="text-[12px] text-[var(--hd-ink-3)]">UPI cash withdrawal</div>
+                <div className="lp-figure mt-1 text-[26px] leading-none tracking-[-0.02em] text-[var(--hd-ink)]">₹2,000.00</div>
+                <div className="mt-4 overflow-hidden rounded-[10px] border border-[var(--hd-line)]">
+                    <Row>
+                        <CheckCircle2 aria-hidden className="size-4 text-[var(--lp-positive)]" strokeWidth={2} />
+                        <span className="text-[var(--hd-ink)]">Paid from customer's UPI app</span>
+                    </Row>
+                    <Row>
+                        <span className="text-[var(--hd-ink-2)]">Your commission</span>
+                        <span className="lp-figure ml-auto text-[var(--lp-accent-ink)]">+₹3.00</span>
+                    </Row>
                 </div>
-            </div>
-            <hr className="lp-tear my-4" />
-            <dl className="space-y-2 text-sm">
-                <div className={ROW}><dt className="text-[var(--lp-muted)]">Bill amount</dt><dd className="lp-figure text-[var(--lp-fg)]">₹1,186.00</dd></div>
-                <div className={ROW}><dt className="text-[var(--lp-muted)]">Due date</dt><dd className="lp-figure text-[var(--lp-fg)]">18 Oct</dd></div>
-            </dl>
-            <hr className="lp-tear my-4" />
-            <div className={`${ROW} text-sm`}>
-                <span className="inline-flex items-center gap-1.5 text-[var(--lp-positive)]"><CheckCircle2 aria-hidden className="size-4" strokeWidth={1.5} /> Paid · receipt sent</span>
-                <span className="lp-figure text-[var(--lp-accent-ink)]">+₹4.50</span>
             </div>
         </div>
     );
 }
 
-const RECHARGE_PLANS = [
+function DmtShot() {
+    return (
+        <div className="p-5">
+            <div className="flex items-center gap-3">
+                <span className="flex size-10 flex-none items-center justify-center rounded-full bg-[#e9e3f7] text-[13px] font-medium text-[#3b2a6b]">RK</span>
+                <div className="min-w-0">
+                    <div className="text-[14px] text-[var(--hd-ink)]">Ravi Kumar</div>
+                    <div className="lp-figure mt-0.5 text-[12px] text-[var(--hd-ink-3)]">SBI •••• 4771</div>
+                </div>
+                <span className="ml-auto inline-flex h-6 flex-none items-center gap-1 rounded-full bg-[#e8f5ec] px-2 text-[12px] text-[var(--lp-positive)]">
+                    <BadgeCheck aria-hidden className="size-3.5" strokeWidth={2} /> Verified
+                </span>
+            </div>
+            <div className="mt-5 rounded-[10px] border border-[var(--hd-line)]">
+                <Row>
+                    <span className="text-[var(--hd-ink-2)]">Send by IMPS</span>
+                    <span className="lp-figure ml-auto text-[var(--hd-ink)]">₹5,000.00</span>
+                </Row>
+                <Row>
+                    <Bar w={72} />
+                    <Bar w={44} className="ml-auto" />
+                </Row>
+            </div>
+            <div className="mt-4 flex h-10 items-center justify-center gap-2 rounded-[9px] bg-[var(--hd-primary)] text-[14px] font-medium text-white">
+                <Send aria-hidden className="size-4" strokeWidth={1.75} /> Send ₹5,000
+            </div>
+        </div>
+    );
+}
+
+function BillShot() {
+    return (
+        <div className="p-5">
+            <div className="flex items-center gap-3">
+                <span className="flex size-10 flex-none items-center justify-center rounded-[10px] bg-[#fdf3dc] text-[#a16207]"><Zap aria-hidden className="size-4" strokeWidth={1.75} /></span>
+                <div className="min-w-0">
+                    <div className="text-[14px] text-[var(--hd-ink)]">WBSEDCL electricity</div>
+                    <div className="lp-figure mt-0.5 text-[12px] text-[var(--hd-ink-3)]">Consumer 1023 4567 89</div>
+                </div>
+            </div>
+            <hr className="lp-tear my-4" />
+            <div className="flex items-baseline justify-between text-[14px]">
+                <span className="text-[var(--hd-ink-2)]">Bill amount</span>
+                <span className="lp-figure text-[var(--hd-ink)]">₹1,186.00</span>
+            </div>
+            <div className="mt-2 flex items-center gap-2"><Bar w={64} /><Bar w={38} className="ml-auto" /></div>
+            <hr className="lp-tear my-4" />
+            <div className="inline-flex items-center gap-1.5 text-[14px] text-[var(--lp-positive)]">
+                <CheckCircle2 aria-hidden className="size-4" strokeWidth={2} /> Paid · receipt sent
+            </div>
+        </div>
+    );
+}
+
+const PLANS = [
     { price: '₹239', detail: '1.5 GB/day · 28 days' },
-    { price: '₹299', detail: '2 GB/day · 28 days' },
+    { price: '₹299', detail: '2 GB/day · 28 days', on: true },
     { price: '₹719', detail: '1.5 GB/day · 84 days' },
 ];
 
-function RechargePlansMockup() {
+function RechargeShot() {
     return (
-        <div className={`${CARD} w-full max-w-sm p-5 text-left`}>
-            <div className="flex items-center gap-3">
-                <div className="lp-icon-tile"><Icon icon={Smartphone} /></div>
-                <div>
-                    <p className="lp-figure text-base text-[var(--lp-fg)]">98XXX XXX21</p>
-                    <p className="text-xs text-[var(--lp-muted)]">Prepaid · West Bengal</p>
+        <div className="grid gap-5 p-5 sm:grid-cols-[1fr_1fr]">
+            <div>
+                <div className="flex items-center gap-3">
+                    <span className="flex size-10 flex-none items-center justify-center rounded-[10px] bg-[#f2f0eb]"><Smartphone aria-hidden className="size-4 text-[var(--hd-ink-2)]" strokeWidth={1.75} /></span>
+                    <div className="min-w-0">
+                        <div className="lp-figure text-[14px] text-[var(--hd-ink)]">98XXX XXX21</div>
+                        <div className="mt-0.5 text-[12px] text-[var(--hd-ink-3)]">Prepaid · West Bengal</div>
+                    </div>
                 </div>
+                <div className="mt-5 flex h-10 items-center justify-center rounded-[9px] bg-[var(--hd-primary)] text-[14px] font-medium text-white">Recharge ₹299</div>
             </div>
-            <div className="mt-4 space-y-2">
-                {RECHARGE_PLANS.map((plan, i) => (
+            <div className="space-y-2">
+                {PLANS.map((p) => (
                     <div
-                        key={plan.price}
-                        className={`flex h-14 items-center justify-between rounded-[10px] border px-3 ${i === 1 ? 'border-[var(--lp-accent)] bg-[var(--lp-accent-soft)]' : 'border-[var(--lp-border)]'}`}
+                        key={p.price}
+                        className={`flex h-14 items-center justify-between gap-3 rounded-[10px] border px-3 ${p.on ? 'border-[var(--hd-primary)] bg-[#f6f5fa]' : 'border-[var(--hd-line)]'}`}
                     >
-                        <div>
-                            <p className="lp-figure text-sm text-[var(--lp-fg)]">{plan.price}</p>
-                            <p className="text-xs text-[var(--lp-muted)]">{plan.detail}</p>
+                        <div className="min-w-0">
+                            <div className="lp-figure text-[14px] text-[var(--hd-ink)]">{p.price}</div>
+                            <div className="mt-0.5 text-[12px] text-[var(--hd-ink-3)]">{p.detail}</div>
                         </div>
-                        {i === 1 && <span className="text-xs text-[var(--lp-accent-ink)]">Selected</span>}
+                        {p.on && <Check aria-hidden className="size-4 flex-none text-[var(--hd-primary)]" strokeWidth={2.25} />}
                     </div>
                 ))}
             </div>
-            <div className="mt-4 flex h-10 items-center justify-center rounded-[10px] bg-[var(--lp-fg)] text-sm font-medium text-white">Recharge ₹299</div>
         </div>
     );
 }
 
-const LEDGER_ROWS = [
-    { label: 'AEPS withdrawal', amount: '+₹12.00', credit: true },
-    { label: 'Money transfer', amount: '−₹5,000.00', credit: false },
-    { label: 'Recharge commission', amount: '+₹6.25', credit: true },
-    { label: 'Electricity bill', amount: '−₹1,186.00', credit: false },
-    { label: 'Settled to bank', amount: '−₹25,000.00', credit: false },
+function PanShot() {
+    return (
+        <div className="p-5">
+            <div className="flex items-center gap-2 text-[14px] text-[var(--hd-ink)]">
+                <Icon icon={IdCard} /> New PAN · Form 49A
+            </div>
+            <div className="mt-4 rounded-[10px] border border-[var(--hd-line)]">
+                <Row>
+                    <span className="text-[var(--hd-ink-2)]">Applicant</span>
+                    <span className="ml-auto text-[var(--hd-ink)]">Samar Ahuja</span>
+                </Row>
+                <Row>
+                    <span className="text-[var(--hd-ink-2)]">Fee</span>
+                    <span className="lp-figure ml-auto text-[var(--hd-ink)]">₹107.00</span>
+                </Row>
+                <Row>
+                    <span className="text-[var(--hd-ink-2)]">You earn</span>
+                    <span className="lp-figure ml-auto text-[var(--lp-accent-ink)]">+₹5.00</span>
+                </Row>
+            </div>
+            <div className="mt-4 flex items-center gap-2 rounded-[10px] bg-[#f7f6f3] px-3 py-3 text-[14px] text-[var(--hd-ink)]">
+                <Icon icon={FileText} /> TaxSuite · ITR filed
+                <span className="ml-auto inline-flex h-6 items-center rounded-full bg-[#e8f5ec] px-2 text-[12px] text-[var(--lp-positive)]">Done</span>
+            </div>
+        </div>
+    );
+}
+
+const LEADS = [
+    { name: 'Credit card', earns: '₹500', icon: CreditCard },
+    { name: 'Zero-balance savings account', earns: '₹100', icon: PiggyBank },
+    { name: 'Instant loan', earns: '₹100', icon: Landmark },
 ];
 
-function LedgerScreen() {
+function LeadShot() {
     return (
-        <div className="px-4 pb-6 pt-10 text-left">
-            <p className="text-xs text-[var(--lp-muted)]">Wallet balance</p>
-            <p className="lp-figure mt-1 text-2xl text-[var(--lp-fg)]">₹48,250.00</p>
-            <p className="mt-1 text-xs text-[var(--lp-fg-2)]">
-                <span className="lp-figure text-[var(--lp-accent-ink)]">+₹1,240.00</span> commission today
-            </p>
-            <p className="mb-2 mt-6 text-xs text-[var(--lp-muted)]">Today</p>
-            <div className="divide-y divide-[var(--lp-border)] rounded-xl border border-[var(--lp-border)] bg-white">
-                {LEDGER_ROWS.map((row) => (
-                    <div key={row.label} className="flex h-11 items-center justify-between px-3">
-                        <span className="text-xs text-[var(--lp-fg-2)]">{row.label}</span>
-                        <span className={`lp-figure text-xs ${row.credit ? 'text-[var(--lp-positive)]' : 'text-[var(--lp-fg)]'}`}>{row.amount}</span>
-                    </div>
+        <div className="p-5">
+            <div className="text-[12px] text-[var(--hd-ink-3)]">Paid once the lead is approved</div>
+            <div className="mt-3 rounded-[10px] border border-[var(--hd-line)]">
+                {LEADS.map((l) => (
+                    <Row key={l.name}>
+                        <Icon icon={l.icon} />
+                        <span className="min-w-0 truncate text-[var(--hd-ink)]">{l.name}</span>
+                        <span className="lp-figure ml-auto flex-none text-[var(--lp-accent-ink)]">{l.earns}</span>
+                    </Row>
                 ))}
             </div>
         </div>
     );
 }
 
-/** A phone outline around a screen; flat, no tilt. */
-const PhoneFrame = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-    <div className={`rounded-[36px] border border-[var(--lp-border-strong)] bg-[var(--lp-fg)] p-2 shadow-[var(--lp-shadow-lg)] ${className}`}>
-        <div className="relative overflow-hidden rounded-[28px] bg-[var(--lp-bg)]">
-            <div className="absolute left-1/2 top-3 h-4 w-16 -translate-x-1/2 rounded-full bg-[var(--lp-fg)]" />
-            {children}
+/* ---------------------------------------------------- wallet + phone shot */
+
+const LEDGER = [
+    { what: 'AEPS commission', amt: '+₹11.00', credit: true, when: '11:42' },
+    { what: 'UPI cash withdrawal', amt: '+₹3.00', credit: true, when: '11:18' },
+    { what: 'Transfer to Ravi Kumar', amt: '−₹5,010.62', credit: false, when: '10:55' },
+];
+
+function WalletShot() {
+    return (
+        <div className="relative mx-auto max-w-[1040px]">
+            <div className="hd-window overflow-hidden rounded-[14px] bg-white md:mr-[160px]">
+                <div className="flex h-[38px] items-center gap-2 border-b border-[var(--hd-line)] bg-[#f7f6f3] px-3.5">
+                    <span className="flex gap-1.5" aria-hidden>
+                        {['#ff5f57', '#febc2e', '#28c840'].map((c) => <span key={c} className="size-[10px] rounded-full" style={{ background: c }} />)}
+                    </span>
+                    <span className="mx-auto flex h-[22px] w-[200px] items-center justify-center rounded-md bg-white text-[11px] text-[var(--hd-ink-3)] ring-1 ring-[var(--hd-line)]">shahparpay.com/ledger</span>
+                </div>
+                <div className="p-5 sm:p-7 md:pr-[124px]">
+                    <div className="flex flex-wrap items-end justify-between gap-4">
+                        <div>
+                            <div className="text-[13px] text-[var(--hd-ink-3)]">Wallet balance</div>
+                            <div className="lp-figure mt-1 text-[32px] leading-none tracking-[-0.02em] text-[var(--hd-ink)]">₹48,261.00</div>
+                        </div>
+                        <div className="flex gap-2" aria-hidden>
+                            <span className="flex h-9 items-center rounded-[9px] border border-[var(--hd-line-strong)] px-3"><Bar w={48} /></span>
+                            <span className="flex h-9 items-center gap-2 rounded-[9px] bg-[var(--hd-primary)] px-3.5 text-[13px] font-medium text-white">
+                                <Landmark aria-hidden className="size-4" strokeWidth={1.75} /> Move to bank
+                            </span>
+                        </div>
+                    </div>
+                    <div className="mt-6 rounded-[10px] border border-[var(--hd-line)]">
+                        {LEDGER.map((r) => (
+                            <Row key={r.what} className="h-[52px]">
+                                <span className="lp-figure w-12 flex-none text-[12px] text-[var(--hd-ink-3)]">{r.when}</span>
+                                <span className="min-w-0 truncate text-[var(--hd-ink)]">{r.what}</span>
+                                <span className={`lp-figure ml-auto flex-none ${r.credit ? 'text-[var(--lp-positive)]' : 'text-[var(--hd-ink)]'}`}>{r.amt}</span>
+                            </Row>
+                        ))}
+                        {[[120, 64], [96, 72]].map(([a, b], i) => (
+                            <Row key={i} className="h-[52px]">
+                                <Bar w={32} className="flex-none" /><Bar w={a} /><Bar w={b} className="ml-auto" />
+                            </Row>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Satellite: the Android app, straddling the window's right edge over its margin. */}
+            <div className="absolute right-0 top-16 hidden w-[260px] md:block">
+                <div className="hd-satellite rounded-[34px] bg-[#16142e] p-[7px]">
+                    <div className="relative min-h-[470px] overflow-hidden rounded-[28px] bg-[#faf9f6] px-4 pb-6 pt-10">
+                        <span aria-hidden className="absolute left-1/2 top-3 h-[18px] w-[70px] -translate-x-1/2 rounded-full bg-[#16142e]" />
+                        <div className="flex items-center gap-2 text-[13px] text-[var(--lp-positive)]">
+                            <CheckCircle2 aria-hidden className="size-4" strokeWidth={2} /> Settled to your bank
+                        </div>
+                        <div className="lp-figure mt-3 text-[28px] leading-none tracking-[-0.02em] text-[var(--hd-ink)]">₹25,000.00</div>
+                        <div className="mt-2 flex items-center gap-1.5 text-[12px] text-[var(--hd-ink-2)]">
+                            <Landmark aria-hidden className="size-3.5 text-[var(--hd-ink-3)]" strokeWidth={1.75} /> SBI <span className="lp-figure">•••• 4771</span>
+                        </div>
+                        <hr className="lp-tear my-4" />
+                        <div className="flex items-baseline justify-between text-[12px]">
+                            <span className="text-[var(--hd-ink-2)]">Payout charge</span>
+                            <span className="lp-figure text-[var(--hd-ink)]">₹5 + GST</span>
+                        </div>
+                        <div className="mt-4 space-y-2.5" aria-hidden>
+                            <Bar w={140} /><Bar w={96} /><Bar w={118} /><Bar w={0} className="h-4 bg-transparent" /><Bar w={120} /><Bar w={84} /><Bar w={132} /><Bar w={100} />
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
+    );
+}
+
+/* ------------------------------------------------- distributor network shot */
+
+const SWITCHES = ['AEPS', 'DMT', 'Recharge', 'PAN'];
+const RETAILERS = [
+    { name: 'Sunita General Store', place: 'Howrah', initials: 'SG', tint: '#e3eefb', ink: '#1e4f8a', off: ['PAN'] },
+    { name: 'Maa Tara Telecom', place: 'Bally', initials: 'MT', tint: '#fbe8e3', ink: '#8a3a1e', off: [] as string[] },
+];
+
+const Toggle = ({ on }: { on: boolean }) => (
+    <span className={`relative inline-flex h-[18px] w-[30px] flex-none rounded-full transition-colors ${on ? 'bg-[var(--hd-primary)]' : 'bg-[#dcd8d0]'}`}>
+        <span className={`absolute top-[2px] size-[14px] rounded-full bg-white shadow-sm ${on ? 'left-[14px]' : 'left-[2px]'}`} />
+    </span>
 );
+
+function NetworkShot() {
+    return (
+        <div className="hd-window overflow-hidden rounded-[14px] bg-white">
+            <div className="flex items-center justify-between gap-4 border-b border-[var(--hd-line)] px-5 py-4">
+                <div className="text-[15px] font-medium text-[var(--hd-ink)]">Your retailers</div>
+                <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-[#fdf3dc] px-2.5 text-[12px] text-[#8a5a07]">
+                    <Clock3 aria-hidden className="size-3.5" strokeWidth={1.75} /> 2 fund requests
+                </span>
+            </div>
+            {RETAILERS.map((r) => (
+                <div key={r.name} className="border-b border-[var(--hd-line)] px-5 py-4 last:border-0">
+                    <div className="flex items-center gap-3">
+                        <span className="flex size-9 flex-none items-center justify-center rounded-full text-[12px] font-medium" style={{ background: r.tint, color: r.ink }}>{r.initials}</span>
+                        <div className="min-w-0">
+                            <div className="truncate text-[14px] text-[var(--hd-ink)]">{r.name}</div>
+                            <div className="text-[12px] text-[var(--hd-ink-3)]">{r.place}</div>
+                        </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 pl-12">
+                        {SWITCHES.map((s) => (
+                            <span key={s} className="inline-flex items-center gap-2 text-[12px] text-[var(--hd-ink-2)]">
+                                <Toggle on={!r.off.includes(s)} /> {s}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            ))}
+            <div className="flex items-center gap-3 px-5 py-4" aria-hidden>
+                <span className="size-9 flex-none rounded-full bg-[#f2f0eb]" />
+                <div className="space-y-2"><Bar w={130} /><Bar w={70} /></div>
+            </div>
+        </div>
+    );
+}
+
+/* -------------------------------------------------------------------- data */
+
+const START_STEPS = [
+    { icon: Users, title: 'Sign up online', text: 'Four short steps with your PAN, Aadhaar, bank and shop details, then a one-time ₹199 registration fee by UPI.' },
+    { icon: Fingerprint, title: 'Get approved and finish KYC', text: 'Our team approves your account. Complete AEPS eKYC from the dashboard with an RD-certified fingerprint scanner.' },
+    { icon: Wallet, title: 'Load your wallet and start', text: 'Raise a fund request to your distributor. Serve customers, earn on every transaction, settle to your bank.' },
+];
+
+const RATES = [
+    { what: 'AEPS withdrawal of ₹3,000', earns: '₹11' },
+    { what: 'UPI cash withdrawal of ₹2,000', earns: '₹3' },
+    { what: 'PAN card application', earns: '₹5' },
+    { what: 'Approved credit card lead', earns: '₹500' },
+];
 
 const FAQ_DATA = {
     support: [
         {
             q: 'How much can I actually earn from this?',
-            a: 'You earn a commission on every transaction — AEPS withdrawals, money transfers, recharges, bill payments, PAN applications and TaxSuite filings each carry their own rate. Your dashboard shows the exact commission on every transaction, and the full rate card is shared before you sign up.',
+            a: 'You earn a commission on every transaction — AEPS and UPI cash withdrawals, Micro ATM, recharges, bill payments, PAN applications and approved leads each carry their own rate. Your dashboard shows the exact commission on every transaction, and the full rate card is on the Commission page.',
         },
         {
             q: 'How do I get my earnings out?',
-            a: 'Commissions land in your wallet as each transaction completes. Settle to your own bank account from the dashboard whenever you like — there is no minimum holding period and no waiting for month-end.',
+            a: 'Commissions land in your wallet as each transaction completes. Move money to your own bank account from the dashboard whenever you like; each payout costs ₹5 + GST. There is no minimum holding period and no waiting for month-end.',
         },
         {
             q: "What if a transaction fails but the customer's money is debited?",
@@ -190,10 +388,6 @@ const FAQ_DATA = {
         {
             q: 'Is there someone I can call when I am stuck at the counter?',
             a: 'Yes. Call +91 8240039776 during business hours, message us on WhatsApp, or raise a ticket from inside the dashboard. Most counter issues are resolved on the same call.',
-        },
-        {
-            q: 'Do I need to be a registered business to join?',
-            a: 'No. Individual shop owners can sign up. You need your own PAN and Aadhaar, a bank account in your name, and a shop or counter where you serve customers.',
         },
         {
             q: 'Can I offer these services from more than one shop?',
@@ -206,16 +400,20 @@ const FAQ_DATA = {
     ],
     getting_started: [
         {
+            q: 'Is there a joining fee?',
+            a: 'There is a one-time ₹199 registration fee, paid by UPI at the end of the online signup. Your signup reaches our team for approval only after the fee is paid. There is no monthly charge.',
+        },
+        {
             q: 'What documents do I need to sign up?',
             a: 'Your PAN card, Aadhaar card, a cancelled cheque or bank passbook page, a photograph, and a photo of your shop. If your shop is registered, keep the GST or Udyam certificate handy as well.',
         },
         {
             q: 'How long before I can start taking transactions?',
-            a: 'Basic services such as recharge and bill payments open as soon as your account is verified. AEPS takes longer because the bank runs its own Aadhaar KYC on you first — that step is done through a fingerprint scanner and is usually cleared within a working day.',
+            a: 'Basic services such as recharge and bill payments open as soon as your account is approved. AEPS takes longer because the bank runs its own Aadhaar KYC on you first — that step is done through a fingerprint scanner and is usually cleared within a working day.',
         },
         {
-            q: 'Is there a joining fee?',
-            a: 'Signing up is free. You only need working balance in your wallet to start transacting, and a fingerprint scanner if you plan to offer AEPS.',
+            q: 'Do I need to be a registered business to join?',
+            a: 'No. Individual shop owners can sign up. You need your own PAN and Aadhaar, a bank account in your name, and a shop or counter where you serve customers.',
         },
         {
             q: 'How do I put money into my wallet?',
@@ -228,8 +426,8 @@ const FAQ_DATA = {
             a: 'Any RD-service certified scanner works — Mantra MFS100, Morpho MSO 1300 E3, Startek FM220U and Evolute are the ones our retailers use most. The device must be registered and its RD service installed before your first AEPS transaction.',
         },
         {
-            q: 'Can I use AEPS from my phone?',
-            a: 'Yes, with an OTG-compatible scanner connected to an Android phone, using the app. Most retailers keep a laptop or desktop at the counter for higher daily volumes.',
+            q: 'Do I need a scanner for UPI cash withdrawal?',
+            a: 'No. You generate a QR for the amount, the customer pays it from any UPI app on their phone, and you hand over the cash once it shows as paid. It works from ₹500 to ₹5,000.',
         },
         {
             q: 'What do I need for Micro ATM?',
@@ -247,7 +445,7 @@ const FAQ_DATA = {
         },
         {
             q: 'Who actually moves the money?',
-            a: 'Transactions run over NPCI rails — AEPS, IMPS and BBPS — through our licensed banking partners. Shahparpay is the platform you work on; the settlement itself sits with the bank and the network.',
+            a: 'Transactions run over NPCI rails — AEPS, UPI, IMPS and BBPS — through our licensed banking partners. Shahparpay is the platform you work on; the settlement itself sits with the bank and the network.',
         },
         {
             q: 'What happens if someone gets into my account?',
@@ -268,8 +466,10 @@ const FAQ_TABS: { key: FaqCategory; label: string }[] = [
     { key: 'support', label: 'Earnings and support' },
 ];
 
+/* -------------------------------------------------------------------- page */
+
 const Landing: React.FC = () => {
-    const [faqCategory, setFaqCategory] = useState<FaqCategory>('support');
+    const [faqCategory, setFaqCategory] = useState<FaqCategory>('getting_started');
     const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
     return (
@@ -278,37 +478,134 @@ const Landing: React.FC = () => {
 
             {/* ------------------------------------------------------------ HERO */}
             <section className="border-b border-[var(--lp-border)]">
-                <div className={`${WRAP} grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-12 lg:gap-12 lg:py-24`}>
-                    <div className="lg:col-span-7">
-                        <h1 className="lp-serif text-balance text-[52px] leading-[1] text-[var(--lp-fg)] sm:text-[68px] lg:text-[76px]">
+                <div className={`${WRAP} grid items-center gap-12 py-14 sm:py-20 lg:grid-cols-12 lg:gap-12 lg:py-24`}>
+                    <div className="lg:col-span-5">
+                        <h1 className="lp-serif text-balance text-[48px] leading-[1] text-[var(--lp-fg)] sm:text-[64px] xl:text-[72px]">
                             Turn your shop into a banking point for your neighbourhood
                         </h1>
                         <p className={`${LEAD} mt-6 max-w-xl sm:text-xl`}>
-                            ₹0 to join. You earn a commission on every transaction, and settle to your bank daily.
+                            AEPS and UPI cash withdrawal, money transfer, bills and recharge on one login. You earn on every transaction and move it to your bank whenever you like.
                         </p>
                         <div className="mt-8 flex flex-wrap gap-3">
-                            <Link to="/login" className={BTN_PRIMARY}>Sign in</Link>
-                            <Link to="/contact" className={BTN_SECONDARY}>Talk to us</Link>
+                            <Link to="/signup" className={BTN_PRIMARY}>Start your signup <ArrowRight aria-hidden className="size-4" strokeWidth={2} /></Link>
+                            <Link to="/login" className={BTN_SECONDARY}>Sign in</Link>
                         </div>
                         <ul className="mt-10 flex flex-wrap gap-x-6 gap-y-3 text-sm text-[var(--lp-fg-2)]">
                             <li className="flex items-center gap-2"><Icon icon={ShieldCheck} /> Aadhaar data never stored</li>
                             <li className="flex items-center gap-2"><Icon icon={Zap} /> Runs on NPCI rails</li>
-                            <li className="flex items-center gap-2"><Icon icon={CheckCircle2} /> Retailers across West Bengal</li>
+                            <li className="flex items-center gap-2"><Icon icon={Smartphone} /> Web and Android app</li>
                         </ul>
                     </div>
+                    <div className="lg:col-span-7">
+                        <div className="rounded-[20px] bg-[var(--lp-surface)]">
+                            <HeroDemo />
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ------------------------------------------------- SERVICES BENTO */}
+            <section id="products" className={`${SECTION} scroll-mt-16`}>
+                <div className={WRAP}>
+                    <div className="max-w-3xl">
+                        <p className="lp-eyebrow">Services</p>
+                        <h2 className={`${H2} mt-3`}>Every errand your customers bring, on one counter</h2>
+                    </div>
+
+                    <div className="mt-12 grid gap-4 lg:grid-cols-12">
+                        <Tile
+                            className="lg:col-span-7"
+                            title="UPI cash withdrawal"
+                            text="No scanner, no card. Show a QR for the amount, the customer pays from any UPI app, you hand over the cash. ₹500 to ₹5,000."
+                        >
+                            <UpiShot />
+                        </Tile>
+                        <Tile
+                            className="lg:col-span-5"
+                            title="Money transfer"
+                            text="Cash in hand to any bank account over IMPS. The account holder's name is checked before a rupee leaves."
+                        >
+                            <DmtShot />
+                        </Tile>
+                        <Tile
+                            className="lg:col-span-5"
+                            title="Bill payments"
+                            text="Electricity, water, gas, broadband, FASTag, insurance and credit card bills on Bharat BillPay, with an instant receipt."
+                        >
+                            <BillShot />
+                        </Tile>
+                        <Tile
+                            className="lg:col-span-7"
+                            title="Mobile and DTH recharge"
+                            text="Every prepaid operator and DTH provider, with current plans listed so you are not hunting for a pack while a customer waits."
+                        >
+                            <RechargeShot />
+                        </Tile>
+                        <Tile
+                            className="lg:col-span-6"
+                            title="PAN card and TaxSuite filing"
+                            text="New PAN applications, corrections and income tax returns. Higher value work than a recharge."
+                        >
+                            <PanShot />
+                        </Tile>
+                        <Tile
+                            className="lg:col-span-6"
+                            title="Lead generation"
+                            text="Refer customers for credit cards, savings accounts and instant loans, and earn a flat amount when the bank approves."
+                        >
+                            <LeadShot />
+                        </Tile>
+                    </div>
+
+                    <p className="mt-6 text-sm text-[var(--lp-fg-2)]">
+                        Also on every counter: AEPS balance enquiry, mini statement, cash deposit and Aadhaar Pay, Micro ATM, and payment links to collect from customers.
+                    </p>
+                </div>
+            </section>
+
+            {/* ------------------------------------------- WALLET AND SETTLEMENT */}
+            <section className={`${SECTION} lp-band`}>
+                <div className={WRAP}>
+                    <div className="max-w-2xl">
+                        <p className="lp-eyebrow">Wallet and settlement</p>
+                        <h2 className={`${H2} mt-3`}>Know exactly what you earned, and take it home</h2>
+                        <p className={`${LEAD} mt-4`}>
+                            One wallet across every service, a line for each credit and debit, and a report per service you can filter and export. Move the balance to your bank from the web or the app.
+                        </p>
+                    </div>
+                    <div className="mt-12">
+                        <WalletShot />
+                    </div>
+                </div>
+            </section>
+
+            {/* ---------------------------------------------- DISTRIBUTOR NETWORK */}
+            <section className={SECTION}>
+                <div className={`${WRAP} grid items-center gap-12 lg:grid-cols-12 lg:gap-16`}>
                     <div className="lg:col-span-5">
-                        <AepsReceipt />
+                        <p className="lp-eyebrow">For distributors</p>
+                        <h2 className={`${H2} mt-3`}>Run a network of counters from one place</h2>
+                        <p className={`${LEAD} mt-4`}>
+                            Add retailers, switch each service on or off per shop, approve their wallet top-ups and earn a share of every transaction they make.
+                        </p>
+                        <Link to="/contact" className={`${BTN_SECONDARY} mt-8`}>Ask about a distributor account</Link>
+                    </div>
+                    <div className="lg:col-span-7">
+                        <div className="rounded-[20px] bg-[var(--lp-surface)] px-[8%] pt-10 sm:pt-12">
+                            <div className="-mb-px max-h-[380px] overflow-hidden">
+                                <NetworkShot />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
 
             {/* ------------------------------------------------- HOW TO START */}
-            <section className={SECTION}>
+            <section className={`${SECTION} lp-band`}>
                 <div className={WRAP}>
                     <div className="max-w-2xl">
                         <p className="lp-eyebrow">Get started</p>
                         <h2 className={`${H2} mt-3`}>Open your banking point in three steps</h2>
-                        <p className={`${LEAD} mt-4`}>No joining fee, no monthly charge, and our team helps you at every step.</p>
                     </div>
 
                     <ol className="mt-12 grid gap-4 md:grid-cols-3">
@@ -325,253 +622,47 @@ const Landing: React.FC = () => {
                     </ol>
 
                     <div className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
+                        <Link to="/signup" className={BTN_PRIMARY}>Start your signup</Link>
                         <a href="tel:+918240039776" className={BTN_SECONDARY}>
                             <Icon icon={Phone} /> <span className="lp-figure">+91 8240039776</span>
                         </a>
-                        <span className="text-sm text-[var(--lp-fg-2)]">or ask your local Shahparpay distributor</span>
                     </div>
                 </div>
             </section>
 
-            {/* ------------------------------------ EVERY SERVICE, ONE LOGIN */}
-            <section className={`${SECTION} lp-band`}>
-                <div className={`${WRAP} grid items-center gap-12 lg:grid-cols-12 lg:gap-16`}>
-                    <div className="lg:col-span-5">
-                        <h2 className={H2}>Every service your customers ask for, on one login</h2>
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2 lg:col-span-7">
-                        <div className={`${CARD} p-6`}>
-                            <p className="text-sm text-[var(--lp-fg-2)]">Transactions this week</p>
-                            <p className="lp-figure mt-3 text-[32px] leading-none text-[var(--lp-fg)]">2,847</p>
-                            <p className="mt-3 text-sm text-[var(--lp-muted)]"><span className="text-[var(--lp-positive)]">+3.5%</span> vs last week</p>
-                        </div>
-
-                        <div className={`${CARD} p-6`}>
-                            <p className="text-sm text-[var(--lp-fg-2)]">No hidden charges</p>
-                            <p className="lp-figure mt-3 text-[32px] leading-none text-[var(--lp-fg)]">₹0</p>
-                            <p className="mt-3 text-sm text-[var(--lp-muted)]">to join, and nothing monthly</p>
-                        </div>
-
-                        <div className={`${CARD} p-6 sm:col-span-2`}>
-                            <div className="flex items-center gap-3">
-                                <div className="flex size-10 items-center justify-center rounded-full bg-[var(--lp-surface)] text-sm text-[var(--lp-fg-2)]">AV</div>
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-base text-[var(--lp-fg)]">Abhishek Verma</p>
-                                    <p className="text-sm text-[var(--lp-muted)]">Retailer KYC verified</p>
-                                </div>
-                                <span className="lp-figure text-base text-[var(--lp-fg)]">₹11,000.00</span>
-                            </div>
-                            <hr className="lp-tear my-4" />
-                            <div className="flex items-center justify-between text-sm">
-                                <span className="flex items-center gap-2 text-[var(--lp-fg-2)]"><Icon icon={Fingerprint} /> AEPS cash withdrawal</span>
-                                <span className="text-[var(--lp-positive)]">Settled</span>
-                            </div>
-                        </div>
-
-                        <div className={`${CARD} p-6`}>
-                            <p className="text-sm text-[var(--lp-fg-2)]">On every counter</p>
-                            <ul className="mt-4 flex flex-wrap gap-2">
-                                {SERVICES.map((s) => (
-                                    <li key={s} className="rounded-md border border-[var(--lp-border)] px-2 py-1 text-sm text-[var(--lp-fg)]">{s}</li>
-                                ))}
-                            </ul>
-                        </div>
-
-                        <div className={`${CARD} flex flex-col p-6`}>
-                            <div className="lp-icon-tile"><Icon icon={Headset} /></div>
-                            <p className="mt-4 text-base text-[var(--lp-fg)]">Our team sets up your counter with you</p>
-                            <p className="mt-1 text-sm text-[var(--lp-muted)]">Call <span className="lp-figure">+91 8240039776</span> · Mon–Sat</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ------------------------------------------ SERVICES IN DETAIL */}
-            <section id="products" className={`${SECTION} scroll-mt-16`}>
-                <div className={WRAP}>
-                    <h2 className={`${H2} max-w-3xl`}>Cash withdrawal, money transfer, bills, recharge. All from your counter</h2>
-
-                    <div className="mt-12 grid gap-4 lg:grid-cols-12">
-                        {/* AEPS */}
-                        <article className={`${CARD} flex flex-col overflow-hidden lg:col-span-7`}>
-                            <div className="p-6 sm:p-8">
-                                <h3 className={H3}>AEPS cash withdrawal</h3>
-                                <p className={`${BODY} mt-3 max-w-md`}>
-                                    Your customer puts a finger on the scanner and walks out with cash. No card, no passbook, no trip to a bank branch. You earn on every withdrawal.
-                                </p>
-                            </div>
-                            <div className="mt-auto flex justify-center bg-[var(--lp-surface)] px-6 pt-8">
-                                <PhoneFrame className="-mb-24 w-64 sm:w-72">
-                                    <div className="space-y-3 px-4 pb-28 pt-10">
-                                        <div className="flex items-center justify-between rounded-xl border border-[var(--lp-border)] bg-white p-3">
-                                            <div>
-                                                <p className="text-sm text-[var(--lp-fg)]">Sunita Devi</p>
-                                                <p className="text-xs text-[var(--lp-positive)]">Aadhaar verified</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-xs text-[var(--lp-muted)]">Withdrawing</p>
-                                                <p className="lp-figure text-sm text-[var(--lp-fg)]">₹2,000.00</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-between rounded-xl border border-[var(--lp-border)] bg-white p-3">
-                                            <div>
-                                                <p className="text-sm text-[var(--lp-fg)]">Your commission</p>
-                                                <p className="text-xs text-[var(--lp-muted)]">Credited to wallet</p>
-                                            </div>
-                                            <p className="lp-figure text-sm text-[var(--lp-accent-ink)]">+₹14.00</p>
-                                        </div>
-                                        <div className="rounded-xl border border-[var(--lp-border)] bg-white p-3">
-                                            <p className="text-xs text-[var(--lp-muted)]">Bank chosen automatically</p>
-                                            <ul className="mt-2 divide-y divide-[var(--lp-border)] text-sm text-[var(--lp-fg)]">
-                                                {['State Bank of India', 'Bank of Baroda', 'Punjab National Bank'].map((b) => (
-                                                    <li key={b} className="py-2">{b}</li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </PhoneFrame>
-                            </div>
-                        </article>
-
-                        {/* Money transfer and bills */}
-                        <article id="payouts" className={`${CARD} scroll-mt-16 p-6 sm:p-8 lg:col-span-5`}>
-                            <h3 className={H3}>Money transfer and bills</h3>
-                            <p className={`${BODY} mt-3`}>
-                                Send cash to any bank account over IMPS, pay an electricity or gas bill, recharge a phone or a FASTag. The errands that bring the same customers back to your shop every month.
-                            </p>
-                            <ul className="mt-8 grid grid-cols-2 gap-x-4 border-t border-[var(--lp-border)]">
-                                {TRANSFER_AND_BILL_SERVICES.map(({ label, icon }) => (
-                                    <li key={label} className="flex h-11 items-center gap-2.5 border-b border-[var(--lp-border)] text-sm text-[var(--lp-fg)]">
-                                        <Icon icon={icon} /> {label}
-                                    </li>
-                                ))}
-                            </ul>
-                        </article>
-
-                        {/* PAN and ITR */}
-                        <article id="identity" className={`${CARD} scroll-mt-16 p-6 sm:p-8 lg:col-span-5`}>
-                            <h3 className={H3}>PAN card and TaxSuite filing</h3>
-                            <p className={`${BODY} mt-3`}>
-                                Apply for a new PAN card, file a correction, or file an income tax return for a customer. Higher value work than a recharge, and nobody in the area is offering it.
-                            </p>
-                            <div className="mt-8 rounded-xl border border-[var(--lp-border)] bg-[var(--lp-bg)] p-5">
-                                <div className="flex items-center gap-2">
-                                    <Icon icon={IdCard} />
-                                    <p className="text-base text-[var(--lp-fg)]">PAN card application</p>
-                                </div>
-                                <p className="mt-1 text-sm text-[var(--lp-muted)]">New PAN · Form 49A · Aadhaar, photo and signature</p>
-                                <hr className="lp-tear my-4" />
-                                <dl className="space-y-2 text-sm">
-                                    <div className={ROW}><dt className="text-[var(--lp-muted)]">Applicant name</dt><dd className="text-[var(--lp-fg)]">Samar Ahuja</dd></div>
-                                    <div className={ROW}><dt className="text-[var(--lp-muted)]">Phone number</dt><dd className="lp-figure text-[var(--lp-fg)]">+91 98XXX XXX10</dd></div>
-                                    <div className={ROW}><dt className="text-[var(--lp-muted)]">Service fee</dt><dd className="lp-figure text-[var(--lp-fg)]">₹107.00</dd></div>
-                                </dl>
-                                <div className="mt-4 flex h-10 items-center justify-center rounded-[10px] bg-[var(--lp-fg)] text-sm font-medium text-white">Submit application</div>
-                            </div>
-                        </article>
-
-                        {/* Daily settlement */}
-                        <article className={`${CARD} p-6 sm:p-8 lg:col-span-7`}>
-                            <h3 className={H3}>Daily settlement</h3>
-                            <p className={`${BODY} mt-3 max-w-md`}>
-                                Move the day's earnings from your wallet to your own bank account, on your schedule.
-                            </p>
-                            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                                <div className="rounded-xl bg-[var(--lp-surface)] p-5">
-                                    <p className="text-sm text-[var(--lp-fg-2)]">Settled to your bank</p>
-                                    <p className="lp-figure mt-2 text-[32px] leading-none text-[var(--lp-fg)]">₹2,450.00</p>
-                                    <p className="lp-figure mt-2 text-xs text-[var(--lp-muted)]">29 Nov 2026 · 02:16 PM</p>
-                                    <hr className="lp-tear my-4" />
-                                    <p className="flex items-center gap-2 text-sm text-[var(--lp-fg-2)]"><Icon icon={Landmark} /> Your account <span className="lp-figure">•••• 4771</span></p>
-                                </div>
-                                <ul className="divide-y divide-[var(--lp-border)] rounded-xl border border-[var(--lp-border)]">
-                                    {[
-                                        { amt: '₹2,450.00', what: 'AEPS withdrawal', when: '4 min' },
-                                        { amt: '₹1,800.00', what: 'Money transfer', when: '22 min' },
-                                        { amt: '₹899.00', what: 'To UPI •••• 7712', when: '11 min' },
-                                    ].map((r) => (
-                                        <li key={r.what} className="flex h-16 items-center justify-between px-4">
-                                            <div>
-                                                <p className="lp-figure text-sm text-[var(--lp-fg)]">{r.amt}</p>
-                                                <p className="text-xs text-[var(--lp-muted)]">{r.what}</p>
-                                            </div>
-                                            <span className="text-xs text-[var(--lp-positive)]">Settled in <span className="lp-figure">{r.when}</span></span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        </article>
-                    </div>
-                </div>
-            </section>
-
-            {/* ----------------------------------------- BILLS AND RECHARGE */}
-            <section className={`${SECTION} lp-band`}>
-                <div className={WRAP}>
-                    <h2 className={H2}>Two more reasons they walk in</h2>
-                    <div className="mt-12 grid gap-12 md:grid-cols-2">
-                        <div>
-                            <BillReceiptMockup />
-                            <h3 className="mt-8 text-lg font-medium text-[var(--lp-fg)]">BBPS bill payments</h3>
-                            <p className={`${BODY} mt-2 max-w-md`}>
-                                Electricity, water, gas, broadband, LPG, FASTag, insurance premiums and credit card bills — all on the Bharat BillPay network, with an instant receipt for the customer.
-                            </p>
-                        </div>
-                        <div>
-                            <RechargePlansMockup />
-                            <h3 className="mt-8 text-lg font-medium text-[var(--lp-fg)]">Mobile and DTH recharge</h3>
-                            <p className={`${BODY} mt-2 max-w-md`}>
-                                Every prepaid operator and DTH provider, with current plans listed in the dashboard so you are not hunting for a pack while a customer waits. Small tickets, steady footfall, commission on each one.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ------------------------------------------ WALLET AND REPORTS */}
+            {/* --------------------------------------------- RATES + CTA */}
             <section className={SECTION}>
-                <div className={`${WRAP} grid items-center gap-12 lg:grid-cols-12 lg:gap-16`}>
-                    <div className="lg:col-span-7">
-                        <p className="lp-eyebrow">Wallet and reports</p>
-                        <h2 className={`${H2} mt-3`}>Know exactly what you earned</h2>
-                        <p className={`${LEAD} mt-4 max-w-xl`}>
-                            Every transaction, every commission and every settlement is on record, so the day's takings are never a guess.
-                        </p>
-                        <h3 className="mt-10 text-lg font-medium text-[var(--lp-fg)]">Your ledger, live</h3>
-                        <p className={`${BODY} mt-2 max-w-xl`}>
-                            One wallet across every service, with a running balance and a line for each credit and debit. Separate reports for AEPS, money transfer, recharge, bills, PAN and ITR, filterable by date and exportable whenever your accountant asks.
-                        </p>
-                    </div>
-                    <div className="flex justify-center lg:col-span-5">
-                        <PhoneFrame className="w-[272px]">
-                            <LedgerScreen />
-                        </PhoneFrame>
-                    </div>
-                </div>
-            </section>
-
-            {/* --------------------------------------------------------- CTA */}
-            <section className="pb-20 sm:pb-28">
                 <div className={WRAP}>
                     <div className="lp-counter rounded-[24px] p-8 sm:p-12 lg:p-16">
-                        <h2 className="lp-serif max-w-3xl text-[40px] leading-[1.04] text-white sm:text-[52px] lg:text-[60px]">
-                            Your shop is already busy. Give people one more reason to come in
-                        </h2>
-                        <p className="mt-6 max-w-xl text-base leading-relaxed text-[var(--lp-on-ink-2)]">
-                            Nothing to pay to join and nothing to pay monthly. You keep a commission on every transaction, and you settle your wallet to your own bank account whenever you want.
-                        </p>
-                        <div className="mt-8 flex flex-wrap gap-3">
-                            <Link to="/login" className="inline-flex h-12 items-center rounded-[10px] bg-[#efe9de] px-5 text-base font-medium text-[var(--lp-fg)] transition-colors hover:bg-white">
-                                Sign in
-                            </Link>
-                            <Link to="/contact" className="inline-flex h-12 items-center rounded-[10px] border border-white/20 px-5 text-base font-medium text-white transition-colors hover:bg-white/10">
-                                Talk to us
-                            </Link>
+                        <div className="grid gap-12 lg:grid-cols-12">
+                            <div className="lg:col-span-6">
+                                <h2 className="lp-serif max-w-2xl text-[40px] leading-[1.04] text-white sm:text-[52px]">
+                                    Your shop is already busy. Give people one more reason to come in
+                                </h2>
+                                <div className="mt-8 flex flex-wrap gap-3">
+                                    <Link to="/signup" className="inline-flex h-12 items-center rounded-[10px] bg-[#efe9de] px-5 text-base font-medium text-[var(--lp-fg)] transition-colors hover:bg-white">
+                                        Start your signup
+                                    </Link>
+                                    <Link to="/contact" className="inline-flex h-12 items-center rounded-[10px] border border-white/20 px-5 text-base font-medium text-white transition-colors hover:bg-white/10">
+                                        Talk to us
+                                    </Link>
+                                </div>
+                            </div>
+                            <div className="lg:col-span-6">
+                                <p className="text-sm text-[var(--lp-on-ink-2)]">What you earn, from the rate card</p>
+                                <dl className="mt-3 divide-y divide-white/10 border-y border-white/10">
+                                    {RATES.map((r) => (
+                                        <div key={r.what} className="flex h-14 items-center justify-between gap-4">
+                                            <dt className="text-[15px] text-[var(--lp-on-ink)]">{r.what}</dt>
+                                            <dd className="lp-figure text-lg text-white">{r.earns}</dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                                <p className="mt-4 text-sm text-[var(--lp-on-ink-2)]">
+                                    Before 2% TDS. <Link to="/commission" className="text-white underline underline-offset-4">See the full rate card</Link>
+                                </p>
+                            </div>
                         </div>
-                        <p className="mt-10 border-t border-white/10 pt-6 text-sm text-[var(--lp-on-ink-2)]">
-                            AEPS · Micro ATM · BBPS · DMT · PAN and ITR
-                        </p>
                     </div>
                 </div>
             </section>
