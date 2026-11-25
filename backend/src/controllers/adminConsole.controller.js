@@ -303,16 +303,19 @@ export const getUsers = async (req, res) => {
       if (req.query.kyc === 'pending') Object.assign(filter, aepsKycPendingFilter());
       if (req.query.kyc === 'done') Object.assign(filter, aepsKycDoneFilter());
       if (req.query.distributor && mongoose.isValidObjectId(req.query.distributor)) filter.distributorId = req.query.distributor;
-      // Self signups waiting for (or refused) admin verification.
-      if (['pending', 'rejected'].includes(req.query.verification)) filter.verificationStatus = req.query.verification;
-      // A self signup reaches the admin only once its ₹199 fee is paid.
-      // Only self signups are ever pending, so this hides just the unpaid ones.
-      if (req.query.verification === 'pending') filter.signupFeePaidAt = { $ne: null };
+      // Unpaid self signups live only in Retailer signups (verification=unpaid);
+      // once the ₹199 fee is paid they move to the Users list for approval.
+      const unpaid = { verificationStatus: 'pending', signupFeePaidAt: null };
+      if (req.query.verification === 'unpaid') Object.assign(filter, unpaid);
+      else {
+        if (['pending', 'rejected'].includes(req.query.verification)) filter.verificationStatus = req.query.verification;
+        filter.$nor = [unpaid];
+      }
     }
     const sort = { newest: { createdAt: -1 }, oldest: { createdAt: 1 }, name: { name: 1 } }[req.query.sort] || { createdAt: -1 };
 
     const query = Model.find(filter)
-      .select('name email contactNumber businessName retailerId distributorId profilePicture isActive isMerchantKycComplete icchhamatiAeps.step icchhamatiAeps.stepAt disabledServices createdAt address signupSource verificationStatus verificationNote')
+      .select('name email contactNumber businessName retailerId distributorId profilePicture isActive isMerchantKycComplete icchhamatiAeps.step icchhamatiAeps.stepAt disabledServices createdAt address signupSource verificationStatus verificationNote signupFeePaidAt')
       .sort(sort)
       .skip(skip)
       .limit(limit);

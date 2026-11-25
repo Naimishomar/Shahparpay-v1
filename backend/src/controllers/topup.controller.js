@@ -3,6 +3,9 @@ import MainWallet from '../models/mainWallet.model.js';
 import AepsWallet from '../models/aepsWallet.model.js';
 import Retailer from '../models/users/retailer.model.js';
 import { sendSignupAlertEmail } from '../utils/email.js';
+import axios from 'axios';
+import sharp from 'sharp';
+import jsQR from 'jsqr';
 import {
   razorpayPost,
   razorpayGet,
@@ -193,14 +196,17 @@ const openQrTransaction = async (res, { prefix, type, name, amount, user }) => {
   }
 
   // Razorpay's QR create response carries no raw `upi://pay?...` string —
-  // `image_url` is the only thing that can be scanned, a hosted poster with
-  // its branding on it. The client shows that image as-is.
+  // `image_url` is a hosted poster with its branding on it. The UPI string is
+  // read back out of that poster so clients can draw a bare QR; the poster
+  // stays as the fallback when it cannot be read.
+  const qrUpi = await readUpiFromPoster(data.image_url);
   return Transaction.findOneAndUpdate(
     { _id: txn._id },
     {
       $set: {
         'metadata.qrCodeId': data.id,
         'metadata.qrImageUrl': data.image_url,
+        'metadata.qrUpi': qrUpi,
         // Recorded so a pending row can be closed once the QR can no longer
         // be paid, instead of being polled forever.
         'metadata.expiresAt': new Date((data.close_by || 0) * 1000).toISOString(),
@@ -210,10 +216,23 @@ const openQrTransaction = async (res, { prefix, type, name, amount, user }) => {
   );
 };
 
+/** Decodes the `upi://` string out of Razorpay's QR poster; null when unreadable. */
+export const readUpiFromPoster = async (url) => {
+  try {
+    const { data: img } = await axios.get(url, { responseType: 'arraybuffer', timeout: 8000 });
+    const { data, info } = await sharp(Buffer.from(img)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const code = jsQR(new Uint8ClampedArray(data.buffer, data.byteOffset, data.length), info.width, info.height, { inversionAttempts: 'attemptBoth' });
+    return /^upi:/i.test(code?.data || '') ? code.data : null;
+  } catch {
+    return null;
+  }
+};
+
 const qrView = (txn) => ({
   transactionId: txn.transactionId,
   qrCodeId: txn.metadata.qrCodeId,
   qrImage: txn.metadata.qrImageUrl,
+  qrUpi: txn.metadata.qrUpi || null,
   amount: txn.amount,
   expiresAt: txn.metadata.expiresAt,
 });

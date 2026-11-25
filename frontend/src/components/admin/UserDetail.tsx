@@ -529,7 +529,7 @@ const VerificationCard = ({ id, token, user, busy, onDecide, onDeleted }: { id: 
                             {(distributors || []).map((d) => <option key={d._id} value={d._id}>{d.name} ({d.distributorId})</option>)}
                         </select>
                     </label>
-                    <button onClick={() => onDecide({ status: 'approved', distributorId: distributorId || null }, 'Retailer approved')} disabled={busy} className={PRIMARY_BUTTON}>
+                    <button onClick={() => onDecide({ status: 'approved', distributorId: distributorId || null }, 'Retailer approved')} disabled={busy || (user.signupSource === 'self' && !user.signupFeePaidAt)} title={user.signupSource === 'self' && !user.signupFeePaidAt ? 'The ₹199 signup fee is not paid yet' : undefined} className={PRIMARY_BUTTON}>
                         {busy ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />} Approve
                     </button>
                     {user.verificationStatus !== 'rejected' && (

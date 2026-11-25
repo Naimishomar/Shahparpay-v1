@@ -5,9 +5,9 @@ import { Avatar, Skeleton } from '../distributor/ui';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-/** Retailers who signed up from the app and wait for (or were refused) admin verification. */
+/** Self signups that have not paid the ₹199 fee yet, or were refused. Paid ones move to the Users list for approval. */
 const RetailerSignups = ({ token, onOpenUser }: { token: string | null; onOpenUser: (role: 'retailer', id: string) => void }) => {
-    const [status, setStatus] = useState<'pending' | 'rejected'>('pending');
+    const [status, setStatus] = useState<'unpaid' | 'rejected'>('unpaid');
     // ponytail: first 100 only; add paging like UserDirectory if the queue ever grows past that.
     const { data, loading, error } = useApiGet<{ rows: any[]; total: number }>(token, `/api/admin/console/users?role=retailer&verification=${status}&sort=oldest&limit=100`);
 
@@ -19,11 +19,11 @@ const RetailerSignups = ({ token, onOpenUser }: { token: string | null; onOpenUs
                         <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><UserCheck className="h-7 w-7" /></div>
                         <div>
                             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Retailer signups</h1>
-                            <p className="text-sm text-muted-foreground">Retailers who signed up from the app. Open one to check their documents, then approve or reject.</p>
+                            <p className="text-sm text-muted-foreground">Retailers who signed up but have not paid the ₹199 fee yet. Once they pay, they move to Users for approval.</p>
                         </div>
                     </div>
                     <div className="inline-flex rounded-xl border bg-background/70 backdrop-blur p-1 shadow-sm">
-                        {(['pending', 'rejected'] as const).map((s) => (
+                        {(['unpaid', 'rejected'] as const).map((s) => (
                             <button
                                 key={s}
                                 onClick={() => setStatus(s)}
@@ -73,7 +73,7 @@ const RetailerSignups = ({ token, onOpenUser }: { token: string | null; onOpenUs
                                     <td className="px-4 py-3">
                                         {status === 'rejected'
                                             ? <span className="line-clamp-2 max-w-xs text-muted-foreground">{u.verificationNote || '—'}</span>
-                                            : <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}>Awaiting review</span>}
+                                            : <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}>₹199 fee unpaid</span>}
                                     </td>
                                 </tr>
                             ))}

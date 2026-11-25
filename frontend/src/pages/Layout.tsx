@@ -4,6 +4,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Suspense, useEffect, useRef, useState } from "react"
 import axios from "axios"
 import { Clock, Loader2, LogOut, QrCode, RefreshCcw, XCircle } from "lucide-react"
+import { QRCodeSVG } from "qrcode.react"
 import { toast } from "sonner"
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "../components/distributor/shared"
 import { Outlet, Navigate, useLocation } from "react-router-dom"
@@ -65,19 +66,27 @@ const UnderVerification = () => {
     return (
         <div className="min-h-screen bg-background top-glow flex items-center justify-center p-4">
             <div className="bg-card border shadow-2xl rounded-3xl p-8 max-w-md w-full text-center space-y-6 animate-in zoom-in-95 duration-300">
+                {feeDue ? <RegistrationSteps /> : (
                 <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto ${rejected ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'}`}>
                     {rejected ? <XCircle size={40} /> : <Clock size={40} />}
                 </div>
+                )}
                 <div className="space-y-2">
-                    <h2 className="text-2xl font-bold">{rejected ? 'Account not approved' : feeDue ? 'Pay to submit your signup' : 'Account under verification'}</h2>
+                    <h2 className="text-2xl font-bold">{rejected ? 'Account not approved' : feeDue ? 'Registration not complete' : 'Account under verification'}</h2>
                     <p className="text-muted-foreground text-sm">
                         {rejected
                             ? 'An admin reviewed your signup and could not approve it.'
                             : feeDue
-                            ? `Thanks for signing up${user?.name ? `, ${user.name}` : ''}. Pay the ₹199 signup fee to send your account to an admin for verification.`
+                            ? `Your details are saved${user?.name ? `, ${user.name}` : ''}. One step left: pay the ₹199 registration fee.`
                             : `Thanks for signing up${user?.name ? `, ${user.name}` : ''}. An admin is checking your details and documents; you can use the portal once they approve your account.`}
                     </p>
                 </div>
+                {feeDue && (
+                    <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-left text-sm text-red-700 dark:text-red-400">
+                        <p className="font-semibold">Payment is required to register.</p>
+                        <p className="mt-1">Your signup is <b>not</b> sent to the admin for approval until the ₹199 fee is paid. Without it, your account stays inactive.</p>
+                    </div>
+                )}
                 {feeDue && <SignupFee onPaid={checkSession} />}
                 {rejected && (
                     <div className="space-y-3 text-left">
@@ -93,10 +102,10 @@ const UnderVerification = () => {
                     </div>
                 )}
                 <div className="flex flex-col sm:flex-row gap-2">
-                    <button onClick={checkAgain} disabled={checking} className={`${PRIMARY_BUTTON} flex-1`}>
+                    {!feeDue && <button onClick={checkAgain} disabled={checking} className={`${PRIMARY_BUTTON} flex-1`}>
                         {checking ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />}
                         {checking ? 'Checking…' : 'Check again'}
-                    </button>
+                    </button>}
                     <button onClick={() => logout()} className={`${SECONDARY_BUTTON} flex-1 justify-center`}><LogOut size={16} /> Logout</button>
                 </div>
             </div>
@@ -104,7 +113,20 @@ const UnderVerification = () => {
     );
 };
 
-type FeeQr = { transactionId: string; qrImage: string; amount: number };
+/** Where a self signup stands: details done, fee due, approval after. */
+const RegistrationSteps = () => (
+    <ol className="flex items-center justify-center gap-2 text-xs font-medium">
+        {[['✓', 'Details'], ['2', 'Pay ₹199'], ['3', 'Admin approval']].map(([mark, label], i) => (
+            <li key={label} className="flex items-center gap-2">
+                {i > 0 && <span className="h-px w-5 bg-border" aria-hidden />}
+                <span className={`flex size-6 items-center justify-center rounded-full ${i === 0 ? 'bg-emerald-500 text-white' : i === 1 ? 'bg-amber-500 text-white ring-4 ring-amber-500/20' : 'bg-muted text-muted-foreground'}`}>{mark}</span>
+                <span className={i === 1 ? 'text-foreground' : 'text-muted-foreground'}>{label}</span>
+            </li>
+        ))}
+    </ol>
+);
+
+type FeeQr = { transactionId: string; qrImage: string; qrUpi?: string | null; amount: number };
 
 /** The ₹199 signup fee, paid by UPI QR; ₹10 of it lands in the Utility Wallet. */
 const SignupFee = ({ onPaid }: { onPaid: () => Promise<void> }) => {
@@ -112,11 +134,10 @@ const SignupFee = ({ onPaid }: { onPaid: () => Promise<void> }) => {
     const [qr, setQr] = useState<FeeQr | null>(null);
     const [loading, setLoading] = useState(false);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
     const paid = async () => {
         if (pollRef.current) clearInterval(pollRef.current);
-        toast.success('Payment received. Your signup is sent to the admin, and ₹10 is added to your Utility Wallet.');
+        toast.success('Payment received. Your registration is sent to the admin for approval, and ₹10 is added to your Utility Wallet.');
         await onPaid();
     };
 
@@ -146,16 +167,24 @@ const SignupFee = ({ onPaid }: { onPaid: () => Promise<void> }) => {
         }
     };
 
+    // The QR opens with the screen; the button is only for after it expires.
+    useEffect(() => {
+        start();
+        return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    }, []);
+
     return (
         <div className="rounded-2xl border p-4 text-left space-y-3">
             <div>
-                <p className="font-semibold">Pay the ₹199 signup fee</p>
-                <p className="text-xs text-muted-foreground">Your signup reaches the admin only after this payment. ₹10 of it is added to your Utility Wallet for the AEPS onboarding fee.</p>
+                <p className="font-semibold">Scan &amp; pay ₹199 with any UPI app</p>
+                <p className="text-xs text-muted-foreground">Your signup goes to the admin as soon as the payment lands. ₹10 of it is added to your Utility Wallet for the AEPS onboarding fee.</p>
             </div>
             {qr ? (
                 <div className="text-center space-y-2">
                     <div className="mx-auto w-fit rounded-xl bg-white p-3 shadow-md">
-                        <img src={qr.qrImage} alt="UPI QR" className="w-48 h-auto" />
+                        {qr.qrUpi
+                            ? <QRCodeSVG value={qr.qrUpi} size={192} />
+                            : <img src={qr.qrImage} alt="UPI QR" className="w-48 h-auto" />}
                     </div>
                     <p className="flex items-center justify-center gap-2 text-sm text-amber-600"><Loader2 size={14} className="animate-spin" /> Waiting for payment…</p>
                     <p className="font-mono text-[11px] opacity-60">Ref {qr.transactionId}</p>

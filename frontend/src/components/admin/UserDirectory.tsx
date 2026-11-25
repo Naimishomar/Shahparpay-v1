@@ -110,7 +110,7 @@ const UserDirectory = ({
                                         <div className="flex items-center gap-3">
                                             <Avatar name={u.name} src={u.profilePicture} />
                                             <div className="min-w-0">
-                                                <p className="truncate font-semibold">{u.name}</p>
+                                                <p className="truncate font-semibold">{u.name}{u.verificationStatus === 'pending' && <span className={`ml-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}>Awaiting approval</span>}</p>
                                                 <p className="truncate text-[11px] text-muted-foreground"><span className="font-mono">{u.retailerId || u.distributorId}</span> · {u.contactNumber}</p>
                                             </div>
                                         </div>

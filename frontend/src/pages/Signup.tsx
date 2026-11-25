@@ -156,7 +156,7 @@ const Signup: React.FC = () => {
                                 <p className="lp-eyebrow">Retailer signup</p>
                                 <h1 className={`${H1} mt-3`}>Open your banking point</h1>
                                 <p className={`${LEAD} mt-5 max-w-xl`}>
-                                    Four short steps. An admin verifies your account, then you can start serving customers.
+                                    Four short steps, then a ₹199 registration fee by UPI. Your signup goes to an admin for approval only after the fee is paid.
                                 </p>
                             </div>
                             <div className="lg:col-span-5">
