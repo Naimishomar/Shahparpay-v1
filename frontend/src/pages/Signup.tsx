@@ -105,7 +105,7 @@ const Signup: React.FC = () => {
             const json = await res.json();
             if (json.success) {
                 setMessage('Account created successfully.');
-                // Signed straight in: the pending screen is where the ₹199 fee is paid.
+                // Signed straight in: the pending screen is where the ₹99 onboarding charge is paid.
                 if (json.token) {
                     login(json.token, { ...json.user, role: json.role }, json.refreshToken);
                     navigate('/dashboard');
@@ -161,7 +161,7 @@ const Signup: React.FC = () => {
                                 <p className="lp-eyebrow">Retailer signup</p>
                                 <h1 className={`${H1} mt-3`}>Open your banking point</h1>
                                 <p className={`${LEAD} mt-5 max-w-xl`}>
-                                    Four short steps, then a ₹199 registration fee by UPI. Your signup goes to an admin for approval only after the fee is paid.
+                                    Four short steps, then a one-time ₹99 onboarding charge by UPI. Your signup goes to an admin for approval only after it is paid.
                                 </p>
                                 <p className="mt-8 text-sm text-[var(--lp-muted)]">Keep these ready</p>
                                 <ul className="mt-3 max-w-xl divide-y divide-[var(--lp-border)] border-y border-[var(--lp-border)]">

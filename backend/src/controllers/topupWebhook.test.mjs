@@ -246,10 +246,10 @@ const settled = await post(paidFourth);
 assert.equal(settled.body.credited, true, 'the retry settles it');
 assert.equal(balance(), 1000);
 
-// --- the signup fee credits ₹10 to Utility, not the ₹199 paid ----------------
+// --- the onboarding charge credits ₹10 to Utility, not the ₹99 paid ----------------
 
 state.transactions.push({
-  _id: 'txn_SUF1', transactionId: 'SUF1', userId: 'ret_1', type: 'SIGNUP_FEE', amount: 199,
+  _id: 'txn_SUF1', transactionId: 'SUF1', userId: 'ret_1', type: 'SIGNUP_FEE', amount: 99,
   status: 'PENDING', metadata: { provider: 'RAZORPAY', qrCodeId: 'qr_fee', userModel: 'Retailer' },
 });
 const fee = (paise) => ({
@@ -260,17 +260,17 @@ const fee = (paise) => ({
   },
 });
 const utility = () => state.utilityWallets.find((w) => w.userId === 'ret_1')?.balance;
-assert.equal((await post(fee(10000))).body.credited, false, 'less than ₹199 does not settle the fee');
+assert.equal((await post(fee(5000))).body.credited, false, 'less than ₹99 does not settle the charge');
 assert.equal(utility(), undefined);
-assert.equal((await post(fee(19900))).body.credited, true);
+assert.equal((await post(fee(9900))).body.credited, true);
 assert.equal(utility(), 10, 'the fee puts ₹10 in the Utility wallet');
 assert.equal(balance(), 1000, 'and nothing in the Trade wallet');
 const feeRow = state.transactions.find((t) => t.transactionId === 'SUF1');
 assert.equal(feeRow.amount, 10, 'the row books the ₹10 credit, which the ledger reads');
-assert.equal(feeRow.metadata.paidAmount, 199);
+assert.equal(feeRow.metadata.paidAmount, 99);
 assert.ok(state.retailers.some((r) => r._id === 'ret_1' && r.signupFeePaidAt), 'the retailer is marked paid');
 assert.deepEqual(state.alerts, ['RT1'], 'paying sends the signup to the admin');
-assert.equal((await post(fee(19900))).body.credited, false, 'a replayed fee does not credit again');
+assert.equal((await post(fee(9900))).body.credited, false, 'a replayed fee does not credit again');
 assert.deepEqual(state.alerts, ['RT1'], 'once');
 assert.equal(utility(), 10);
 

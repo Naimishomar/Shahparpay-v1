@@ -623,13 +623,13 @@ export const createRetailer = async (req, res) => {
     const target = { _id: newRetailer._id, role: 'retailer', name: newRetailer.name };
     await Otp.deleteOne({ email });
     if (self) {
-      // The admin alert goes out once the ₹199 fee is paid (topup.controller creditTopup).
-      logActivity({ req, actor: target, action: 'retailer.signup', target, summary: `Retailer ${newRetailer.name} (${newRetailer.retailerId}) signed up; awaiting the ₹199 fee` });
+      // The admin alert goes out once the ₹99 onboarding charge is paid (topup.controller creditTopup).
+      logActivity({ req, actor: target, action: 'retailer.signup', target, summary: `Retailer ${newRetailer.name} (${newRetailer.retailerId}) signed up; awaiting the ₹99 onboarding charge` });
       // Signed straight in: the email OTP was just proven, and the pending
-      // screen is where the ₹199 signup fee is paid.
+      // screen is where the ₹99 onboarding charge is paid.
       return res.status(201).json({
         success: true,
-        message: 'Account created. Pay the ₹199 signup fee; an admin will then verify it.',
+        message: 'Account created. Pay the ₹99 onboarding charge; an admin will then verify it.',
         data: { retailerId: newRetailer.retailerId, verificationStatus: newRetailer.verificationStatus },
         ...issueSession(req, res, newRetailer, 'retailer'),
       });

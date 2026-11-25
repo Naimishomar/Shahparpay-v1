@@ -36,11 +36,11 @@ const MAX_TOPUP = 100000;
 const QR_TTL_SECONDS = 30 * 60;
 
 /**
- * A self-signed-up retailer pays this once, by the same UPI QR, before an admin
- * reviews them. SIGNUP_FEE_CREDIT of it lands in their Utility (MAIN) wallet so
+ * The onboarding charge: a self-signed-up retailer pays this once, by the same
+ * UPI QR, before an admin reviews them. SIGNUP_FEE_CREDIT of it lands in their Utility (MAIN) wallet so
  * the AEPS onboarding fee can be paid from it.
  */
-const SIGNUP_FEE = 199;
+const SIGNUP_FEE = 99;
 const SIGNUP_FEE_CREDIT = 10;
 const QR_TYPES = ['WALLET_TOPUP', 'SIGNUP_FEE'];
 
@@ -58,7 +58,7 @@ const userModelFor = (role) => (role === 'distributor' ? 'Distributor' : 'Retail
 const creditTopup = async (txn, { paymentId, paidPaise, method, vpa }) => {
   const paid = toRupees(paidPaise);
   if (!Number.isFinite(paid) || paid <= 0) return { credited: false, transaction: txn };
-  // The fee row books only the wallet credit; the ₹199 itself stays in metadata.
+  // The fee row books only the wallet credit; the ₹99 paid stays in metadata.
   const isFee = txn.type === 'SIGNUP_FEE';
   if (isFee && paid < SIGNUP_FEE) return { credited: false, transaction: txn };
   const amount = isFee ? SIGNUP_FEE_CREDIT : paid;
@@ -307,7 +307,7 @@ const qrError = (res, error) => {
 };
 
 /**
- * POST /api/auth/signup-fee/qr: the ₹199 QR a self-signed-up retailer pays
+ * POST /api/auth/signup-fee/qr: the ₹99 onboarding charge QR a self-signed-up retailer pays
  * while awaiting verification. Under /api/auth because every other route
  * refuses a pending account.
  */
@@ -330,7 +330,9 @@ export const createSignupFeeQr = async (req, res) => {
 
     // A retailer who paid and closed the app before the poll saw it, or who
     // asks again while a QR is still live, must not be handed a second QR:
-    // paying both would take ₹398. Settle or reuse the open one first.
+    // paying both would take twice the charge. Settle or reuse the open one first
+    // (a QR opened before the charge changed keeps its own amount, which the
+    // screen reads from `amount`).
     // ponytail: two simultaneous requests can still mint two QRs; a unique
     // partial index on (userId, type: SIGNUP_FEE, status: PENDING) closes that.
     const open = await Transaction.find({

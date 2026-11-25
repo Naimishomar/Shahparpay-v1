@@ -23,7 +23,7 @@ interface User {
     /** Why the admin rejected the signup. */
     verificationNote?: string;
     signupSource?: 'distributor' | 'self';
-    /** Set once a self signup's ₹199 fee is paid. */
+    /** Set once a self signup's ₹99 onboarding charge is paid. */
     signupFeePaidAt?: string | null;
 }
 

@@ -69,7 +69,7 @@ router.post(
   signupRetailer
 );
 
-// The ₹199 self-signup fee. Under /api/auth because a pending account is refused everywhere else.
+// The ₹99 self-signup onboarding charge. Under /api/auth because a pending account is refused everywhere else.
 router.post('/signup-fee/qr', authMiddlewares, createSignupFeeQr);
 router.get('/signup-fee/status/:transactionId', authMiddlewares, getTopupStatus);
 

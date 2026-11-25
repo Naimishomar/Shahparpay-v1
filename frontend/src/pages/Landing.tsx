@@ -440,7 +440,7 @@ function NetworkShot() {
 /* -------------------------------------------------------------------- data */
 
 const START_STEPS = [
-    { icon: Users, title: 'Sign up online', text: 'Four short steps with your PAN, Aadhaar, bank and shop details, then a one-time ₹199 registration fee by UPI.' },
+    { icon: Users, title: 'Sign up online', text: 'Four short steps with your PAN, Aadhaar, bank and shop details, then a one-time ₹99 onboarding charge by UPI.' },
     { icon: Fingerprint, title: 'Get approved and finish KYC', text: 'Our team approves your account. Complete AEPS eKYC from the dashboard with an RD-certified fingerprint scanner.' },
     { icon: Wallet, title: 'Load your wallet and start', text: 'Raise a fund request to your distributor. Serve customers, earn on every transaction, settle to your bank.' },
 ];
@@ -481,8 +481,8 @@ const FAQ_DATA = {
     ],
     getting_started: [
         {
-            q: 'Is there a joining fee?',
-            a: 'There is a one-time ₹199 registration fee, paid by UPI at the end of the online signup. Your signup reaches our team for approval only after the fee is paid. There is no monthly charge.',
+            q: 'Is there an onboarding charge?',
+            a: 'Yes, a one-time ₹99 onboarding charge, paid by UPI at the end of the online signup. Your signup reaches our team for approval only after it is paid, and ₹10 of it goes to your Utility Wallet for the AEPS onboarding fee. There is no monthly charge.',
         },
         {
             q: 'What documents do I need to sign up?',

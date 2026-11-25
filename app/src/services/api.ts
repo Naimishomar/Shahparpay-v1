@@ -655,7 +655,7 @@ class ApiService {
     return this.get(`${API_ENDPOINTS.topup.status}/${transactionId}`);
   }
 
-  /** The ₹199 self-signup fee QR; returns the open one if a QR is still live. */
+  /** The ₹99 self-signup onboarding charge QR; returns the open one if a QR is still live. */
   async createSignupFeeQr() {
     return this.post(API_ENDPOINTS.auth.signupFeeQr, {});
   }

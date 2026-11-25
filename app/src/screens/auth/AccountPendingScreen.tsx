@@ -21,7 +21,7 @@ export const AccountPendingScreen: React.FC = () => {
   const check = useAction(checkSession);
   const signOut = useAction(() => logout());
   const feeDue = !rejected && user?.signupSource === 'self' && !user?.signupFeePaidAt;
-  const [qr, setQr] = useState<{ transactionId: string; qrImage: string; qrUpi?: string | null } | null>(null);
+  const [qr, setQr] = useState<{ transactionId: string; qrImage: string; qrUpi?: string | null; amount?: number } | null>(null);
   const pay = useAction(async () => {
     const res = await api.createSignupFeeQr();
     if (res?.data?.status === 'SUCCESS') return checkSession();
@@ -52,12 +52,12 @@ export const AccountPendingScreen: React.FC = () => {
     <Screen contentStyle={{ paddingTop: insets.top + space.xl }}>
       <EmptyState
         icon={rejected ? 'account-cancel-outline' : 'account-clock-outline'}
-        title={feeDue ? 'Registration not complete' : 'Account under verification'}
+        title={feeDue ? 'Pay the onboarding charge' : 'Account under verification'}
         subtitle={
           rejected
             ? 'Your account was not approved.'
             : feeDue
-            ? 'Step 2 of 3: pay the ₹199 registration fee. Admin approval comes after.'
+            ? 'Step 2 of 3: pay the ₹99 onboarding charge. Admin approval comes after.'
             : 'Your account is waiting for admin verification. You can start once it is approved.'
         }
       />
@@ -66,7 +66,7 @@ export const AccountPendingScreen: React.FC = () => {
       )}
       {feeDue && (
         <View style={{ gap: space.sm, alignItems: 'center' }}>
-          <Banner tone="error" message="Payment is required to register. Your signup is NOT sent to the admin for approval until the ₹199 fee is paid." />
+          <Banner tone="error" message="Your signup is not sent to the admin for approval until the ₹99 onboarding charge is paid." />
           {qr ? (
             <>
               {qr.qrUpi ? (
@@ -76,13 +76,13 @@ export const AccountPendingScreen: React.FC = () => {
               ) : (
                 <Image source={{ uri: qr.qrImage }} style={{ width: 220, height: Math.round((220 * 1644) / 674) }} resizeMode="contain" />
               )}
-              <Text style={{ fontWeight: '600' }}>Scan & pay ₹199 with any UPI app</Text>
+              <Text style={{ fontWeight: '600' }}>Onboarding charge: scan & pay ₹{qr.amount || 99} with any UPI app</Text>
               <Text>Waiting for payment… Ref {qr.transactionId}</Text>
               <Text style={{ fontSize: 12, opacity: 0.7, textAlign: 'center' }}>₹10 of it is added to your Utility Wallet for the AEPS onboarding fee.</Text>
             </>
           ) : (
             <Button icon="qrcode" onPress={pay.run} loading={pay.pending} fullWidth>
-              Pay ₹199 by UPI
+              Pay ₹99 onboarding charge by UPI
             </Button>
           )}
           {!!pay.error && <Banner tone="error" message={pay.error} />}

@@ -37,7 +37,7 @@ export interface User {
   /** The admin's reason when rejected. */
   verificationNote?: string;
   signupSource?: string;
-  /** Set once a self signup's ₹199 fee is paid. */
+  /** Set once a self signup's ₹99 onboarding charge is paid. */
   signupFeePaidAt?: string | null;
 }
 

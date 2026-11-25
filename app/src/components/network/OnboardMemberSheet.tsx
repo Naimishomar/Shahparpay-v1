@@ -191,7 +191,7 @@ export const OnboardMemberSheet: React.FC<{
       }
     );
     if (!res.success) throw new Error(res.message || 'Failed to create the account.');
-    // A self signup is signed straight in; the pending screen asks for the ₹199 fee.
+    // A self signup is signed straight in; the pending screen asks for the ₹99 onboarding charge.
     if (self && res.token) {
       await login(res.token, { ...res.user, role: res.role }, res.refreshToken);
       onClose();

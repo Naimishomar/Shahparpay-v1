@@ -304,7 +304,7 @@ export const getUsers = async (req, res) => {
       if (req.query.kyc === 'done') Object.assign(filter, aepsKycDoneFilter());
       if (req.query.distributor && mongoose.isValidObjectId(req.query.distributor)) filter.distributorId = req.query.distributor;
       // Unpaid self signups live only in Retailer signups (verification=unpaid);
-      // once the ₹199 fee is paid they move to the Users list for approval.
+      // once the ₹99 onboarding charge is paid they move to the Users list for approval.
       const unpaid = { verificationStatus: 'pending', signupFeePaidAt: null };
       if (req.query.verification === 'unpaid') Object.assign(filter, unpaid);
       else {
@@ -574,7 +574,7 @@ export const setRetailerVerification = async (req, res) => {
     if (!retailer) return res.status(404).json({ success: false, message: 'Retailer not found' });
 
     if (status === 'approved' && retailer.signupSource === 'self' && !retailer.signupFeePaidAt) {
-      return res.status(400).json({ success: false, message: 'This retailer has not paid the ₹199 signup fee yet.' });
+      return res.status(400).json({ success: false, message: 'This retailer has not paid the ₹99 onboarding charge yet.' });
     }
 
     let distributor = null;

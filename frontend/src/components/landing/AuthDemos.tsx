@@ -81,7 +81,7 @@ export function TodayDemo() {
 const STEPS = ['Account', 'KYC & business', 'Branding', 'Review'];
 
 /**
- * The signup as it happens: four steps tick off, the ₹199 fee is paid by UPI,
+ * The signup as it happens: four steps tick off, the ₹99 onboarding charge is paid by UPI,
  * and the account goes to the admin. Beat i means i things are done.
  */
 export function SignupDemo() {
@@ -91,7 +91,7 @@ export function SignupDemo() {
 
     return (
         <div ref={ref}>
-            <Well label="Retailer signup: four steps complete, the ₹199 registration fee is paid by UPI, and the account is sent for approval.">
+            <Well label="Retailer signup: four steps complete, the ₹99 onboarding charge is paid by UPI, and the account is sent for approval.">
                 <div className="px-5 pb-1 pt-5 text-[13px] text-[var(--hd-ink-3)]">Your signup</div>
                 <ol className="px-2">
                     {STEPS.map((s, i) => {
@@ -112,8 +112,8 @@ export function SignupDemo() {
                 </ol>
                 <div className="mx-5 mt-2 flex items-center gap-3 rounded-[10px] border border-[var(--hd-line)] px-3 py-3 text-[14px]">
                     <QrCode aria-hidden className="size-4 flex-none text-[var(--hd-ink-3)]" strokeWidth={1.75} />
-                    <span className="text-[var(--hd-ink)]">Registration fee</span>
-                    <span className="lp-figure text-[var(--hd-ink)]">₹199</span>
+                    <span className="text-[var(--hd-ink)]">Onboarding charge</span>
+                    <span className="lp-figure text-[var(--hd-ink)]">₹99</span>
                     <Slot
                         className="ml-auto justify-items-end text-[12px]"
                         at={feePaid ? 2 : paying ? 1 : 0}

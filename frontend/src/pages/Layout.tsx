@@ -86,7 +86,7 @@ const UnderVerification = () => {
     const steps: { label: string; note: string; state: StepState }[] = [
         { label: 'Details', note: 'Account, KYC and shop saved', state: 'done' },
         // Only a self signup pays the fee; a retailer added by a distributor skips it.
-        ...(user?.signupSource === 'self' ? [{ label: 'Registration fee', note: feeDue ? '₹199 by UPI, due now' : '₹199 paid', state: (feeDue ? 'current' : 'done') as StepState }] : []),
+        ...(user?.signupSource === 'self' ? [{ label: 'Onboarding charge', note: feeDue ? '₹99 by UPI, due now' : '₹99 paid', state: (feeDue ? 'current' : 'done') as StepState }] : []),
         {
             label: 'Admin approval',
             note: rejected ? 'Not approved' : feeDue ? 'Starts once the fee is paid' : 'An admin is checking your documents',
@@ -94,11 +94,11 @@ const UnderVerification = () => {
         },
     ];
 
-    const title = rejected ? 'Account not approved' : feeDue ? 'Pay ₹199 to finish signing up' : 'Under review';
+    const title = rejected ? 'Account not approved' : feeDue ? 'Pay the ₹99 onboarding charge' : 'Under review';
     const lead = rejected
         ? 'An admin reviewed your signup and could not approve it.'
         : feeDue
-        ? `Your details are saved${firstName ? `, ${firstName}` : ''}. Pay the registration fee below and your signup goes to an admin for approval.`
+        ? `Your details are saved${firstName ? `, ${firstName}` : ''}. Pay the one-time onboarding charge below and your signup goes to an admin for approval.`
         : `Thanks for signing up${firstName ? `, ${firstName}` : ''}. An admin is checking your details and documents; you can use the portal once they approve your account.`;
 
     return (
@@ -144,7 +144,7 @@ const UnderVerification = () => {
                     <div className="mt-8">
                         <SignupFee onPaid={checkSession} />
                         <p className="mx-auto mt-5 max-w-md text-sm leading-relaxed text-[var(--lp-muted)]">
-                            Until the fee is paid, your signup is not sent for approval and your account stays inactive.
+                            Until the onboarding charge is paid, your signup is not sent for approval and your account stays inactive.
                         </p>
                     </div>
                 )}
@@ -177,7 +177,7 @@ const UnderVerification = () => {
 
 type FeeQr = { transactionId: string; qrImage: string; qrUpi?: string | null; amount: number };
 
-/** The ₹199 signup fee, paid by UPI QR; ₹10 of it lands in the Utility Wallet. */
+/** The ₹99 onboarding charge, paid by UPI QR; ₹10 of it lands in the Utility Wallet. */
 const SignupFee = ({ onPaid }: { onPaid: () => Promise<void> }) => {
     const api = import.meta.env.VITE_BACKEND_URL;
     const [qr, setQr] = useState<FeeQr | null>(null);
@@ -223,20 +223,21 @@ const SignupFee = ({ onPaid }: { onPaid: () => Promise<void> }) => {
     }, []);
 
     return (
-        <section aria-label="Pay the registration fee" className="rounded-2xl border border-[var(--lp-border-strong)] bg-[var(--lp-card)] p-6 sm:p-8">
+        <section aria-label="Pay the onboarding charge" className="rounded-2xl border border-[var(--lp-border-strong)] bg-[var(--lp-card)] p-6 sm:p-8">
             {qr ? (
                 <>
-                    <p className="text-[15px] text-[var(--lp-fg)]">Scan with any UPI app and pay</p>
-                    <p className="lp-figure mt-1 text-[36px] leading-none tracking-[-0.02em] text-[var(--lp-fg)]">₹199</p>
+                    <p className="text-[15px] text-[var(--lp-fg)]">Onboarding charge · scan with any UPI app and pay</p>
+                    {/* The QR's own amount: one opened before the charge changed still asks for what it was made for. */}
+                    <p className="lp-figure mt-1 text-[36px] leading-none tracking-[-0.02em] text-[var(--lp-fg)]">₹{qr.amount || 99}</p>
                     <div className="mx-auto mt-6 w-fit rounded-xl bg-white p-3 ring-1 ring-[var(--lp-border)]">
                         {qr.qrUpi
                             ? <QRCodeSVG value={qr.qrUpi} size={232} fgColor="#16142e" bgColor="#ffffff" />
-                            : <img src={qr.qrImage} alt="UPI QR for the ₹199 registration fee" className="h-auto w-[232px]" />}
+                            : <img src={qr.qrImage} alt={`UPI QR for the ₹${qr.amount || 99} onboarding charge`} className="h-auto w-[232px]" />}
                     </div>
                     {/* On a phone the QR cannot be scanned from its own screen; open the UPI app instead. */}
                     {qr.qrUpi && (
                         <a href={qr.qrUpi} className={`${BTN_PRIMARY} mt-6 w-full sm:hidden`}>
-                            <Smartphone aria-hidden size={16} strokeWidth={1.75} /> Pay ₹199 with a UPI app
+                            <Smartphone aria-hidden size={16} strokeWidth={1.75} /> Pay ₹{qr.amount || 99} with a UPI app
                         </a>
                     )}
                     <p className="mt-6 flex items-center justify-center gap-2 text-sm text-[var(--lp-fg-2)]">
@@ -244,14 +245,14 @@ const SignupFee = ({ onPaid }: { onPaid: () => Promise<void> }) => {
                     </p>
                     <hr className="my-6 border-[var(--lp-border)]" />
                     <p className="text-sm leading-relaxed text-[var(--lp-muted)]">
-                        ₹10 of the fee is added to your Utility Wallet for the AEPS onboarding fee.
+                        ₹10 of it is added to your Utility Wallet for the AEPS onboarding fee.
                     </p>
                     <p className="lp-figure mt-2 text-xs text-[var(--lp-muted)]">Ref {qr.transactionId}</p>
                 </>
             ) : (
                 <>
-                    <p className="text-[15px] text-[var(--lp-fg)]">Registration fee</p>
-                    <p className="lp-figure mt-1 text-[36px] leading-none tracking-[-0.02em] text-[var(--lp-fg)]">₹199</p>
+                    <p className="text-[15px] text-[var(--lp-fg)]">Onboarding charge</p>
+                    <p className="lp-figure mt-1 text-[36px] leading-none tracking-[-0.02em] text-[var(--lp-fg)]">₹99</p>
                     <button type="button" onClick={start} disabled={loading} className={`${BTN_PRIMARY} mt-6 w-full`}>
                         {loading ? <Loader2 aria-hidden size={16} className="animate-spin" /> : <QrCode aria-hidden size={16} strokeWidth={1.75} />}
                         {loading ? 'Generating QR…' : 'Show payment QR'}
