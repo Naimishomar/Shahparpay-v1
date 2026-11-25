@@ -4,6 +4,8 @@ import {
     Package, Pencil, ShieldCheck, Sparkles, Upload, User, UserPlus, X,
 } from 'lucide-react';
 import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE } from './shared';
+import { BTN_PRIMARY, BTN_SECONDARY, INPUT as LP_INPUT } from '../landing/ui';
+import { Roll, Slot } from '../landing/motion';
 import { INDIAN_STATES } from '../../constants';
 import { SERVICES } from '../../lib/services';
 
@@ -23,6 +25,26 @@ const RETAILER_STEPS = [
 const DISTRIBUTOR_STEPS = RETAILER_STEPS.map((st, i) => (i === 2 ? { ...st, title: 'Branding', hint: 'Optional extras' } : st));
 
 
+/*
+ * The public signup page (`self`) uses the site's own controls: 48px fields with a
+ * hairline and a 10px radius, a solid primary, a secondary with a visible surface.
+ * The portal keeps its own look.
+ */
+const PUBLIC = {
+    input: LP_INPUT.replace('mt-2 ', ''),
+    primary: BTN_PRIMARY,
+    secondary: `${BTN_SECONDARY} whitespace-nowrap disabled:opacity-50`,
+    card: 'rounded-2xl border border-[var(--lp-border)] bg-[var(--lp-card)] p-6 sm:p-8',
+    prefix: 'flex flex-none items-center rounded-l-[10px] border border-r-0 border-[var(--lp-border-strong)] bg-[var(--lp-surface)] px-3.5 text-[15px] text-[var(--lp-fg-2)]',
+};
+const PORTAL = {
+    input: INPUT,
+    primary: PRIMARY_BUTTON,
+    secondary: SECONDARY_BUTTON,
+    card: CARD,
+    prefix: 'flex items-center rounded-l-xl border border-r-0 bg-muted px-3 text-sm text-muted-foreground',
+};
+
 const AADHAAR = /^\d{12}$/;
 const PAN = /^[A-Z]{5}\d{4}[A-Z]$/;
 const MOBILE = /^[6-9]\d{9}$/;
@@ -40,10 +62,37 @@ const Field = ({ label, required, error, hint, children, className = '' }: {
 );
 
 /** Drop-zone style picker with an image preview, so a wrong photo is caught before upload. */
-const FilePicker = ({ label, file, onChange, required, error }: {
+const FilePicker = ({ label, file, onChange, required, error, compact }: {
     label: string; file: File | null; onChange: (f: File | null) => void; required?: boolean; error?: string;
+    /** One field-height row, so it sits level with the inputs beside it. */
+    compact?: boolean;
 }) => {
     const preview = file && file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
+    if (compact) return (
+        <div className="space-y-1.5">
+            <p className="text-sm font-medium text-foreground">{label} {required && <span className="text-red-500">*</span>}</p>
+            {file ? (
+                <div className="flex h-12 items-center gap-3 rounded-[10px] border border-[var(--lp-border-strong)] bg-[var(--lp-card)] pl-1.5 pr-1">
+                    <div className="size-9 flex-none overflow-hidden rounded-[7px] bg-[var(--lp-surface)]">
+                        {preview ? <img src={preview} alt="" className="size-full object-cover" onLoad={() => URL.revokeObjectURL(preview)} /> : <FileImage className="m-2.5 size-4 text-muted-foreground" />}
+                    </div>
+                    <p className="min-w-0 flex-1 truncate text-sm">{file.name}</p>
+                    <span className="lp-figure flex-none text-xs text-muted-foreground">{(file.size / 1024).toFixed(0)} KB</span>
+                    <button type="button" onClick={() => onChange(null)} className="flex size-10 flex-none items-center justify-center rounded-lg text-muted-foreground hover:bg-[var(--lp-surface)] hover:text-foreground" aria-label={`Remove ${label}`}>
+                        <X size={16} />
+                    </button>
+                </div>
+            ) : (
+                <label className={`flex h-12 cursor-pointer items-center gap-2.5 rounded-[10px] border border-dashed bg-[var(--lp-card)] px-4 text-sm transition-colors hover:bg-[var(--lp-surface)] ${error ? 'border-red-500/60' : 'border-[var(--lp-border-strong)]'}`}>
+                    <Upload className="size-4 flex-none text-muted-foreground" />
+                    <span>Choose a photo</span>
+                    <span className="ml-auto text-xs text-muted-foreground">JPG or PNG</span>
+                    <input type="file" accept="image/*" className="sr-only" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+                </label>
+            )}
+            {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+        </div>
+    );
     return (
         <div className="space-y-1.5">
             <p className="text-sm font-medium text-foreground">{label} {required && <span className="text-red-500">*</span>}</p>
@@ -79,6 +128,62 @@ const knownState = (name: string) => {
     return INDIAN_STATES.find((s) => key(s) === key(name)) || '';
 };
 
+/** The step hints, spoken to the person signing themselves up. */
+const SELF_HINTS = ['Who you are and how you sign in', 'Your identity documents and shop address', 'Optional extras', 'Check everything, then create'];
+
+type PreviewRow = { label: string; value: string; ok: boolean; note?: string };
+const BAR_W = [96, 132, 88, 112, 72, 120];
+
+/**
+ * The public signup's side panel: the application as the admin will see it,
+ * filling in as the retailer types. Empty fields are the product's gray lines;
+ * each ticks when its step's checks pass. Ends on the fee and what happens next.
+ */
+const ApplicationPreview = ({ rows }: { rows: PreviewRow[] }) => {
+    const ready = rows.filter((r) => r.ok).length;
+    return (
+        <aside className="lg:sticky lg:top-6 lg:self-start">
+            <div className="hd-window overflow-hidden rounded-2xl bg-[var(--hd-surface)]">
+                <div className="flex items-baseline justify-between gap-4 border-b border-[var(--hd-line)] px-5 py-4">
+                    <p className="text-[15px] font-medium text-[var(--hd-ink)]">Your application</p>
+                    <p className="lp-figure text-[13px] text-[var(--hd-ink-3)]"><Roll value={String(ready)} /> of {rows.length} ready</p>
+                </div>
+                <dl className="px-2 py-1.5">
+                    {rows.map((r, i) => (
+                        <div key={r.label} className="flex h-12 items-center gap-3 px-3 text-[14px]">
+                            <dt className="w-[68px] flex-none text-[var(--hd-ink-3)]">{r.label}</dt>
+                            <dd className="min-w-0 flex-1 truncate text-[var(--hd-ink)]">
+                                {r.value ? (
+                                    <span className={r.label === 'Aadhaar' || r.label === 'PAN' || r.label === 'Mobile' ? 'lp-figure' : ''}>{r.value}</span>
+                                ) : (
+                                    <span aria-label="Not filled yet" className="block h-[6px] rounded-full bg-[var(--hd-bar)]" style={{ width: BAR_W[i % BAR_W.length] }} />
+                                )}
+                            </dd>
+                            <Slot
+                                className="flex-none justify-items-end"
+                                at={r.ok ? 1 : 0}
+                                states={[
+                                    [0, <span className="text-[12px] text-[var(--hd-ink-3)]">{r.value ? r.note ?? '' : ''}</span>],
+                                    [1, <span className="flex size-[18px] items-center justify-center rounded-full bg-[var(--lp-positive)]" aria-label="Ready"><Check className="size-3 text-[var(--hd-surface)]" strokeWidth={3} /></span>],
+                                ]}
+                            />
+                        </div>
+                    ))}
+                </dl>
+                <div className="border-t border-[var(--hd-line)] px-5 py-4">
+                    <div className="flex items-baseline justify-between gap-4 text-[14px]">
+                        <span className="text-[var(--hd-ink)]">Registration fee</span>
+                        <span className="lp-figure text-[var(--hd-ink)]">₹199</span>
+                    </div>
+                    <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--hd-ink-2)]">
+                        Paid by UPI right after you create the account. An admin then approves it, and you finish AEPS onboarding from the AEPS page.
+                    </p>
+                </div>
+            </div>
+        </aside>
+    );
+};
+
 const CreateRetailerWizard = ({
     formData, setFormData, parentName, merchantCode,
     aadhaarPicture, setAadhaarPicture, panPicture, setPanPicture, profilePicture, setProfilePicture,
@@ -112,6 +217,7 @@ const CreateRetailerWizard = ({
     const needsOtp = !isRetailer || self;
     // On the public signup page the labels read in sentence case, like the rest of the site.
     const LBL = self ? 'text-sm text-muted-foreground' : LABEL;
+    const C = self ? PUBLIC : PORTAL;
     const [step, setStep] = useState(0);
     const [touched, setTouched] = useState<Set<number>>(new Set());
     const [showPassword, setShowPassword] = useState(false);
@@ -188,7 +294,7 @@ const CreateRetailerWizard = ({
         else setTouched(new Set(touched).add(step));
     };
 
-    const inputCls = (k: string) => `${INPUT} ${err(k) ? 'border-red-500/60 focus:border-red-500 focus:ring-red-500/15' : ''}`;
+    const inputCls = (k: string) => `${C.input} ${err(k) ? 'border-red-500/60 focus:border-red-500 focus:ring-red-500/15' : ''}`;
     const text = (k: string, props: React.InputHTMLAttributes<HTMLInputElement> = {}, clean?: (s: string) => string) => (
         <input
             name={k}
@@ -215,6 +321,28 @@ const CreateRetailerWizard = ({
                         </div>
                     </div>}
 
+                    {self ? (
+                        <ol className="flex items-center gap-3">
+                            {STEPS.map((s, i) => {
+                                const state = i < step ? 'done' : i === step ? 'current' : 'todo';
+                                return (
+                                    <li key={s.title} className={`flex items-center gap-3 ${i < STEPS.length - 1 ? 'flex-1' : ''}`}>
+                                        <button type="button" onClick={() => jump(i)} aria-current={state === 'current' ? 'step' : undefined} className="flex flex-none items-center gap-2.5 rounded-lg py-1 text-left">
+                                            <span
+                                                className={`flex size-7 flex-none items-center justify-center rounded-full text-[13px] transition-colors duration-200 ${
+                                                    state === 'current' ? 'bg-[var(--lp-accent)] text-white' : state === 'done' ? 'bg-[var(--lp-fg)] text-[var(--lp-bg)]' : 'border border-[var(--lp-border-strong)] text-[var(--lp-muted)]'
+                                                }`}
+                                            >
+                                                {state === 'done' ? <Check size={14} strokeWidth={2.5} /> : i + 1}
+                                            </span>
+                                            <span className={`hidden text-[15px] sm:inline ${state === 'todo' ? 'text-[var(--lp-muted)]' : 'text-[var(--lp-fg)]'}`}>{s.title}</span>
+                                        </button>
+                                        {i < STEPS.length - 1 && <span aria-hidden className={`h-px flex-1 transition-colors duration-300 ${i < step ? 'bg-[var(--lp-fg)]' : 'bg-[var(--lp-border-strong)]'}`} />}
+                                    </li>
+                                );
+                            })}
+                        </ol>
+                    ) : (
                     <ol className="grid grid-cols-4 gap-2">
                         {STEPS.map((s, i) => {
                             const state = i < step ? 'done' : i === step ? 'current' : 'todo';
@@ -236,6 +364,7 @@ const CreateRetailerWizard = ({
                             );
                         })}
                     </ol>
+                    )}
                 </div>
             </section>
 
@@ -248,7 +377,14 @@ const CreateRetailerWizard = ({
                 }}
                 className="grid gap-6 lg:grid-cols-3"
             >
-                <section className={`${CARD} lg:col-span-2`}>
+                <section className={`${C.card} lg:col-span-2`}>
+                    {self ? (
+                        <div className="mb-7">
+                            <p className="text-sm text-[var(--lp-muted)]">Step {step + 1} of {STEPS.length}</p>
+                            <h2 className="mt-1 text-2xl font-medium tracking-[-0.01em] text-[var(--lp-fg)]">{STEPS[step].title}</h2>
+                            <p className="mt-1 text-[15px] text-[var(--lp-fg-2)]">{SELF_HINTS[step]}</p>
+                        </div>
+                    ) : (
                     <div className="mb-6 flex items-center gap-3">
                         {(() => { const Icon = STEPS[step].icon; return <div className={`rounded-xl p-2 ${SILVER_TILE}`}><Icon className="h-4 w-4" /></div>; })()}
                         <div>
@@ -256,12 +392,13 @@ const CreateRetailerWizard = ({
                             <h2 className="text-lg font-semibold">{STEPS[step].title}</h2>
                         </div>
                     </div>
+                    )}
 
                     {step === 0 && (
                         <div className="grid gap-5 md:grid-cols-2 animate-in fade-in duration-300">
                             <Field label="Name" required error={err('firstName') || err('lastName')} className="md:col-span-2">
                                 <div className="grid grid-cols-[90px_1fr_1fr] gap-2">
-                                    <select value={v('prefix')} onChange={(e) => set('prefix', e.target.value)} className={INPUT} aria-label="Prefix">
+                                    <select value={v('prefix')} onChange={(e) => set('prefix', e.target.value)} className={C.input} aria-label="Prefix">
                                         {['Mr', 'Mrs', 'Miss'].map((p) => <option key={p}>{p}</option>)}
                                     </select>
                                     {text('firstName', { placeholder: 'First name', autoComplete: 'off' })}
@@ -277,11 +414,11 @@ const CreateRetailerWizard = ({
                                         {isEmailVerified && <CheckCircle2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-500" />}
                                     </div>
                                     {!needsOtp ? null : !otpSent ? (
-                                        <button type="button" onClick={onSendOtp} disabled={sendingOtp || !/^\S+@\S+\.\S+$/.test(v('email'))} className={SECONDARY_BUTTON}>
+                                        <button type="button" onClick={onSendOtp} disabled={sendingOtp || !/^\S+@\S+\.\S+$/.test(v('email'))} className={C.secondary}>
                                             {sendingOtp ? <Loader2 size={16} className="animate-spin" /> : null} Send OTP
                                         </button>
                                     ) : !isEmailVerified ? (
-                                        <button type="button" onClick={onResetEmail} className={SECONDARY_BUTTON}>Change</button>
+                                        <button type="button" onClick={onResetEmail} className={C.secondary}>Change</button>
                                     ) : null}
                                 </div>
                                 {needsOtp && otpSent && !isEmailVerified && (
@@ -291,9 +428,9 @@ const CreateRetailerWizard = ({
                                             onChange={(e) => set('otp', e.target.value.replace(/\D/g, '').slice(0, 6))}
                                             placeholder="6-digit OTP"
                                             inputMode="numeric"
-                                            className={`${INPUT} font-mono tracking-[0.4em]`}
+                                            className={`${C.input} font-mono tracking-[0.4em]`}
                                         />
-                                        <button type="button" onClick={onVerifyEmail} disabled={verifyingEmail || v('otp').length !== 6} className={PRIMARY_BUTTON}>
+                                        <button type="button" onClick={onVerifyEmail} disabled={verifyingEmail || v('otp').length !== 6} className={C.primary}>
                                             {verifyingEmail ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />} Verify
                                         </button>
                                     </div>
@@ -302,7 +439,7 @@ const CreateRetailerWizard = ({
 
                             <Field label="Mobile" required error={err('contactNumber')}>
                                 <div className="flex">
-                                    <span className="flex items-center rounded-l-xl border border-r-0 bg-muted px-3 text-sm text-muted-foreground">+91</span>
+                                    <span className={C.prefix}>+91</span>
                                     {text('contactNumber', { inputMode: 'numeric', placeholder: '98765 43210', className: `${inputCls('contactNumber')} rounded-l-none` }, (s) => s.replace(/\D/g, '').slice(0, 10))}
                                 </div>
                             </Field>
@@ -318,21 +455,21 @@ const CreateRetailerWizard = ({
                                     </button>
                                 </div>
                             </Field>
-                            <FilePicker label="Profile photo" file={profilePicture} onChange={setProfilePicture} />
+                            <FilePicker compact={self} label="Profile photo" file={profilePicture} onChange={setProfilePicture} />
 
                             {!isRetailer && (
                                 <Field label="Distributor ID (auto-generated)">
-                                    <input value={merchantCode} disabled className={`${INPUT} font-mono disabled:cursor-not-allowed disabled:opacity-70`} />
+                                    <input value={merchantCode} disabled className={`${C.input} font-mono disabled:cursor-not-allowed disabled:opacity-70`} />
                                 </Field>
                             )}
                             {isRetailer && !self && (
                             <div className="md:col-span-2 rounded-2xl border bg-background p-4">
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <Field label="Retailer ID (auto-generated)">
-                                        <input value={merchantCode} disabled className={`${INPUT} font-mono disabled:cursor-not-allowed disabled:opacity-70`} />
+                                        <input value={merchantCode} disabled className={`${C.input} font-mono disabled:cursor-not-allowed disabled:opacity-70`} />
                                     </Field>
                                     <Field label="Parent distributor">
-                                        <input value={parentName} disabled className={`${INPUT} disabled:cursor-not-allowed disabled:opacity-70`} />
+                                        <input value={parentName} disabled className={`${C.input} disabled:cursor-not-allowed disabled:opacity-70`} />
                                     </Field>
                                 </div>
                             </div>
@@ -348,10 +485,10 @@ const CreateRetailerWizard = ({
                             <Field label="PAN number" required error={err('panNumber')}>
                                 {text('panNumber', { placeholder: 'ABCDE1234F', className: `${inputCls('panNumber')} font-mono uppercase tracking-wider` }, (s) => s.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10))}
                             </Field>
-                            <FilePicker label="Aadhaar photo" required={isRetailer} file={aadhaarPicture} onChange={setAadhaarPicture} error={err('aadhaarPicture')} />
-                            <FilePicker label="PAN photo" required={isRetailer} file={panPicture} onChange={setPanPicture} error={err('panPicture')} />
+                            <FilePicker compact={self} label="Aadhaar photo" required={isRetailer} file={aadhaarPicture} onChange={setAadhaarPicture} error={err('aadhaarPicture')} />
+                            <FilePicker compact={self} label="PAN photo" required={isRetailer} file={panPicture} onChange={setPanPicture} error={err('panPicture')} />
                             <div className="space-y-1.5">
-                                <FilePicker label="Aadhaar back photo (optional)" file={aadhaarBack} onChange={readAadhaarBack} />
+                                <FilePicker compact={self} label="Aadhaar back photo (optional)" file={aadhaarBack} onChange={readAadhaarBack} />
                                 {/* Blocks the form while the QR is read: anything typed meanwhile would be overwritten by the fill. */}
                                 {qrState.reading && (
                                     <div role="alertdialog" aria-modal="true" aria-live="polite" aria-label="Reading your Aadhaar QR" className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -402,8 +539,8 @@ const CreateRetailerWizard = ({
                                     <Field label="Brand name">{text('brandName', { placeholder: 'Brand name' })}</Field>
                                     <Field label="Website">
                                         <div className="flex">
-                                            <span className="flex items-center rounded-l-xl border border-r-0 bg-muted px-3 text-sm text-muted-foreground">https://</span>
-                                            {text('website', { placeholder: 'www.company.com', className: `${INPUT} rounded-l-none` })}
+                                            <span className={C.prefix}>https://</span>
+                                            {text('website', { placeholder: 'www.company.com', className: `${C.input} rounded-l-none` })}
                                         </div>
                                     </Field>
                                     <Field label="Support email">{text('supportEmail', { type: 'email', placeholder: 'support@company.com' })}</Field>
@@ -503,15 +640,15 @@ const CreateRetailerWizard = ({
                     )}
 
                     <div className="mt-8 flex items-center justify-between gap-3 border-t pt-5">
-                        <button type="button" onClick={() => setStep(step - 1)} disabled={step === 0 || isLoading} className={`${SECONDARY_BUTTON} disabled:invisible`}>
+                        <button type="button" onClick={() => setStep(step - 1)} disabled={step === 0 || isLoading} className={`${C.secondary} disabled:invisible`}>
                             <ArrowLeft size={16} /> Back
                         </button>
                         {step < STEPS.length - 1 ? (
-                            <button type="submit" className={PRIMARY_BUTTON}>
+                            <button type="submit" className={C.primary}>
                                 {step === 2 ? 'Review' : 'Continue'} <ArrowRight size={16} />
                             </button>
                         ) : (
-                            <button type="submit" disabled={isLoading || done} className={`${PRIMARY_BUTTON} px-6`}>
+                            <button type="submit" disabled={isLoading || done} className={`${C.primary} px-6`}>
                                 {isLoading ? <Loader2 size={16} className="animate-spin" /> : done ? <CheckCircle2 size={16} /> : <UserPlus size={16} />}
                                 {isLoading ? 'Creating…' : done ? 'Created' : self ? 'Create account' : `Create ${noun}`}
                             </button>
@@ -519,7 +656,18 @@ const CreateRetailerWizard = ({
                     </div>
                 </section>
 
-                {/* Checklist */}
+                {self ? (
+                    <ApplicationPreview
+                        rows={[
+                            { label: 'Name', value: [v('firstName'), v('lastName')].filter((x) => x.trim()).join(' '), ok: !!(v('firstName').trim() && v('lastName').trim()) },
+                            { label: 'Email', value: v('email'), ok: !!isEmailVerified, note: isEmailVerified ? undefined : otpSent ? 'Enter the OTP' : 'Not verified yet' },
+                            { label: 'Mobile', value: v('contactNumber') && `+91 ${v('contactNumber')}`, ok: MOBILE.test(v('contactNumber')) && !!v('dob') },
+                            { label: 'Aadhaar', value: v('aadhaarNumber') && `XXXX XXXX ${v('aadhaarNumber').slice(-4).padStart(4, '•')}`, ok: AADHAAR.test(v('aadhaarNumber')) && !!aadhaarPicture },
+                            { label: 'PAN', value: v('panNumber'), ok: PAN.test(v('panNumber')) && !!panPicture },
+                            { label: 'Shop', value: [v('businessName'), v('city')].filter((x) => x.trim()).join(', '), ok: !!(v('businessName') && v('businessAddress') && v('city') && v('district') && v('state')) },
+                        ]}
+                    />
+                ) : (
                 <aside className="flex flex-col gap-6">
                     <section className={CARD}>
                         <p className={`${LBL} mb-4`}>Checklist</p>
@@ -550,6 +698,7 @@ const CreateRetailerWizard = ({
                         </div>
                     </section>
                 </aside>
+                )}
             </form>
         </div>
     );

@@ -17,5 +17,5 @@ export const ROW = 'flex items-baseline justify-between gap-4';
 export const LABEL = 'block text-sm text-[var(--lp-fg)]';
 export const INPUT =
     'mt-2 h-12 w-full rounded-[10px] border border-[var(--lp-border-strong)] bg-[var(--lp-card)] px-4 text-base text-[var(--lp-fg)] outline-none transition-colors placeholder:text-[var(--lp-muted)] focus:border-[var(--lp-accent)] focus:ring-2 focus:ring-[var(--lp-accent-soft)] disabled:opacity-60';
-export const ALERT_ERROR = 'rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700';
-export const ALERT_OK = 'rounded-[10px] border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800';
+export const ALERT_ERROR = 'rounded-[10px] border border-[var(--lp-danger-line)] bg-[var(--lp-danger-soft)] px-4 py-3 text-sm text-[var(--lp-danger)]';
+export const ALERT_OK = 'rounded-[10px] border border-[var(--lp-border)] bg-[var(--hd-ok-bg)] px-4 py-3 text-sm text-[var(--lp-positive)]';

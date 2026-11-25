@@ -17,7 +17,6 @@ import {
     Scale,
     Send,
     ShieldCheck,
-    Users,
     Zap,
 } from 'lucide-react';
 import LandingNav from '@/components/landing/LandingNav';
@@ -168,29 +167,9 @@ const About: React.FC = () => {
                 </div>
             </header>
 
-            {/* Mission, platform and the official record */}
+            {/* The official record, kept word for word */}
             <section className={`${SECTION} lp-band`}>
                 <div className={`${WRAP} space-y-4`}>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div className={`${CARD} p-6 sm:p-8`}>
-                            <Users aria-hidden strokeWidth={1.5} className={ICON} />
-                            <h2 className="mt-5 text-xl font-medium text-[var(--lp-fg)]">Our mission</h2>
-                            <p className={`${BODY} mt-3`}>
-                                With a vision to bridge the digital gap and enable financial inclusion across India, we are
-                                committed to delivering instant transactions, transparent reporting, and dedicated support.
-                                Whether you're a local store owner or a large distributor, Shahparpay Solutions Pvt Ltd helps you
-                                serve your customers better and earn more on every transaction.
-                            </p>
-                        </div>
-                        <div className={`${CARD} p-6 sm:p-8`}>
-                            <ShieldCheck aria-hidden strokeWidth={1.5} className={ICON} />
-                            <h2 className="mt-5 text-xl font-medium text-[var(--lp-fg)]">Our platform</h2>
-                            <p className={`${BODY} mt-3`}>
-                                Join thousands of trusted partners and grow your digital service business with us.
-                            </p>
-                        </div>
-                    </div>
-
                     {/* Kept word for word: the company's official About Us record. */}
                     <div className={`${CARD} p-6 sm:p-8`}>
                         <div className="flex items-center gap-2">

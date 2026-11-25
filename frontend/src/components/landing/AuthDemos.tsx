@@ -11,7 +11,7 @@ import { TRAVEL, useBeats } from './beats';
 
 const Bar = ({ w }: { w: number }) => <span aria-hidden className="block h-[6px] rounded-full bg-[var(--hd-bar)]" style={{ width: w }} />;
 
-function Well({ children, label }: { children: React.ReactNode; label: string }) {
+export function Well({ children, label }: { children: React.ReactNode; label: string }) {
     return (
         <div role="img" aria-label={label} className="overflow-hidden rounded-[20px] bg-[var(--lp-surface)] px-[8%] pt-8">
             <div className="hd-window -mb-6 rounded-t-[14px] bg-[var(--hd-surface)] pb-10">{children}</div>
@@ -129,6 +129,46 @@ export function SignupDemo() {
                     style={feePaid ? { background: 'var(--hd-primary)', color: 'var(--hd-on-primary)' } : { background: 'var(--hd-fill)', color: 'var(--hd-ink-3)' }}
                 >
                     <Slot at={feePaid ? 1 : 0} states={[[0, 'Finish the steps to apply'], [1, 'Sent for approval']]} />
+                </div>
+            </Well>
+        </div>
+    );
+}
+
+/* ---------------------------------------------------------------- contact */
+
+/** A callback request on our side of the desk: received, then our team calls the number left. */
+export function CallbackDemo() {
+    const { ref, step } = useBeats([1800, 2600, 3200], 2);
+    return (
+        <div ref={ref}>
+            <Well label="A callback request from a shop owner is received and our support team calls them back.">
+                <div className="flex items-center justify-between gap-4 border-b border-[var(--hd-line)] px-5 py-4">
+                    <span className="text-[15px] font-medium text-[var(--hd-ink)]">Callback request</span>
+                    <Slot
+                        className="justify-items-end text-[12px]"
+                        at={step}
+                        states={[
+                            [0, <span className="inline-flex h-6 items-center rounded-full bg-[var(--hd-fill)] px-2 text-[var(--hd-ink-2)]">Received</span>],
+                            [1, <span className="inline-flex items-center gap-1.5 text-[var(--hd-ink-2)]"><Loader2 aria-hidden className="size-3.5 animate-spin" strokeWidth={2} /> Calling</span>],
+                            [2, <span className="inline-flex h-6 items-center rounded-full bg-[var(--hd-ok-bg)] px-2 text-[var(--lp-positive)]">Spoke to them</span>],
+                        ]}
+                    />
+                </div>
+                <dl className="px-2 py-1.5">
+                    {[
+                        ['Name', 'Sunita Devi', false],
+                        ['Mobile', '98XXX XXX10', true],
+                        ['City', 'Hooghly', false],
+                    ].map(([k, v, mono]) => (
+                        <div key={String(k)} className="flex h-11 items-center gap-3 px-3 text-[14px]">
+                            <dt className="w-16 flex-none text-[var(--hd-ink-3)]">{k}</dt>
+                            <dd className={`text-[var(--hd-ink)] ${mono ? 'lp-figure' : ''}`}>{v}</dd>
+                        </div>
+                    ))}
+                </dl>
+                <div className="mx-5 rounded-[10px] bg-[var(--hd-fill)] px-4 py-3 text-[14px] leading-relaxed text-[var(--hd-ink)]">
+                    I want to start AEPS and money transfer at my shop.
                 </div>
             </Well>
         </div>

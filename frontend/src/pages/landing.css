@@ -19,6 +19,12 @@
   --lp-accent-ink: #5b21b6;
   --lp-accent-soft: rgba(109, 40, 217, 0.07);
   --lp-positive: #15803d;
+  --lp-warn: #b45309;
+  --lp-warn-soft: rgba(217, 119, 6, 0.08);
+  --lp-warn-line: rgba(217, 119, 6, 0.24);
+  --lp-danger: #b91c1c;
+  --lp-danger-soft: rgba(220, 38, 38, 0.07);
+  --lp-danger-line: rgba(220, 38, 38, 0.22);
   --lp-ease: cubic-bezier(0.22, 1, 0.36, 1);
   /* The counter: a deep violet surface the receipt and the closing band sit on. */
   --lp-ink: #22143b;
@@ -92,6 +98,12 @@ html.dark .landing-page:not(.lp-light) {
   --lp-accent-ink: #c4b5fd;
   --lp-accent-soft: rgba(124, 77, 255, 0.16);
   --lp-positive: #4ade80;
+  --lp-warn: #fbbf24;
+  --lp-warn-soft: rgba(251, 191, 36, 0.08);
+  --lp-warn-line: rgba(251, 191, 36, 0.24);
+  --lp-danger: #f87171;
+  --lp-danger-soft: rgba(248, 113, 113, 0.08);
+  --lp-danger-line: rgba(248, 113, 113, 0.24);
   --lp-ink: #1c1430;
   --lp-ink-2: #2b1e4a;
   --lp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -481,4 +493,9 @@ html.dark .landing-page:not(.lp-light) {
 /* Legal pages stay a light document, so the theme switch has nothing to change there. */
 .lp-light .lp-theme-toggle {
   display: none;
+}
+
+/* Fields draw their own focus (accent border and soft ring); the page outline would double it. */
+.landing-page :is(input, select, textarea):focus-visible {
+  outline: none;
 }

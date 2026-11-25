@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Clock, Headset, Loader2, Mail, MapPin, Phone, Percent } from 'lucide-react';
 import LandingNav from '@/components/landing/LandingNav';
+import { CallbackDemo } from '@/components/landing/AuthDemos';
 import LandingFooter from '@/components/landing/LandingFooter';
 import { ALERT_ERROR, BTN_PRIMARY, BTN_SECONDARY, CARD, H1, INPUT, LABEL, LEAD, WRAP } from '@/components/landing/ui';
 import './landing.css';
@@ -78,13 +79,18 @@ const Contact: React.FC = () => {
             <LandingNav />
 
             <header className="border-b border-[var(--lp-border)]">
-                <div className={`${WRAP} py-16 sm:py-24`}>
-                    <p className="lp-eyebrow"><Headset aria-hidden strokeWidth={1.5} className="size-4" /> We answer in your language</p>
-                    <h1 className={`${H1} mt-3`}>Talk to our team</h1>
-                    <p className={`${LEAD} mt-5 max-w-2xl`}>
-                        Leave your details and we will call you back. No form-filling marathon — a name,
-                        a number and what you need is enough.
-                    </p>
+                <div className={`${WRAP} grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-12`}>
+                    <div className="lg:col-span-6">
+                        <p className="lp-eyebrow"><Headset aria-hidden strokeWidth={1.5} className="size-4" /> We answer in your language</p>
+                        <h1 className={`${H1} mt-3`}>Talk to our team</h1>
+                        <p className={`${LEAD} mt-5 max-w-2xl`}>
+                            Leave your details and we will call you back. No form-filling marathon — a name,
+                            a number and what you need is enough.
+                        </p>
+                    </div>
+                    <div className="lg:col-span-5 lg:col-start-8">
+                        <CallbackDemo />
+                    </div>
                 </div>
             </header>
 

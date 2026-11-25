@@ -7,6 +7,7 @@ import { ALERT_ERROR, BTN_SECONDARY, CARD, H1, LEAD, SECTION, WRAP } from '@/com
 import './landing.css';
 
 import { rupees, type Rates } from '@/lib/rateCard';
+import SlabDemo from '@/components/landing/SlabDemo';
 
 const Card: React.FC<{
     icon: React.ElementType;
@@ -63,13 +64,20 @@ const Commission: React.FC = () => {
             <LandingNav />
 
             <header className="border-b border-[var(--lp-border)]">
-                <div className={`${WRAP} py-16 sm:py-24`}>
-                    <p className="lp-eyebrow">The same rates that credit your wallet</p>
-                    <h1 className={`${H1} mt-3`}>What you earn</h1>
-                    <p className={`${LEAD} mt-5 max-w-2xl`}>
-                        Commission is credited to your wallet as each transaction completes. No monthly
-                        target, no minimum, and nothing held back until month end.
-                    </p>
+                <div className={`${WRAP} grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-12`}>
+                    <div className="lg:col-span-6">
+                        <p className="lp-eyebrow">The same rates that credit your wallet</p>
+                        <h1 className={`${H1} mt-3`}>What you earn</h1>
+                        <p className={`${LEAD} mt-5 max-w-2xl`}>
+                            Commission is credited to your wallet as each transaction completes. No monthly
+                            target, no minimum, and nothing held back until month end.
+                        </p>
+                    </div>
+                    {rates && rates.aeps.withdrawal.length > 0 && (
+                        <div className="lg:col-span-5 lg:col-start-8">
+                            <SlabDemo slabs={rates.aeps.withdrawal} />
+                        </div>
+                    )}
                 </div>
             </header>
 

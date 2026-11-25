@@ -1,6 +1,5 @@
 import React from 'react';
-import LandingNav from '@/components/landing/LandingNav';
-import LandingFooter from '@/components/landing/LandingFooter';
+import LegalLayout from '@/components/landing/LegalLayout';
 import './landing.css';
 
 // Play Store links here as the app's privacy policy; keep it in step with the
@@ -79,28 +78,16 @@ const SECTIONS: { title: string; items: string[] }[] = [
 ];
 
 const PrivacyPolicy: React.FC = () => (
-    <div className="landing-page lp-light relative overflow-x-clip bg-white text-slate-900 font-sans">
-        <LandingNav />
-        <section className="w-full bg-[#f8fafc] px-4 sm:px-6 py-14 sm:py-20 border-b border-slate-100">
-            <div className="mx-auto max-w-4xl space-y-8">
-                <div className="text-center">
-                    <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
-                        Privacy <span className="text-[#008c46]">Policy</span>
-                    </h1>
-                    <p className="mt-3 text-sm text-slate-500">Last updated: 12 November 2026</p>
-                </div>
-                {SECTIONS.map((s) => (
-                    <div key={s.title} className="p-6 rounded-[24px] bg-white border border-slate-200 shadow-sm">
-                        <h2 className="text-lg font-extrabold text-slate-900 mb-3">{s.title}</h2>
-                        <ul className="space-y-2 list-disc pl-5 text-sm text-slate-700 leading-relaxed">
-                            {s.items.map((i) => <li key={i}>{i}</li>)}
-                        </ul>
-                    </div>
-                ))}
-            </div>
-        </section>
-        <LandingFooter />
-    </div>
+    <LegalLayout eyebrow="Last updated 12 November 2026" title="Privacy policy">
+        {SECTIONS.map((s) => (
+            <section key={s.title} className="border-b border-[var(--lp-border)] pb-8 last:border-0">
+                <h2 className="text-xl font-medium tracking-[-0.01em] text-[var(--lp-fg)]">{s.title}</h2>
+                <ul className="mt-4 list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-[var(--lp-fg-2)] marker:text-[var(--lp-muted)]">
+                    {s.items.map((i) => <li key={i}>{i}</li>)}
+                </ul>
+            </section>
+        ))}
+    </LegalLayout>
 );
 
 export default PrivacyPolicy;
