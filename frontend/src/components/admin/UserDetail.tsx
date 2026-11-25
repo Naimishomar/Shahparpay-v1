@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Banknote, ChevronLeft, Clock, History, Loader2, Mail, MapPin, Package, Phone, Power, Receipt, RefreshCcw, ShieldCheck, LogIn, Trash2, Store, UserCheck, Users, XCircle } from 'lucide-react';
+import { ArrowRight, Banknote, ChevronLeft, Clock, History, Loader2, Mail, MapPin, MessageCircle, Package, Phone, Power, Receipt, RefreshCcw, ShieldCheck, LogIn, Trash2, Store, UserCheck, Users, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { CARD, INPUT, LABEL, PENDING_PILL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, STATUS_PILL, ago, inr, inrShort, serviceLabel, useApiGet } from '../distributor/shared';
 import { Avatar, Skeleton } from '../distributor/ui';
@@ -420,7 +420,13 @@ const UserDetail = ({
                     <h2 className="mb-4 text-lg font-semibold">Contact & business</h2>
                     <dl className="space-y-3 text-sm">
                         <div className="flex items-center gap-3"><Mail size={16} className="text-muted-foreground" /><dd className="truncate font-medium">{user.email || '—'}</dd></div>
-                        <div className="flex items-center gap-3"><Phone size={16} className="text-muted-foreground" /><dd className="font-medium tabular-nums">{user.contactNumber || '—'}</dd></div>
+                        <div className="flex items-center gap-3"><Phone size={16} className="text-muted-foreground" /><dd className="font-medium tabular-nums">{user.contactNumber || '—'}</dd>
+                            {user.contactNumber && (
+                                <a href={`https://wa.me/91${String(user.contactNumber).replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(`Hi ${user.name}, this is Shahparpay.`)}`} target="_blank" rel="noopener noreferrer" className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700">
+                                    <MessageCircle size={14} /> WhatsApp
+                                </a>
+                            )}
+                        </div>
                         <div className="flex items-start gap-3"><MapPin size={16} className="mt-0.5 text-muted-foreground" /><dd className="font-medium">{[user.businessName, user.businessAddress, address].filter(Boolean).join(' · ') || '—'}</dd></div>
                         <div className="flex items-center gap-3"><Clock size={16} className="text-muted-foreground" /><dd className="text-muted-foreground">Joined {new Date(user.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</dd></div>
                     </dl>
