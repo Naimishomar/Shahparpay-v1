@@ -314,3 +314,198 @@ body, [data-slot="sidebar-inset"] {
         radial-gradient(ellipse 50% 50% at 100% 0%, rgb(189 230 250 / 0.05), transparent 70%),
         radial-gradient(ellipse 55% 50% at 100% 100%, rgb(250 214 191 / 0.05), transparent 70%);
 }
+
+/*
+ * Admin and distributor portals wear the public site's look (Layout sets
+ * html.lp-portal for those roles; the retailer portal keeps the pastel set).
+ * Same palette as pages/landing.css: warm paper or ink neutrals, one violet
+ * accent, no gradients or glows. Unlayered, so it wins over the utilities above.
+ */
+html.lp-portal {
+    --background: #faf9f6;
+    --foreground: #1c1a17;
+    --card: #ffffff;
+    --card-foreground: #1c1a17;
+    --popover: #ffffff;
+    --popover-foreground: #1c1a17;
+    --primary: #6d28d9;
+    --primary-foreground: #ffffff;
+    --secondary: #f2f0eb;
+    --secondary-foreground: #1c1a17;
+    --muted: #f2f0eb;
+    --muted-foreground: #736d65;
+    --accent: #f2f0eb;
+    --accent-foreground: #1c1a17;
+    --border: rgba(28, 26, 23, 0.09);
+    --input: rgba(28, 26, 23, 0.16);
+    --ring: #6d28d9;
+    --chip: #f2f0eb;
+    --chip-foreground: #57524a;
+    --brand: #6d28d9;
+    --chart-1: #6d28d9;
+    --chart-2: #15803d;
+    --chart-3: #a39d93;
+    --chart-4: #1c1a17;
+    --chart-5: #b45309;
+    --radius: 0.75rem;
+    --glow-strength: 0;
+    --sidebar: #faf9f6;
+    --sidebar-foreground: #1c1a17;
+    --sidebar-primary: #1c1a17;
+    --sidebar-primary-foreground: #faf9f6;
+    --sidebar-accent: #f2f0eb;
+    --sidebar-accent-foreground: #1c1a17;
+    --sidebar-border: rgba(28, 26, 23, 0.09);
+    --sidebar-ring: #6d28d9;
+}
+
+html.lp-portal.dark {
+    --background: #0e0d12;
+    --foreground: #f1eee8;
+    --card: #17161d;
+    --card-foreground: #f1eee8;
+    --popover: #1b1a22;
+    --popover-foreground: #f1eee8;
+    --primary: #7c4dff;
+    --primary-foreground: #ffffff;
+    --secondary: #1f1e26;
+    --secondary-foreground: #f1eee8;
+    --muted: #1f1e26;
+    --muted-foreground: #918b81;
+    --accent: #24232c;
+    --accent-foreground: #f1eee8;
+    --border: rgba(255, 255, 255, 0.08);
+    --input: rgba(255, 255, 255, 0.14);
+    --ring: #7c4dff;
+    --chip: #24232c;
+    --chip-foreground: #bab4aa;
+    --brand: #c4b5fd;
+    --chart-1: #a78bfa;
+    --chart-2: #4ade80;
+    --chart-3: #6b665e;
+    --chart-4: #f1eee8;
+    --chart-5: #fbbf24;
+    --sidebar: #0e0d12;
+    --sidebar-foreground: #f1eee8;
+    --sidebar-primary: #f1eee8;
+    --sidebar-primary-foreground: #0e0d12;
+    --sidebar-accent: #1f1e26;
+    --sidebar-accent-foreground: #f1eee8;
+    --sidebar-border: rgba(255, 255, 255, 0.07);
+    --sidebar-ring: #7c4dff;
+}
+
+/* No pastel wash or glow behind the screens. */
+html.lp-portal body,
+html.lp-portal [data-slot="sidebar-inset"],
+html.lp-portal .top-glow {
+    background-image: none;
+}
+
+/* The primary action: solid accent, the way the public site draws it. */
+html.lp-portal .btn-primary {
+    background-image: none;
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    border-color: transparent;
+    box-shadow: none;
+    filter: none;
+}
+html.lp-portal .btn-primary:hover {
+    background-color: color-mix(in oklab, var(--primary) 88%, black);
+}
+
+/* The hero banner and service tints become plain surfaces: hierarchy from type and space, not a wash. */
+html.lp-portal .hero-panel {
+    --color-white: var(--card-foreground);
+    background: var(--card);
+    color: var(--card-foreground);
+    border: 1px solid var(--border);
+    box-shadow: none;
+}
+html.lp-portal :is(.tint-lavender, .tint-sky, .tint-lime, .tint-peach, .tint-butter, .tint-mint, .tint-lilac) {
+    background: var(--card);
+    color: var(--card-foreground);
+}
+html.lp-portal :is(.glass, .glass-card) {
+    background: var(--card);
+    backdrop-filter: none;
+    border-color: var(--border);
+}
+
+/* Buttons do not shrink on press; motion stays as quick as the product. */
+html.lp-portal button:not(:disabled):active {
+    transform: none;
+}
+
+/* One icon colour: muted at rest, ink on the current page (skill: icons are one opaque colour). */
+html.lp-portal .nav-icon { color: var(--muted-foreground); }
+html.lp-portal [aria-current="page"] .nav-icon,
+html.lp-portal a:hover .nav-icon { color: var(--foreground); }
+
+/* The support strip is a quiet line on the page, not a navy band. */
+html.lp-portal .support-strip {
+    background: var(--background);
+    border-bottom: 1px solid var(--border);
+    --color-white: var(--foreground);
+    color: var(--muted-foreground);
+}
+
+/* The avatar keeps a plain hairline instead of the orange-to-green ring. */
+html.lp-portal .avatar-ring { background: var(--border); box-shadow: none; }
+
+html.lp-portal .support-fab { box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18); }
+
+/* Sentence case: labels are not shouted (form values that must be capitals keep it). */
+html.lp-portal :not(input):not(textarea).uppercase {
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+/* One weight step for hierarchy, not two. */
+html.lp-portal :is(.font-bold, .font-extrabold, .font-black) { font-weight: 600; }
+
+/*
+ * A page's title sits on the page, not boxed in a card of its own (skill:
+ * compose objects, not an inventory of cards). The admin and distributor
+ * screens share this exact header block.
+ */
+html.lp-portal section.top-glow.rounded-3xl {
+    background: none;
+    border-color: transparent;
+    box-shadow: none;
+    padding: 0 0 4px;
+    overflow: visible;
+}
+
+/* Cards are separated by their hairline; shadow is kept for things that float (menus, dialogs). */
+html.lp-portal .shadow-sm { box-shadow: none; }
+
+/* The public controls (landing/ui.ts) read --lp-* tokens; give them the portal's values here. */
+html.lp-portal {
+    --lp-bg: var(--background);
+    --lp-surface: var(--muted);
+    --lp-card: var(--card);
+    --lp-fg: var(--foreground);
+    --lp-fg-2: #57524a;
+    --lp-muted: var(--muted-foreground);
+    --lp-border: var(--border);
+    --lp-border-strong: var(--input);
+    --lp-accent: var(--primary);
+    --lp-accent-ink: #5b21b6;
+    --lp-accent-soft: rgba(109, 40, 217, 0.08);
+    --lp-positive: #15803d;
+    --lp-danger: #b91c1c;
+    --lp-danger-soft: rgba(220, 38, 38, 0.07);
+    --lp-danger-line: rgba(220, 38, 38, 0.22);
+    --lp-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+html.lp-portal.dark {
+    --lp-fg-2: #bab4aa;
+    --lp-accent-ink: #c4b5fd;
+    --lp-accent-soft: rgba(124, 77, 255, 0.16);
+    --lp-positive: #4ade80;
+    --lp-danger: #f87171;
+    --lp-danger-soft: rgba(248, 113, 113, 0.08);
+    --lp-danger-line: rgba(248, 113, 113, 0.24);
+}

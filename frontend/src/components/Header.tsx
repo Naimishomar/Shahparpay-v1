@@ -63,7 +63,7 @@ const StatusStrip = () => {
                 : null;
 
     return (
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 bg-gradient-to-r from-[#16142E] to-[#2A2556] dark:from-[#141415] dark:to-[#1C1C1E] px-4 py-1.5 text-xs text-white/70 md:px-5">
+        <div className="support-strip flex flex-wrap items-center gap-x-5 gap-y-1 bg-gradient-to-r from-[#16142E] to-[#2A2556] dark:from-[#141415] dark:to-[#1C1C1E] px-4 py-1.5 text-xs text-white/70 md:px-5">
             {aeps && <span className="flex shrink-0 items-center gap-2 whitespace-nowrap"><i className={`h-1.5 w-1.5 rounded-full ${aeps.dot}`} />{aeps.text}</span>}
             {lastSettlement && (
                 <span className="shrink-0 whitespace-nowrap">
@@ -234,7 +234,7 @@ const Header = ({ trigger }: { trigger?: React.ReactNode }) => {
         : user?.adminId;
 
     const avatar = (size: string) => (
-        <div className={`${size} shrink-0 rounded-full bg-gradient-to-br from-[#F47920] to-[#12A65A] p-[2px] shadow-sm`}>
+        <div className={`avatar-ring ${size} shrink-0 rounded-full bg-gradient-to-br from-[#F47920] to-[#12A65A] p-[2px] shadow-sm`}>
             <div className="w-full h-full bg-background rounded-full flex items-center justify-center overflow-hidden">
                 {user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-foreground" />}
             </div>

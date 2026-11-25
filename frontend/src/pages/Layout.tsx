@@ -20,6 +20,14 @@ const Layout = () => {
 
     const location = useLocation();
 
+    // Admin and distributor portals take the public site's look (index.css, html.lp-portal).
+    // On <html> so dialogs and popovers rendered outside this tree get it too.
+    const pro = user?.role === 'admin' || user?.role === 'distributor';
+    useEffect(() => {
+        document.documentElement.classList.toggle('lp-portal', pro);
+        return () => document.documentElement.classList.remove('lp-portal');
+    }, [pro]);
+
     if (!token) {
         return <Navigate to="/login" replace />;
     }

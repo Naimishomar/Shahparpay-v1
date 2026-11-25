@@ -167,7 +167,7 @@ const NavLink = ({ item, active }: { item: NavItem; active: boolean }) => {
     >
       {/* The active page: colour, weight and a bar, so it never rests on colour alone. */}
       {active && <span aria-hidden="true" className="absolute -left-3 top-2.5 bottom-2.5 w-[3px] rounded-r bg-foreground" />}
-      <Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${iconTone(item.name)}`} strokeWidth={active ? 2.2 : 1.8} />
+      <Icon aria-hidden="true" className={`nav-icon h-5 w-5 shrink-0 ${iconTone(item.name)}`} strokeWidth={active ? 2.2 : 1.8} />
       <span className="truncate">{item.name}</span>
     </Link>
   );

@@ -7,6 +7,7 @@ import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE } fro
 import { BTN_PRIMARY, BTN_SECONDARY, INPUT as LP_INPUT } from '../landing/ui';
 import { Roll, Slot } from '../landing/motion';
 import { INDIAN_STATES } from '../../constants';
+import { useAuth } from '../../context/AuthContext';
 import { SERVICES } from '../../lib/services';
 
 export type RetailerForm = Record<string, string | boolean>;
@@ -216,8 +217,12 @@ const CreateRetailerWizard = ({
     const noun = isRetailer ? 'retailer' : 'distributor';
     const needsOtp = !isRetailer || self;
     // On the public signup page the labels read in sentence case, like the rest of the site.
-    const LBL = self ? 'text-sm text-muted-foreground' : LABEL;
-    const C = self ? PUBLIC : PORTAL;
+    // The public signup and the admin/distributor portals share the public site's controls;
+    // the retailer portal never shows this wizard, but anything else keeps the portal set.
+    const { user } = useAuth();
+    const pub = self || user?.role === 'admin' || user?.role === 'distributor';
+    const LBL = pub ? 'text-sm text-muted-foreground' : LABEL;
+    const C = pub ? PUBLIC : PORTAL;
     const [step, setStep] = useState(0);
     const [touched, setTouched] = useState<Set<number>>(new Set());
     const [showPassword, setShowPassword] = useState(false);
@@ -321,7 +326,7 @@ const CreateRetailerWizard = ({
                         </div>
                     </div>}
 
-                    {self ? (
+                    {pub ? (
                         <ol className="flex items-center gap-3">
                             {STEPS.map((s, i) => {
                                 const state = i < step ? 'done' : i === step ? 'current' : 'todo';
@@ -378,11 +383,11 @@ const CreateRetailerWizard = ({
                 className="grid gap-6 lg:grid-cols-3"
             >
                 <section className={`${C.card} lg:col-span-2`}>
-                    {self ? (
+                    {pub ? (
                         <div className="mb-7">
                             <p className="text-sm text-[var(--lp-muted)]">Step {step + 1} of {STEPS.length}</p>
                             <h2 className="mt-1 text-2xl font-medium tracking-[-0.01em] text-[var(--lp-fg)]">{STEPS[step].title}</h2>
-                            <p className="mt-1 text-[15px] text-[var(--lp-fg-2)]">{SELF_HINTS[step]}</p>
+                            <p className="mt-1 text-[15px] text-[var(--lp-fg-2)]">{self ? SELF_HINTS[step] : STEPS[step].hint}</p>
                         </div>
                     ) : (
                     <div className="mb-6 flex items-center gap-3">
@@ -455,7 +460,7 @@ const CreateRetailerWizard = ({
                                     </button>
                                 </div>
                             </Field>
-                            <FilePicker compact={self} label="Profile photo" file={profilePicture} onChange={setProfilePicture} />
+                            <FilePicker compact={pub} label="Profile photo" file={profilePicture} onChange={setProfilePicture} />
 
                             {!isRetailer && (
                                 <Field label="Distributor ID (auto-generated)">
@@ -485,10 +490,10 @@ const CreateRetailerWizard = ({
                             <Field label="PAN number" required error={err('panNumber')}>
                                 {text('panNumber', { placeholder: 'ABCDE1234F', className: `${inputCls('panNumber')} font-mono uppercase tracking-wider` }, (s) => s.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10))}
                             </Field>
-                            <FilePicker compact={self} label="Aadhaar photo" required={isRetailer} file={aadhaarPicture} onChange={setAadhaarPicture} error={err('aadhaarPicture')} />
-                            <FilePicker compact={self} label="PAN photo" required={isRetailer} file={panPicture} onChange={setPanPicture} error={err('panPicture')} />
+                            <FilePicker compact={pub} label="Aadhaar photo" required={isRetailer} file={aadhaarPicture} onChange={setAadhaarPicture} error={err('aadhaarPicture')} />
+                            <FilePicker compact={pub} label="PAN photo" required={isRetailer} file={panPicture} onChange={setPanPicture} error={err('panPicture')} />
                             <div className="space-y-1.5">
-                                <FilePicker compact={self} label="Aadhaar back photo (optional)" file={aadhaarBack} onChange={readAadhaarBack} />
+                                <FilePicker compact={pub} label="Aadhaar back photo (optional)" file={aadhaarBack} onChange={readAadhaarBack} />
                                 {/* Blocks the form while the QR is read: anything typed meanwhile would be overwritten by the fill. */}
                                 {qrState.reading && (
                                     <div role="alertdialog" aria-modal="true" aria-live="polite" aria-label="Reading your Aadhaar QR" className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -624,7 +629,7 @@ const CreateRetailerWizard = ({
                                     <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
                                         {block.rows.map(([k, val]) => (
                                             <div key={k} className="flex justify-between gap-3 text-sm sm:block">
-                                                <dt className={`${self ? 'text-xs' : 'text-[11px] uppercase tracking-wider'} text-muted-foreground`}>{k}</dt>
+                                                <dt className={`${pub ? 'text-xs' : 'text-[11px] uppercase tracking-wider'} text-muted-foreground`}>{k}</dt>
                                                 <dd className="truncate font-medium">{val || <span className="text-muted-foreground">—</span>}</dd>
                                             </div>
                                         ))}
