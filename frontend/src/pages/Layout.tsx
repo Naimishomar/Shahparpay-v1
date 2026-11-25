@@ -86,11 +86,11 @@ const UnderVerification = () => {
         },
     ];
 
-    const title = rejected ? 'Account not approved' : feeDue ? 'One step left' : 'Under review';
+    const title = rejected ? 'Account not approved' : feeDue ? 'Pay ₹199 to finish signing up' : 'Under review';
     const lead = rejected
         ? 'An admin reviewed your signup and could not approve it.'
         : feeDue
-        ? `Your details are saved${firstName ? `, ${firstName}` : ''}. Pay the ₹199 registration fee and your signup goes to an admin for approval.`
+        ? `Your details are saved${firstName ? `, ${firstName}` : ''}. Pay the registration fee below and your signup goes to an admin for approval.`
         : `Thanks for signing up${firstName ? `, ${firstName}` : ''}. An admin is checking your details and documents; you can use the portal once they approve your account.`;
 
     return (
@@ -107,73 +107,61 @@ const UnderVerification = () => {
                 </div>
             </header>
 
-            <main className={`${WRAP} grid gap-10 py-12 sm:py-16 ${feeDue ? 'lg:grid-cols-12 lg:items-start' : ''}`}>
-                {/* Intro, then on a phone the payment card straight after it; on a wide screen the card takes the right column. */}
-                <div className={feeDue ? 'lg:col-span-6' : ''}>
-                    <p className="lp-eyebrow">Retailer signup</p>
-                    <h1 className="lp-serif mt-3 text-[44px] leading-[1.02] text-[var(--lp-fg)] sm:text-[60px]">{title}</h1>
-                    <p className="mt-5 max-w-xl text-base leading-relaxed text-[var(--lp-fg-2)] sm:text-lg">{lead}</p>
-                </div>
+            {/* One centred column: where the signup stands, then the one thing to do. */}
+            <main className="mx-auto w-full max-w-xl px-4 py-10 text-center sm:py-14">
+                <ol aria-label="Signup progress" className="flex items-center justify-center gap-2">
+                    {steps.map((st, i) => (
+                        <li key={st.label} className="flex items-center gap-2">
+                            <span
+                                aria-current={st.state === 'current' ? 'step' : undefined}
+                                className={`flex size-6 flex-none items-center justify-center rounded-full text-[12px] ${
+                                    st.state === 'done' ? 'bg-[var(--lp-fg)] text-[var(--lp-bg)]'
+                                    : st.state === 'current' ? 'bg-[var(--lp-accent)] text-white'
+                                    : st.state === 'failed' ? 'bg-[var(--lp-danger)] text-white'
+                                    : 'border border-[var(--lp-border-strong)] text-[var(--lp-muted)]'
+                                }`}
+                            >
+                                {st.state === 'done' ? <Check aria-hidden size={12} strokeWidth={3} /> : st.state === 'failed' ? <XCircle aria-hidden size={12} strokeWidth={2.5} /> : i + 1}
+                            </span>
+                            <span className={`whitespace-nowrap text-[13px] ${st.state === 'current' ? '' : 'hidden sm:inline'} ${st.state === 'todo' ? 'text-[var(--lp-muted)]' : 'text-[var(--lp-fg)]'}`}>{st.label}</span>
+                            {i < steps.length - 1 && <span aria-hidden className={`h-px w-4 flex-none sm:w-10 ${st.state === 'done' ? 'bg-[var(--lp-fg)]' : 'bg-[var(--lp-border-strong)]'}`} />}
+                        </li>
+                    ))}
+                </ol>
+
+                <h1 className="lp-serif mt-10 text-balance text-[40px] leading-[1.04] text-[var(--lp-fg)] sm:text-[52px]">{title}</h1>
+                <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-[var(--lp-fg-2)]">{lead}</p>
 
                 {feeDue && (
-                    <div className="lg:col-span-5 lg:col-start-8 lg:row-span-2 lg:row-start-1">
+                    <div className="mt-8">
                         <SignupFee onPaid={checkSession} />
+                        <p className="mx-auto mt-5 max-w-md text-sm leading-relaxed text-[var(--lp-muted)]">
+                            Until the fee is paid, your signup is not sent for approval and your account stays inactive.
+                        </p>
                     </div>
                 )}
 
-                <div className={feeDue ? 'lg:col-span-6' : ''}>
-                    <ol className="max-w-md">
-                        {steps.map((st, i) => (
-                            <li key={st.label} className="relative flex gap-4 pb-7 last:pb-0">
-                                {i < steps.length - 1 && (
-                                    <span aria-hidden className={`absolute left-[13px] top-8 bottom-1 w-px ${st.state === 'done' ? 'bg-[var(--lp-fg)]' : 'bg-[var(--lp-border-strong)]'}`} />
-                                )}
-                                <span
-                                    className={`relative flex size-7 flex-none items-center justify-center rounded-full text-[13px] ${
-                                        st.state === 'done' ? 'bg-[var(--lp-fg)] text-[var(--lp-bg)]'
-                                        : st.state === 'current' ? 'bg-[var(--lp-accent)] text-white'
-                                        : st.state === 'failed' ? 'bg-[var(--lp-danger)] text-white'
-                                        : 'border border-[var(--lp-border-strong)] text-[var(--lp-muted)]'
-                                    }`}
-                                >
-                                    {st.state === 'done' ? <Check aria-hidden size={14} strokeWidth={2.5} /> : st.state === 'failed' ? <XCircle aria-hidden size={14} strokeWidth={2} /> : i + 1}
-                                </span>
-                                <div className="pt-0.5">
-                                    <p className={`text-[15px] ${st.state === 'todo' ? 'text-[var(--lp-muted)]' : 'text-[var(--lp-fg)]'}`}>{st.label}</p>
-                                    <p className="mt-0.5 text-sm text-[var(--lp-muted)]">{st.note}</p>
-                                </div>
-                            </li>
-                        ))}
-                    </ol>
-
-                    {feeDue && (
-                        <p className="mt-10 max-w-md border-l-2 border-[var(--lp-warn-line)] pl-4 text-sm leading-relaxed text-[var(--lp-fg-2)]">
-                            Until the fee is paid, your signup is not sent for approval and your account stays inactive.
+                {rejected && (
+                    <div className="mx-auto mt-8 max-w-md space-y-4 text-left">
+                        {user?.verificationNote && (
+                            <div className={ALERT_ERROR}>
+                                <p className="text-xs opacity-80">Reason</p>
+                                <p className="mt-1 whitespace-pre-wrap">{user.verificationNote}</p>
+                            </div>
+                        )}
+                        <p className="text-center text-[15px] leading-relaxed text-[var(--lp-fg-2)]">
+                            Call <a href="tel:+918240039776" className="lp-figure text-[var(--lp-fg)] hover:text-[var(--lp-accent-ink)]">+91 8240039776</a> or write to{' '}
+                            <a href="mailto:shahparpay@gmail.com" className="text-[var(--lp-fg)] hover:text-[var(--lp-accent-ink)]">shahparpay@gmail.com</a>.
                         </p>
-                    )}
+                    </div>
+                )}
 
-                    {rejected && (
-                        <div className="mt-10 max-w-md space-y-4">
-                            {user?.verificationNote && (
-                                <div className={ALERT_ERROR}>
-                                    <p className="text-xs opacity-80">Reason</p>
-                                    <p className="mt-1 whitespace-pre-wrap">{user.verificationNote}</p>
-                                </div>
-                            )}
-                            <p className="text-[15px] leading-relaxed text-[var(--lp-fg-2)]">
-                                Call <a href="tel:+918240039776" className="lp-figure text-[var(--lp-fg)] hover:text-[var(--lp-accent-ink)]">+91 8240039776</a> or write to{' '}
-                                <a href="mailto:shahparpay@gmail.com" className="text-[var(--lp-fg)] hover:text-[var(--lp-accent-ink)]">shahparpay@gmail.com</a>.
-                            </p>
-                        </div>
-                    )}
-
-                    {!feeDue && !rejected && (
-                        <button type="button" onClick={checkAgain} disabled={checking} className={`${BTN_PRIMARY} mt-10`}>
-                            {checking ? <Loader2 aria-hidden size={16} className="animate-spin" /> : <RefreshCcw aria-hidden size={16} strokeWidth={1.75} />}
-                            {checking ? 'Checking…' : 'Check again'}
-                        </button>
-                    )}
-                </div>
+                {!feeDue && !rejected && (
+                    <button type="button" onClick={checkAgain} disabled={checking} className={`${BTN_PRIMARY} mt-8`}>
+                        {checking ? <Loader2 aria-hidden size={16} className="animate-spin" /> : <RefreshCcw aria-hidden size={16} strokeWidth={1.75} />}
+                        {checking ? 'Checking…' : 'Check again'}
+                    </button>
+                )}
             </main>
         </div>
     );
@@ -227,45 +215,41 @@ const SignupFee = ({ onPaid }: { onPaid: () => Promise<void> }) => {
     }, []);
 
     return (
-        <section aria-label="Pay the registration fee" className="hd-window overflow-hidden rounded-2xl bg-[var(--hd-surface)]">
-            <div className="flex items-end justify-between gap-4 border-b border-[var(--hd-line)] px-6 py-5">
-                <div>
-                    <p className="text-sm text-[var(--hd-ink-3)]">Registration fee</p>
-                    <p className="lp-figure mt-1 text-[32px] leading-none tracking-[-0.02em] text-[var(--hd-ink)]">₹199</p>
-                </div>
-                <p className="text-sm text-[var(--hd-ink-2)]">Any UPI app</p>
-            </div>
-
-            <div className="px-6 py-6">
-                {qr ? (
-                    <div className="flex flex-col items-center">
-                        <div className="rounded-xl bg-white p-3 ring-1 ring-[var(--hd-line)]">
-                            {qr.qrUpi
-                                ? <QRCodeSVG value={qr.qrUpi} size={208} fgColor="#16142e" bgColor="#ffffff" />
-                                : <img src={qr.qrImage} alt="UPI QR for the ₹199 registration fee" className="h-auto w-52" />}
-                        </div>
-                        <p className="mt-4 flex items-center gap-2 text-sm text-[var(--hd-ink-2)]">
-                            <Loader2 aria-hidden size={14} className="animate-spin" /> Waiting for payment
-                        </p>
-                        {/* On a phone the QR cannot be scanned from its own screen; open the UPI app instead. */}
-                        {qr.qrUpi && (
-                            <a href={qr.qrUpi} className={`${BTN_PRIMARY} mt-5 w-full sm:hidden`}>
-                                <Smartphone aria-hidden size={16} strokeWidth={1.75} /> Pay with a UPI app
-                            </a>
-                        )}
+        <section aria-label="Pay the registration fee" className="rounded-2xl border border-[var(--lp-border-strong)] bg-[var(--lp-card)] p-6 sm:p-8">
+            {qr ? (
+                <>
+                    <p className="text-[15px] text-[var(--lp-fg)]">Scan with any UPI app and pay</p>
+                    <p className="lp-figure mt-1 text-[36px] leading-none tracking-[-0.02em] text-[var(--lp-fg)]">₹199</p>
+                    <div className="mx-auto mt-6 w-fit rounded-xl bg-white p-3 ring-1 ring-[var(--lp-border)]">
+                        {qr.qrUpi
+                            ? <QRCodeSVG value={qr.qrUpi} size={232} fgColor="#16142e" bgColor="#ffffff" />
+                            : <img src={qr.qrImage} alt="UPI QR for the ₹199 registration fee" className="h-auto w-[232px]" />}
                     </div>
-                ) : (
-                    <button type="button" onClick={start} disabled={loading} className={`${BTN_PRIMARY} w-full`}>
+                    {/* On a phone the QR cannot be scanned from its own screen; open the UPI app instead. */}
+                    {qr.qrUpi && (
+                        <a href={qr.qrUpi} className={`${BTN_PRIMARY} mt-6 w-full sm:hidden`}>
+                            <Smartphone aria-hidden size={16} strokeWidth={1.75} /> Pay ₹199 with a UPI app
+                        </a>
+                    )}
+                    <p className="mt-6 flex items-center justify-center gap-2 text-sm text-[var(--lp-fg-2)]">
+                        <Loader2 aria-hidden size={14} className="animate-spin" /> Waiting for your payment. This page moves on by itself.
+                    </p>
+                    <hr className="my-6 border-[var(--lp-border)]" />
+                    <p className="text-sm leading-relaxed text-[var(--lp-muted)]">
+                        ₹10 of the fee is added to your Utility Wallet for the AEPS onboarding fee.
+                    </p>
+                    <p className="lp-figure mt-2 text-xs text-[var(--lp-muted)]">Ref {qr.transactionId}</p>
+                </>
+            ) : (
+                <>
+                    <p className="text-[15px] text-[var(--lp-fg)]">Registration fee</p>
+                    <p className="lp-figure mt-1 text-[36px] leading-none tracking-[-0.02em] text-[var(--lp-fg)]">₹199</p>
+                    <button type="button" onClick={start} disabled={loading} className={`${BTN_PRIMARY} mt-6 w-full`}>
                         {loading ? <Loader2 aria-hidden size={16} className="animate-spin" /> : <QrCode aria-hidden size={16} strokeWidth={1.75} />}
-                        {loading ? 'Generating QR…' : 'Generate payment QR'}
+                        {loading ? 'Generating QR…' : 'Show payment QR'}
                     </button>
-                )}
-            </div>
-
-            <div className="border-t border-[var(--hd-line)] px-6 py-4 text-sm leading-relaxed text-[var(--hd-ink-2)]">
-                Your signup goes to an admin the moment the payment lands. ₹10 of it is added to your Utility Wallet for the AEPS onboarding fee.
-                {qr && <p className="lp-figure mt-2 text-xs text-[var(--hd-ink-3)]">Ref {qr.transactionId}</p>}
-            </div>
+                </>
+            )}
         </section>
     );
 };
