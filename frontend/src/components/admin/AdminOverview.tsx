@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { ArrowRight, CheckCircle2, Radio } from 'lucide-react';
-import {
-    CARD, LABEL, PENDING_PILL, STATUS_PILL, ago, delta, inr, inrShort, serviceLabel, useApiGet,
-    type TrendPoint,
-} from '../distributor/shared';
-import { DeltaBadge, RangeSwitch, ShareBar, Skeleton, TrendChart } from '../distributor/ui';
+import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { motion } from 'motion/react';
+import { ALERT_ERROR } from '../landing/ui';
+import { TABLE, TD, TH, THEAD, TR, ago, delta, inr, inrShort, serviceLabel, useApiGet, type TrendPoint } from '../distributor/shared';
+import { Avatar, Empty, PageHeader, Panel, RangeSwitch, Segmented, ShareBar, Skeleton, StatStrip, StatusDot, TextLink, TrendChart } from '../distributor/ui';
 
 type Money = { volume: number; count: number; adminEarned: number; distributorEarned: number; retailerEarned: number };
 type Overview = {
@@ -48,23 +47,23 @@ const AdminOverview = ({
     const kpis = data ? [
         { label: 'Transaction volume', value: inrShort(data.totals.volume), change: delta(data.totals.volume, data.previous.volume), hint: `${data.totals.count.toLocaleString('en-IN')} successful` },
         { label: 'Platform earnings', value: inr.format(data.totals.adminEarned), change: delta(data.totals.adminEarned, data.previous.adminEarned), hint: 'Admin commission' },
-        { label: 'Success rate', value: data.successRate === null ? '—' : `${data.successRate}%`, change: null as number | null, hint: `${failed.toLocaleString('en-IN')} failed` },
-        { label: 'Active retailers', value: `${data.totals.activeRetailers}/${data.users.retailers}`, change: null as number | null, hint: 'Transacted in range' },
+        { label: 'Success rate', value: data.successRate === null ? '—' : `${data.successRate}%`, hint: `${failed.toLocaleString('en-IN')} failed`, onClick: failed ? () => onOpenTransactions({ status: 'FAILED' }) : undefined },
+        { label: 'Active retailers', value: `${data.totals.activeRetailers}/${data.users.retailers}`, hint: 'Transacted in range', onClick: () => onNavigate('users?role=retailer') },
     ] : [];
 
     // Only what is actually waiting; an empty queue is not news.
     const queues = data ? [
-        { title: 'retailer fund requests', count: data.queues.pendingRetailerFunds, action: () => onNavigate('fund-requests') },
-        { title: 'distributor fund requests', count: data.queues.pendingDistributorFunds, action: () => onNavigate('fund-requests') },
-        { title: 'open tickets', count: data.queues.openTickets, action: () => onNavigate('support') },
+        { title: 'Retailer fund requests', count: data.queues.pendingRetailerFunds, action: () => onNavigate('fund-requests') },
+        { title: 'Distributor fund requests', count: data.queues.pendingDistributorFunds, action: () => onNavigate('fund-requests') },
+        { title: 'Open tickets', count: data.queues.openTickets, action: () => onNavigate('support') },
         { title: 'KYC pending', count: data.users.kycPending, action: () => onNavigate('users?role=retailer&kyc=pending') },
-        { title: 'failed transactions', count: failed, action: () => onOpenTransactions({ status: 'FAILED' }) },
-        { title: 'inactive accounts', count: data.users.inactive, action: () => onNavigate('users?status=inactive') },
+        { title: 'Failed transactions', count: failed, action: () => onOpenTransactions({ status: 'FAILED' }) },
+        { title: 'Inactive accounts', count: data.users.inactive, action: () => onNavigate('users?status=inactive') },
     ].filter((q) => q.count > 0) : [];
 
     const money = data ? [
-        { label: 'Retailers', value: data.users.retailers.toLocaleString('en-IN'), hint: `+${data.users.newRetailers} new`, action: () => onNavigate('users?role=retailer') },
-        { label: 'Distributors', value: data.users.distributors.toLocaleString('en-IN'), hint: `+${data.users.newDistributors} new`, action: () => onNavigate('users?role=distributor') },
+        { label: 'Retailers', value: data.users.retailers.toLocaleString('en-IN'), hint: `+${data.users.newRetailers} new`, onClick: () => onNavigate('users?role=retailer') },
+        { label: 'Distributors', value: data.users.distributors.toLocaleString('en-IN'), hint: `+${data.users.newDistributors} new`, onClick: () => onNavigate('users?role=distributor') },
         { label: 'Admin wallet', value: inrShort(data.wallets.adminBalance), hint: 'Your balance' },
         { label: 'Utility float', value: inrShort(data.wallets.mainFloat), hint: 'All users' },
         { label: 'Trade float', value: inrShort(data.wallets.aepsFloat), hint: 'All users' },
@@ -72,185 +71,139 @@ const AdminOverview = ({
     ] : [];
 
     return (
-        <div className="flex flex-col gap-6 w-full animate-in fade-in duration-200">
-            <header className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-                    <p className="text-sm text-muted-foreground">Everything happening across Shahparpay.</p>
-                </div>
-                <RangeSwitch value={days} onChange={setDays} />
-            </header>
+        <div className="flex w-full flex-col gap-6 animate-in fade-in duration-200">
+            <PageHeader eyebrow="Admin" title="Overview" description="Everything happening across Shahparpay." actions={<RangeSwitch value={days} onChange={setDays} />} />
 
-            {error && <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
+            {error && <div className={ALERT_ERROR}>{error}</div>}
 
-            {data && (
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                    {queues.length === 0 ? (
-                        <span className="inline-flex items-center gap-2 text-muted-foreground"><CheckCircle2 size={16} className="text-emerald-500" /> Nothing waiting on you.</span>
+            <StatStrip items={kpis} loading={loading} />
+
+            <div className="grid gap-6 xl:grid-cols-3">
+                <Panel
+                    className="xl:col-span-2"
+                    title="Daily trend"
+                    description={`Last ${days} days. Hover for a day.`}
+                    action={<Segmented label="Chart metric" size="sm" value={metric} onChange={setMetric} options={[['volume', 'Volume'], ['count', 'Txns'], ['adminEarned', 'Earnings']] as const} />}
+                >
+                    {loading && !data ? <Skeleton className="h-44 rounded-xl" /> : points.length ? <TrendChart points={points} metric={chartMetric} id="admin-trend" /> : <Empty>No transactions in this range.</Empty>}
+                </Panel>
+
+                {/* What is waiting on the admin, said once; nothing when nothing is. */}
+                <Panel title="Needs attention" flush>
+                    {!data ? (
+                        <Empty>{loading ? 'Loading…' : 'Could not load the queues.'}</Empty>
+                    ) : queues.length === 0 ? (
+                        <p className="flex items-center justify-center gap-2 px-5 py-12 text-sm text-muted-foreground"><CheckCircle2 size={16} className="text-[var(--lp-positive)]" /> Nothing waiting on you.</p>
                     ) : (
-                        <>
-                            <span className="mr-1 font-medium">Needs attention</span>
+                        <ul>
                             {queues.map((q) => (
-                                <button key={q.title} onClick={q.action} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 ring-1 transition hover:opacity-80 ${PENDING_PILL}`}>
-                                    <span className="font-semibold tabular-nums">{q.count.toLocaleString('en-IN')}</span>{q.title}
-                                </button>
-                            ))}
-                        </>
-                    )}
-                </div>
-            )}
-
-            <section className={`${CARD} overflow-hidden p-0`}>
-                <div className="grid grid-cols-2 gap-px bg-border lg:grid-cols-4">
-                    {loading && !data
-                        ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="bg-card p-5"><Skeleton className="h-16" /></div>)
-                        : kpis.map(({ label, value, change, hint }) => (
-                            <div key={label} className="bg-card p-5">
-                                <p className={LABEL}>{label}</p>
-                                <p className="mt-2 truncate text-2xl font-semibold tabular-nums">{value}</p>
-                                <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                                    {change !== null && <DeltaBadge value={change} />}
-                                    <span className="text-xs text-muted-foreground">{hint}</span>
-                                </div>
-                            </div>
-                        ))}
-                </div>
-                <div className="border-t p-5">
-                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                        <h2 className="font-semibold">Daily trend</h2>
-                        <div className="inline-flex rounded-xl border bg-background p-1">
-                            {([['volume', 'Volume'], ['count', 'Txns'], ['adminEarned', 'Earnings']] as const).map(([key, label]) => (
-                                <button key={key} onClick={() => setMetric(key)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${metric === key ? 'bg-black/5 dark:bg-white/10 text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    {loading && !data ? <Skeleton className="h-44 rounded-xl" /> : <TrendChart points={points} metric={chartMetric} id="admin-trend" />}
-                </div>
-            </section>
-
-            <section className={`${CARD} overflow-hidden p-0`}>
-                <div className="grid grid-cols-2 gap-px bg-border md:grid-cols-3 xl:grid-cols-6">
-                    {money.map(({ label, value, hint, action }) => {
-                        const body = (
-                            <>
-                                <p className={LABEL}>{label}</p>
-                                <p className="mt-1.5 truncate text-lg font-semibold tabular-nums">{value}</p>
-                                <p className="text-xs text-muted-foreground">{hint}</p>
-                            </>
-                        );
-                        return action
-                            ? <button key={label} onClick={action} className="bg-card p-4 text-left transition-colors hover:bg-muted">{body}</button>
-                            : <div key={label} className="bg-card p-4">{body}</div>;
-                    })}
-                </div>
-            </section>
-
-            <div className="grid gap-6 lg:grid-cols-3">
-                <section className={CARD}>
-                    <h2 className="mb-4 font-semibold">Service mix</h2>
-                    {services.length === 0 ? (
-                        <p className="py-10 text-center text-sm text-muted-foreground">{loading ? 'Loading…' : 'No transactions in this range.'}</p>
-                    ) : (
-                        <ul className="space-y-3.5">
-                            {services.slice(0, 8).map((s) => (
-                                <li key={s.type}>
-                                    <button onClick={() => onOpenTransactions({ type: s.type })} className="w-full text-left">
-                                        <div className="mb-1.5 flex items-baseline justify-between gap-2 text-sm">
-                                            <span className="truncate font-medium">{serviceLabel(s.type)}</span>
-                                            <span className="font-semibold tabular-nums">{inrShort(s.volume)}</span>
-                                        </div>
-                                        <ShareBar value={s.volume} max={serviceMax} />
-                                        <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">{s.count} txns · {inr.format(s.adminEarned)} earned</p>
+                                <li key={q.title} className="border-b last:border-0">
+                                    <button type="button" onClick={q.action} className="flex h-12 w-full items-center justify-between gap-3 px-5 text-left text-sm transition-colors hover:bg-muted/50">
+                                        <span className="text-foreground">{q.title}</span>
+                                        <span className="lp-figure flex items-center gap-2 text-foreground">{q.count.toLocaleString('en-IN')} <ArrowRight size={13} className="text-muted-foreground" /></span>
                                     </button>
                                 </li>
                             ))}
                         </ul>
                     )}
-                </section>
+                </Panel>
+            </div>
+
+            <StatStrip items={money} loading={loading} cols={6} />
+
+            <div className="grid gap-6 lg:grid-cols-3">
+                <Panel title="Service mix" action={<TextLink onClick={() => onOpenTransactions({})}>Explorer</TextLink>}>
+                    {services.length === 0 ? (
+                        <Empty>{loading ? 'Loading…' : 'No transactions in this range.'}</Empty>
+                    ) : (
+                        <ul className="space-y-4">
+                            {services.slice(0, 8).map((s) => (
+                                <li key={s.type}>
+                                    <button type="button" onClick={() => onOpenTransactions({ type: s.type })} className="w-full text-left">
+                                        <div className="mb-1.5 flex items-baseline justify-between gap-2 text-sm">
+                                            <span className="truncate text-foreground">{serviceLabel(s.type)}</span>
+                                            <span className="lp-figure text-foreground">{inrShort(s.volume)}</span>
+                                        </div>
+                                        <ShareBar value={s.volume} max={serviceMax} />
+                                        <p className="mt-1 text-[12px] text-muted-foreground tabular-nums">{s.count} txns · {inr.format(s.adminEarned)} earned</p>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </Panel>
 
                 {[
-                    { title: 'Top distributors', rows: data?.topDistributors || [], role: 'distributor' as const, sub: (d: Overview['topDistributors'][number]) => `${d.distributorId} · ${d.activeRetailers} active retailers` },
+                    { title: 'Top distributors', rows: data?.topDistributors || [], role: 'distributor' as const, sub: (d: Overview['topDistributors'][number]) => `${d.distributorId} · ${d.activeRetailers} active` },
                     { title: 'Top retailers', rows: data?.topRetailers || [], role: 'retailer' as const, sub: (r: Overview['topRetailers'][number]) => `${r.retailerId} · ${r.count} txns` },
-                ].map(({ title, rows, role, sub }) => {
-                    const max = Math.max(...rows.map((r) => r.volume), 0);
-                    return (
-                        <section key={title} className={CARD}>
-                            <div className="mb-4 flex items-center justify-between">
-                                <h2 className="font-semibold">{title}</h2>
-                                <button onClick={() => onNavigate(`users?role=${role}`)} className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground">All <ArrowRight size={12} /></button>
-                            </div>
-                            {rows.length === 0 ? (
-                                <p className="py-10 text-center text-sm text-muted-foreground">{loading ? 'Loading…' : 'No activity in this range.'}</p>
-                            ) : (
-                                <ol className="space-y-1">
-                                    {rows.map((r, i) => (
-                                        <li key={r._id}>
-                                            <button onClick={() => onOpenUser(role, r._id)} className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-black/5 dark:hover:bg-white/5">
-                                                <span className="w-4 text-center text-xs font-bold text-muted-foreground">{i + 1}</span>
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="flex items-baseline justify-between gap-2">
-                                                        <p className="truncate text-sm font-semibold">{r.name}</p>
-                                                        <p className="text-sm font-bold tabular-nums">{inrShort(r.volume)}</p>
-                                                    </div>
-                                                    <p className="mb-1 truncate text-[11px] text-muted-foreground">{sub(r as never)}</p>
-                                                    <ShareBar value={r.volume} max={max} />
-                                                </div>
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ol>
-                            )}
-                        </section>
-                    );
-                })}
+                ].map(({ title, rows, role, sub }) => (
+                    <Panel key={title} title={title} action={<TextLink onClick={() => onNavigate(`users?role=${role}`)}>All</TextLink>} flush>
+                        {rows.length === 0 ? (
+                            <Empty>{loading ? 'Loading…' : 'No activity in this range.'}</Empty>
+                        ) : (
+                            <ol>
+                                {rows.map((r) => (
+                                    <li key={r._id} className="border-b last:border-0">
+                                        <button type="button" onClick={() => onOpenUser(role, r._id)} className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-muted/50">
+                                            <Avatar name={r.name} size="w-8 h-8" />
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-sm text-foreground">{r.name}</p>
+                                                <p className="truncate text-[12px] text-muted-foreground">{sub(r as never)}</p>
+                                            </div>
+                                            <p className="lp-figure flex-none text-sm text-foreground">{inrShort(r.volume)}</p>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ol>
+                        )}
+                    </Panel>
+                ))}
             </div>
 
             {/* Live feed from the existing SSE stream */}
-            <section className={CARD}>
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                        <span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" /></span>
-                        <h2 className="font-semibold">Live transactions</h2>
-                    </div>
-                    <button onClick={() => onOpenTransactions({})} className="inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground">Open explorer <ArrowRight size={14} /></button>
-                </div>
+            <Panel
+                title={<span className="inline-flex items-center gap-2"><span className="relative flex size-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--lp-positive)] opacity-50" /><span className="relative inline-flex size-2 rounded-full bg-[var(--lp-positive)]" /></span>Live transactions</span>}
+                action={<TextLink onClick={() => onOpenTransactions({})}>Open explorer</TextLink>}
+                flush
+            >
                 {live.length === 0 ? (
-                    <div className="flex flex-col items-center py-10 text-muted-foreground">
-                        <Radio className="mb-3 opacity-50" size={32} />
-                        <p className="text-sm">Waiting for transactions…</p>
-                    </div>
+                    <Empty>Transactions appear here as they happen.</Empty>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                        <table className={TABLE}>
                             <thead>
-                                <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-                                    <th className="pb-3 font-medium">User</th>
-                                    <th className="pb-3 font-medium">Type</th>
-                                    <th className="pb-3 font-medium text-right">Amount</th>
-                                    <th className="pb-3 font-medium">Status</th>
-                                    <th className="pb-3 font-medium text-right">When</th>
+                                <tr className={THEAD}>
+                                    <th className={TH}>User</th>
+                                    <th className={TH}>Type</th>
+                                    <th className={`${TH} text-right`}>Amount</th>
+                                    <th className={TH}>Status</th>
+                                    <th className={`${TH} text-right`}>When</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y">
-                                {live.slice(0, 10).map((t: LiveTxn) => (
-                                    <tr key={t._id || t.transactionId} className="hover:bg-black/[0.03] dark:hover:bg-white/[0.04]">
-                                        <td className="py-2.5 pr-3">
-                                            <button onClick={() => t.userId?._id && onOpenUser('retailer', t.userId._id)} className="text-left font-medium hover:underline">{t.userId?.name || '—'}</button>
-                                        </td>
-                                        <td className="py-2.5 pr-3">{serviceLabel(t.type)}</td>
-                                        <td className="py-2.5 pr-3 text-right font-semibold tabular-nums">{inr.format(t.amount || 0)}</td>
-                                        <td className="py-2.5 pr-3"><span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${STATUS_PILL[t.status] || PENDING_PILL}`}>{t.status}</span></td>
-                                        <td className="py-2.5 text-right text-muted-foreground whitespace-nowrap">{ago(t.createdAt)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
+                                <tbody>
+                                    {live.slice(0, 10).map((t: LiveTxn) => (
+                                        <motion.tr
+                                            key={t._id || t.transactionId}
+                                            layout
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            transition={{ duration: 0.4 }}
+                                            className={TR}
+                                        >
+                                            <td className={TD}>
+                                                <button type="button" onClick={() => t.userId?._id && onOpenUser('retailer', t.userId._id)} className="text-left text-foreground hover:underline">{t.userId?.name || '—'}</button>
+                                            </td>
+                                            <td className={TD}>{serviceLabel(t.type)}</td>
+                                            <td className={`${TD} lp-figure text-right text-foreground`}>{inr.format(t.amount || 0)}</td>
+                                            <td className={TD}><StatusDot status={t.status} /></td>
+                                            <td className={`${TD} whitespace-nowrap text-right text-muted-foreground`}>{ago(t.createdAt)}</td>
+                                        </motion.tr>
+                                    ))}
+                                </tbody>
                         </table>
                     </div>
                 )}
-            </section>
-
+            </Panel>
         </div>
     );
 };

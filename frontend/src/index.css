@@ -499,6 +499,7 @@ html.lp-portal {
     --lp-danger-soft: rgba(220, 38, 38, 0.07);
     --lp-danger-line: rgba(220, 38, 38, 0.22);
     --lp-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --lp-display: 'Instrument Serif', Georgia, 'Times New Roman', serif;
 }
 html.lp-portal.dark {
     --lp-fg-2: #bab4aa;

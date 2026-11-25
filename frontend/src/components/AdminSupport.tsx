@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, Headset, Loader2, Paperclip, Search, Send, X } from 'lucide-react';
+import { ChevronLeft, Loader2, Paperclip, Search, Send, X } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
-import { CARD, INPUT, SILVER_TILE, ago } from './distributor/shared';
+import { BUTTON, FIELD, ICON_BUTTON, ago } from './distributor/shared';
+import { Empty, PageHeader, Skeleton } from './distributor/ui';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const STATUS = {
-    OPEN: { label: 'Open', cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-amber-500/20' },
-    IN_PROGRESS: { label: 'In progress', cls: 'bg-sky-500/10 text-sky-700 dark:text-sky-400 ring-sky-500/20' },
-    RESOLVED: { label: 'Resolved', cls: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20' },
-    CLOSED: { label: 'Closed', cls: 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 ring-zinc-500/20' },
+    OPEN: { label: 'Open', dot: 'bg-amber-500' },
+    IN_PROGRESS: { label: 'In progress', dot: 'bg-sky-500' },
+    RESOLVED: { label: 'Resolved', dot: 'bg-[var(--lp-positive)]' },
+    CLOSED: { label: 'Closed', dot: 'bg-muted-foreground' },
 } as const;
 type Status = keyof typeof STATUS;
 const pill = (s: string) => STATUS[s as Status] || STATUS.OPEN;
@@ -79,39 +80,37 @@ const AdminSupport = () => {
         .filter((t) => filter === 'all' || (filter === 'active' ? ['OPEN', 'IN_PROGRESS'].includes(t.status) : t.status === filter))
         .filter((t) => !term || [t.subject, t.userId?.name, t.userId?.businessName].some((v) => v?.toLowerCase().includes(term)));
 
+    const panel = 'flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-card';
+
     return (
-        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><Headset className="h-7 w-7" /></div>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Customer support</h1>
-                            <p className="text-sm text-muted-foreground">Answer retailer and distributor requests and track them to resolution.</p>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2">
-                        {(Object.keys(STATUS) as Status[]).map((s) => (
-                            <div key={s} className="rounded-xl border bg-background/70 backdrop-blur px-3 py-2 text-center">
-                                <p className="text-lg font-bold tabular-nums">{counts[s] || 0}</p>
-                                <p className="text-[11px] text-muted-foreground">{STATUS[s].label}</p>
-                            </div>
+        <div className="flex w-full flex-col gap-6 animate-in fade-in duration-200">
+            <PageHeader
+                eyebrow="Platform"
+                title="Customer support"
+                description={
+                    <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <span>Answer retailer and distributor requests and track them to resolution.</span>
+                        {(Object.keys(STATUS) as Status[]).map((st) => (
+                            <span key={st} className="inline-flex items-center gap-1.5 text-[13px]">
+                                <span aria-hidden className={`size-1.5 rounded-full ${STATUS[st].dot}`} />
+                                <span className="lp-figure text-foreground">{counts[st] || 0}</span> {STATUS[st].label.toLowerCase()}
+                            </span>
                         ))}
-                    </div>
-                </div>
-            </section>
+                    </span>
+                }
+            />
 
             <div className="grid gap-6 lg:grid-cols-5">
                 {/* Inbox — hidden on phones once a ticket is open */}
-                <section className={`${CARD} flex flex-col overflow-hidden p-0 lg:col-span-2 ${selected ? 'hidden lg:flex' : 'flex'}`}>
+                <section className={`${panel} lg:col-span-2 ${selected ? 'hidden lg:flex' : 'flex'}`}>
                     <div className="space-y-3 border-b p-4">
                         <div className="relative">
                             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search subject or user" className={`${INPUT} pl-9`} />
+                            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search subject or user" className={`${FIELD} pl-9`} />
                         </div>
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="flex flex-wrap gap-1">
                             {([['active', 'Active'], ['all', 'All'], ...Object.entries(STATUS).map(([k, v]) => [k, v.label])] as [string, string][]).map(([k, label]) => (
-                                <button key={k} onClick={() => setFilter(k as typeof filter)} className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition ${filter === k ? 'border-transparent btn-primary' : 'bg-background text-muted-foreground hover:text-foreground'}`}>
+                                <button key={k} type="button" onClick={() => setFilter(k as typeof filter)} aria-pressed={filter === k} className={`h-7 rounded-lg px-2.5 text-[12px] transition-colors ${filter === k ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
                                     {label}
                                 </button>
                             ))}
@@ -119,65 +118,64 @@ const AdminSupport = () => {
                     </div>
                     <div className="max-h-[640px] flex-1 overflow-y-auto">
                         {!loaded ? (
-                            <div className="space-y-2 p-4">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-black/5 dark:bg-white/5" />)}</div>
+                            <div className="space-y-2 p-4">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
                         ) : visible.length === 0 ? (
-                            <p className="p-10 text-center text-sm text-muted-foreground">No tickets here.</p>
+                            <Empty>No tickets here.</Empty>
                         ) : visible.map((t) => (
                             <button
                                 key={t._id}
+                                type="button"
                                 onClick={() => setSelected(t)}
-                                className={`w-full border-b px-4 py-3 text-left transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04] ${selected?._id === t._id ? 'bg-black/[0.05] dark:bg-white/[0.06]' : ''}`}
+                                className={`w-full border-b px-4 py-3 text-left transition-colors hover:bg-muted/50 ${selected?._id === t._id ? 'bg-muted' : ''}`}
                             >
-                                <div className="flex items-start justify-between gap-2">
-                                    <p className="truncate text-sm font-semibold">{t.subject}</p>
-                                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${pill(t.status).cls}`}>{pill(t.status).label}</span>
+                                <div className="flex items-start justify-between gap-3">
+                                    <p className="truncate text-sm text-foreground">{t.subject}</p>
+                                    <span className="inline-flex flex-none items-center gap-1.5 text-[12px] text-muted-foreground"><span aria-hidden className={`size-1.5 rounded-full ${pill(t.status).dot}`} />{pill(t.status).label}</span>
                                 </div>
-                                <p className="mt-1 truncate text-xs text-muted-foreground">{t.userId?.name || t.userId?.businessName || 'User'} · {t.userModel}</p>
-                                <p className="mt-1 text-[11px] text-muted-foreground">{ago(t.updatedAt)} · {(t.messages || []).length} messages</p>
+                                <p className="mt-1 truncate text-[12px] text-muted-foreground">{t.userId?.name || t.userId?.businessName || 'User'} · {t.userModel} · {ago(t.updatedAt)} · {(t.messages || []).length} messages</p>
                             </button>
                         ))}
                     </div>
                 </section>
 
                 {/* Conversation */}
-                <section className={`${CARD} min-h-[560px] flex-col overflow-hidden p-0 lg:col-span-3 ${selected ? 'flex' : 'hidden lg:flex'}`}>
+                <section className={`${panel} min-h-[560px] lg:col-span-3 ${selected ? 'flex' : 'hidden lg:flex'}`}>
                     {!selected ? (
                         <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-                            <div className={`mb-3 rounded-2xl p-3 ${SILVER_TILE}`}><Headset className="h-6 w-6" /></div>
-                            <h3 className="text-lg font-semibold">Select a ticket</h3>
-                            <p className="text-sm text-muted-foreground">Open a request to read the conversation and reply.</p>
+                            <p className="text-sm text-foreground">Select a ticket</p>
+                            <p className="mt-1 text-[13px] text-muted-foreground">Open a request to read the conversation and reply.</p>
                         </div>
                     ) : (
                         <>
-                            <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
+                            <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3">
                                 <div className="flex min-w-0 items-center gap-2">
-                                    <button onClick={() => setSelected(null)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-black/5 lg:hidden dark:hover:bg-white/10" aria-label="Back to tickets"><ChevronLeft size={18} /></button>
+                                    <button type="button" onClick={() => setSelected(null)} className={`${ICON_BUTTON} lg:hidden`} aria-label="Back to tickets"><ChevronLeft size={16} /></button>
                                     <div className="min-w-0">
-                                        <h3 className="truncate text-lg font-semibold">{selected.subject}</h3>
-                                        <p className="truncate text-sm text-muted-foreground">{selected.userId?.name || selected.userId?.businessName} · {selected.userModel} · opened {ago(selected.createdAt)}</p>
+                                        <h3 className="truncate text-[15px] font-medium text-foreground">{selected.subject}</h3>
+                                        <p className="truncate text-[13px] text-muted-foreground">{selected.userId?.name || selected.userId?.businessName} · {selected.userModel} · opened {ago(selected.createdAt)}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     {statusSaving && <Loader2 size={16} className="animate-spin text-muted-foreground" />}
-                                    <select value={selected.status} onChange={(e) => updateStatus(e.target.value)} disabled={statusSaving} className={`${INPUT} w-40 py-2`} aria-label="Ticket status">
-                                        {(Object.keys(STATUS) as Status[]).map((s) => <option key={s} value={s}>{STATUS[s].label}</option>)}
+                                    <select value={selected.status} onChange={(e) => updateStatus(e.target.value)} disabled={statusSaving} className={`${FIELD} h-9 sm:w-40`} aria-label="Ticket status">
+                                        {(Object.keys(STATUS) as Status[]).map((st) => <option key={st} value={st}>{STATUS[st].label}</option>)}
                                     </select>
                                 </div>
                             </div>
 
-                            <div className="flex-1 space-y-3 overflow-y-auto bg-black/[0.015] p-5 dark:bg-white/[0.015]">
+                            <div className="flex-1 space-y-3 overflow-y-auto bg-muted/30 p-5">
                                 {(selected.messages || []).map((m: any, i: number) => {
                                     const mine = m.senderRole === 'admin' || m.senderRole === 'support';
                                     return (
                                         <div key={i} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${mine ? 'rounded-br-md bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'rounded-bl-md border bg-card'}`}>
+                                            <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${mine ? 'rounded-br-md bg-primary text-primary-foreground' : 'rounded-bl-md border bg-card text-foreground'}`}>
                                                 <p className="whitespace-pre-wrap text-sm">{m.message}</p>
                                                 {m.attachments?.map((file: any) => (
                                                     <a key={file.url} href={file.url} target="_blank" rel="noreferrer" className="mt-2 block">
                                                         <img src={file.url} alt={file.name || 'Attachment'} className="max-h-48 rounded-lg bg-black/10 object-contain" />
                                                     </a>
                                                 ))}
-                                                <p className="mt-1 text-[10px] opacity-60">{new Date(m.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                                                <p className="mt-1 text-[11px] opacity-60">{new Date(m.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                                             </div>
                                         </div>
                                     );
@@ -187,28 +185,29 @@ const AdminSupport = () => {
 
                             <div className="space-y-2 border-t p-4">
                                 {attachment && (
-                                    <span className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs">
+                                    <span className="inline-flex items-center gap-2 rounded-lg bg-muted px-3 py-1 text-[12px] text-foreground">
                                         <Paperclip size={12} /> {attachment.name}
-                                        <button onClick={() => setAttachment(null)} aria-label="Remove attachment"><X size={12} /></button>
+                                        <button type="button" onClick={() => setAttachment(null)} aria-label="Remove attachment"><X size={12} /></button>
                                     </span>
                                 )}
-                                <div className="flex gap-2">
+                                <div className="flex items-end gap-2">
                                     <textarea
                                         value={reply}
                                         onChange={(e) => setReply(e.target.value)}
                                         onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); } }}
                                         rows={1}
                                         placeholder="Reply… (Enter to send, Shift+Enter for a new line)"
-                                        className={`${INPUT} min-h-[44px] resize-none`}
+                                        className={`${FIELD} h-auto min-h-10 resize-none py-2.5`}
                                     />
-                                    <label className="flex cursor-pointer items-center rounded-xl border bg-background px-3 hover:bg-black/5 dark:hover:bg-white/10" title="Attach image">
+                                    <label className={`${ICON_BUTTON} size-10 cursor-pointer`} title="Attach image">
                                         <Paperclip className="h-4 w-4" />
                                         <input type="file" accept="image/*" onChange={(e) => setAttachment(e.target.files?.[0] || null)} className="hidden" />
                                     </label>
                                     <button
+                                        type="button"
                                         onClick={sendReply}
                                         disabled={saving || (!reply.trim() && !attachment)}
-                                        className="flex items-center rounded-xl btn-primary px-4 disabled:opacity-50"
+                                        className={`${BUTTON} w-10 px-0`}
                                         aria-label="Send reply"
                                     >
                                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

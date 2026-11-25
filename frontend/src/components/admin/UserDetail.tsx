@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Banknote, ChevronLeft, Clock, History, Loader2, Mail, MapPin, MessageCircle, Package, Phone, Power, Receipt, RefreshCcw, ShieldCheck, LogIn, Trash2, Store, UserCheck, Users, XCircle } from 'lucide-react';
+import { ChevronLeft, Loader2, Mail, MapPin, MessageCircle, Power, Receipt, RefreshCcw, ShieldCheck, LogIn, Trash2, Store, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { CARD, INPUT, LABEL, PENDING_PILL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, STATUS_PILL, ago, inr, inrShort, serviceLabel, useApiGet } from '../distributor/shared';
-import { Avatar, Skeleton } from '../distributor/ui';
+import { BUTTON, BUTTON_DANGER, BUTTON_QUIET, FIELD, TABLE, TD, TH, THEAD, TR, ago, inr, inrShort, serviceLabel, useApiGet } from '../distributor/shared';
+import { Avatar, Empty, PageHeader, Panel, Skeleton, StatStrip, StatusDot, TextLink } from '../distributor/ui';
 import { SERVICES, aepsKycDone, aepsStepLabel, type ServiceKey } from '../../lib/services';
 import { ActivityList, type Activity } from './ActivityLog';
 import { useAuth } from '../../context/AuthContext';
+import { ALERT_ERROR } from '../landing/ui';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -20,14 +21,25 @@ type Detail = {
     retailers: any[];
 };
 
+/** Small field label, sentence case. */
+const LBL = 'text-[13px] text-muted-foreground';
+
+/** One hairline row of a detail list: label left, value right. */
+const KV = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div className="flex min-h-11 items-center justify-between gap-4 border-b py-2.5 text-sm last:border-0">
+        <dt className="flex-none text-muted-foreground">{label}</dt>
+        <dd className="min-w-0 text-right text-foreground">{children}</dd>
+    </div>
+);
+
 const DocTile = ({ label, number, picture }: { label: string; number?: string; picture?: string }) => (
     <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2"><p className={LABEL}>{label}</p><span className="font-mono text-sm">{number || '—'}</span></div>
+        <div className="flex items-center justify-between gap-2"><p className={LBL}>{label}</p><span className="lp-figure text-[13px] text-foreground">{number || '—'}</span></div>
         {picture ? (
-            <a href={picture} target="_blank" rel="noreferrer" className="group relative block aspect-[3/2] overflow-hidden rounded-xl border">
-                <img src={picture} alt={label} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <a href={picture} target="_blank" rel="noreferrer" className="block aspect-[3/2] overflow-hidden rounded-xl border">
+                <img src={picture} alt={label} className="h-full w-full object-cover" />
             </a>
-        ) : <div className="flex aspect-[3/2] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">Not uploaded</div>}
+        ) : <div className="flex aspect-[3/2] items-center justify-center rounded-xl border border-dashed text-[13px] text-muted-foreground">Not uploaded</div>}
     </div>
 );
 
@@ -60,37 +72,35 @@ const NoticeEmail = ({ token, role, id, email, onDone }: { token: string | null;
         }
     };
 
-    if (!email) return <div className={`${CARD} p-4 text-sm text-muted-foreground`}>This user has no email on file.</div>;
+    if (!email) return <Panel><p className="text-sm text-muted-foreground">This user has no email on file.</p></Panel>;
     return (
-        <div className={`${CARD} p-5 flex flex-col gap-4`}>
-            <div>
-                <p className="font-semibold">Send an email</p>
-                <p className="text-sm text-muted-foreground">To {email}. Pick a reason; the email is written for you.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-                {(reasons || []).map((r) => (
-                    <button key={r.key} onClick={() => setReason(r.key)} className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${reason === r.key ? 'border-transparent bg-foreground text-background' : 'bg-background hover:bg-black/5 dark:hover:bg-white/10'}`}>
-                        {r.label}
-                    </button>
-                ))}
-            </div>
-            {picked && (
-                <div className="rounded-xl border bg-background/60 p-4 text-sm">
-                    <p className="font-semibold">{picked.subject}</p>
-                    <p className="mt-1 text-muted-foreground">{picked.body}</p>
+        <Panel title="Send an email" description={`To ${email}. Pick a reason; the email is written for you.`}>
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-wrap gap-2">
+                    {(reasons || []).map((r) => (
+                        <button key={r.key} type="button" onClick={() => setReason(r.key)} className={`h-8 rounded-lg border px-3 text-[13px] transition-colors ${reason === r.key ? 'border-foreground bg-foreground text-background' : 'bg-card text-foreground hover:bg-muted'}`}>
+                            {r.label}
+                        </button>
+                    ))}
                 </div>
-            )}
-            <label className="flex flex-col gap-1.5">
-                <span className={LABEL}>Note (optional)</span>
-                <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} rows={2} placeholder="Anything specific to add, e.g. which document is missing" className={INPUT} />
-            </label>
-            <div className="flex gap-2">
-                <button onClick={send} disabled={!reason || sending} className={PRIMARY_BUTTON}>
-                    {sending ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />} Send email
-                </button>
-                <button onClick={onDone} className={SECONDARY_BUTTON}>Cancel</button>
+                {picked && (
+                    <div className="rounded-xl bg-muted/60 p-4 text-sm">
+                        <p className="text-foreground">{picked.subject}</p>
+                        <p className="mt-1 text-muted-foreground">{picked.body}</p>
+                    </div>
+                )}
+                <label className="flex flex-col gap-1.5">
+                    <span className={LBL}>Note (optional)</span>
+                    <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} rows={2} placeholder="Anything specific to add, e.g. which document is missing" className={`${FIELD} h-auto py-2.5`} />
+                </label>
+                <div className="flex gap-2">
+                    <button type="button" onClick={send} disabled={!reason || sending} className={BUTTON}>
+                        {sending ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} strokeWidth={1.75} />} Send email
+                    </button>
+                    <button type="button" onClick={onDone} className={BUTTON_QUIET}>Cancel</button>
+                </div>
             </div>
-        </div>
+        </Panel>
     );
 };
 
@@ -177,14 +187,16 @@ const UserDetail = ({
     useEffect(() => { if (role === 'retailer') fetchAepsStatus().then((json) => json.success && reload()).catch(() => {}); }, [id, role]);
 
     if (loading && !data) {
-        return <div className="flex flex-col gap-6"><Skeleton className="h-56 rounded-3xl" /><Skeleton className="h-64 rounded-2xl" /></div>;
+        return <div className="flex flex-col gap-6"><Skeleton className="h-24 rounded-2xl" /><Skeleton className="h-28 rounded-2xl" /><Skeleton className="h-64 rounded-2xl" /></div>;
     }
     if (!data || !user) {
         return (
-            <div className={`${CARD} text-center`}>
-                <p className="text-sm text-muted-foreground">{error || 'User not found.'}</p>
-                <button onClick={onBack} className={`${SECONDARY_BUTTON} mt-4`}><ChevronLeft size={16} /> Back</button>
-            </div>
+            <Panel>
+                <div className="py-6 text-center">
+                    <p className="text-sm text-muted-foreground">{error || 'User not found.'}</p>
+                    <button type="button" onClick={onBack} className={`${BUTTON_QUIET} mt-4`}><ChevronLeft size={16} /> Back</button>
+                </div>
+            </Panel>
         );
     }
 
@@ -193,271 +205,262 @@ const UserDetail = ({
     const txnFilter: Record<string, string> = { [role]: id };
     const successRate = data.stats.count ? Math.round((data.stats.success / data.stats.count) * 100) : null;
 
-    return (
-        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-right-8 duration-500">
-            <button onClick={onBack} className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"><ChevronLeft size={16} /> Back</button>
+    const isRetailer = role === 'retailer';
+    const pending = isRetailer && (user.verificationStatus === 'pending' || user.verificationStatus === 'rejected');
 
-            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div className="relative flex flex-col gap-6">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 min-w-0">
-                            <Avatar name={user.name} src={user.profilePicture} size="w-16 h-16" />
-                            <div className="min-w-0">
-                                <h1 className="truncate text-2xl md:text-3xl font-bold tracking-tight">{user.name}</h1>
-                                <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${SILVER_TILE}`}>{role}</span>
-                                    <span className="rounded-full border bg-background/70 px-2.5 py-0.5 font-mono text-xs">{code}</span>
-                                    {active
-                                        ? <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20">Active</span>
-                                        : <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 bg-red-500/10 text-red-700 dark:text-red-400 ring-red-500/20">Inactive</span>}
-                                    {role === 'retailer' && user.verificationStatus === 'pending' && <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}>Awaiting verification</span>}
-                                    {role === 'retailer' && user.verificationStatus === 'rejected' && <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${STATUS_PILL.FAILED}`}>Signup rejected</span>}
-                                    {role === 'retailer' && user.signupSource === 'self' && <span className="rounded-full border bg-background/70 px-2.5 py-0.5 text-xs">Self signup</span>}
-                                    {role === 'retailer' && user.signupSource === 'self' && <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${user.signupFeePaidAt ? STATUS_PILL.SUCCESS : PENDING_PILL}`}>{user.signupFeePaidAt ? '₹199 fee paid' : '₹199 fee unpaid'}</span>}
-                                    {role === 'retailer' && (aepsKycDone(user)
-                                        ? <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20"><ShieldCheck size={12} /> KYC verified</span>
-                                        : <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}><Clock size={12} /> {aepsStepLabel(user)}</span>)}
-                                    {role === 'retailer' && (
-                                        <button onClick={refreshAepsStatus} disabled={checkingAeps} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-60" title="Check AEPS onboarding with the provider now">
-                                            <RefreshCcw size={12} className={checkingAeps ? 'animate-spin' : ''} />
-                                            {checkingAeps ? 'Checking…' : user.icchhamatiAeps?.stepAt ? `Checked ${ago(user.icchhamatiAeps.stepAt)}` : 'Check status'}
-                                        </button>
-                                    )}
-                                    {role === 'retailer' && user.distributorId && (
-                                        <button onClick={() => onOpenUser('distributor', user.distributorId._id)} className="inline-flex items-center gap-1 rounded-full border bg-background/70 px-2.5 py-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/10">
-                                            <Store size={12} /> {user.distributorId.name}
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <button onClick={() => onOpenTransactions(txnFilter)} className={`${SECONDARY_BUTTON} py-2`}><Receipt size={16} /> All transactions</button>
-                            <button onClick={() => setEmailing((v) => !v)} className={`${SECONDARY_BUTTON} py-2`}><Mail size={16} /> Send email</button>
+    const stats = [
+        { label: 'Utility wallet', value: inr.format(data.wallets.main) },
+        { label: 'Trade wallet', value: inr.format(data.wallets.aeps) },
+        { label: isRetailer ? 'Lifetime volume' : 'Network volume', value: inrShort(data.stats.volume), hint: `${data.stats.count.toLocaleString('en-IN')} txns`, onClick: () => onOpenTransactions(txnFilter) },
+        { label: 'Commission earned', value: inr.format(data.stats.earned) },
+        { label: 'Success rate', value: successRate === null ? '—' : `${successRate}%`, hint: data.stats.failed ? `${data.stats.failed} failed` : undefined },
+        { label: 'Last transaction', value: data.stats.lastTxnAt ? ago(data.stats.lastTxnAt) : 'Never' },
+    ];
+
+    // Who they are, said once under the name: role, code, standing.
+    const facts: React.ReactNode[] = [
+        <span key="role">{isRetailer ? 'Retailer' : 'Distributor'}</span>,
+        <span key="code" className="lp-figure">{code}</span>,
+        <StatusDot key="active" status={active ? 'ACTIVE' : 'INACTIVE'} />,
+    ];
+    if (isRetailer && user.verificationStatus === 'pending') facts.push(<StatusDot key="v" status="Awaiting_verification" />);
+    if (isRetailer && user.verificationStatus === 'rejected') facts.push(<StatusDot key="v" status="REJECTED" />);
+    if (isRetailer && user.signupSource === 'self') facts.push(<span key="self">Self signup · {user.signupFeePaidAt ? 'onboarding charge paid' : 'onboarding charge unpaid'}</span>);
+
+    return (
+        <div className="flex w-full flex-col gap-6 animate-in fade-in duration-200">
+            <button type="button" onClick={onBack} className="inline-flex w-fit items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground"><ChevronLeft size={15} /> Back</button>
+
+            <div className="flex items-start gap-4">
+                <Avatar name={user.name} src={user.profilePicture} size="w-14 h-14 text-base" />
+                <div className="min-w-0 flex-1">
+                    <PageHeader
+                        title={<span className="block truncate">{user.name}</span>}
+                        description={<span className="flex flex-wrap items-center gap-x-3 gap-y-1">{facts.map((f, i) => <span key={i} className="inline-flex items-center gap-3">{i > 0 && <span aria-hidden className="text-border">·</span>}{f}</span>)}</span>}
+                        actions={<>
+                            <button type="button" onClick={() => onOpenTransactions(txnFilter)} className={BUTTON_QUIET}><Receipt size={16} strokeWidth={1.75} /> Transactions</button>
+                            <button type="button" onClick={() => setEmailing((v) => !v)} className={BUTTON_QUIET}><Mail size={16} strokeWidth={1.75} /> Email</button>
                             {active && (
-                                <button onClick={loginAs} disabled={busy === 'loginAs'} className={`${SECONDARY_BUTTON} py-2`} title="Open their portal to fix a problem; ends after 1 hour">
-                                    {busy === 'loginAs' ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />} Login as {role}
+                                <button type="button" onClick={loginAs} disabled={busy === 'loginAs'} className={BUTTON_QUIET} title="Open their portal to fix a problem; ends after 1 hour">
+                                    {busy === 'loginAs' ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} strokeWidth={1.75} />} Login as {role}
                                 </button>
                             )}
-                            <button
-                                onClick={() => setConfirmStatus(true)}
-                                disabled={busy === 'status'}
-                                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold shadow-sm transition disabled:opacity-50 ${active ? 'border border-red-500/30 bg-red-500/10 text-red-700 hover:bg-red-500/15 dark:text-red-400' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
-                            >
-                                {busy === 'status' ? <Loader2 size={16} className="animate-spin" /> : <Power size={16} />}
+                            <button type="button" onClick={() => setConfirmStatus(true)} disabled={busy === 'status'} className={active ? BUTTON_DANGER : BUTTON}>
+                                {busy === 'status' ? <Loader2 size={16} className="animate-spin" /> : <Power size={16} strokeWidth={1.75} />}
                                 {active ? 'Deactivate' : 'Activate'}
                             </button>
-                        </div>
-                    </div>
+                        </>}
+                    />
+                </div>
+            </div>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-                        {[
-                            ['Utility Wallet', inr.format(data.wallets.main)],
-                            ['Trade Wallet', inr.format(data.wallets.aeps)],
-                            [role === 'retailer' ? 'Lifetime volume' : 'Network volume', inrShort(data.stats.volume)],
-                            [role === 'retailer' ? 'Commission earned' : 'Commission earned', inr.format(data.stats.earned)],
-                            ['Success rate', successRate === null ? '—' : `${successRate}%`],
-                            ['Last transaction', data.stats.lastTxnAt ? ago(data.stats.lastTxnAt) : 'Never'],
-                        ].map(([label, value]) => (
-                            <div key={label} className="rounded-2xl border bg-background/70 backdrop-blur p-3.5">
-                                <p className={LABEL}>{label}</p>
-                                <p className="mt-1.5 truncate text-lg font-bold tabular-nums">{value}</p>
-                            </div>
-                        ))}
+            {confirmStatus && (
+                <div className="flex flex-col gap-3 rounded-2xl border border-[var(--lp-warn-line,rgba(217,119,6,0.3))] bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p className="text-sm text-foreground">{active ? `Deactivate ${user.name}?` : `Activate ${user.name}?`}</p>
+                        <p className="mt-1 text-[13px] text-muted-foreground">
+                            {active
+                                ? 'They are signed out on their next request and cannot sign in again until you reactivate them.'
+                                : 'They will be able to sign in and use the platform again.'}
+                        </p>
+                    </div>
+                    <div className="flex flex-none gap-2">
+                        <button type="button" onClick={toggleStatus} className={active ? BUTTON_DANGER : BUTTON}>Yes, {active ? 'deactivate' : 'activate'}</button>
+                        <button type="button" onClick={() => setConfirmStatus(false)} className={BUTTON_QUIET}>Cancel</button>
                     </div>
                 </div>
-            </section>
+            )}
 
             {emailing && <NoticeEmail token={token} role={role} id={id} email={user.email} onDone={() => setEmailing(false)} />}
 
-            {confirmStatus && (
-                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
-                    <p className="text-sm font-semibold">{active ? `Deactivate ${user.name}?` : `Activate ${user.name}?`}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        {active
-                            ? 'They are signed out on their next request and cannot sign in again until you reactivate them.'
-                            : 'They will be able to sign in and use the platform again.'}
-                    </p>
-                    <div className="mt-3 flex gap-2">
-                        <button onClick={toggleStatus} className="rounded-xl btn-primary px-4 py-2 text-sm font-semibold">Yes, {active ? 'deactivate' : 'activate'}</button>
-                        <button onClick={() => setConfirmStatus(false)} className={SECONDARY_BUTTON}>Cancel</button>
-                    </div>
-                </div>
-            )}
-
-            {role === 'retailer' && (user.verificationStatus === 'pending' || user.verificationStatus === 'rejected') && (
+            {pending && (
                 <VerificationCard token={token} user={user} busy={busy === 'verify'} onDecide={(body, ok) => call('verify', `/api/admin/console/retailers/${id}/verification`, 'PATCH', body, ok)} onDeleted={onBack} id={id} />
             )}
 
-            {role === 'retailer' && user.verificationStatus !== 'pending' && user.verificationStatus !== 'rejected' && (
-                <DistributorCard token={token} user={user} busy={busy === 'distributor'} onSave={(distributorId) => call('distributor', `/api/admin/console/retailers/${id}/distributor`, 'PATCH', { distributorId }, 'Distributor updated')} />
-            )}
+            <StatStrip items={stats} cols={6} />
 
-            {role === 'retailer' && (
-                <section className={CARD}>
-                    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                            <div className={`rounded-xl p-2 ${SILVER_TILE}`}><Package className="h-4 w-4" /></div>
-                            <div>
-                                <h2 className="text-lg font-semibold">Services</h2>
-                                <p className="text-sm text-muted-foreground">Switched-off services are hidden from this retailer and blocked on the server.</p>
-                            </div>
-                        </div>
-                        <span className={LABEL}>{SERVICES.length - disabled.length} of {SERVICES.length} on</span>
-                    </div>
-                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-                        {SERVICES.map((svc) => {
-                            const on = !disabled.includes(svc.key);
-                            return (
-                                <div key={svc.key} className="flex items-center justify-between gap-3 rounded-xl border bg-background p-3">
-                                    <span className={`text-sm font-semibold ${on ? '' : 'text-muted-foreground'}`}>{svc.label}</span>
-                                    <button
-                                        role="switch"
-                                        aria-checked={on}
-                                        aria-label={`${svc.label} ${on ? 'on' : 'off'}`}
-                                        disabled={busy !== null}
-                                        onClick={() => toggleService(svc.key)}
-                                        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60 ${on ? 'bg-primary' : 'bg-black/15 dark:bg-white/15'}`}
-                                    >
-                                        <span className={`absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform dark:bg-zinc-900 ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
-                                    </button>
+            <div className="grid gap-6 xl:grid-cols-3">
+                {/* Main column: what they do */}
+                <div className="flex min-w-0 flex-col gap-6 xl:col-span-2">
+                    {isRetailer && (
+                        <Panel
+                            title="Services"
+                            description="Switched-off services are hidden from this retailer and blocked on the server."
+                            action={<span className="text-[13px] text-muted-foreground"><span className="lp-figure text-foreground">{SERVICES.length - disabled.length}</span> of {SERVICES.length} on</span>}
+                            flush
+                        >
+                            <ul className="grid sm:grid-cols-2">
+                                {SERVICES.map((svc) => {
+                                    const on = !disabled.includes(svc.key);
+                                    return (
+                                        <li key={svc.key} className="flex min-h-12 items-center justify-between gap-3 border-b px-5 py-2.5 sm:odd:border-r">
+                                            <span className={`text-sm ${on ? 'text-foreground' : 'text-muted-foreground'}`}>{svc.label}</span>
+                                            <button
+                                                type="button"
+                                                role="switch"
+                                                aria-checked={on}
+                                                aria-label={`${svc.label} ${on ? 'on' : 'off'}`}
+                                                disabled={busy !== null}
+                                                onClick={() => toggleService(svc.key)}
+                                                className={`relative h-5 w-9 flex-none rounded-full transition-colors duration-200 disabled:opacity-60 ${on ? 'bg-primary' : 'bg-input'}`}
+                                            >
+                                                <span className="absolute top-0.5 size-4 rounded-full bg-white shadow-sm transition-[left] duration-200" style={{ left: on ? 18 : 2 }} />
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </Panel>
+                    )}
+
+                    {role === 'distributor' && (
+                        <Panel title="Retailers" description={`${data.retailers.length} onboarded`} flush>
+                            {data.retailers.length === 0 ? (
+                                <Empty>No retailers onboarded yet.</Empty>
+                            ) : (
+                                <div className="max-h-[28rem] overflow-auto">
+                                    <table className={TABLE}>
+                                        <thead className="sticky top-0 bg-card">
+                                            <tr className={THEAD}>
+                                                <th className={TH}>Retailer</th>
+                                                <th className={`${TH} text-right`}>Volume</th>
+                                                <th className={`${TH} text-right`}>Txns</th>
+                                                <th className={TH}>Last txn</th>
+                                                <th className={TH}>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {[...data.retailers].sort((a, b) => b.volume - a.volume).map((r) => (
+                                                <tr key={r._id} onClick={() => onOpenUser('retailer', r._id)} className={`${TR} cursor-pointer`}>
+                                                    <td className={TD}>
+                                                        <p className="text-foreground">{r.name}</p>
+                                                        <p className="lp-figure text-[12px] text-muted-foreground">{r.retailerId}</p>
+                                                    </td>
+                                                    <td className={`${TD} lp-figure text-right`}>{inrShort(r.volume)}</td>
+                                                    <td className={`${TD} lp-figure text-right`}>{r.count}</td>
+                                                    <td className={`${TD} text-muted-foreground`}>{ago(r.lastTxnAt)}</td>
+                                                    <td className={TD}>
+                                                        {r.isActive === false ? <StatusDot status="INACTIVE" /> : aepsKycDone(r) ? <StatusDot status="ACTIVE" /> : <span className="inline-flex items-center gap-1.5 text-[13px] text-foreground"><span aria-hidden className="size-1.5 rounded-full bg-amber-500" />{aepsStepLabel(r)}</span>}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
-                            );
-                        })}
-                    </div>
-                </section>
-            )}
-
-            {role === 'retailer' && user.icchhamatiAeps?.outletId && !aepsKycDone(user) && (
-                <AepsAddressCard id={id} token={token} user={user} onSaved={reload} />
-            )}
-
-            {role === 'distributor' && (
-                <section className={`${CARD} overflow-hidden p-0`}>
-                    <div className="flex items-center justify-between p-6 pb-4">
-                        <div className="flex items-center gap-3">
-                            <div className={`rounded-xl p-2 ${SILVER_TILE}`}><Users className="h-4 w-4" /></div>
-                            <h2 className="text-lg font-semibold">Retailers ({data.retailers.length})</h2>
-                        </div>
-                    </div>
-                    {data.retailers.length === 0 ? (
-                        <p className="px-6 pb-8 text-sm text-muted-foreground">No retailers onboarded yet.</p>
-                    ) : (
-                        <div className="max-h-[28rem] overflow-auto">
-                            <table className="w-full text-sm">
-                                <thead className="sticky top-0 bg-card">
-                                    <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-                                        <th className="px-6 py-2 font-medium">Retailer</th>
-                                        <th className="px-4 py-2 font-medium text-right">Volume</th>
-                                        <th className="px-4 py-2 font-medium text-right">Txns</th>
-                                        <th className="px-4 py-2 font-medium">Last txn</th>
-                                        <th className="px-4 py-2 font-medium">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y">
-                                    {[...data.retailers].sort((a, b) => b.volume - a.volume).map((r) => (
-                                        <tr key={r._id} onClick={() => onOpenUser('retailer', r._id)} className="cursor-pointer hover:bg-black/[0.03] dark:hover:bg-white/[0.04]">
-                                            <td className="px-6 py-2.5">
-                                                <p className="font-medium">{r.name}</p>
-                                                <p className="font-mono text-[11px] text-muted-foreground">{r.retailerId}</p>
-                                            </td>
-                                            <td className="px-4 py-2.5 text-right tabular-nums">{inrShort(r.volume)}</td>
-                                            <td className="px-4 py-2.5 text-right tabular-nums">{r.count}</td>
-                                            <td className="px-4 py-2.5 text-muted-foreground">{ago(r.lastTxnAt)}</td>
-                                            <td className="px-4 py-2.5">
-                                                {r.isActive === false ? <span className="text-xs font-semibold text-red-600 dark:text-red-400">Inactive</span> : aepsKycDone(r) ? <span className="text-xs text-muted-foreground">Active</span> : <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">{aepsStepLabel(r)}</span>}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </section>
-            )}
-
-            <div className="grid gap-6 lg:grid-cols-5">
-                <section className={`${CARD} lg:col-span-3`}>
-                    <div className="mb-4 flex items-center justify-between">
-                        <h2 className="text-lg font-semibold">Recent transactions</h2>
-                        <button onClick={() => onOpenTransactions(txnFilter)} className="inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground">All <ArrowRight size={14} /></button>
-                    </div>
-                    {data.recentTransactions.length === 0 ? (
-                        <p className="py-10 text-center text-sm text-muted-foreground">No transactions yet.</p>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <tbody className="divide-y">
-                                    {data.recentTransactions.map((t) => (
-                                        <tr key={t._id}>
-                                            <td className="py-2.5 pr-3">
-                                                <p className="font-medium">{serviceLabel(t.type)}</p>
-                                                <p className="text-[11px] text-muted-foreground">{role === 'distributor' ? `${t.userId?.name} · ` : ''}{new Date(t.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
-                                            </td>
-                                            <td className="py-2.5 pr-3 text-right font-semibold tabular-nums">{inr.format(t.amount)}</td>
-                                            <td className="py-2.5 text-right"><span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${STATUS_PILL[t.status] || PENDING_PILL}`}>{t.status}</span></td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </section>
-
-                <section className={`${CARD} lg:col-span-2`}>
-                    <div className="mb-4 flex items-center gap-3">
-                        <div className={`rounded-xl p-2 ${SILVER_TILE}`}><History className="h-4 w-4" /></div>
-                        <h2 className="text-lg font-semibold">Activity</h2>
-                    </div>
-                    {data.activity.length === 0
-                        ? <p className="py-10 text-center text-sm text-muted-foreground">No activity recorded yet.</p>
-                        : <div className="max-h-[28rem] overflow-auto pr-1"><ActivityList rows={data.activity} onOpenUser={onOpenUser} /></div>}
-                </section>
-            </div>
-
-            <div className="grid gap-6 lg:grid-cols-2">
-                <section className={CARD}>
-                    <h2 className="mb-4 text-lg font-semibold">Contact & business</h2>
-                    <dl className="space-y-3 text-sm">
-                        <div className="flex items-center gap-3"><Mail size={16} className="text-muted-foreground" /><dd className="truncate font-medium">{user.email || '—'}</dd></div>
-                        <div className="flex items-center gap-3"><Phone size={16} className="text-muted-foreground" /><dd className="font-medium tabular-nums">{user.contactNumber || '—'}</dd>
-                            {user.contactNumber && (
-                                <a href={`https://wa.me/91${String(user.contactNumber).replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(`Hi ${user.name}, this is Shahparpay.`)}`} target="_blank" rel="noopener noreferrer" className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700">
-                                    <MessageCircle size={14} /> WhatsApp
-                                </a>
                             )}
-                        </div>
-                        <div className="flex items-start gap-3"><MapPin size={16} className="mt-0.5 text-muted-foreground" /><dd className="font-medium">{[user.businessName, user.businessAddress, address].filter(Boolean).join(' · ') || '—'}</dd></div>
-                        <div className="flex items-center gap-3"><Clock size={16} className="text-muted-foreground" /><dd className="text-muted-foreground">Joined {new Date(user.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</dd></div>
-                    </dl>
-                    <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-4">
-                        <DocTile label="Aadhaar" number={user.aadhaarNumber} picture={user.aadhaarPicture} />
-                        <DocTile label="PAN" number={user.panNumber} picture={user.panPicture} />
-                        <DocTile label="Photo" picture={user.profilePicture} />
-                    </div>
-                </section>
-
-                <section className={CARD}>
-                    <div className="mb-4 flex items-center gap-3">
-                        <div className={`rounded-xl p-2 ${SILVER_TILE}`}><Banknote className="h-4 w-4" /></div>
-                        <h2 className="text-lg font-semibold">Fund requests</h2>
-                    </div>
-                    {data.fundRequests.length === 0 ? (
-                        <p className="py-8 text-center text-sm text-muted-foreground">None.</p>
-                    ) : (
-                        <ul className="divide-y text-sm">
-                            {data.fundRequests.map((f) => (
-                                <li key={f._id} className="flex items-center justify-between gap-3 py-2.5">
-                                    <div>
-                                        <p className="font-semibold tabular-nums">{inr.format(f.amount)}</p>
-                                        <p className="text-[11px] text-muted-foreground">{f.transactionMode} · {new Date(f.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
-                                    </div>
-                                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${f.status === 'APPROVED' ? STATUS_PILL.SUCCESS : f.status === 'REJECTED' ? STATUS_PILL.FAILED : PENDING_PILL}`}>{f.status}</span>
-                                </li>
-                            ))}
-                        </ul>
+                        </Panel>
                     )}
-                </section>
+
+                    <Panel title="Recent transactions" action={<TextLink onClick={() => onOpenTransactions(txnFilter)}>All</TextLink>} flush>
+                        {data.recentTransactions.length === 0 ? (
+                            <Empty>No transactions yet.</Empty>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className={TABLE}>
+                                    <tbody>
+                                        {data.recentTransactions.map((t) => (
+                                            <tr key={t._id} className={TR}>
+                                                <td className={TD}>
+                                                    <p className="text-foreground">{serviceLabel(t.type)}</p>
+                                                    <p className="text-[12px] text-muted-foreground">{role === 'distributor' ? `${t.userId?.name} · ` : ''}{new Date(t.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                                                </td>
+                                                <td className={`${TD} lp-figure text-right text-foreground`}>{inr.format(t.amount)}</td>
+                                                <td className={`${TD} text-right`}><StatusDot status={t.status} /></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Panel>
+
+                    <Panel title="Activity">
+                        {data.activity.length === 0
+                            ? <Empty>No activity recorded yet.</Empty>
+                            : <div className="max-h-[28rem] overflow-auto pr-1"><ActivityList rows={data.activity} onOpenUser={onOpenUser} /></div>}
+                    </Panel>
+                </div>
+
+                {/* Side column: who they are */}
+                <div className="flex min-w-0 flex-col gap-6">
+                    {isRetailer && (
+                        <Panel
+                            title="AEPS onboarding"
+                            action={
+                                <button type="button" onClick={refreshAepsStatus} disabled={checkingAeps} className="inline-flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground disabled:opacity-60" title="Check AEPS onboarding with the provider now">
+                                    <RefreshCcw size={13} className={checkingAeps ? 'animate-spin' : ''} />
+                                    {checkingAeps ? 'Checking…' : user.icchhamatiAeps?.stepAt ? `Checked ${ago(user.icchhamatiAeps.stepAt)}` : 'Check status'}
+                                </button>
+                            }
+                        >
+                            <p className="flex items-center gap-2 text-sm text-foreground">
+                                {aepsKycDone(user)
+                                    ? <><ShieldCheck size={16} className="text-[var(--lp-positive)]" /> KYC verified</>
+                                    : <><span aria-hidden className="size-1.5 rounded-full bg-amber-500" /> {aepsStepLabel(user)}</>}
+                            </p>
+                        </Panel>
+                    )}
+
+                    {isRetailer && !pending && (
+                        <DistributorCard token={token} user={user} busy={busy === 'distributor'} onSave={(distributorId) => call('distributor', `/api/admin/console/retailers/${id}/distributor`, 'PATCH', { distributorId }, 'Distributor updated')} />
+                    )}
+
+                    {isRetailer && pending && user.distributorId && (
+                        <Panel title="Distributor">
+                            <button type="button" onClick={() => onOpenUser('distributor', user.distributorId._id)} className="inline-flex items-center gap-2 text-sm text-foreground hover:underline"><Store size={15} className="text-muted-foreground" /> {user.distributorId.name}</button>
+                        </Panel>
+                    )}
+
+                    <Panel title="Contact and business">
+                        <dl>
+                            <KV label="Email"><span className="block truncate">{user.email || '—'}</span></KV>
+                            <KV label="Mobile">
+                                <span className="inline-flex items-center gap-3">
+                                    <span className="lp-figure">{user.contactNumber || '—'}</span>
+                                    {user.contactNumber && (
+                                        <a href={`https://wa.me/91${String(user.contactNumber).replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(`Hi ${user.name}, this is Shahparpay.`)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[13px] text-[var(--lp-positive)] hover:underline">
+                                            <MessageCircle size={14} /> WhatsApp
+                                        </a>
+                                    )}
+                                </span>
+                            </KV>
+                            {isRetailer && user.distributorId && !pending && (
+                                <KV label="Distributor">
+                                    <button type="button" onClick={() => onOpenUser('distributor', user.distributorId._id)} className="hover:underline">{user.distributorId.name}</button>
+                                </KV>
+                            )}
+                            <KV label="Business">{[user.businessName, user.businessAddress, address].filter(Boolean).join(' · ') || '—'}</KV>
+                            <KV label="Joined">{new Date(user.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</KV>
+                        </dl>
+                        <div className="mt-5 grid grid-cols-3 gap-3">
+                            <DocTile label="Aadhaar" number={user.aadhaarNumber} picture={user.aadhaarPicture} />
+                            <DocTile label="PAN" number={user.panNumber} picture={user.panPicture} />
+                            <DocTile label="Photo" picture={user.profilePicture} />
+                        </div>
+                    </Panel>
+
+                    {isRetailer && user.icchhamatiAeps?.outletId && !aepsKycDone(user) && (
+                        <AepsAddressCard id={id} token={token} user={user} onSaved={reload} />
+                    )}
+
+                    <Panel title="Fund requests" flush>
+                        {data.fundRequests.length === 0 ? (
+                            <Empty>None.</Empty>
+                        ) : (
+                            <ul>
+                                {data.fundRequests.map((f) => (
+                                    <li key={f._id} className="flex items-center justify-between gap-3 border-b px-5 py-3 last:border-0">
+                                        <div>
+                                            <p className="lp-figure text-sm text-foreground">{inr.format(f.amount)}</p>
+                                            <p className="text-[12px] text-muted-foreground">{f.transactionMode} · {new Date(f.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
+                                        </div>
+                                        <StatusDot status={f.status} />
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </Panel>
+                </div>
             </div>
         </div>
     );
@@ -474,27 +477,20 @@ const DistributorCard = ({ token, user, busy, onSave }: { token: string | null; 
     const canBeUnderAdmin = user.signupSource === 'self';
 
     return (
-        <section className={CARD}>
-            <div className="mb-5 flex items-center gap-3">
-                <div className={`rounded-xl p-2 ${SILVER_TILE}`}><Store className="h-4 w-4" /></div>
-                <div>
-                    <h2 className="text-lg font-semibold">Distributor</h2>
-                    <p className="text-sm text-muted-foreground">{current ? 'Move this retailer to another distributor.' : 'This retailer is directly under the admin. Add a distributor any time.'}</p>
-                </div>
-            </div>
-            <div className="flex flex-col gap-3 md:flex-row md:items-end">
-                <label className="flex flex-1 flex-col gap-1.5">
-                    <span className={LABEL}>Place under</span>
-                    <select className={INPUT} value={distributorId} onChange={(e) => setDistributorId(e.target.value)}>
+        <Panel title="Distributor" description={current ? 'Move this retailer to another distributor.' : 'Directly under the admin. Add a distributor any time.'}>
+            <div className="flex flex-col gap-3">
+                <label className="flex flex-col gap-1.5">
+                    <span className={LBL}>Place under</span>
+                    <select className={FIELD} value={distributorId} onChange={(e) => setDistributorId(e.target.value)}>
                         {(canBeUnderAdmin || !current) && <option value="">No distributor (under admin)</option>}
                         {(distributors || []).map((d) => <option key={d._id} value={d._id}>{d.name} ({d.distributorId})</option>)}
                     </select>
                 </label>
-                <button onClick={() => onSave(distributorId || null)} disabled={busy || distributorId === current} className={PRIMARY_BUTTON}>
-                    {busy ? <Loader2 size={16} className="animate-spin" /> : <Store size={16} />} Save
+                <button type="button" onClick={() => onSave(distributorId || null)} disabled={busy || distributorId === current} className={`${BUTTON} w-full`}>
+                    {busy ? <Loader2 size={16} className="animate-spin" /> : <Store size={16} strokeWidth={1.75} />} Save
                 </button>
             </div>
-        </section>
+        </Panel>
     );
 };
 
@@ -532,68 +528,66 @@ const VerificationCard = ({ id, token, user, busy, onDecide, onDeleted }: { id: 
     const [note, setNote] = useState('');
 
     return (
-        <section className={`${CARD} border-amber-500/30`}>
-            <div className="mb-5 flex items-center gap-3">
-                <div className={`rounded-xl p-2 ${SILVER_TILE}`}><UserCheck className="h-4 w-4" /></div>
-                <div>
-                    <h2 className="text-lg font-semibold">{user.verificationStatus === 'rejected' ? 'Signup rejected' : 'Verify this signup'}</h2>
-                    <p className="text-sm text-muted-foreground">Check the documents and shop address below. Until approved, the retailer can sign in but use nothing.</p>
-                </div>
-            </div>
+        <Panel
+            className="border-amber-500/40"
+            title={user.verificationStatus === 'rejected' ? 'Signup rejected' : 'Verify this signup'}
+            description="Check the documents and shop address. Until approved, the retailer can sign in but use nothing."
+        >
             {user.verificationStatus === 'rejected' && user.verificationNote && (
-                <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-400">
-                    <p className={LABEL}>Reason given</p>
+                <div className={`${ALERT_ERROR} mb-4`}>
+                    <p className="text-[12px] opacity-80">Reason given</p>
                     <p className="mt-1 whitespace-pre-wrap">{user.verificationNote}</p>
                 </div>
             )}
             {rejecting ? (
                 <div className="flex flex-col gap-3">
                     <label className="flex flex-col gap-1.5">
-                        <span className={LABEL}>Reason (the retailer sees this)</span>
-                        <textarea className={`${INPUT} min-h-24`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Aadhaar photo is blurry; please contact support with a clear copy." autoFocus />
+                        <span className={LBL}>Reason (the retailer sees this)</span>
+                        <textarea className={`${FIELD} h-auto min-h-24 py-2.5`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Aadhaar photo is blurry; please contact support with a clear copy." autoFocus />
                     </label>
                     <div className="flex flex-wrap gap-2">
                         <button
+                            type="button"
                             onClick={() => onDecide({ status: 'rejected', note: note.trim() }, 'Signup rejected')}
                             disabled={busy || !note.trim()}
-                            className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-500/15 disabled:opacity-50 dark:text-red-400"
+                            className={BUTTON_DANGER}
                         >
                             {busy ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />} Reject signup
                         </button>
-                        <button onClick={() => setRejecting(false)} className={SECONDARY_BUTTON}>Cancel</button>
+                        <button type="button" onClick={() => setRejecting(false)} className={BUTTON_QUIET}>Cancel</button>
                     </div>
                 </div>
             ) : (
                 <div className="flex flex-col gap-3 md:flex-row md:items-end">
                     <label className="flex flex-1 flex-col gap-1.5">
-                        <span className={LABEL}>Place under</span>
-                        <select className={INPUT} value={distributorId} onChange={(e) => setDistributorId(e.target.value)}>
+                        <span className={LBL}>Place under</span>
+                        <select className={FIELD} value={distributorId} onChange={(e) => setDistributorId(e.target.value)}>
                             <option value="">No distributor (under admin)</option>
                             {(distributors || []).map((d) => <option key={d._id} value={d._id}>{d.name} ({d.distributorId})</option>)}
                         </select>
                     </label>
-                    <button onClick={() => onDecide({ status: 'approved', distributorId: distributorId || null }, 'Retailer approved')} disabled={busy || (user.signupSource === 'self' && !user.signupFeePaidAt)} title={user.signupSource === 'self' && !user.signupFeePaidAt ? 'The ₹199 signup fee is not paid yet' : undefined} className={PRIMARY_BUTTON}>
+                    <button onClick={() => onDecide({ status: 'approved', distributorId: distributorId || null }, 'Retailer approved')} disabled={busy || (user.signupSource === 'self' && !user.signupFeePaidAt)} title={user.signupSource === 'self' && !user.signupFeePaidAt ? 'The ₹99 onboarding charge is not paid yet' : undefined} className={BUTTON}>
                         {busy ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />} Approve
                     </button>
                     {user.verificationStatus !== 'rejected' && (
-                        <button onClick={() => setRejecting(true)} disabled={busy} className={SECONDARY_BUTTON}><XCircle size={16} /> Reject</button>
+                        <button type="button" onClick={() => setRejecting(true)} disabled={busy} className={BUTTON_QUIET}><XCircle size={16} strokeWidth={1.75} /> Reject</button>
                     )}
-                    <button onClick={() => setDeleting(true)} disabled={busy || removing} className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-500/15 disabled:opacity-50 dark:text-red-400"><Trash2 size={16} /> Delete</button>
+                    <button onClick={() => setDeleting(true)} disabled={busy || removing} className={BUTTON_DANGER}><Trash2 size={16} strokeWidth={1.75} /> Delete</button>
                 </div>
             )}
             {deleting && (
-                <div className="mt-4 flex flex-col gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4">
-                    <p className="text-sm text-red-700 dark:text-red-400">This permanently deletes {user.name}'s account, wallets, transactions (including the signup fee), banks, tickets and logs. It cannot be undone. Type <span className="font-mono font-semibold">{user.retailerId}</span> to confirm.</p>
-                    <input className={INPUT} value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={user.retailerId} autoFocus />
+                <div className="mt-4 flex flex-col gap-3 rounded-xl border border-[var(--lp-danger-line)] bg-[var(--lp-danger-soft)] p-4">
+                    <p className="text-sm text-[var(--lp-danger)]">This permanently deletes {user.name}'s account, wallets, transactions (including the onboarding charge), banks, tickets and logs. It cannot be undone. Type <span className="lp-figure">{user.retailerId}</span> to confirm.</p>
+                    <input className={FIELD} value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={user.retailerId} autoFocus />
                     <div className="flex flex-wrap gap-2">
-                        <button onClick={remove} disabled={removing || typed.trim() !== user.retailerId} className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+                        <button onClick={remove} disabled={removing || typed.trim() !== user.retailerId} className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-[var(--lp-danger)] px-4 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
                             {removing ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />} Delete everything
                         </button>
-                        <button onClick={() => { setDeleting(false); setTyped(''); }} className={SECONDARY_BUTTON}>Cancel</button>
+                        <button type="button" onClick={() => { setDeleting(false); setTyped(''); }} className={BUTTON_QUIET}>Cancel</button>
                     </div>
                 </div>
             )}
-        </section>
+        </Panel>
     );
 };
 
@@ -632,40 +626,34 @@ const AepsAddressCard = ({ id, token, user, onSaved }: { id: string; token: stri
     };
 
     return (
-        <section className={CARD}>
-            <div className="mb-5 flex items-center gap-3">
-                <div className={`rounded-xl p-2 ${SILVER_TILE}`}><MapPin className="h-4 w-4" /></div>
-                <div>
-                    <h2 className="text-lg font-semibold">AEPS shop address</h2>
-                    <p className="text-sm text-muted-foreground">
-                        Corrects the address on outlet <span className="font-mono">{user.icchhamatiAeps.outletId}</span> at Icchhamati. Use it when activation fails validation. Only possible before AEPS is activated.
-                    </p>
-                </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-                <label className="flex flex-col gap-1.5 md:col-span-2">
-                    <span className={LABEL}>Shop address</span>
-                    <input className={INPUT} value={form.shop_address} onChange={set('shop_address')} placeholder="Shop number, street, area" />
+        <Panel
+            title="AEPS shop address"
+            description={<>Corrects the address on outlet <span className="lp-figure">{user.icchhamatiAeps.outletId}</span> at Icchhamati, when activation fails validation. Only before AEPS is activated.</>}
+        >
+            <div className="grid gap-4 sm:grid-cols-2">
+                <label className="flex flex-col gap-1.5 sm:col-span-2">
+                    <span className={LBL}>Shop address</span>
+                    <input className={FIELD} value={form.shop_address} onChange={set('shop_address')} placeholder="Shop number, street, area" />
                 </label>
                 <label className="flex flex-col gap-1.5">
-                    <span className={LABEL}>City</span>
-                    <input className={INPUT} value={form.shop_city} onChange={set('shop_city')} />
+                    <span className={LBL}>City</span>
+                    <input className={FIELD} value={form.shop_city} onChange={set('shop_city')} />
                 </label>
                 <label className="flex flex-col gap-1.5">
-                    <span className={LABEL}>District</span>
-                    <input className={INPUT} value={form.shop_district} onChange={set('shop_district')} />
+                    <span className={LBL}>District</span>
+                    <input className={FIELD} value={form.shop_district} onChange={set('shop_district')} />
                 </label>
                 <label className="flex flex-col gap-1.5">
-                    <span className={LABEL}>Pincode</span>
-                    <input className={`${INPUT} font-mono`} inputMode="numeric" value={form.shop_pin_code} onChange={(e) => setForm({ ...form, shop_pin_code: e.target.value.replace(/\D/g, '').slice(0, 6) })} />
+                    <span className={LBL}>Pincode</span>
+                    <input className={`${FIELD} lp-figure`} inputMode="numeric" value={form.shop_pin_code} onChange={(e) => setForm({ ...form, shop_pin_code: e.target.value.replace(/\D/g, '').slice(0, 6) })} />
                 </label>
                 <div className="flex items-end">
-                    <button onClick={save} disabled={saving} className={`${PRIMARY_BUTTON} w-full`}>
+                    <button type="button" onClick={save} disabled={saving} className={`${BUTTON} w-full`}>
                         {saving ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
                         {saving ? 'Saving…' : 'Update on Icchhamati'}
                     </button>
                 </div>
             </div>
-        </section>
+        </Panel>
     );
 };

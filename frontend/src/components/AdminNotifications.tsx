@@ -1,17 +1,19 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { AlertTriangle, Archive, Bell, CheckCircle2, Info, Loader2, Megaphone, Send, Siren } from 'lucide-react';
+import { Archive, Loader2, Send } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
-import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SILVER_TILE, ago } from './distributor/shared';
+import { BUTTON, FIELD, ICON_BUTTON, ago } from './distributor/shared';
+import { Empty, PageHeader, Panel, Segmented, Skeleton } from './distributor/ui';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+// A kind is a status, so it keeps a status colour; said as a dot, not a tinted tile.
 const KINDS = {
-    info: { label: 'Information', icon: Info, cls: 'bg-sky-500/10 text-sky-700 dark:text-sky-400 ring-sky-500/20' },
-    success: { label: 'Success', icon: CheckCircle2, cls: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20' },
-    warning: { label: 'Warning', icon: AlertTriangle, cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-amber-500/20' },
-    urgent: { label: 'Urgent', icon: Siren, cls: 'bg-red-500/10 text-red-700 dark:text-red-400 ring-red-500/20' },
+    info: { label: 'Information', dot: 'bg-sky-500' },
+    success: { label: 'Success', dot: 'bg-[var(--lp-positive)]' },
+    warning: { label: 'Warning', dot: 'bg-amber-500' },
+    urgent: { label: 'Urgent', dot: 'bg-[var(--lp-danger)]' },
 } as const;
 type Kind = keyof typeof KINDS;
 const kindOf = (k: string) => KINDS[(k as Kind)] || KINDS.info;
@@ -49,122 +51,106 @@ const AdminNotifications = () => {
     };
 
     const preview = kindOf(form.kind);
-    const PreviewIcon = preview.icon;
+    const LBL = 'text-[13px] text-muted-foreground';
 
     return (
-        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div className="relative flex items-center gap-4">
-                    <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><Bell className="h-7 w-7" /></div>
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Notifications</h1>
-                        <p className="text-sm text-muted-foreground">Announcements every retailer and distributor sees in their bell, and in the app's Latest Updates ticker.</p>
-                    </div>
-                </div>
-            </section>
+        <div className="flex w-full flex-col gap-6 animate-in fade-in duration-200">
+            <PageHeader
+                eyebrow="Platform"
+                title="Notifications"
+                description="Announcements every retailer and distributor sees in their bell, and in the app's Latest Updates ticker."
+            />
 
-            <div className="grid gap-6 lg:grid-cols-5">
-                <form onSubmit={publish} className={`${CARD} lg:col-span-3 space-y-5`}>
-                    <div className="flex items-center gap-3">
-                        <div className={`rounded-xl p-2 ${SILVER_TILE}`}><Megaphone className="h-4 w-4" /></div>
-                        <h2 className="text-lg font-semibold">New announcement</h2>
-                    </div>
-                    <div className="space-y-1.5">
-                        <div className="flex justify-between"><label className="text-sm font-medium">Title</label><span className="text-xs text-muted-foreground tabular-nums">{form.title.length}/120</span></div>
-                        <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} maxLength={120} placeholder="e.g. AEPS maintenance tonight" className={INPUT} />
-                    </div>
-                    <div className="space-y-1.5">
-                        <label className="text-sm font-medium">Type</label>
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                            {(Object.keys(KINDS) as Kind[]).map((k) => {
-                                const { label, icon: Icon, cls } = KINDS[k];
-                                const on = form.kind === k;
-                                return (
-                                    <button key={k} type="button" onClick={() => setForm({ ...form, kind: k })} aria-pressed={on} className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition ${on ? `ring-1 ${cls}` : 'bg-background text-muted-foreground hover:text-foreground'}`}>
-                                        <Icon size={15} /> {label}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                    <div className="space-y-1.5">
-                        <div className="flex justify-between"><label className="text-sm font-medium">Message</label><span className="text-xs text-muted-foreground tabular-nums">{form.message.length}/1000</span></div>
-                        <textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} maxLength={1000} rows={5} placeholder="Write the announcement…" className={`${INPUT} resize-y`} />
-                    </div>
-                    <div className="grid gap-4 rounded-2xl border bg-background p-4 sm:grid-cols-2">
-                        <label className="flex cursor-pointer items-center gap-3 text-sm">
-                            <input type="checkbox" checked={form.showInTicker} onChange={(e) => setForm({ ...form, showInTicker: e.target.checked })} className="h-4 w-4 accent-zinc-900 dark:accent-zinc-200" />
-                            <span><span className="font-semibold">Show in ticker</span><span className="block text-xs text-muted-foreground">Scrolls across the top of dashboards</span></span>
+            <div className="grid gap-6 xl:grid-cols-5">
+                <Panel className="xl:col-span-3" title="New announcement">
+                    <form onSubmit={publish} className="flex flex-col gap-5">
+                        <label className="flex flex-col gap-1.5">
+                            <span className="flex justify-between"><span className={LBL}>Title</span><span className="lp-figure text-[12px] text-muted-foreground">{form.title.length}/120</span></span>
+                            <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} maxLength={120} placeholder="e.g. AEPS maintenance tonight" className={FIELD} />
                         </label>
-                        <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground">Expires (optional)</label>
-                            <input type="datetime-local" value={form.expiresAt} onChange={(e) => setForm({ ...form, expiresAt: e.target.value })} className={`${INPUT} py-2 dark:[color-scheme:dark]`} />
+                        <div className="flex flex-col gap-1.5">
+                            <span className={LBL}>Type</span>
+                            <div>
+                                <Segmented
+                                    label="Announcement type"
+                                    value={form.kind as Kind}
+                                    onChange={(k) => setForm({ ...form, kind: k })}
+                                    options={(Object.keys(KINDS) as Kind[]).map((k) => [k, KINDS[k].label] as const)}
+                                />
+                            </div>
                         </div>
-                    </div>
-                    <div className="flex justify-end">
-                        <button disabled={saving} className={`${PRIMARY_BUTTON} px-6`}>
-                            {saving ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} {saving ? 'Publishing…' : 'Publish'}
-                        </button>
-                    </div>
-                </form>
+                        <label className="flex flex-col gap-1.5">
+                            <span className="flex justify-between"><span className={LBL}>Message</span><span className="lp-figure text-[12px] text-muted-foreground">{form.message.length}/1000</span></span>
+                            <textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} maxLength={1000} rows={5} placeholder="Write the announcement…" className={`${FIELD} h-auto resize-y py-2.5`} />
+                        </label>
+                        <div className="grid gap-4 border-t pt-5 sm:grid-cols-2 sm:items-end">
+                            <label className="flex cursor-pointer items-center gap-3 text-sm">
+                                <input type="checkbox" checked={form.showInTicker} onChange={(e) => setForm({ ...form, showInTicker: e.target.checked })} className="size-4 accent-[var(--primary)]" />
+                                <span><span className="text-foreground">Show in ticker</span><span className="block text-[12px] text-muted-foreground">Scrolls across the top of dashboards</span></span>
+                            </label>
+                            <label className="flex flex-col gap-1.5">
+                                <span className={LBL}>Expires (optional)</span>
+                                <input type="datetime-local" value={form.expiresAt} onChange={(e) => setForm({ ...form, expiresAt: e.target.value })} className={`${FIELD} dark:[color-scheme:dark]`} />
+                            </label>
+                        </div>
+                        <div className="flex justify-end">
+                            <button disabled={saving} className={BUTTON}>
+                                {saving ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} strokeWidth={1.75} />} {saving ? 'Publishing…' : 'Publish'}
+                            </button>
+                        </div>
+                    </form>
+                </Panel>
 
-                <aside className={`${CARD} lg:col-span-2 space-y-4`}>
-                    <p className={LABEL}>Preview</p>
-                    <div className="rounded-2xl border bg-background p-4 shadow-sm">
+                {/* The announcement as users will see it: the bell item, then the ticker line. */}
+                <Panel className="xl:col-span-2" title="Preview" description="Exactly as it reads in the bell.">
+                    <div className="rounded-xl border bg-background p-4">
                         <div className="flex items-start gap-3">
-                            <div className={`rounded-xl p-2 ring-1 ${preview.cls}`}><PreviewIcon size={16} /></div>
+                            <span aria-hidden className={`mt-1.5 size-2 flex-none rounded-full ${preview.dot}`} />
                             <div className="min-w-0">
-                                <p className="font-semibold">{form.title || 'Your title'}</p>
-                                <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{form.message || 'Your message appears here, exactly as users will read it.'}</p>
-                                <p className="mt-2 text-[11px] text-muted-foreground">Just now</p>
+                                <p className="text-sm text-foreground">{form.title || 'Your title'}</p>
+                                <p className="mt-1 whitespace-pre-wrap text-[13px] text-muted-foreground">{form.message || 'Your message appears here, exactly as users will read it.'}</p>
+                                <p className="mt-2 text-[12px] text-muted-foreground">Just now · {preview.label}</p>
                             </div>
                         </div>
                     </div>
                     {form.showInTicker && (
-                        <div className="overflow-hidden rounded-xl border bg-zinc-900 px-3 py-2 text-xs text-white dark:bg-zinc-100 dark:text-zinc-900">
-                            <span className="font-bold">LATEST · </span>{form.title || 'Your title'}
+                        <div className="mt-3 overflow-hidden rounded-xl bg-foreground px-4 py-2.5 text-[13px] text-background">
+                            <span className="opacity-70">Latest · </span>{form.title || 'Your title'}
                         </div>
                     )}
-                </aside>
+                </Panel>
             </div>
 
-            <section className={`${CARD} p-0 overflow-hidden`}>
-                <div className="flex items-center justify-between p-6 pb-4">
-                    <h2 className="text-lg font-semibold">Active announcements</h2>
-                    <span className={LABEL}>{items.length} live</span>
-                </div>
+            <Panel title="Active announcements" action={<span className="text-[13px] text-muted-foreground"><span className="lp-figure text-foreground">{items.length}</span> live</span>} flush>
                 {!loaded ? (
-                    <div className="space-y-3 px-6 pb-6">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-black/5 dark:bg-white/5" />)}</div>
+                    <div className="space-y-3 p-5">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
                 ) : items.length === 0 ? (
-                    <p className="px-6 pb-10 pt-4 text-center text-sm text-muted-foreground">No active announcements.</p>
+                    <Empty>No active announcements.</Empty>
                 ) : (
-                    <ul className="divide-y border-t">
+                    <ul>
                         {items.map((item) => {
                             const k = kindOf(item.kind);
-                            const Icon = k.icon;
                             return (
-                                <li key={item._id} className="flex items-start gap-4 px-6 py-4">
-                                    <div className={`rounded-xl p-2 ring-1 ${k.cls}`}><Icon size={16} /></div>
+                                <li key={item._id} className="flex items-start gap-4 border-b px-5 py-4 last:border-0">
+                                    <span aria-hidden title={k.label} className={`mt-1.5 size-2 flex-none rounded-full ${k.dot}`} />
                                     <div className="min-w-0 flex-1">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <h3 className="font-semibold">{item.title}</h3>
-                                            {item.showInTicker && <span className="rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground">Ticker</span>}
-                                        </div>
-                                        <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{item.message}</p>
-                                        <p className="mt-2 text-xs text-muted-foreground">
-                                            Published {ago(item.createdAt)}
+                                        <h3 className="text-sm text-foreground">{item.title}</h3>
+                                        <p className="mt-1 whitespace-pre-wrap text-[13px] text-muted-foreground">{item.message}</p>
+                                        <p className="mt-2 text-[12px] text-muted-foreground">
+                                            {k.label} · published {ago(item.createdAt)}
+                                            {item.showInTicker && ' · in ticker'}
                                             {item.expiresAt && ` · expires ${new Date(item.expiresAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`}
                                         </p>
                                     </div>
-                                    <button onClick={() => archive(item._id)} className="rounded-lg p-2 text-muted-foreground hover:bg-red-500/10 hover:text-red-600" title="Archive" aria-label={`Archive ${item.title}`}>
-                                        <Archive className="h-4 w-4" />
+                                    <button type="button" onClick={() => archive(item._id)} className={ICON_BUTTON} title="Archive" aria-label={`Archive ${item.title}`}>
+                                        <Archive className="h-4 w-4" strokeWidth={1.75} />
                                     </button>
                                 </li>
                             );
                         })}
                     </ul>
                 )}
-            </section>
+            </Panel>
         </div>
     );
 };

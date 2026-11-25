@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { ArrowRight, Landmark, Loader2, RefreshCcw, Search, Wallet } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Loader2, RefreshCcw, Search } from 'lucide-react';
 import { toast } from 'sonner';
-import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, inr, useApiGet } from '../distributor/shared';
-import { Skeleton } from '../distributor/ui';
+import { BUTTON, BUTTON_QUIET, FIELD, ICON_BUTTON, TABLE, TD, TH, THEAD, TR, inr, useApiGet } from '../distributor/shared';
+import { Empty, PageHeader, Panel, Skeleton, StatusDot } from '../distributor/ui';
+import { ALERT_ERROR } from '../landing/ui';
 
 type IcchWallet = { id: number; name: string; number: string; isPrimary: boolean; balance: number; available: number; hold: number; active: boolean };
 type Payout = {
@@ -11,11 +12,7 @@ type Payout = {
 };
 type PayoutPage = { rows: Payout[]; page: number; lastPage: number; total: number };
 
-const STATUS_PILL: Record<string, string> = {
-    success: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20',
-    failed: 'bg-red-500/10 text-red-700 dark:text-red-400 ring-red-500/20',
-};
-const PENDING = 'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-amber-500/20';
+const LBL = 'text-[13px] text-muted-foreground';
 
 /**
  * Shahparpay's own Icchhamati account: the float every retailer transacts
@@ -63,112 +60,100 @@ const IcchhamatiAccount = ({ token }: { token: string | null }) => {
     };
 
     return (
-        <div className="flex w-full flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div className="relative flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><Landmark className="h-7 w-7" /></div>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Icchhamati account</h1>
-                            <p className="text-sm text-muted-foreground">The company float every retailer transacts through. Admins only.</p>
-                        </div>
-                    </div>
-                    <button onClick={() => { wallets.reload(); payouts.reload(); }} className={`${SECONDARY_BUTTON} py-2`}><RefreshCcw size={16} /> Refresh</button>
+        <div className="flex w-full flex-col gap-6 animate-in fade-in duration-200">
+            <PageHeader
+                eyebrow="Admin only"
+                title="Icchhamati account"
+                description="The company float every retailer transacts through, the payouts sent from it, and moving money between its wallets."
+                actions={<button type="button" onClick={() => { wallets.reload(); payouts.reload(); }} className={BUTTON_QUIET}><RefreshCcw size={16} strokeWidth={1.75} /> Refresh</button>}
+            />
+
+            {wallets.error && <p className={ALERT_ERROR}>{wallets.error}</p>}
+
+            {/* Wallets: one strip, the primary first. */}
+            <section className="overflow-hidden rounded-2xl border bg-card">
+                <div className="grid gap-px bg-border sm:grid-cols-2 xl:grid-cols-3">
+                    {wallets.loading && !wallets.data
+                        ? Array.from({ length: 2 }).map((_, i) => <div key={i} className="bg-card p-5"><Skeleton className="h-16" /></div>)
+                        : wallets.data?.map((w) => (
+                            <div key={w.id} className="bg-card p-5">
+                                <div className="flex items-center justify-between gap-2">
+                                    <p className="text-[13px] text-muted-foreground">{w.name}</p>
+                                    {w.isPrimary && <span className="text-[12px] text-foreground">Primary</span>}
+                                </div>
+                                <p className="lp-figure mt-2 text-[24px] leading-none tracking-[-0.02em] text-foreground">{inr.format(w.available)}</p>
+                                <p className="mt-2 text-[12px] text-muted-foreground">
+                                    <span className="lp-figure">{w.number}</span>{w.hold > 0 && <> · {inr.format(w.hold)} on hold</>}{!w.active && ' · inactive'}
+                                </p>
+                            </div>
+                        ))}
                 </div>
             </section>
 
-            {wallets.error && <p className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">{wallets.error}</p>}
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {wallets.loading && !wallets.data
-                    ? Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-2xl" />)
-                    : wallets.data?.map((w) => (
-                        <div key={w.id} className={CARD}>
-                            <div className="flex items-center justify-between gap-2">
-                                <p className="flex items-center gap-2 font-semibold"><Wallet size={16} /> {w.name}</p>
-                                {w.isPrimary && <span className="rounded-full border px-2 py-0.5 text-[11px] font-semibold">Primary</span>}
-                            </div>
-                            <p className="mt-3 text-2xl font-bold tabular-nums">{inr.format(w.available)}</p>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                                <span className="font-mono">{w.number}</span>{w.hold > 0 && <> · {inr.format(w.hold)} on hold</>}{!w.active && ' · inactive'}
-                            </p>
-                        </div>
-                    ))}
-            </div>
-
             {primary && targets.length > 0 && (
-                <form onSubmit={sendTransfer} className={`${CARD} space-y-4`}>
-                    <div>
-                        <p className="text-lg font-semibold">Move money between wallets</p>
-                        <p className="text-sm text-muted-foreground">Icchhamati moves money out of the primary wallet ({primary.name}) only. Nothing leaves the account.</p>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-4">
-                        <label className="block space-y-1.5"><span className="text-sm font-medium">To</span>
-                            <select value={transfer.targetAccountId} onChange={(e) => setTransfer({ ...transfer, targetAccountId: e.target.value })} className={INPUT}>
+                <Panel title="Move money between wallets" description={`Icchhamati moves money out of the primary wallet (${primary.name}) only. Nothing leaves the account.`}>
+                    <form onSubmit={sendTransfer} className="grid gap-4 md:grid-cols-[repeat(4,minmax(0,1fr))_auto] md:items-end">
+                        <label className="flex flex-col gap-1.5"><span className={LBL}>To</span>
+                            <select value={transfer.targetAccountId} onChange={(e) => setTransfer({ ...transfer, targetAccountId: e.target.value })} className={FIELD}>
                                 <option value="" disabled>Select wallet</option>
                                 {targets.map((w) => <option key={w.id} value={w.id}>{w.name} ({w.number})</option>)}
                             </select>
                         </label>
-                        <label className="block space-y-1.5"><span className="text-sm font-medium">Amount</span>
-                            <input value={transfer.amount} onChange={(e) => setTransfer({ ...transfer, amount: e.target.value.replace(/[^\d.]/g, '') })} inputMode="decimal" placeholder={`Up to ${inr.format(primary.available)}`} className={INPUT} />
+                        <label className="flex flex-col gap-1.5"><span className={LBL}>Amount</span>
+                            <input value={transfer.amount} onChange={(e) => setTransfer({ ...transfer, amount: e.target.value.replace(/[^\d.]/g, '') })} inputMode="decimal" placeholder={`Up to ${inr.format(primary.available)}`} className={`${FIELD} lp-figure`} />
                         </label>
-                        <label className="block space-y-1.5"><span className="text-sm font-medium">Icchhamati MPIN</span>
-                            <input value={transfer.mpin} onChange={(e) => setTransfer({ ...transfer, mpin: e.target.value.replace(/\D/g, '').slice(0, 4) })} type="password" inputMode="numeric" autoComplete="off" className={`${INPUT} font-mono tracking-[0.4em]`} />
+                        <label className="flex flex-col gap-1.5"><span className={LBL}>Icchhamati MPIN</span>
+                            <input value={transfer.mpin} onChange={(e) => setTransfer({ ...transfer, mpin: e.target.value.replace(/\D/g, '').slice(0, 4) })} type="password" inputMode="numeric" autoComplete="off" className={`${FIELD} lp-figure tracking-[0.4em]`} />
                         </label>
-                        <label className="block space-y-1.5"><span className="text-sm font-medium">Note (optional)</span>
-                            <input value={transfer.details} onChange={(e) => setTransfer({ ...transfer, details: e.target.value })} className={INPUT} />
+                        <label className="flex flex-col gap-1.5"><span className={LBL}>Note (optional)</span>
+                            <input value={transfer.details} onChange={(e) => setTransfer({ ...transfer, details: e.target.value })} className={FIELD} />
                         </label>
-                    </div>
-                    <button disabled={sending} className={PRIMARY_BUTTON}>{sending ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />} Transfer</button>
-                </form>
+                        <button disabled={sending} className={BUTTON}>{sending ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} strokeWidth={1.75} />} Transfer</button>
+                    </form>
+                </Panel>
             )}
 
-            <section className={CARD}>
-                <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-                    <div>
-                        <p className="text-lg font-semibold">Payouts</p>
-                        <p className="text-sm text-muted-foreground">IMPS / NEFT sent from the Icchhamati account{payouts.data ? ` · ${payouts.data.total} total` : ''}</p>
+            <Panel title="Payouts" description={`IMPS and NEFT sent from the Icchhamati account${payouts.data ? ` · ${payouts.data.total} total` : ''}`} flush>
+                <form onSubmit={(e) => { e.preventDefault(); setPage(1); setApplied(filters); }} className="flex flex-wrap items-center gap-2 border-b px-5 py-3">
+                    <div className="relative min-w-56 flex-1">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <input value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} placeholder="Name, account, UTR…" className={`${FIELD} pl-9`} />
                     </div>
-                    <form onSubmit={(e) => { e.preventDefault(); setPage(1); setApplied(filters); }} className="flex flex-wrap items-end gap-2">
-                        <div className="relative">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <input value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} placeholder="Name, account, UTR…" className={`${INPUT} w-56 pl-9`} />
-                        </div>
-                        <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })} className={`${INPUT} w-36`}>
-                            <option value="">All statuses</option>
-                            <option value="success">Success</option>
-                            <option value="pending">Pending</option>
-                            <option value="failed">Failed</option>
-                        </select>
-                        <input type="date" value={filters.date_from} onChange={(e) => setFilters({ ...filters, date_from: e.target.value })} className={`${INPUT} w-40 dark:[color-scheme:dark]`} aria-label="From date" />
-                        <input type="date" value={filters.date_to} onChange={(e) => setFilters({ ...filters, date_to: e.target.value })} className={`${INPUT} w-40 dark:[color-scheme:dark]`} aria-label="To date" />
-                        <button className={`${SECONDARY_BUTTON} py-2.5`}>Apply</button>
-                    </form>
-                </div>
+                    <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })} className={`${FIELD} sm:w-36`}>
+                        <option value="">All statuses</option>
+                        <option value="success">Success</option>
+                        <option value="pending">Pending</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                    <input type="date" value={filters.date_from} onChange={(e) => setFilters({ ...filters, date_from: e.target.value })} className={`${FIELD} sm:w-40 dark:[color-scheme:dark]`} aria-label="From date" />
+                    <input type="date" value={filters.date_to} onChange={(e) => setFilters({ ...filters, date_to: e.target.value })} className={`${FIELD} sm:w-40 dark:[color-scheme:dark]`} aria-label="To date" />
+                    <button className={BUTTON_QUIET}>Apply</button>
+                </form>
 
-                {payouts.error && <p className="mb-3 text-sm text-red-600 dark:text-red-400">{payouts.error}</p>}
+                {payouts.error && <p className="px-5 pt-4 text-sm text-[var(--lp-danger)]">{payouts.error}</p>}
                 {payouts.loading && !payouts.data ? (
-                    <Skeleton className="h-64 rounded-xl" />
+                    <div className="p-5"><Skeleton className="h-64 rounded-xl" /></div>
                 ) : !payouts.data?.rows.length ? (
-                    <p className="py-10 text-center text-sm text-muted-foreground">No payouts match.</p>
+                    <Empty>No payouts match.</Empty>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                        <table className={TABLE}>
                             <thead>
-                                <tr className={`border-b text-left ${LABEL}`}>
-                                    {['Date', 'Beneficiary', 'Bank', 'Amount', 'Mode', 'UTR', 'Reference', 'Status'].map((h) => <th key={h} className="py-2 pr-4 font-medium">{h}</th>)}
+                                <tr className={THEAD}>
+                                    {['Date', 'Beneficiary', 'Bank', 'Amount', 'Mode', 'UTR', 'Reference', 'Status'].map((h) => <th key={h} className={`${TH} ${h === 'Amount' ? 'text-right' : ''}`}>{h}</th>)}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y">
+                            <tbody>
                                 {payouts.data.rows.map((p) => (
-                                    <tr key={p.id}>
-                                        <td className="py-3 pr-4 whitespace-nowrap text-muted-foreground">{p.createdAt ? new Date(p.createdAt).toLocaleString('en-IN') : '—'}</td>
-                                        <td className="py-3 pr-4"><p className="font-medium">{p.name || '—'}</p><p className="text-xs text-muted-foreground">{p.mobile}</p></td>
-                                        <td className="py-3 pr-4"><p>{p.bankName || '—'}</p><p className="font-mono text-xs text-muted-foreground">{p.account} · {p.ifsc}</p></td>
-                                        <td className="py-3 pr-4 font-medium tabular-nums">{inr.format(p.amount)}{p.charge > 0 && <p className="text-xs text-muted-foreground">+{inr.format(p.charge)} fee</p>}</td>
-                                        <td className="py-3 pr-4">{p.type || '—'}</td>
-                                        <td className="py-3 pr-4 font-mono text-xs">{p.utr || '—'}</td>
-                                        <td className="py-3 pr-4 font-mono text-xs">{p.transactionId}</td>
-                                        <td className="py-3"><span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize ring-1 ${STATUS_PILL[p.status] || PENDING}`} title={p.message || undefined}>{p.status || 'pending'}</span></td>
+                                    <tr key={p.id} className={TR}>
+                                        <td className={`${TD} whitespace-nowrap text-muted-foreground`}>{p.createdAt ? new Date(p.createdAt).toLocaleString('en-IN') : '—'}</td>
+                                        <td className={TD}><p className="text-foreground">{p.name || '—'}</p><p className="lp-figure text-[12px] text-muted-foreground">{p.mobile}</p></td>
+                                        <td className={TD}><p className="text-foreground">{p.bankName || '—'}</p><p className="lp-figure text-[12px] text-muted-foreground">{p.account} · {p.ifsc}</p></td>
+                                        <td className={`${TD} text-right`}><p className="lp-figure text-foreground">{inr.format(p.amount)}</p>{p.charge > 0 && <p className="lp-figure text-[12px] text-muted-foreground">+{inr.format(p.charge)} fee</p>}</td>
+                                        <td className={TD}>{p.type || '—'}</td>
+                                        <td className={`${TD} lp-figure text-[12px]`}>{p.utr || '—'}</td>
+                                        <td className={`${TD} lp-figure text-[12px]`}>{p.transactionId}</td>
+                                        <td className={TD}><span title={p.message || undefined}><StatusDot status={p.status || 'pending'} /></span></td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -177,13 +162,15 @@ const IcchhamatiAccount = ({ token }: { token: string | null }) => {
                 )}
 
                 {payouts.data && payouts.data.lastPage > 1 && (
-                    <div className="mt-4 flex items-center justify-end gap-2 text-sm">
-                        <button disabled={page <= 1} onClick={() => setPage(page - 1)} className={`${SECONDARY_BUTTON} py-1.5`}>Previous</button>
+                    <div className="flex items-center justify-between gap-2 border-t px-5 py-3 text-[13px]">
                         <span className="text-muted-foreground">Page {payouts.data.page} of {payouts.data.lastPage}</span>
-                        <button disabled={page >= payouts.data.lastPage} onClick={() => setPage(page + 1)} className={`${SECONDARY_BUTTON} py-1.5`}>Next</button>
+                        <div className="flex gap-2">
+                            <button type="button" aria-label="Previous page" disabled={page <= 1} onClick={() => setPage(page - 1)} className={ICON_BUTTON}><ChevronLeft size={16} /></button>
+                            <button type="button" aria-label="Next page" disabled={page >= payouts.data.lastPage} onClick={() => setPage(page + 1)} className={ICON_BUTTON}><ChevronRight size={16} /></button>
+                        </div>
                     </div>
                 )}
-            </section>
+            </Panel>
         </div>
     );
 };

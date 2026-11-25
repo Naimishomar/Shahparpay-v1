@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, Filter, Loader2, Receipt, Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Filter, Loader2, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { CARD, INPUT, LABEL, PENDING_PILL, SECONDARY_BUTTON, SILVER_TILE, STATUS_PILL, SERVICE_LABELS, inr, inrShort, useApiGet } from '../distributor/shared';
-import { Skeleton } from '../distributor/ui';
+import { BUTTON, BUTTON_QUIET, FIELD, ICON_BUTTON, SERVICE_LABELS, TABLE, TD, TH, THEAD, TR, inr, inrShort, useApiGet } from '../distributor/shared';
+import { Empty, PageHeader, Panel, Skeleton, StatStrip, StatusDot } from '../distributor/ui';
+import { ALERT_ERROR } from '../landing/ui';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -76,140 +77,130 @@ const TransactionExplorer = ({
         }
     };
 
+    const stats = data ? [
+        { label: 'Matching', value: data.total.toLocaleString('en-IN') },
+        { label: 'Volume', value: inrShort(data.summary.volume) },
+        { label: 'Success / failed', value: `${data.summary.success.toLocaleString('en-IN')} / ${data.summary.failed.toLocaleString('en-IN')}` },
+        { label: 'Admin earned', value: inr.format(data.summary.adminEarned) },
+    ] : [];
+    const sentence = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
+
     return (
-        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div className="relative flex flex-col gap-5">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><Receipt className="h-7 w-7" /></div>
-                            <div>
-                                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Transactions</h1>
-                                <p className="text-sm text-muted-foreground">Every transaction by every retailer, searchable.</p>
-                            </div>
+        <div className="flex w-full flex-col gap-6 animate-in fade-in duration-200">
+            <PageHeader
+                eyebrow="Money"
+                title="Transactions"
+                description="Every transaction by every retailer, searchable."
+                actions={
+                    <button type="button" onClick={exportCsv} disabled={exporting || !data?.total} className={BUTTON_QUIET}>
+                        {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} strokeWidth={1.75} />} Export CSV
+                    </button>
+                }
+            />
+
+            {(data || loading) && <StatStrip items={stats} loading={loading} />}
+
+            <Panel flush>
+                {/* Filters: one toolbar row */}
+                <form onSubmit={(e) => { e.preventDefault(); apply(draft); }} className="border-b p-4">
+                    <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr_1fr_auto]">
+                        <div className="relative">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <input value={draft.q || ''} onChange={(e) => setDraft({ ...draft, q: e.target.value })} placeholder="Txn ID, UTR, retailer name / ID / mobile" className={`${FIELD} pl-9`} />
                         </div>
-                        <button onClick={exportCsv} disabled={exporting || !data?.total} className={`${SECONDARY_BUTTON} py-2`}>
-                            {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Export CSV
+                        <select value={draft.type || ''} onChange={(e) => setDraft({ ...draft, type: e.target.value })} className={FIELD} aria-label="Type">
+                            <option value="">All types</option>
+                            {TYPES.map((t) => <option key={t} value={t}>{TYPE_LABEL(t)}</option>)}
+                        </select>
+                        <select value={draft.status || ''} onChange={(e) => setDraft({ ...draft, status: e.target.value })} className={FIELD} aria-label="Status">
+                            <option value="">All statuses</option>
+                            {STATUSES.map((s) => <option key={s} value={s}>{sentence(s)}</option>)}
+                        </select>
+                        <input type="date" value={draft.from || ''} onChange={(e) => setDraft({ ...draft, from: e.target.value })} className={`${FIELD} dark:[color-scheme:dark]`} aria-label="From" />
+                        <input type="date" value={draft.to || ''} onChange={(e) => setDraft({ ...draft, to: e.target.value })} className={`${FIELD} dark:[color-scheme:dark]`} aria-label="To" />
+                        <button type="submit" className={BUTTON}>
+                            <Filter size={16} strokeWidth={1.75} /> Apply
                         </button>
                     </div>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                        {[
-                            ['Matching', data ? data.total.toLocaleString('en-IN') : '–'],
-                            ['Volume', data ? inrShort(data.summary.volume) : '–'],
-                            ['Success / failed', data ? `${data.summary.success.toLocaleString('en-IN')} / ${data.summary.failed.toLocaleString('en-IN')}` : '–'],
-                            ['Admin earned', data ? inr.format(data.summary.adminEarned) : '–'],
-                        ].map(([label, value]) => (
-                            <div key={label} className="rounded-2xl border bg-background/70 backdrop-blur p-4">
-                                <p className={LABEL}>{label}</p>
-                                <p className="mt-1.5 truncate text-xl font-bold tabular-nums">{value}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
+                    {activeFilters.length > 0 && (
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                            {activeFilters.map(([k, v]) => (
+                                <span key={k} className="inline-flex h-7 items-center gap-1.5 rounded-lg border bg-background pl-2.5 pr-1 text-[13px]">
+                                    <span className="text-muted-foreground">{k}</span> {k === 'retailer' || k === 'distributor' ? 'selected user' : v}
+                                    <button type="button" onClick={() => { const next = { ...query, [k]: '' }; setDraft(next); apply(next); }} aria-label={`Clear ${k}`} className="rounded p-1 text-muted-foreground hover:text-foreground"><X size={12} /></button>
+                                </span>
+                            ))}
+                            <button type="button" onClick={() => { setDraft({}); apply({}); }} className="text-[13px] text-muted-foreground hover:text-foreground">Clear all</button>
+                        </div>
+                    )}
+                </form>
 
-            {/* Filters */}
-            <form
-                onSubmit={(e) => { e.preventDefault(); apply(draft); }}
-                className={`${CARD} grid gap-3 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr_1fr_auto]`}
-            >
-                <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <input value={draft.q || ''} onChange={(e) => setDraft({ ...draft, q: e.target.value })} placeholder="Txn ID, UTR, retailer name / ID / mobile" className={`${INPUT} pl-9`} />
-                </div>
-                <select value={draft.type || ''} onChange={(e) => setDraft({ ...draft, type: e.target.value })} className={INPUT} aria-label="Type">
-                    <option value="">All types</option>
-                    {TYPES.map((t) => <option key={t} value={t}>{TYPE_LABEL(t)}</option>)}
-                </select>
-                <select value={draft.status || ''} onChange={(e) => setDraft({ ...draft, status: e.target.value })} className={INPUT} aria-label="Status">
-                    <option value="">All statuses</option>
-                    {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <input type="date" value={draft.from || ''} onChange={(e) => setDraft({ ...draft, from: e.target.value })} className={`${INPUT} dark:[color-scheme:dark]`} aria-label="From" />
-                <input type="date" value={draft.to || ''} onChange={(e) => setDraft({ ...draft, to: e.target.value })} className={`${INPUT} dark:[color-scheme:dark]`} aria-label="To" />
-                <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-xl btn-primary px-4 py-2.5 text-sm font-semibold">
-                    <Filter size={16} /> Apply
-                </button>
-                {activeFilters.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2 md:col-span-2 xl:col-span-6">
-                        {activeFilters.map(([k, v]) => (
-                            <span key={k} className="inline-flex items-center gap-1 rounded-full border bg-background px-2.5 py-1 text-xs">
-                                <span className="text-muted-foreground">{k}:</span> {k === 'retailer' || k === 'distributor' ? 'selected user' : v}
-                                <button type="button" onClick={() => { const next = { ...query, [k]: '' }; setDraft(next); apply(next); }} aria-label={`Clear ${k}`}><X size={12} /></button>
-                            </span>
-                        ))}
-                        <button type="button" onClick={() => { setDraft({}); apply({}); }} className="text-xs font-semibold text-muted-foreground hover:text-foreground">Clear all</button>
-                    </div>
-                )}
-            </form>
-
-            <section className={`${CARD} overflow-hidden p-0`}>
-                {error && <p className="px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
+                {error && <div className={`${ALERT_ERROR} m-4`}>{error}</div>}
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className={TABLE}>
                         <thead>
-                            <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-                                <th className="px-4 py-3 font-medium">Date</th>
-                                <th className="px-4 py-3 font-medium">Retailer</th>
-                                <th className="px-4 py-3 font-medium">Distributor</th>
-                                <th className="px-4 py-3 font-medium">Type</th>
-                                <th className="px-4 py-3 font-medium text-right">Amount</th>
-                                <th className="px-4 py-3 font-medium text-right">Admin</th>
-                                <th className="px-4 py-3 font-medium">Status</th>
+                            <tr className={THEAD}>
+                                <th className={TH}>Date</th>
+                                <th className={TH}>Retailer</th>
+                                <th className={TH}>Distributor</th>
+                                <th className={TH}>Type</th>
+                                <th className={`${TH} text-right`}>Amount</th>
+                                <th className={`${TH} text-right`}>Admin</th>
+                                <th className={TH}>Status</th>
                             </tr>
                         </thead>
-                        <tbody className={`divide-y transition-opacity ${loading && data ? 'opacity-50' : ''}`}>
+                        <tbody className={`transition-opacity ${loading && data ? 'opacity-50' : ''}`}>
                             {loading && !data ? (
-                                Array.from({ length: 8 }).map((_, i) => <tr key={i}><td colSpan={7} className="px-4 py-2"><Skeleton className="h-9" /></td></tr>)
+                                Array.from({ length: 8 }).map((_, i) => <tr key={i}><td colSpan={7} className="px-5 py-2"><Skeleton className="h-9" /></td></tr>)
                             ) : !data?.rows.length ? (
-                                <tr><td colSpan={7} className="px-4 py-14 text-center text-muted-foreground">No transactions match these filters.</td></tr>
+                                <tr><td colSpan={7}><Empty>No transactions match these filters.</Empty></td></tr>
                             ) : data.rows.map((t) => (
-                                <tr key={t._id} onClick={() => setSelected(t)} className="cursor-pointer hover:bg-black/[0.03] dark:hover:bg-white/[0.04]">
-                                    <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{new Date(t.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
-                                    <td className="px-4 py-3">
+                                <tr key={t._id} onClick={() => setSelected(t)} className={`${TR} cursor-pointer`}>
+                                    <td className={`${TD} whitespace-nowrap text-muted-foreground`}>{new Date(t.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
+                                    <td className={TD}>
                                         {t.userId ? (
                                             <button onClick={(e) => { e.stopPropagation(); onOpenUser('retailer', t.userId._id); }} className="text-left hover:underline">
-                                                <p className="font-medium">{t.userId.name}</p>
-                                                <p className="font-mono text-[11px] text-muted-foreground">{t.userId.retailerId}</p>
+                                                <p className="text-foreground">{t.userId.name}</p>
+                                                <p className="lp-figure text-[12px] text-muted-foreground">{t.userId.retailerId}</p>
                                             </button>
                                         ) : '—'}
                                     </td>
-                                    <td className="px-4 py-3">
+                                    <td className={TD}>
                                         {t.userId?.distributorId ? (
-                                            <button onClick={(e) => { e.stopPropagation(); onOpenUser('distributor', t.userId.distributorId._id); }} className="text-left hover:underline">{t.userId.distributorId.name}</button>
+                                            <button onClick={(e) => { e.stopPropagation(); onOpenUser('distributor', t.userId.distributorId._id); }} className="text-left text-foreground hover:underline">{t.userId.distributorId.name}</button>
                                         ) : <span className="text-muted-foreground">—</span>}
                                     </td>
-                                    <td className="px-4 py-3">{TYPE_LABEL(t.type)}</td>
-                                    <td className="px-4 py-3 text-right font-semibold tabular-nums">{inr.format(t.amount)}</td>
-                                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{t.commissions?.adminEarned ? inr.format(t.commissions.adminEarned) : '—'}</td>
-                                    <td className="px-4 py-3"><span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${STATUS_PILL[t.status] || PENDING_PILL}`}>{t.status}</span></td>
+                                    <td className={TD}>{TYPE_LABEL(t.type)}</td>
+                                    <td className={`${TD} lp-figure text-right text-foreground`}>{inr.format(t.amount)}</td>
+                                    <td className={`${TD} lp-figure text-right text-muted-foreground`}>{t.commissions?.adminEarned ? inr.format(t.commissions.adminEarned) : '—'}</td>
+                                    <td className={TD}><StatusDot status={t.status} /></td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
-                <div className="flex items-center justify-between gap-3 border-t px-4 py-3">
-                    <p className={LABEL}>Page {pageNo} of {pages}</p>
+                <div className="flex items-center justify-between gap-3 border-t px-5 py-3">
+                    <p className="text-[13px] text-muted-foreground">Page <span className="lp-figure">{pageNo}</span> of <span className="lp-figure">{pages}</span></p>
                     <div className="flex gap-2">
-                        <button onClick={() => setPageNo(pageNo - 1)} disabled={pageNo <= 1 || loading} className={`${SECONDARY_BUTTON} px-3 py-1.5`} aria-label="Previous page"><ChevronLeft size={16} /></button>
-                        <button onClick={() => setPageNo(pageNo + 1)} disabled={pageNo >= pages || loading} className={`${SECONDARY_BUTTON} px-3 py-1.5`} aria-label="Next page"><ChevronRight size={16} /></button>
+                        <button onClick={() => setPageNo(pageNo - 1)} disabled={pageNo <= 1 || loading} className={ICON_BUTTON} aria-label="Previous page"><ChevronLeft size={16} /></button>
+                        <button onClick={() => setPageNo(pageNo + 1)} disabled={pageNo >= pages || loading} className={ICON_BUTTON} aria-label="Next page"><ChevronRight size={16} /></button>
                     </div>
                 </div>
-            </section>
+            </Panel>
 
             {/* Detail drawer */}
             {selected && (
-                <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setSelected(null)}>
-                    <aside onClick={(e) => e.stopPropagation()} className="h-full w-full max-w-lg overflow-y-auto border-l bg-card p-6 shadow-2xl animate-in slide-in-from-right-8 duration-300">
-                        <div className="mb-6 flex items-start justify-between gap-3">
+                <div className="fixed inset-0 z-50 flex justify-end bg-black/40 animate-in fade-in duration-200" onClick={() => setSelected(null)}>
+                    <aside onClick={(e) => e.stopPropagation()} className="h-full w-full max-w-lg overflow-y-auto border-l bg-card shadow-2xl animate-in slide-in-from-right-8 duration-300">
+                        <div className="flex items-start justify-between gap-3 border-b p-6">
                             <div>
-                                <p className={LABEL}>{TYPE_LABEL(selected.type)}</p>
-                                <p className="mt-1 text-3xl font-bold tabular-nums">{inr.format(selected.amount)}</p>
-                                <span className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${STATUS_PILL[selected.status] || PENDING_PILL}`}>{selected.status}</span>
+                                <p className="text-sm text-muted-foreground">{TYPE_LABEL(selected.type)}</p>
+                                <p className="lp-figure mt-1 text-[32px] leading-none tracking-[-0.02em] text-foreground">{inr.format(selected.amount)}</p>
+                                <div className="mt-3"><StatusDot status={selected.status} /></div>
                             </div>
-                            <button onClick={() => setSelected(null)} className="rounded-full p-2 text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10" aria-label="Close"><X size={18} /></button>
+                            <button onClick={() => setSelected(null)} className={ICON_BUTTON} aria-label="Close"><X size={16} /></button>
                         </div>
-                        <dl className="divide-y rounded-2xl border bg-background text-sm">
+                        <dl className="px-6 py-2 text-sm">
                             {[
                                 ['Transaction ID', selected.transactionId],
                                 ['Date', new Date(selected.createdAt).toLocaleString('en-IN')],
@@ -220,16 +211,16 @@ const TransactionExplorer = ({
                                 ['Retailer earned', inr.format(selected.commissions?.retailerEarned || 0)],
                                 ['Charge deducted', inr.format(selected.commissions?.chargeDeducted || 0)],
                             ].map(([k, v]) => (
-                                <div key={k} className="flex justify-between gap-4 px-4 py-2.5">
+                                <div key={k} className="flex justify-between gap-4 border-b py-3 last:border-0">
                                     <dt className="text-muted-foreground">{k}</dt>
-                                    <dd className="text-right font-medium break-all">{v}</dd>
+                                    <dd className="break-all text-right text-foreground">{v}</dd>
                                 </div>
                             ))}
                         </dl>
                         {selected.metadata && (
-                            <div className="mt-4">
-                                <p className={`${LABEL} mb-2`}>Provider details</p>
-                                <pre className="max-h-96 overflow-auto rounded-2xl border bg-background p-4 text-xs leading-relaxed">{JSON.stringify(selected.metadata, null, 2)}</pre>
+                            <div className="border-t px-6 py-5">
+                                <p className="mb-2 text-sm text-muted-foreground">Provider details</p>
+                                <pre className="max-h-96 overflow-auto rounded-xl border bg-background p-4 text-xs leading-relaxed">{JSON.stringify(selected.metadata, null, 2)}</pre>
                             </div>
                         )}
                     </aside>

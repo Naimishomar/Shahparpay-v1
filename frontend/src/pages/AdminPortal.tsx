@@ -136,8 +136,8 @@ const AdminPortal = () => {
 
     if (isInitializing) {
         return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <div className="flex min-h-screen items-center justify-center bg-background">
+                <div className="size-6 animate-spin rounded-full border-2 border-muted-foreground/40 border-t-transparent" />
             </div>
         );
     }
@@ -318,16 +318,8 @@ const AdminPortal = () => {
 
     return (
         <div className="w-full">
-            {/* Sidebar */}
-            
-
-            {/* Main Content Area */}
-            <main className="flex-1 w-full p-2 md:p-6 overflow-y-auto no-scrollbar">
-                
-                
-                
-
-                {/* Dashboard Tab */}
+            {/* One reading width for every admin screen; the screens bring their own headers. */}
+            <main className="mx-auto w-full max-w-[1440px] flex-1 overflow-y-auto p-0 no-scrollbar md:p-2">
                 {activeTab === 'notifications' && <AdminNotifications />}
                 {activeTab === 'support' && <AdminSupport />}
                 {activeTab === 'dashboard' && (

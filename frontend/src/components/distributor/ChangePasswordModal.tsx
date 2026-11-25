@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { KeyRound, Loader2, Mail, X } from 'lucide-react';
+import { Loader2, Mail, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { INPUT, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE } from './shared';
+import { BUTTON, BUTTON_QUIET, FIELD } from './shared';
 
 const MIN_LENGTH = 6;
 
@@ -67,30 +67,27 @@ const ChangePasswordModal = ({ token, email, onClose }: { token: string | null; 
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
-            <div role="dialog" aria-modal="true" aria-labelledby="change-password-title" onClick={(e) => e.stopPropagation()} className="relative w-full max-w-md rounded-3xl border bg-card p-6 shadow-2xl sm:p-8">
-                <button onClick={onClose} className="absolute right-4 top-4 rounded-full p-2 text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10" aria-label="Close">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200" onClick={onClose}>
+            <div role="dialog" aria-modal="true" aria-labelledby="change-password-title" onClick={(e) => e.stopPropagation()} className="relative w-full max-w-md rounded-2xl border bg-card p-6 shadow-xl sm:p-7">
+                <button onClick={onClose} className="absolute right-4 top-4 flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Close">
                     <X size={18} />
                 </button>
 
-                <div className="mb-6 flex flex-col items-center text-center">
-                    <div className={`mb-4 rounded-2xl p-3 ${SILVER_TILE}`}><KeyRound className="h-6 w-6" /></div>
-                    <h2 id="change-password-title" className="text-xl font-bold tracking-tight">Change password</h2>
+                <div className="mb-6 pr-10">
+                    <p className="text-[13px] text-muted-foreground">Step {step} of 2</p>
+                    <h2 id="change-password-title" className="lp-serif mt-1 text-[30px] leading-[1.05] text-foreground">Change password</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
                         {step === 1 ? 'We will email a 6-digit code to confirm it is you.' : `Enter the code sent to ${maskEmail(email)} and your new password.`}
                     </p>
-                    <div className="mt-4 flex gap-1.5" aria-hidden>
-                        {[1, 2].map((s) => <span key={s} className={`h-1.5 w-8 rounded-full ${s <= step ? 'bg-zinc-800 dark:bg-zinc-200' : 'bg-black/10 dark:bg-white/10'}`} />)}
-                    </div>
                 </div>
 
                 {step === 1 ? (
                     <div className="space-y-4">
-                        <div className="flex items-center gap-3 rounded-xl border bg-background p-3">
+                        <div className="flex h-10 items-center gap-3 rounded-[10px] border bg-muted/50 px-3.5">
                             <Mail size={16} className="shrink-0 text-muted-foreground" />
-                            <span className="truncate text-sm font-medium">{maskEmail(email)}</span>
+                            <span className="truncate text-sm text-foreground">{maskEmail(email)}</span>
                         </div>
-                        <button onClick={sendOtp} disabled={loading} className={`${PRIMARY_BUTTON} w-full py-3`}>
+                        <button onClick={sendOtp} disabled={loading} className={`${BUTTON} w-full`}>
                             {loading && <Loader2 size={16} className="animate-spin" />}
                             {loading ? 'Sending…' : 'Send code'}
                         </button>
@@ -99,8 +96,8 @@ const ChangePasswordModal = ({ token, email, onClose }: { token: string | null; 
                     <form onSubmit={submit} className="space-y-4">
                         <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
-                                <label className="text-sm font-medium">Verification code</label>
-                                <button type="button" onClick={sendOtp} disabled={loading} className="text-xs font-semibold text-muted-foreground hover:text-foreground disabled:opacity-50">Resend</button>
+                                <label className="text-sm text-foreground">Verification code</label>
+                                <button type="button" onClick={sendOtp} disabled={loading} className="text-[13px] text-muted-foreground hover:text-foreground disabled:opacity-50">Resend</button>
                             </div>
                             <input
                                 value={otp}
@@ -109,11 +106,11 @@ const ChangePasswordModal = ({ token, email, onClose }: { token: string | null; 
                                 autoComplete="one-time-code"
                                 placeholder="6-digit code"
                                 autoFocus
-                                className={`${INPUT} font-mono tracking-[0.4em]`}
+                                className={`${FIELD} lp-figure tracking-[0.4em]`}
                             />
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-sm font-medium">New password</label>
+                            <label className="text-sm text-foreground">New password</label>
                             <div className="relative">
                                 <input
                                     type={show ? 'text' : 'password'}
@@ -121,30 +118,30 @@ const ChangePasswordModal = ({ token, email, onClose }: { token: string | null; 
                                     onChange={(e) => setPassword(e.target.value)}
                                     autoComplete="new-password"
                                     placeholder={`At least ${MIN_LENGTH} characters`}
-                                    className={`${INPUT} pr-16`}
+                                    className={`${FIELD} pr-16`}
                                 />
-                                <button type="button" onClick={() => setShow(!show)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground">
+                                <button type="button" onClick={() => setShow(!show)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-[13px] text-muted-foreground hover:text-foreground">
                                     {show ? 'Hide' : 'Show'}
                                 </button>
                             </div>
                             {password.length > 0 && password.length < MIN_LENGTH && (
-                                <p className="text-xs text-red-600 dark:text-red-400">At least {MIN_LENGTH} characters</p>
+                                <p className="text-[13px] text-[var(--lp-danger)]">At least {MIN_LENGTH} characters</p>
                             )}
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-sm font-medium">Confirm new password</label>
+                            <label className="text-sm text-foreground">Confirm new password</label>
                             <input
                                 type={show ? 'text' : 'password'}
                                 value={confirm}
                                 onChange={(e) => setConfirm(e.target.value)}
                                 autoComplete="new-password"
-                                className={`${INPUT} ${mismatch ? 'border-red-500/60' : ''}`}
+                                className={`${FIELD} ${mismatch ? 'border-[var(--lp-danger-line)]' : ''}`}
                             />
-                            {mismatch && <p className="text-xs text-red-600 dark:text-red-400">Passwords don't match</p>}
+                            {mismatch && <p className="text-[13px] text-[var(--lp-danger)]">Passwords don't match</p>}
                         </div>
                         <div className="flex gap-2 pt-2">
-                            <button type="button" onClick={() => setStep(1)} disabled={loading} className={`${SECONDARY_BUTTON} justify-center`}>Back</button>
-                            <button type="submit" disabled={loading || !canSubmit} className={`${PRIMARY_BUTTON} flex-1 py-3`}>
+                            <button type="button" onClick={() => setStep(1)} disabled={loading} className={BUTTON_QUIET}>Back</button>
+                            <button type="submit" disabled={loading || !canSubmit} className={`${BUTTON} flex-1`}>
                                 {loading && <Loader2 size={16} className="animate-spin" />}
                                 {loading ? 'Updating…' : 'Change password'}
                             </button>

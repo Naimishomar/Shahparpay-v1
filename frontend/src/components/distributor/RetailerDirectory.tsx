@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { ArrowDownUp, Download, Search, ShieldCheck, Clock, UserPlus, Users } from 'lucide-react';
-import { CARD, INPUT, LABEL, type NetworkAnalytics, type NetworkRetailer, PENDING_PILL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, ago, daysSince, inr, inrShort, useDistributorData } from './shared';
-import { Avatar, RangeSwitch, ShareBar, Skeleton } from './ui';
+import { ArrowDownUp, Download, Search, UserPlus } from 'lucide-react';
+import { ALERT_ERROR } from '../landing/ui';
+import { BUTTON, BUTTON_QUIET, FIELD, TABLE, TD, TH, THEAD, TR, type NetworkAnalytics, type NetworkRetailer, ago, daysSince, inr, inrShort, useDistributorData } from './shared';
+import { Avatar, Empty, PageHeader, Panel, RangeSwitch, Segmented, ShareBar, Skeleton } from './ui';
 import type { DirectoryPreset } from './NetworkDashboard';
 import { aepsKycDone, aepsStepLabel } from '../../lib/services';
 
@@ -73,122 +74,106 @@ const RetailerDirectory = ({
     const maxEarned = Math.max(...rows.map((r) => r.earned), 0);
 
     return (
-        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><Users className="h-7 w-7" /></div>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">My retailers</h1>
-                            <p className="text-sm text-muted-foreground">Track each retailer's business and what they earn you.</p>
-                        </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <RangeSwitch value={days} onChange={onDaysChange} />
-                        <button onClick={() => exportCsv(rows, days)} disabled={!rows.length} className={`${SECONDARY_BUTTON} py-2`}>
-                            <Download size={16} /> Export CSV
-                        </button>
-                        <button onClick={onCreate} className={`${PRIMARY_BUTTON} py-2`}>
-                            <UserPlus size={16} /> New
-                        </button>
-                    </div>
-                </div>
-            </section>
+        <div className="flex w-full flex-col gap-6 animate-in fade-in duration-200">
+            <PageHeader
+                eyebrow="Network"
+                title="My retailers"
+                description="Track each retailer's business and what they earn you."
+                actions={<>
+                    <RangeSwitch value={days} onChange={onDaysChange} />
+                    <button type="button" onClick={() => exportCsv(rows, days)} disabled={!rows.length} className={BUTTON_QUIET}>
+                        <Download size={16} strokeWidth={1.75} /> Export CSV
+                    </button>
+                    <button type="button" onClick={onCreate} className={BUTTON}>
+                        <UserPlus size={16} strokeWidth={1.75} /> New
+                    </button>
+                </>}
+            />
 
-            <section className={`${CARD} p-0 overflow-hidden`}>
-                <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
-                    <div className="flex flex-wrap gap-2">
-                        {FILTERS.map((f) => {
-                            const count = all.filter(f.test).length;
-                            return (
-                                <button
-                                    key={f.key}
-                                    onClick={() => setFilter(f.key)}
-                                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${filter === f.key ? 'border-transparent btn-primary' : 'bg-background text-muted-foreground hover:text-foreground'}`}
-                                >
-                                    {f.label}
-                                    <span className="tabular-nums opacity-70">{loading && !data ? '–' : count}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
+            {error && <div className={ALERT_ERROR}>{error}</div>}
+
+            <Panel
+                flush
+                title={
+                    <Segmented
+                        label="Filter retailers"
+                        size="sm"
+                        value={filter}
+                        onChange={setFilter}
+                        options={FILTERS.map((f) => [f.key, `${f.label} ${loading && !data ? '–' : all.filter(f.test).length}`] as const)}
+                    />
+                }
+                action={
                     <div className="flex flex-col gap-2 sm:flex-row">
                         <div className="relative">
                             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, ID, business" className={`${INPUT} pl-9 sm:w-64`} />
+                            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, ID, business" className={`${FIELD} pl-9 sm:w-64`} />
                         </div>
                         <label className="relative">
                             <span className="sr-only">Sort by</span>
                             <ArrowDownUp className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className={`${INPUT} pl-9 pr-8 appearance-none sm:w-56`}>
+                            <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className={`${FIELD} appearance-none pl-9 pr-8 sm:w-56`}>
                                 {SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
                             </select>
                         </label>
                     </div>
-                </div>
-
-                {error && <p className="px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
-
+                }
+            >
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className={TABLE}>
                         <thead>
-                            <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-                                <th className="px-4 py-3 font-medium">Retailer</th>
-                                <th className="px-4 py-3 font-medium min-w-[180px]">Commission · {days}d</th>
-                                <th className="px-4 py-3 font-medium text-right">Volume</th>
-                                <th className="px-4 py-3 font-medium text-right">Txns</th>
-                                <th className="px-4 py-3 font-medium text-right">Lifetime</th>
-                                <th className="px-4 py-3 font-medium">Last active</th>
-                                <th className="px-4 py-3 font-medium">KYC</th>
+                            <tr className={THEAD}>
+                                <th className={TH}>Retailer</th>
+                                <th className={`${TH} min-w-[180px]`}>Commission · {days}d</th>
+                                <th className={`${TH} text-right`}>Volume</th>
+                                <th className={`${TH} text-right`}>Txns</th>
+                                <th className={`${TH} text-right`}>Lifetime</th>
+                                <th className={TH}>Last active</th>
+                                <th className={TH}>KYC</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y">
+                        <tbody>
                             {loading && !data ? (
                                 Array.from({ length: 5 }).map((_, i) => (
-                                    <tr key={i}><td colSpan={7} className="px-4 py-3"><Skeleton className="h-10" /></td></tr>
+                                    <tr key={i} className={TR}><td colSpan={7} className={TD}><Skeleton className="h-10" /></td></tr>
                                 ))
                             ) : rows.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
-                                        {all.length ? 'No retailers match this view.' : 'No retailers yet. Click "New" to add one.'}
+                                    <td colSpan={7}>
+                                        <Empty>{all.length ? 'No retailers match this view.' : 'No retailers yet. Click "New" to add one.'}</Empty>
                                     </td>
                                 </tr>
                             ) : rows.map((r) => {
                                 const quiet = daysSince(r.lastActiveAt);
                                 return (
-                                    <tr key={r._id} onClick={() => onOpenRetailer(r._id)} className="cursor-pointer hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors">
-                                        <td className="px-4 py-3">
+                                    <tr key={r._id} onClick={() => onOpenRetailer(r._id)} className={`${TR} cursor-pointer`}>
+                                        <td className={TD}>
                                             <div className="flex items-center gap-3">
-                                                <Avatar name={r.name} src={r.profilePicture} />
+                                                <Avatar name={r.name} src={r.profilePicture} size="w-8 h-8" />
                                                 <div className="min-w-0">
-                                                    <p className="truncate font-semibold">{r.name}</p>
-                                                    <p className="truncate text-[11px] text-muted-foreground"><span className="font-mono">{r.retailerId}</span>{r.businessName ? ` · ${r.businessName}` : ''}</p>
+                                                    <p className="truncate text-foreground">{r.name}</p>
+                                                    <p className="truncate text-[12px] text-muted-foreground"><span className="lp-figure">{r.retailerId}</span>{r.businessName ? ` · ${r.businessName}` : ''}</p>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3">
-                                            <p className="mb-1.5 font-semibold tabular-nums">{inr.format(r.earned)}</p>
+                                        <td className={TD}>
+                                            <p className="lp-figure mb-1.5 text-foreground">{inr.format(r.earned)}</p>
                                             <ShareBar value={r.earned} max={maxEarned} />
                                         </td>
-                                        <td className="px-4 py-3 text-right tabular-nums">{inrShort(r.volume)}</td>
-                                        <td className="px-4 py-3 text-right tabular-nums">{r.count}</td>
-                                        <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{inrShort(r.lifetimeEarned)}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap">
-                                            <span className={`inline-flex items-center gap-1.5 text-xs ${quiet >= 7 ? 'text-amber-700 dark:text-amber-400 font-semibold' : 'text-muted-foreground'}`}>
-                                                <span className={`h-1.5 w-1.5 rounded-full ${quiet < 1 ? 'bg-emerald-500' : quiet < 7 ? 'bg-zinc-400' : 'bg-amber-500'}`} />
+                                        <td className={`${TD} lp-figure text-right`}>{inrShort(r.volume)}</td>
+                                        <td className={`${TD} lp-figure text-right`}>{r.count}</td>
+                                        <td className={`${TD} lp-figure text-right text-muted-foreground`}>{inrShort(r.lifetimeEarned)}</td>
+                                        <td className={`${TD} whitespace-nowrap`}>
+                                            <span className={`inline-flex items-center gap-1.5 text-[13px] ${quiet >= 7 ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                                <span aria-hidden className={`size-1.5 rounded-full ${quiet < 1 ? 'bg-[var(--lp-positive)]' : quiet < 7 ? 'bg-muted-foreground' : 'bg-amber-500'}`} />
                                                 {ago(r.lastActiveAt)}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3">
-                                            {aepsKycDone(r) ? (
-                                                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20">
-                                                    <ShieldCheck size={12} /> Verified
-                                                </span>
-                                            ) : (
-                                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}>
-                                                    <Clock size={12} /> {aepsStepLabel(r)}
-                                                </span>
-                                            )}
+                                        <td className={TD}>
+                                            <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] text-foreground">
+                                                <span aria-hidden className={`size-1.5 flex-none rounded-full ${aepsKycDone(r) ? 'bg-[var(--lp-positive)]' : 'bg-amber-500'}`} />
+                                                {aepsKycDone(r) ? 'Verified' : aepsStepLabel(r)}
+                                            </span>
                                         </td>
                                     </tr>
                                 );
@@ -197,14 +182,14 @@ const RetailerDirectory = ({
                     </table>
                 </div>
                 {!!rows.length && (
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-3">
-                        <p className={LABEL}>{rows.length} of {all.length} retailers</p>
-                        <p className="text-xs text-muted-foreground tabular-nums">
-                            Shown: {inr.format(rows.reduce((s, r) => s + r.earned, 0))} commission · {inrShort(rows.reduce((s, r) => s + r.volume, 0))} volume
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3 text-[13px] text-muted-foreground">
+                        <p>{rows.length} of {all.length} retailers</p>
+                        <p className="tabular-nums">
+                            Shown: <span className="lp-figure text-foreground">{inr.format(rows.reduce((s, r) => s + r.earned, 0))}</span> commission · <span className="lp-figure text-foreground">{inrShort(rows.reduce((s, r) => s + r.volume, 0))}</span> volume
                         </p>
                     </div>
                 )}
-            </section>
+            </Panel>
         </div>
     );
 };

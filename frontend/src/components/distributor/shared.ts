@@ -146,3 +146,18 @@ export function useDistributorData<T>(token: string | null, path: string | null,
 
 export const RANGES = [7, 30, 90] as const;
 
+
+/* Tables in the admin and distributor portals: hairline rows, quiet heads, 20px side inset to match Panel. */
+export const TABLE = 'w-full text-sm';
+export const THEAD = 'border-b text-left text-[13px] text-muted-foreground';
+export const TH = 'px-5 py-3 font-normal whitespace-nowrap';
+export const TR = 'border-b last:border-0 transition-colors hover:bg-muted/50';
+export const TD = 'px-5 py-3';
+
+/* Controls in the admin and distributor portals, the public site's shapes on the portal tokens. */
+export const FIELD = 'h-10 w-full rounded-[10px] border border-input bg-card px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-60';
+export const BUTTON = 'inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-[10px] bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50';
+export const BUTTON_QUIET = 'inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-[10px] border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50';
+export const BUTTON_DANGER = 'inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-[10px] border border-[var(--lp-danger-line)] bg-card px-4 text-sm font-medium text-[var(--lp-danger)] transition-colors hover:bg-[var(--lp-danger-soft)] disabled:cursor-not-allowed disabled:opacity-50';
+/** Small icon-only button (row actions, pagination). */
+export const ICON_BUTTON = 'inline-flex size-9 flex-none items-center justify-center rounded-lg border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40';

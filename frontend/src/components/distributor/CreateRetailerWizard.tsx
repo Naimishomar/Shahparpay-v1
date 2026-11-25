@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
 import {
     ArrowLeft, ArrowRight, BadgeCheck, Building2, Check, CheckCircle2, FileImage, Globe, IdCard, Loader2, Mail,
-    Package, Pencil, ShieldCheck, Sparkles, Upload, User, UserPlus, X,
+    Package, Pencil, ShieldCheck, Upload, User, UserPlus, X,
 } from 'lucide-react';
 import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE } from './shared';
 import { BTN_PRIMARY, BTN_SECONDARY, INPUT as LP_INPUT } from '../landing/ui';
 import { Roll, Slot } from '../landing/motion';
+import { PageHeader } from './ui';
 import { INDIAN_STATES } from '../../constants';
 import { useAuth } from '../../context/AuthContext';
 import { SERVICES } from '../../lib/services';
@@ -173,8 +174,8 @@ const ApplicationPreview = ({ rows }: { rows: PreviewRow[] }) => {
                 </dl>
                 <div className="border-t border-[var(--hd-line)] px-5 py-4">
                     <div className="flex items-baseline justify-between gap-4 text-[14px]">
-                        <span className="text-[var(--hd-ink)]">Registration fee</span>
-                        <span className="lp-figure text-[var(--hd-ink)]">₹199</span>
+                        <span className="text-[var(--hd-ink)]">Onboarding charge</span>
+                        <span className="lp-figure text-[var(--hd-ink)]">₹99</span>
                     </div>
                     <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--hd-ink-2)]">
                         Paid by UPI right after you create the account. An admin then approves it, and you finish AEPS onboarding from the AEPS page.
@@ -315,16 +316,16 @@ const CreateRetailerWizard = ({
     return (
         <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
             {/* Hero + stepper */}
-            <section className={self ? '' : 'relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm'}>
-                <div className="relative flex flex-col gap-6">
-                    {/* The signup page sets its own title. */}
-                    {!self && <div className="flex items-center gap-4">
-                        <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><UserPlus className="h-7 w-7" /></div>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{self ? 'Create your account' : `Onboard a ${noun}`}</h1>
-                            <p className="text-sm text-muted-foreground">{self ? 'Four short steps. An admin verifies your account before you can start.' : isRetailer ? `Four short steps. They'll join your network under ${parentName}.` : 'Four short steps to add a distributor to the platform.'}</p>
-                        </div>
-                    </div>}
+            <section className={pub ? '' : 'relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm'}>
+                <div className="relative flex flex-col gap-8">
+                    {/* The signup page sets its own title; the portals get their page header. */}
+                    {!self && (
+                        <PageHeader
+                            eyebrow={isRetailer ? 'Add new' : 'Admin'}
+                            title={`Onboard a ${noun}`}
+                            description={isRetailer ? `Four short steps. They'll join your network under ${parentName}.` : 'Four short steps to add a distributor to the platform.'}
+                        />
+                    )}
 
                     {pub ? (
                         <ol className="flex items-center gap-3">
@@ -693,9 +694,9 @@ const CreateRetailerWizard = ({
                             ))}
                         </ul>
                     </section>
-                    <section className={self ? CARD : `${CARD} bg-gradient-to-br from-card to-zinc-100/60 dark:to-zinc-900/60`}>
+                    <section className={CARD}>
                         <div className="flex items-start gap-3">
-                            <div className={`rounded-xl p-2 ${SILVER_TILE}`}>{self ? <ShieldCheck className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}</div>
+                            <div className={`rounded-xl p-2 ${SILVER_TILE}`}><ShieldCheck className="h-4 w-4" /></div>
                             <div className="text-sm">
                                 <p className="font-semibold">{self ? 'After you sign up' : 'After you create them'}</p>
                                 <p className="mt-1 text-muted-foreground">{self ? <>An admin checks your details. Sign in with this email and password to see the status; once approved, finish AEPS onboarding from the AEPS page.</> : isRetailer ? <>They sign in with this email and password, then complete AEPS onboarding themselves from the AEPS page.</> : <>They sign in with this email and password and can start onboarding retailers right away. Find them under <b>Users</b>.</>}</p>

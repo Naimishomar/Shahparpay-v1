@@ -1,26 +1,32 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { SERVICES, aepsKycDone, aepsStepLabel, type ServiceKey } from '../../lib/services';
-import { Briefcase, Package, ChevronLeft, Edit2, Mail, MapPin, Phone, ShieldCheck, Clock, UserCircle, Activity, RefreshCcw } from 'lucide-react';
-import { CARD, LABEL, PENDING_PILL, PRIMARY_BUTTON, type RetailerPerformance, SILVER_TILE, STATUS_PILL, ago, delta, inr, inrShort, serviceLabel, useDistributorData } from './shared';
-import { Avatar, DeltaBadge, RangeSwitch, ShareBar, Skeleton, TrendChart } from './ui';
+import { ChevronLeft, Edit2, RefreshCcw } from 'lucide-react';
+import { BUTTON, TABLE, TD, TH, THEAD, TR, type RetailerPerformance, ago, delta, inr, inrShort, serviceLabel, useDistributorData } from './shared';
+import { Avatar, Empty, PageHeader, Panel, RangeSwitch, Segmented, ShareBar, Skeleton, StatStrip, StatusDot, TrendChart } from './ui';
 
 const DocTile = ({ label, number, picture }: { label: string; number?: string; picture?: string }) => (
     <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-            <p className={LABEL}>{label}</p>
-            <span className="font-mono text-sm">{number || '—'}</span>
+        <div className="flex items-baseline justify-between gap-2 text-sm">
+            <p className="text-muted-foreground">{label}</p>
+            <span className="lp-figure text-foreground">{number || '—'}</span>
         </div>
         {picture ? (
             <a href={picture} target="_blank" rel="noreferrer" className="group relative block aspect-[3/2] overflow-hidden rounded-xl border">
-                <img src={picture} alt={label} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                    <span className="text-sm font-medium text-white">View full</span>
-                </div>
+                <img src={picture} alt={label} className="h-full w-full object-cover" />
+                <span className="absolute bottom-2 right-2 rounded-md bg-card px-2 py-1 text-[12px] text-foreground opacity-0 transition-opacity group-hover:opacity-100">View full</span>
             </a>
         ) : (
             <div className="flex aspect-[3/2] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">Not uploaded</div>
         )}
+    </div>
+);
+
+/** A hairline key/value row: label muted on the left, value on the right. */
+const KV = ({ label, children, mono = false }: { label: string; children: React.ReactNode; mono?: boolean }) => (
+    <div className="flex items-baseline justify-between gap-4 border-b px-5 py-3 text-sm last:border-0">
+        <dt className="flex-none text-muted-foreground">{label}</dt>
+        <dd className={`min-w-0 text-right text-foreground ${mono ? 'lp-figure' : ''}`}>{children}</dd>
     </div>
 );
 
@@ -104,199 +110,156 @@ const RetailerDetail = ({
         { label: `Your commission · ${days}d`, value: inr.format(data.totals.earned), change: delta(data.totals.earned, data.previous.earned) },
         { label: `Volume · ${days}d`, value: inrShort(data.totals.volume), change: delta(data.totals.volume, data.previous.volume) },
         { label: `Transactions · ${days}d`, value: data.totals.count.toLocaleString('en-IN'), change: delta(data.totals.count, data.previous.count) },
-        { label: 'Lifetime commission', value: inr.format(data.lifetimeEarned), change: null },
+        { label: 'Lifetime commission', value: inr.format(data.lifetimeEarned) },
     ] : [];
 
     return (
-        <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-right-8 duration-500">
-            <button onClick={onBack} className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                <ChevronLeft size={16} /> Back to retailers
+        <div className="flex w-full flex-col gap-6 animate-in fade-in duration-200">
+            <button type="button" onClick={onBack} className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground">
+                <ChevronLeft size={16} strokeWidth={1.75} /> Back to retailers
             </button>
 
-            <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div className="relative flex flex-col gap-6">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 min-w-0">
-                            <Avatar name={retailer.name} src={retailer.profilePicture} size="w-16 h-16" />
-                            <div className="min-w-0">
-                                <h1 className="truncate text-2xl md:text-3xl font-bold tracking-tight">{retailer.name}</h1>
-                                <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                                    <span className="rounded-full border bg-background/70 px-2.5 py-0.5 font-mono text-xs">{retailer.retailerId}</span>
-                                    {aepsKycDone(retailer) ? (
-                                        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20"><ShieldCheck size={12} /> KYC verified</span>
-                                    ) : (
-                                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${PENDING_PILL}`}><Clock size={12} /> {aepsStepLabel(retailer)}</span>
-                                    )}
-                                    <button onClick={refreshAepsStatus} disabled={checkingAeps} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-60" title="Check AEPS onboarding with the provider now">
-                                        <RefreshCcw size={12} className={checkingAeps ? 'animate-spin' : ''} />
-                                        {checkingAeps ? 'Checking…' : retailer.icchhamatiAeps?.stepAt ? `Checked ${ago(retailer.icchhamatiAeps.stepAt)}` : 'Check status'}
-                                    </button>
-                                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Activity size={12} /> Active {ago(data?.lastActiveAt ?? retailer.lastActiveAt)}</span>
-                                </div>
+            <PageHeader
+                eyebrow={
+                    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span className="lp-figure text-foreground">{retailer.retailerId}</span>
+                        <span className="inline-flex items-center gap-1.5">
+                            <span aria-hidden className={`size-1.5 rounded-full ${aepsKycDone(retailer) ? 'bg-[var(--lp-positive)]' : 'bg-amber-500'}`} />
+                            {aepsKycDone(retailer) ? 'KYC verified' : aepsStepLabel(retailer)}
+                        </span>
+                        <button type="button" onClick={refreshAepsStatus} disabled={checkingAeps} className="inline-flex items-center gap-1 hover:text-foreground disabled:opacity-60" title="Check AEPS onboarding with the provider now">
+                            <RefreshCcw size={12} className={checkingAeps ? 'animate-spin' : ''} />
+                            {checkingAeps ? 'Checking…' : retailer.icchhamatiAeps?.stepAt ? `Checked ${ago(retailer.icchhamatiAeps.stepAt)}` : 'Check status'}
+                        </button>
+                    </span>
+                }
+                title={<span className="inline-flex items-center gap-4"><Avatar name={retailer.name} src={retailer.profilePicture} size="w-12 h-12" /><span className="truncate">{retailer.name}</span></span>}
+                description={`Active ${ago(data?.lastActiveAt ?? retailer.lastActiveAt).toLowerCase()} · joined ${new Date(retailer.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+                actions={<>
+                    <RangeSwitch value={days} onChange={onDaysChange} />
+                    <button type="button" onClick={onEdit} className={BUTTON}><Edit2 size={16} strokeWidth={1.75} /> Edit details</button>
+                </>}
+            />
+
+            <StatStrip items={kpis} loading={loading} />
+
+            <div className="grid gap-6 xl:grid-cols-3">
+                <div className="flex min-w-0 flex-col gap-6 xl:col-span-2">
+                    <Panel
+                        title="Daily activity"
+                        description={`Last ${days} days. Hover for a day.`}
+                        action={<Segmented label="Chart metric" size="sm" value={metric} onChange={setMetric} options={[['volume', 'Volume'], ['earned', 'Commission'], ['count', 'Txns']] as const} />}
+                    >
+                        {loading && !data ? <Skeleton className="h-44 rounded-xl" /> : data?.trend.length ? <TrendChart points={data.trend} metric={metric} id={`retailer-${retailer._id}`} /> : <Empty>No transactions in this range.</Empty>}
+                    </Panel>
+
+                    <Panel title="Recent transactions" flush>
+                        {loading && !data ? (
+                            <div className="space-y-3 p-5">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
+                        ) : !data?.recent.length ? (
+                            <Empty>This retailer has no transactions yet.</Empty>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className={TABLE}>
+                                    <thead>
+                                        <tr className={THEAD}>
+                                            <th className={TH}>Reference</th>
+                                            <th className={TH}>Service</th>
+                                            <th className={`${TH} text-right`}>Amount</th>
+                                            <th className={`${TH} text-right`}>Your commission</th>
+                                            <th className={TH}>Status</th>
+                                            <th className={`${TH} text-right`}>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {data.recent.map((t) => (
+                                            <tr key={t._id} className={TR}>
+                                                <td className={`${TD} lp-figure text-[12px] text-muted-foreground`}>{t.transactionId}</td>
+                                                <td className={TD}>{serviceLabel(t.type)}</td>
+                                                <td className={`${TD} lp-figure text-right text-foreground`}>{inr.format(t.amount)}</td>
+                                                <td className={`${TD} lp-figure text-right`}>{t.commissions?.distributorEarned ? inr.format(t.commissions.distributorEarned) : '—'}</td>
+                                                <td className={TD}><StatusDot status={t.status} /></td>
+                                                <td className={`${TD} whitespace-nowrap text-right text-muted-foreground`}>{new Date(t.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <RangeSwitch value={days} onChange={onDaysChange} />
-                            <button onClick={onEdit} className={`${PRIMARY_BUTTON} py-2`}><Edit2 size={16} /> Edit details</button>
-                        </div>
-                    </div>
+                        )}
+                    </Panel>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                        {loading && !data
-                            ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)
-                            : kpis.map(({ label, value, change }) => (
-                                <div key={label} className="rounded-2xl border bg-background/70 backdrop-blur p-4">
-                                    <p className={LABEL}>{label}</p>
-                                    <p className="mt-2 text-xl font-bold tabular-nums truncate">{value}</p>
-                                    {change !== null && <div className="mt-1"><DeltaBadge value={change} /></div>}
-                                </div>
-                            ))}
-                    </div>
-                    <div className="flex flex-wrap gap-2 text-xs">
-                        <span className="rounded-full border bg-background/70 px-3 py-1">Utility Wallet <b className="tabular-nums">{inr.format(retailer.mainWalletBalance || 0)}</b></span>
-                        <span className="rounded-full border bg-background/70 px-3 py-1">Trade Wallet <b className="tabular-nums">{inr.format(retailer.aepsWalletBalance || 0)}</b></span>
-                        <span className="rounded-full border bg-background/70 px-3 py-1">Joined <b>{new Date(retailer.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</b></span>
-                    </div>
-                </div>
-            </section>
-
-            <div className="grid gap-6 lg:grid-cols-3">
-                <section className={`${CARD} lg:col-span-2`}>
-                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                        <h2 className="text-lg font-semibold">Daily activity</h2>
-                        <div className="inline-flex rounded-xl border bg-background p-1">
-                            {([['volume', 'Volume'], ['earned', 'Commission'], ['count', 'Txns']] as const).map(([key, label]) => (
-                                <button key={key} onClick={() => setMetric(key)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${metric === key ? 'bg-black/5 dark:bg-white/10 text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    {loading && !data ? <Skeleton className="h-44 rounded-xl" /> : <TrendChart points={data?.trend || []} metric={metric} id={`retailer-${retailer._id}`} />}
-                </section>
-
-                <section className={CARD}>
-                    <h2 className="mb-4 text-lg font-semibold">Services used</h2>
-                    {loading && !data ? (
-                        <div className="space-y-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-8" />)}</div>
-                    ) : services.length === 0 ? (
-                        <p className="py-10 text-center text-sm text-muted-foreground">No transactions in this range.</p>
-                    ) : (
-                        <ul className="space-y-3.5">
-                            {services.map((s) => (
-                                <li key={s.type}>
-                                    <div className="mb-1.5 flex items-baseline justify-between gap-2 text-sm">
-                                        <span className="truncate font-medium">{serviceLabel(s.type)}</span>
-                                        <span className="font-semibold tabular-nums">{inrShort(s.volume)}</span>
-                                    </div>
-                                    <ShareBar value={s.volume} max={serviceMax} />
-                                    <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">{s.count} txns{s.earned ? ` · ${inr.format(s.earned)} to you` : ''}</p>
-                                </li>
-                            ))}
+                    <Panel title="Services" description="Switched-off services are hidden from this retailer and blocked." action={<span className="text-[13px] text-muted-foreground">{SERVICES.length - disabled.length} of {SERVICES.length} on</span>} flush>
+                        <ul className="grid sm:grid-cols-2">
+                            {SERVICES.map((svc) => {
+                                const on = !disabled.includes(svc.key);
+                                return (
+                                    <li key={svc.key} className="flex items-center justify-between gap-3 border-b px-5 py-3 sm:odd:border-r">
+                                        <div className="min-w-0">
+                                            <p className={`text-sm ${on ? 'text-foreground' : 'text-muted-foreground'}`}>{svc.label}</p>
+                                            <p className="truncate text-[12px] text-muted-foreground">{svc.hint}</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            role="switch"
+                                            aria-checked={on}
+                                            aria-label={`${svc.label} ${on ? 'on' : 'off'}`}
+                                            disabled={savingKey !== null}
+                                            onClick={() => toggleService(svc.key)}
+                                            className={`relative h-5 w-9 flex-none rounded-full transition-colors disabled:opacity-60 ${on ? 'bg-primary' : 'bg-input'}`}
+                                        >
+                                            <span className={`absolute left-0 top-0.5 size-4 rounded-full bg-white shadow-sm transition-transform ${on ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                                        </button>
+                                    </li>
+                                );
+                            })}
                         </ul>
-                    )}
-                </section>
-            </div>
+                    </Panel>
+                </div>
 
-            <section className={CARD}>
-                <h2 className="mb-4 text-lg font-semibold">Recent transactions</h2>
-                {loading && !data ? (
-                    <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
-                ) : !data?.recent.length ? (
-                    <p className="py-8 text-center text-sm text-muted-foreground">This retailer has no transactions yet.</p>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-                                    <th className="pb-3 font-medium">Reference</th>
-                                    <th className="pb-3 font-medium">Service</th>
-                                    <th className="pb-3 font-medium text-right">Amount</th>
-                                    <th className="pb-3 font-medium text-right">Your commission</th>
-                                    <th className="pb-3 font-medium">Status</th>
-                                    <th className="pb-3 font-medium text-right">Date</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                                {data.recent.map((t) => (
-                                    <tr key={t._id}>
-                                        <td className="py-3 pr-3 font-mono text-xs text-muted-foreground">{t.transactionId}</td>
-                                        <td className="py-3 pr-3">{serviceLabel(t.type)}</td>
-                                        <td className="py-3 pr-3 text-right font-semibold tabular-nums">{inr.format(t.amount)}</td>
-                                        <td className="py-3 pr-3 text-right tabular-nums">{t.commissions?.distributorEarned ? inr.format(t.commissions.distributorEarned) : '—'}</td>
-                                        <td className="py-3 pr-3"><span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${STATUS_PILL[t.status] || PENDING_PILL}`}>{t.status}</span></td>
-                                        <td className="py-3 text-right whitespace-nowrap text-muted-foreground">{new Date(t.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
-                                    </tr>
+                <div className="flex min-w-0 flex-col gap-6">
+                    <Panel title="Account" flush>
+                        <dl>
+                            <KV label="Utility wallet" mono>{inr.format(retailer.mainWalletBalance || 0)}</KV>
+                            <KV label="Trade wallet" mono>{inr.format(retailer.aepsWalletBalance || 0)}</KV>
+                            <KV label="Email"><span className="break-all">{retailer.email || '—'}</span></KV>
+                            <KV label="Mobile" mono>{retailer.contactNumber || '—'}</KV>
+                            <KV label="Location">{address || '—'}</KV>
+                        </dl>
+                    </Panel>
+
+                    <Panel title="Services used">
+                        {loading && !data ? (
+                            <div className="space-y-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-8" />)}</div>
+                        ) : services.length === 0 ? (
+                            <Empty>No transactions in this range.</Empty>
+                        ) : (
+                            <ul className="space-y-4">
+                                {services.map((s) => (
+                                    <li key={s.type}>
+                                        <div className="mb-1.5 flex items-baseline justify-between gap-2 text-sm">
+                                            <span className="truncate text-foreground">{serviceLabel(s.type)}</span>
+                                            <span className="lp-figure text-foreground">{inrShort(s.volume)}</span>
+                                        </div>
+                                        <ShareBar value={s.volume} max={serviceMax} />
+                                        <p className="mt-1 text-[12px] text-muted-foreground tabular-nums">{s.count} txns{s.earned ? ` · ${inr.format(s.earned)} to you` : ''}</p>
+                                    </li>
                                 ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </section>
+                            </ul>
+                        )}
+                    </Panel>
 
-            <section className={CARD}>
-                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                        <div className={`rounded-xl p-2 ${SILVER_TILE}`}><Package className="h-4 w-4" /></div>
-                        <div>
-                            <h2 className="text-lg font-semibold">Services</h2>
-                            <p className="text-sm text-muted-foreground">Switched-off services are hidden from this retailer and blocked.</p>
+                    <Panel title="Business and documents" flush>
+                        <dl>
+                            <KV label="Business name">{retailer.businessName || '—'}</KV>
+                            <KV label="Business address">{retailer.businessAddress || '—'}</KV>
+                            {retailer.hasGst && <KV label="GST number" mono>{retailer.gstNumber}</KV>}
+                        </dl>
+                        <div className="grid grid-cols-2 gap-4 border-t p-5">
+                            <DocTile label="Aadhaar" number={retailer.aadhaarNumber} picture={retailer.aadhaarPicture} />
+                            <DocTile label="PAN" number={retailer.panNumber} picture={retailer.panPicture} />
                         </div>
-                    </div>
-                    <span className={LABEL}>{SERVICES.length - disabled.length} of {SERVICES.length} on</span>
+                    </Panel>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                    {SERVICES.map((svc) => {
-                        const on = !disabled.includes(svc.key);
-                        return (
-                            <label key={svc.key} className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 transition-colors ${on ? 'bg-background' : 'bg-black/[0.02] dark:bg-white/[0.02]'}`}>
-                                <div className="min-w-0">
-                                    <p className={`text-sm font-semibold ${on ? '' : 'text-muted-foreground'}`}>{svc.label}</p>
-                                    <p className="truncate text-xs text-muted-foreground">{svc.hint}</p>
-                                </div>
-                                <button
-                                    type="button"
-                                    role="switch"
-                                    aria-checked={on}
-                                    aria-label={`${svc.label} ${on ? 'on' : 'off'}`}
-                                    disabled={savingKey !== null}
-                                    onClick={() => toggleService(svc.key)}
-                                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60 ${on ? 'bg-primary' : 'bg-black/15 dark:bg-white/15'}`}
-                                >
-                                    <span className={`absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform dark:bg-zinc-900 ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
-                                </button>
-                            </label>
-                        );
-                    })}
-                </div>
-            </section>
-
-            <div className="grid gap-6 lg:grid-cols-2">
-                <section className={CARD}>
-                    <div className="mb-5 flex items-center gap-3">
-                        <div className={`rounded-xl p-2 ${SILVER_TILE}`}><UserCircle className="h-4 w-4" /></div>
-                        <h2 className="text-lg font-semibold">Personal info</h2>
-                    </div>
-                    <dl className="space-y-4 text-sm">
-                        <div className="flex items-center gap-3"><Mail size={16} className="text-muted-foreground" /><dd className="truncate font-medium">{retailer.email || '—'}</dd></div>
-                        <div className="flex items-center gap-3"><Phone size={16} className="text-muted-foreground" /><dd className="font-medium tabular-nums">{retailer.contactNumber || '—'}</dd></div>
-                        <div className="flex items-start gap-3"><MapPin size={16} className="mt-0.5 text-muted-foreground" /><dd className="font-medium">{address || '—'}</dd></div>
-                    </dl>
-                </section>
-
-                <section className={CARD}>
-                    <div className="mb-5 flex items-center gap-3">
-                        <div className={`rounded-xl p-2 ${SILVER_TILE}`}><Briefcase className="h-4 w-4" /></div>
-                        <h2 className="text-lg font-semibold">Business & legal</h2>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div><p className={LABEL}>Business name</p><p className="mt-1 font-medium">{retailer.businessName || '—'}</p></div>
-                        <div><p className={LABEL}>Business address</p><p className="mt-1 font-medium">{retailer.businessAddress || '—'}</p></div>
-                        {retailer.hasGst && <div className="col-span-2"><p className={LABEL}>GST number</p><p className="mt-1 font-mono">{retailer.gstNumber}</p></div>}
-                        <DocTile label="Aadhaar" number={retailer.aadhaarNumber} picture={retailer.aadhaarPicture} />
-                        <DocTile label="PAN" number={retailer.panNumber} picture={retailer.panPicture} />
-                    </div>
-                </section>
             </div>
         </div>
     );

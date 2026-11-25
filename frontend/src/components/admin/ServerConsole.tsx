@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { ExternalLink, Loader2, Pause, Play, RefreshCcw, Rocket } from 'lucide-react';
 import { toast } from 'sonner';
-import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, ago, useApiGet } from '../distributor/shared';
-import { Skeleton } from '../distributor/ui';
+import { BUTTON, BUTTON_QUIET, FIELD, ago, useApiGet } from '../distributor/shared';
+import { PageHeader, Panel, Skeleton } from '../distributor/ui';
+import { ALERT_ERROR } from '../landing/ui';
 
 type Health = {
     startedAt: number;
@@ -36,13 +37,13 @@ const call = async (token: string | null, path: string, init: RequestInit = {}) 
 const Meter = ({ used, total }: { used: number; total: number }) => {
     const pct = total > 0 ? (used / total) * 100 : 0;
     return (
-        <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-black/5 dark:bg-white/10">
-            <div className={`h-full rounded-full ${pct > 85 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${pct}%` }} />
+        <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-muted">
+            <div className={`h-full rounded-full ${pct > 85 ? 'bg-[var(--lp-danger)]' : pct > 70 ? 'bg-amber-500' : 'bg-[var(--chart-1)]'}`} style={{ width: `${pct}%` }} />
         </div>
     );
 };
 
-const Dot = ({ ok }: { ok: boolean }) => <span className={`h-2 w-2 shrink-0 rounded-full ${ok ? 'bg-emerald-500' : 'bg-red-500'}`} />;
+const Dot = ({ ok }: { ok: boolean }) => <span className={`size-1.5 shrink-0 rounded-full ${ok ? 'bg-[var(--lp-positive)]' : 'bg-[var(--lp-danger)]'}`} />;
 
 /** Restart and deploy ask for an emailed code first: a stolen session alone cannot take the server down. */
 const ConfirmAction = ({ token, action, onDone, onCancel }: { token: string | null; action: 'restart' | 'deploy'; onDone: () => void; onCancel: () => void }) => {
@@ -69,8 +70,8 @@ const ConfirmAction = ({ token, action, onDone, onCancel }: { token: string | nu
     };
 
     return (
-        <div className="mt-4 rounded-xl border bg-background p-4">
-            <p className="text-sm font-medium">{what}?</p>
+        <div className="mt-4 rounded-xl bg-muted/60 p-4">
+            <p className="text-sm text-foreground">{what}?</p>
             <p className="mt-1 text-sm text-muted-foreground">
                 {action === 'restart'
                     ? 'The portal and app stop answering for about 10 seconds. Transactions in progress may fail.'
@@ -78,8 +79,8 @@ const ConfirmAction = ({ token, action, onDone, onCancel }: { token: string | nu
             </p>
             {!sent ? (
                 <div className="mt-4 flex gap-2">
-                    <button onClick={send} disabled={busy} className={PRIMARY_BUTTON}>{busy && <Loader2 size={14} className="animate-spin" />}Email me a code</button>
-                    <button onClick={onCancel} className={SECONDARY_BUTTON}>Cancel</button>
+                    <button type="button" onClick={send} disabled={busy} className={BUTTON}>{busy && <Loader2 size={14} className="animate-spin" />}Email me a code</button>
+                    <button type="button" onClick={onCancel} className={BUTTON_QUIET}>Cancel</button>
                 </div>
             ) : (
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -90,10 +91,10 @@ const ConfirmAction = ({ token, action, onDone, onCancel }: { token: string | nu
                         autoFocus
                         aria-label="6-digit code"
                         placeholder="6-digit code"
-                        className={`${INPUT} tracking-widest`}
+                        className={`${FIELD} lp-figure tracking-widest`}
                     /></div>
-                    <button onClick={confirm} disabled={busy || otp.length !== 6} className={PRIMARY_BUTTON}>{busy && <Loader2 size={14} className="animate-spin" />}Confirm</button>
-                    <button onClick={onCancel} className={SECONDARY_BUTTON}>Cancel</button>
+                    <button type="button" onClick={confirm} disabled={busy || otp.length !== 6} className={BUTTON}>{busy && <Loader2 size={14} className="animate-spin" />}Confirm</button>
+                    <button type="button" onClick={onCancel} className={BUTTON_QUIET}>Cancel</button>
                 </div>
             )}
         </div>
@@ -134,22 +135,23 @@ const LiveLogs = ({ token }: { token: string | null }) => {
     const shown = lines.filter((l) => (!errorsOnly || l.level !== 'log') && (!q || l.line.toLowerCase().includes(q)));
 
     return (
-        <section className={CARD}>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h2 className="font-semibold">Live logs</h2>
-                    <p className="text-sm text-muted-foreground">Server console since the last restart. Refreshes every 3 seconds.</p>
-                </div>
+        <Panel
+            title="Live logs"
+            description="Server console since the last restart. Refreshes every 3 seconds."
+            action={
                 <div className="flex flex-wrap items-center gap-2">
-                    <div className="w-48"><input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter…" aria-label="Filter logs" className={`${INPUT} py-2`} /></div>
-                    <button onClick={() => setErrorsOnly(!errorsOnly)} aria-pressed={errorsOnly} className={`${SECONDARY_BUTTON} py-2 ${errorsOnly ? 'bg-black/5 dark:bg-white/10' : ''}`}>Errors only</button>
-                    <button onClick={() => setPaused(!paused)} className={`${SECONDARY_BUTTON} py-2`}>{paused ? <Play size={14} /> : <Pause size={14} />}{paused ? 'Resume' : 'Pause'}</button>
+                    <div className="w-48"><input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter…" aria-label="Filter logs" className={`${FIELD} h-9`} /></div>
+                    <button type="button" onClick={() => setErrorsOnly(!errorsOnly)} aria-pressed={errorsOnly} className={`${BUTTON_QUIET} h-9 ${errorsOnly ? 'bg-muted' : ''}`}>Errors only</button>
+                    <button type="button" onClick={() => setPaused(!paused)} className={`${BUTTON_QUIET} h-9`}>{paused ? <Play size={14} /> : <Pause size={14} />}{paused ? 'Resume' : 'Pause'}</button>
                 </div>
-            </div>
+            }
+            flush
+        >
+            {/* A terminal is the content here: monospace lines on a quiet dark surface. */}
             <div
                 ref={box}
                 onScroll={(e) => { const el = e.currentTarget; stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40; }}
-                className="h-[420px] overflow-auto rounded-xl bg-[#0E0D18] p-4 font-mono text-[12px] leading-relaxed text-zinc-300"
+                className="h-[420px] overflow-auto rounded-b-2xl bg-[#100f14] p-5 font-mono text-[12px] leading-relaxed text-zinc-300"
             >
                 {shown.length === 0 ? (
                     <p className="text-zinc-500">{lines.length ? 'No lines match.' : 'Waiting for logs…'}</p>
@@ -159,7 +161,7 @@ const LiveLogs = ({ token }: { token: string | null }) => {
                     </div>
                 ))}
             </div>
-        </section>
+        </Panel>
     );
 };
 
@@ -205,43 +207,42 @@ const ServerConsole = ({ token }: { token: string | null }) => {
 
     return (
         <div className="flex w-full flex-col gap-6 animate-in fade-in duration-200">
-            <header className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Server</h1>
-                    <p className="text-sm text-muted-foreground">{h ? `${h.machine.hostname} · ${h.env}` : 'Health, logs and controls for the backend.'}</p>
-                </div>
-                <button onClick={reloadHealth} className={SECONDARY_BUTTON}><RefreshCcw size={14} /> Refresh</button>
-            </header>
+            <PageHeader
+                eyebrow="Platform"
+                title="Server"
+                description={h ? <><span className="lp-figure">{h.machine.hostname}</span> · {h.env}</> : 'Health, logs and controls for the backend.'}
+                actions={<button type="button" onClick={reloadHealth} className={BUTTON_QUIET}><RefreshCcw size={14} /> Refresh</button>}
+            />
 
-            {health.error && <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">{health.error}</div>}
+            {health.error && <div className={ALERT_ERROR}>{health.error}</div>}
 
-            <section className={`${CARD} overflow-hidden p-0`}>
+            <section className="overflow-hidden rounded-2xl border bg-card">
                 <div className="grid grid-cols-2 gap-px bg-border md:grid-cols-3 xl:grid-cols-5">
                     {!h
                         ? Array.from({ length: 5 }).map((_, i) => <div key={i} className="bg-card p-5"><Skeleton className="h-14" /></div>)
                         : tiles.map((t) => (
                             <div key={t.label} className="bg-card p-5">
-                                <p className={`${LABEL} flex items-center gap-2`}><Dot ok={t.ok} />{t.label}</p>
-                                <p className="mt-2 text-xl font-semibold tabular-nums">{t.value}</p>
-                                <p className="mt-0.5 truncate text-xs text-muted-foreground">{t.hint}</p>
+                                <p className="flex items-center gap-2 text-[13px] text-muted-foreground"><Dot ok={t.ok} />{t.label}</p>
+                                <p className="lp-figure mt-2 text-[22px] leading-none tracking-[-0.02em] text-foreground">{t.value}</p>
+                                <p className="mt-2 truncate text-[12px] text-muted-foreground">{t.hint}</p>
                                 {t.meter && <Meter used={t.meter[0]} total={t.meter[1]} />}
                             </div>
                         ))}
                 </div>
             </section>
 
-            <div className="grid gap-6 lg:grid-cols-5">
-                <section className={`${CARD} lg:col-span-3`}>
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                            <h2 className="font-semibold">Deploys</h2>
-                            <p className="text-sm text-muted-foreground">Every push to main ships the backend automatically.</p>
-                        </div>
+            <div className="grid gap-6 xl:grid-cols-5">
+                <Panel
+                    className="xl:col-span-3"
+                    title="Deploys"
+                    description="Every push to main ships the backend automatically."
+                    action={
                         <div className="flex gap-2">
-                            <button onClick={() => setConfirming('restart')} className={SECONDARY_BUTTON}><RefreshCcw size={14} /> Restart</button>
-                            <button onClick={() => setConfirming('deploy')} disabled={!deploys.data?.configured} className={PRIMARY_BUTTON}><Rocket size={14} /> Deploy now</button>
+                            <button type="button" onClick={() => setConfirming('restart')} className={BUTTON_QUIET}><RefreshCcw size={14} /> Restart</button>
+                            <button type="button" onClick={() => setConfirming('deploy')} disabled={!deploys.data?.configured} className={BUTTON}><Rocket size={14} /> Deploy now</button>
                         </div>
-                    </div>
+                    }
+                >
                     {confirming && (
                         <ConfirmAction
                             key={confirming}
@@ -252,53 +253,52 @@ const ServerConsole = ({ token }: { token: string | null }) => {
                         />
                     )}
                     {deploys.data && !deploys.data.configured ? (
-                        <p className="mt-4 rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+                        <p className="mt-1 rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
                             To deploy and see deploy history from here, add <code className="font-mono text-foreground">GITHUB_TOKEN</code> to the server's <code className="font-mono text-foreground">backend/.env</code>: a fine-grained GitHub token for this repository with <em>Actions: read and write</em>.
                         </p>
                     ) : (
-                        <ul className="mt-4 divide-y">
+                        <ul className="-my-1">
                             {(deploys.data?.runs || []).map((r) => {
                                 const state = r.status !== 'completed' ? 'Running' : r.conclusion === 'success' ? 'Live' : r.conclusion === 'cancelled' ? 'Cancelled' : 'Failed';
-                                const tone = state === 'Live' ? 'bg-emerald-500' : state === 'Running' ? 'bg-amber-500 animate-pulse' : state === 'Cancelled' ? 'bg-zinc-400' : 'bg-red-500';
+                                const tone = state === 'Live' ? 'bg-[var(--lp-positive)]' : state === 'Running' ? 'bg-amber-500 animate-pulse' : state === 'Cancelled' ? 'bg-muted-foreground' : 'bg-[var(--lp-danger)]';
                                 return (
-                                    <li key={r.id} className="flex items-center gap-3 py-3">
-                                        <span className={`h-2 w-2 shrink-0 rounded-full ${tone}`} />
+                                    <li key={r.id} className="flex items-center gap-3 border-b py-3 last:border-0">
+                                        <span className={`size-1.5 shrink-0 rounded-full ${tone}`} />
                                         <div className="min-w-0 flex-1">
-                                            <p className="truncate text-sm font-medium">{r.commit || 'Manual deploy'}</p>
-                                            <p className="text-xs text-muted-foreground">{state} · {r.sha} · {r.author} · {ago(r.createdAt)}</p>
+                                            <p className="truncate text-sm text-foreground">{r.commit || 'Manual deploy'}</p>
+                                            <p className="text-[12px] text-muted-foreground">{state} · <span className="lp-figure">{r.sha}</span> · {r.author} · {ago(r.createdAt)}</p>
                                         </div>
                                         <a href={r.url} target="_blank" rel="noreferrer" aria-label="Open on GitHub" className="text-muted-foreground hover:text-foreground"><ExternalLink size={14} /></a>
                                     </li>
                                 );
                             })}
                             {deploys.loading && !deploys.data && <li className="py-3"><Skeleton className="h-10" /></li>}
-                            {deploys.error && <li className="py-3 text-sm text-red-600">{deploys.error}</li>}
+                            {deploys.error && <li className="py-3 text-sm text-[var(--lp-danger)]">{deploys.error}</li>}
                         </ul>
                     )}
-                </section>
+                </Panel>
 
-                <section className={`${CARD} lg:col-span-2`}>
-                    <h2 className="font-semibold">Services</h2>
-                    <p className="text-sm text-muted-foreground">Pause one for every retailer, e.g. when a provider is down.</p>
-                    <ul className="mt-4 divide-y">
+                <Panel className="xl:col-span-2" title="Services" description="Pause one for every retailer, e.g. when a provider is down." flush>
+                    <ul>
                         {(services.data || []).map((s) => (
-                            <li key={s.key} className="flex items-center justify-between gap-3 py-2.5">
-                                <span className={`text-sm ${s.enabled ? '' : 'text-muted-foreground'}`}>{s.label}{!s.enabled && ' · paused'}</span>
+                            <li key={s.key} className="flex min-h-12 items-center justify-between gap-3 border-b px-5 py-2.5 last:border-0">
+                                <span className={`text-sm ${s.enabled ? 'text-foreground' : 'text-muted-foreground'}`}>{s.label}{!s.enabled && ' · paused'}</span>
                                 <button
+                                    type="button"
                                     role="switch"
                                     aria-checked={s.enabled}
                                     aria-label={`${s.label} for all retailers`}
                                     disabled={switching === s.key}
                                     onClick={() => toggle(s)}
-                                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${s.enabled ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                                    className={`relative h-5 w-9 flex-none rounded-full transition-colors duration-200 disabled:opacity-50 ${s.enabled ? 'bg-primary' : 'bg-input'}`}
                                 >
-                                    <span className={`absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${s.enabled ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+                                    <span className="absolute top-0.5 size-4 rounded-full bg-white shadow-sm transition-[left] duration-200" style={{ left: s.enabled ? 18 : 2 }} />
                                 </button>
                             </li>
                         ))}
-                        {services.loading && !services.data && <li className="py-3"><Skeleton className="h-40" /></li>}
+                        {services.loading && !services.data && <li className="p-5"><Skeleton className="h-40" /></li>}
                     </ul>
-                </section>
+                </Panel>
             </div>
 
             <LiveLogs token={token} />

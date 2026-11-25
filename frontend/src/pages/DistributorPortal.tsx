@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-    UserPlus,
-    FileText,
-    CheckCircle,
-    XCircle,
-    Trash2
-} from 'lucide-react';
+import { CheckCircle, FileText, Plus, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import EditRetailerModal from '../components/EditRetailerModal';
 import NetworkDashboard, { type DirectoryPreset } from '../components/distributor/NetworkDashboard';
@@ -16,6 +10,8 @@ import RetailerDetail from '../components/distributor/RetailerDetail';
 import CreateRetailerWizard from '../components/distributor/CreateRetailerWizard';
 import DistributorProfile from '../components/distributor/DistributorProfile';
 import { SERVICES } from '../lib/services';
+import { BUTTON, BUTTON_QUIET, FIELD, ICON_BUTTON, TABLE, TD, TH, THEAD, TR, inr } from '../components/distributor/shared';
+import { Empty, PageHeader, Panel, Segmented, StatusDot } from '../components/distributor/ui';
 
 const DistributorPortal = () => {
     const { user, token, isInitializing } = useAuth();
@@ -396,103 +392,76 @@ const DistributorPortal = () => {
 
                 {/* Fund Requests Tab */}
                 {activeTab === 'fund_requests' && (
-                    <div className="animate-in fade-in duration-200">
-                        <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-                            <div>
-                                <h2 className="text-3xl font-bold mb-2">Fund Requests</h2>
-                                <p className="text-muted-foreground">Manage incoming and outgoing fund requests.</p>
-                            </div>
-                            <div className="flex bg-white/5 p-1 rounded-lg border border-border">
-                                <button 
-                                    onClick={() => setFrSubTab('incoming')} 
-                                    className={`px-4 py-2 rounded-md text-sm transition-colors ${frSubTab === 'incoming' ? 'btn-primary font-medium' : 'text-muted-foreground hover:text-white'}`}
-                                >
-                                    From Retailers
-                                </button>
-                                <button 
-                                    onClick={() => setFrSubTab('outgoing')} 
-                                    className={`px-4 py-2 rounded-md text-sm transition-colors ${frSubTab === 'outgoing' ? 'btn-primary font-medium' : 'text-muted-foreground hover:text-white'}`}
-                                >
-                                    My Requests (To Admin)
-                                </button>
-                            </div>
-                        </div>
+                    <div className="flex w-full flex-col gap-6 animate-in fade-in duration-200">
+                        <PageHeader
+                            eyebrow="Network"
+                            title="Fund requests"
+                            description="Wallet top-ups your retailers ask you for, and the ones you ask the admin for."
+                            actions={<>
+                                <Segmented
+                                    label="Fund request direction"
+                                    value={frSubTab}
+                                    onChange={setFrSubTab}
+                                    options={[['incoming', `From retailers ${fundRequests.filter((r) => r.status === 'PENDING').length || ''}`.trim()], ['outgoing', 'To admin']] as const}
+                                />
+                                {frSubTab === 'outgoing' && (
+                                    <button type="button" onClick={() => setShowAddFrModal(true)} className={BUTTON}>
+                                        <Plus size={16} strokeWidth={1.75} /> Request funds
+                                    </button>
+                                )}
+                            </>}
+                        />
 
                         {frSubTab === 'incoming' && (
-                            <div className="glass-card rounded-2xl border border-border overflow-hidden">
+                            <Panel title="From your retailers" description="Approving credits the retailer's wallet from yours." flush>
                                 <div className="overflow-x-auto">
-                                    <table className="w-full text-left border-collapse">
+                                    <table className={TABLE}>
                                         <thead>
-                                            <tr className="bg-white/5 border-b border-border">
-                                                <th className="p-4 text-sm font-semibold text-muted-foreground">Date</th>
-                                                <th className="p-4 text-sm font-semibold text-muted-foreground">Retailer</th>
-                                                <th className="p-4 text-sm font-semibold text-muted-foreground">Amount</th>
-                                                <th className="p-4 text-sm font-semibold text-muted-foreground">Txn Mode & UTR</th>
-                                                <th className="p-4 text-sm font-semibold text-muted-foreground">Receipt</th>
-                                                <th className="p-4 text-sm font-semibold text-muted-foreground">Status</th>
-                                                <th className="p-4 text-sm font-semibold text-muted-foreground">Actions</th>
+                                            <tr className={THEAD}>
+                                                <th className={TH}>Date</th>
+                                                <th className={TH}>Retailer</th>
+                                                <th className={`${TH} text-right`}>Amount</th>
+                                                <th className={TH}>Mode and UTR</th>
+                                                <th className={TH}>Receipt</th>
+                                                <th className={TH}>Status</th>
+                                                <th className={`${TH} text-right`}>Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-border">
+                                        <tbody>
                                             {fundRequests.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={7} className="p-8 text-center text-muted-foreground">No fund requests found.</td>
-                                                </tr>
+                                                <tr><td colSpan={7}><Empty>No fund requests yet.</Empty></td></tr>
                                             ) : (
                                                 fundRequests.map((req) => (
-                                                    <tr key={req._id} className="hover:bg-white/5 transition-colors">
-                                                        <td className="p-4 text-sm text-white/70">
-                                                            {new Date(req.depositDate).toLocaleDateString()}
+                                                    <tr key={req._id} className={TR}>
+                                                        <td className={`${TD} whitespace-nowrap text-muted-foreground`}>{new Date(req.depositDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                                                        <td className={TD}>
+                                                            <p className="text-foreground">{req.retailerId?.firstName} {req.retailerId?.lastName}</p>
+                                                            <p className="text-[12px] text-muted-foreground"><span className="lp-figure">{req.retailerId?.retailerId}</span>{req.retailerId?.businessName ? ` · ${req.retailerId.businessName}` : ''}</p>
                                                         </td>
-                                                        <td className="p-4">
-                                                            <div className="font-medium text-white">{req.retailerId?.firstName} {req.retailerId?.lastName}</div>
-                                                            <div className="text-xs text-muted-foreground">{req.retailerId?.businessName}</div>
-                                                            <div className="text-xs text-primary/70">{req.retailerId?.retailerId}</div>
+                                                        <td className={`${TD} lp-figure text-right text-foreground`}>{inr.format(Number(req.amount) || 0)}</td>
+                                                        <td className={TD}>
+                                                            <p className="text-foreground">{req.transactionMode}</p>
+                                                            <p className="lp-figure text-[12px] text-muted-foreground">{req.bankUtr}</p>
                                                         </td>
-                                                        <td className="p-4 font-bold text-white">₹{req.amount}</td>
-                                                        <td className="p-4">
-                                                            <div className="text-sm text-white">{req.transactionMode}</div>
-                                                            <div className="text-xs font-mono text-muted-foreground">{req.bankUtr}</div>
-                                                        </td>
-                                                        <td className="p-4">
+                                                        <td className={TD}>
                                                             {req.depositSlipUrl ? (
-                                                                <a href={req.depositSlipUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-primary hover:underline text-sm">
-                                                                    <FileText size={14} /> View
+                                                                <a href={req.depositSlipUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[13px] text-foreground hover:underline">
+                                                                    <FileText size={14} strokeWidth={1.75} /> View
                                                                 </a>
-                                                            ) : <span className="text-xs text-muted-foreground">No File</span>}
+                                                            ) : <span className="text-[13px] text-muted-foreground">None</span>}
                                                         </td>
-                                                        <td className="p-4">
-                                                            <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full border ${
-                                                                req.status === 'APPROVED' ? 'text-green-500 bg-green-500/10 border-green-500/20' :
-                                                                req.status === 'REJECTED' ? 'text-red-500 bg-red-500/10 border-red-500/20' :
-                                                                'text-yellow-500 bg-yellow-500/10 border-yellow-500/20'
-                                                            }`}>
-                                                                {req.status}
-                                                            </span>
-                                                            {req.adminRemarks && (
-                                                                <div className="text-[10px] text-muted-foreground mt-1 max-w-[150px] truncate" title={req.adminRemarks}>
-                                                                    {req.adminRemarks}
-                                                                </div>
-                                                            )}
+                                                        <td className={TD}>
+                                                            <StatusDot status={req.status} />
+                                                            {req.adminRemarks && <p className="mt-1 max-w-[160px] truncate text-[12px] text-muted-foreground" title={req.adminRemarks}>{req.adminRemarks}</p>}
                                                         </td>
-                                                        <td className="p-4">
+                                                        <td className={`${TD} text-right`}>
                                                             {req.status === 'PENDING' && (
-                                                                <div className="flex items-center gap-2">
-                                                                    <button 
-                                                                        disabled={loadingFR}
-                                                                        onClick={() => handleFundRequestStatus(req._id, 'APPROVED')}
-                                                                        className="p-1.5 bg-green-500/10 text-green-500 hover:bg-green-500/20 rounded-md transition-colors disabled:opacity-50"
-                                                                        title="Approve & Credit Wallet"
-                                                                    >
-                                                                        <CheckCircle size={18} />
+                                                                <div className="inline-flex items-center gap-2">
+                                                                    <button type="button" disabled={loadingFR} onClick={() => handleFundRequestStatus(req._id, 'REJECTED')} className={`${BUTTON_QUIET} h-8 px-3 text-[13px]`} title="Reject">
+                                                                        Reject
                                                                     </button>
-                                                                    <button 
-                                                                        disabled={loadingFR}
-                                                                        onClick={() => handleFundRequestStatus(req._id, 'REJECTED')}
-                                                                        className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-md transition-colors disabled:opacity-50"
-                                                                        title="Reject"
-                                                                    >
-                                                                        <XCircle size={18} />
+                                                                    <button type="button" disabled={loadingFR} onClick={() => handleFundRequestStatus(req._id, 'APPROVED')} className={`${BUTTON} h-8 px-3 text-[13px]`} title="Approve and credit wallet">
+                                                                        <CheckCircle size={14} strokeWidth={1.75} /> Approve
                                                                     </button>
                                                                 </div>
                                                             )}
@@ -503,90 +472,62 @@ const DistributorPortal = () => {
                                         </tbody>
                                     </table>
                                 </div>
-                            </div>
+                            </Panel>
                         )}
 
                         {frSubTab === 'outgoing' && (
-                            <div className="space-y-6">
-                                <div className="flex justify-end">
-                                    <button 
-                                        onClick={() => setShowAddFrModal(true)}
-                                        className="px-5 py-2 btn-primary rounded-lg font-medium transition-all flex items-center gap-2"
-                                    >
-                                        <UserPlus className="w-4 h-4" /> Request Funds from Admin
-                                    </button>
-                                </div>
-                                <div className="glass-card rounded-2xl border border-border overflow-hidden">
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-left border-collapse">
-                                            <thead>
-                                                <tr className="bg-white/5 border-b border-border">
-                                                    <th className="p-4 text-sm font-semibold text-muted-foreground">Date</th>
-                                                    <th className="p-4 text-sm font-semibold text-muted-foreground">Amount</th>
-                                                    <th className="p-4 text-sm font-semibold text-muted-foreground">Txn Mode & UTR</th>
-                                                    <th className="p-4 text-sm font-semibold text-muted-foreground">Receipt</th>
-                                                    <th className="p-4 text-sm font-semibold text-muted-foreground">Remarks</th>
-                                                    <th className="p-4 text-sm font-semibold text-muted-foreground">Status</th>
-                                                    <th className="p-4 text-sm font-semibold text-muted-foreground">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-border">
-                                                {myFundRequests.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan={7} className="p-8 text-center text-muted-foreground">You haven't requested any funds yet.</td>
+                            <Panel title="Your requests to admin" flush>
+                                <div className="overflow-x-auto">
+                                    <table className={TABLE}>
+                                        <thead>
+                                            <tr className={THEAD}>
+                                                <th className={TH}>Date</th>
+                                                <th className={`${TH} text-right`}>Amount</th>
+                                                <th className={TH}>Mode and UTR</th>
+                                                <th className={TH}>Receipt</th>
+                                                <th className={TH}>Remarks</th>
+                                                <th className={TH}>Status</th>
+                                                <th className={`${TH} text-right`}>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {myFundRequests.length === 0 ? (
+                                                <tr><td colSpan={7}><Empty>You haven't requested any funds yet.</Empty></td></tr>
+                                            ) : (
+                                                myFundRequests.map((req) => (
+                                                    <tr key={req._id} className={TR}>
+                                                        <td className={`${TD} whitespace-nowrap text-muted-foreground`}>{new Date(req.depositDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                                                        <td className={`${TD} lp-figure text-right text-foreground`}>{inr.format(Number(req.amount) || 0)}</td>
+                                                        <td className={TD}>
+                                                            <p className="text-foreground">{req.transactionMode}</p>
+                                                            <p className="lp-figure text-[12px] text-muted-foreground">{req.bankUtr}</p>
+                                                        </td>
+                                                        <td className={TD}>
+                                                            {req.depositSlipUrl ? (
+                                                                <a href={req.depositSlipUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[13px] text-foreground hover:underline">
+                                                                    <FileText size={14} strokeWidth={1.75} /> View
+                                                                </a>
+                                                            ) : <span className="text-[13px] text-muted-foreground">None</span>}
+                                                        </td>
+                                                        <td className={`${TD} max-w-[160px] truncate text-muted-foreground`} title={req.remarks}>{req.remarks || '—'}</td>
+                                                        <td className={TD}>
+                                                            <StatusDot status={req.status} />
+                                                            {req.adminRemarks && <p className="mt-1 max-w-[160px] truncate text-[12px] text-muted-foreground" title={req.adminRemarks}>{req.adminRemarks}</p>}
+                                                        </td>
+                                                        <td className={`${TD} text-right`}>
+                                                            {req.status === 'PENDING' && (
+                                                                <button type="button" onClick={() => handleDeleteMyFundRequest(req._id)} className={ICON_BUTTON} title="Delete request" aria-label="Delete request">
+                                                                    <Trash2 size={15} strokeWidth={1.75} />
+                                                                </button>
+                                                            )}
+                                                        </td>
                                                     </tr>
-                                                ) : (
-                                                    myFundRequests.map((req) => (
-                                                        <tr key={req._id} className="hover:bg-white/5 transition-colors">
-                                                            <td className="p-4 text-sm text-white/70">
-                                                                {new Date(req.depositDate).toLocaleDateString()}
-                                                            </td>
-                                                            <td className="p-4 font-bold text-white">₹{req.amount}</td>
-                                                            <td className="p-4">
-                                                                <div className="text-sm text-white">{req.transactionMode}</div>
-                                                                <div className="text-xs font-mono text-muted-foreground">{req.bankUtr}</div>
-                                                            </td>
-                                                            <td className="p-4">
-                                                                {req.depositSlipUrl ? (
-                                                                    <a href={req.depositSlipUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-primary hover:underline text-sm">
-                                                                        <FileText size={14} /> View
-                                                                    </a>
-                                                                ) : <span className="text-xs text-muted-foreground">No File</span>}
-                                                            </td>
-                                                            <td className="p-4 text-sm text-white/70 max-w-[150px] truncate" title={req.remarks}>{req.remarks || '-'}</td>
-                                                            <td className="p-4">
-                                                                <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full border ${
-                                                                    req.status === 'APPROVED' ? 'text-green-500 bg-green-500/10 border-green-500/20' :
-                                                                    req.status === 'REJECTED' ? 'text-red-500 bg-red-500/10 border-red-500/20' :
-                                                                    'text-yellow-500 bg-yellow-500/10 border-yellow-500/20'
-                                                                }`}>
-                                                                    {req.status}
-                                                                </span>
-                                                                {req.adminRemarks && (
-                                                                    <div className="text-[10px] text-muted-foreground mt-1 max-w-[150px] truncate" title={req.adminRemarks}>
-                                                                        {req.adminRemarks}
-                                                                    </div>
-                                                                )}
-                                                            </td>
-                                                            <td className="p-4">
-                                                                {req.status === 'PENDING' && (
-                                                                    <button 
-                                                                        onClick={() => handleDeleteMyFundRequest(req._id)}
-                                                                        className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                                                                        title="Delete Request"
-                                                                    >
-                                                                        <Trash2 className="w-4 h-4" />
-                                                                    </button>
-                                                                )}
-                                                            </td>
-                                                        </tr>
-                                                    ))
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
                                 </div>
-                            </div>
+                            </Panel>
                         )}
                     </div>
                 )}
@@ -639,102 +580,99 @@ const DistributorPortal = () => {
                 </main>
             {/* Add Fund Request Modal */}
             {showAddFrModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-[#1e2330] rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl border border-white/10">
-                        
-                        <div className="flex justify-between items-center p-6 border-b border-white/5 bg-black/20">
-                            <h2 className="text-xl font-semibold text-white">Request Funds From Admin</h2>
-                            <button onClick={() => setShowAddFrModal(false)} className="text-white/50 hover:text-white transition-colors">
-                                <span className="font-bold text-xl">&times;</span>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200" onClick={() => setShowAddFrModal(false)}>
+                    <div role="dialog" aria-modal="true" aria-labelledby="fr-title" onClick={(e) => e.stopPropagation()} className="relative w-full max-w-2xl rounded-2xl border bg-card shadow-xl">
+                        <div className="flex items-start justify-between gap-4 border-b px-6 py-5">
+                            <div>
+                                <h2 id="fr-title" className="lp-serif text-[30px] leading-[1.05] text-foreground">Request funds</h2>
+                                <p className="mt-1 text-sm text-muted-foreground">Tell the admin what you deposited; they credit your wallet once it checks out.</p>
+                            </div>
+                            <button type="button" onClick={() => setShowAddFrModal(false)} className="flex size-9 flex-none items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Close">
+                                <X size={18} />
                             </button>
                         </div>
 
                         <form onSubmit={handleCreateFrSubmit} className="p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                
-                                <div className="space-y-2">
-                                    <label className="text-sm text-white/70">Transaction Mode *</label>
-                                    <select 
+                            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                                <label className="space-y-1.5">
+                                    <span className="text-sm text-foreground">Transaction mode</span>
+                                    <select
                                         required
-                                        className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors appearance-none"
+                                        className={FIELD}
                                         value={frFormData.transactionMode}
                                         onChange={(e) => setFrFormData({...frFormData, transactionMode: e.target.value})}
                                     >
-                                        <option value="" className="bg-[#1e2330]">Select transaction mode</option>
-                                        <option value="IMPS" className="bg-[#1e2330]">IMPS</option>
-                                        <option value="NEFT" className="bg-[#1e2330]">NEFT</option>
-                                        <option value="RTGS" className="bg-[#1e2330]">RTGS</option>
-                                        <option value="UPI" className="bg-[#1e2330]">UPI</option>
-                                        <option value="Cash Deposit" className="bg-[#1e2330]">Cash Deposit</option>
-                                        <option value="Cheque" className="bg-[#1e2330]">Cheque</option>
+                                        <option value="">Select transaction mode</option>
+                                        <option value="IMPS">IMPS</option>
+                                        <option value="NEFT">NEFT</option>
+                                        <option value="RTGS">RTGS</option>
+                                        <option value="UPI">UPI</option>
+                                        <option value="Cash Deposit">Cash Deposit</option>
+                                        <option value="Cheque">Cheque</option>
                                     </select>
-                                </div>
+                                </label>
 
-                                <div className="space-y-2">
-                                    <label className="text-sm text-white/70">Deposit Amount *</label>
-                                    <input 
-                                        type="number" 
+                                <label className="space-y-1.5">
+                                    <span className="text-sm text-foreground">Deposit amount</span>
+                                    <input
+                                        type="number"
                                         required min="1"
-                                        placeholder="Enter deposit amount" 
-                                        className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors"
+                                        placeholder="₹0"
+                                        className={`${FIELD} lp-figure`}
                                         value={frFormData.amount}
                                         onChange={(e) => setFrFormData({...frFormData, amount: e.target.value})}
                                     />
-                                </div>
+                                </label>
 
-                                <div className="space-y-2">
-                                    <label className="text-sm text-white/70">Bank UTR / Reference ID *</label>
-                                    <input 
-                                        type="text" 
+                                <label className="space-y-1.5">
+                                    <span className="text-sm text-foreground">Bank UTR or reference ID</span>
+                                    <input
+                                        type="text"
                                         required
-                                        placeholder="Enter UTR number" 
-                                        className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors"
+                                        placeholder="UTR number"
+                                        className={`${FIELD} lp-figure`}
                                         value={frFormData.bankUtr}
                                         onChange={(e) => setFrFormData({...frFormData, bankUtr: e.target.value})}
                                     />
-                                </div>
+                                </label>
 
-                                <div className="space-y-2">
-                                    <label className="text-sm text-white/70">Deposit Date *</label>
-                                    <input 
-                                        type="date" 
+                                <label className="space-y-1.5">
+                                    <span className="text-sm text-foreground">Deposit date</span>
+                                    <input
+                                        type="date"
                                         required
-                                        className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors"
+                                        className={`${FIELD} dark:[color-scheme:dark]`}
                                         value={frFormData.depositDate}
                                         onChange={(e) => setFrFormData({...frFormData, depositDate: e.target.value})}
                                     />
-                                </div>
+                                </label>
 
-                                <div className="space-y-2 md:col-span-2">
-                                    <label className="text-sm text-white/70">Upload Deposit Slip</label>
-                                    <input 
-                                        type="file" 
+                                <label className="space-y-1.5 md:col-span-2">
+                                    <span className="text-sm text-foreground">Deposit slip <span className="text-muted-foreground">(optional)</span></span>
+                                    <input
+                                        type="file"
                                         accept="image/*,.pdf"
-                                        className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
+                                        className={`${FIELD} py-1.5 file:mr-3 file:h-7 file:rounded-md file:border-0 file:bg-muted file:px-3 file:text-[13px] file:text-foreground`}
                                         onChange={(e) => setFrDepositSlip(e.target.files ? e.target.files[0] : null)}
                                     />
-                                </div>
+                                </label>
 
-                                <div className="space-y-2 md:col-span-2">
-                                    <label className="text-sm text-white/70">Remark</label>
-                                    <textarea 
+                                <label className="space-y-1.5 md:col-span-2">
+                                    <span className="text-sm text-foreground">Remark <span className="text-muted-foreground">(optional)</span></span>
+                                    <textarea
                                         rows={3}
-                                        placeholder="Add any remarks..."
-                                        className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors resize-none"
+                                        placeholder="Anything the admin should know"
+                                        className={`${FIELD} h-auto resize-none py-2.5`}
                                         value={frFormData.remarks}
                                         onChange={(e) => setFrFormData({...frFormData, remarks: e.target.value})}
                                     />
-                                </div>
-
+                                </label>
                             </div>
 
-                            <div className="mt-8 flex justify-center">
-                                <button 
-                                    type="submit"
-                                    disabled={loadingFR}
-                                    className="px-12 py-3 btn-primary rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/25"
-                                >
-                                    {loadingFR ? 'Submitting...' : 'Submit'}
+                            <div className="mt-6 flex justify-end gap-2 border-t pt-5">
+                                <button type="button" onClick={() => setShowAddFrModal(false)} className={BUTTON_QUIET}>Cancel</button>
+                                <button type="submit" disabled={loadingFR} className={BUTTON}>
+                                    {loadingFR ? 'Submitting…' : 'Submit request'}
                                 </button>
                             </div>
                         </form>
