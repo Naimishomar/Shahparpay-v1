@@ -10,7 +10,6 @@ import { isServiceEnabled } from '../lib/services';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "sonner";
 import { Roll } from '../components/landing/motion';
-import ServiceShowcase from '../components/ServiceShowcase';
 import { ARRIVE, TRAVEL } from '../components/landing/beats';
 import { AnimatePresence, motion } from 'motion/react';
 
@@ -479,7 +478,6 @@ const Dashboard = () => {
                 </section>
             </div>
 
-            <ServiceShowcase user={user} />
         </div>
     );
 };

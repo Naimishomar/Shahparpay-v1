@@ -6,8 +6,7 @@
  * the selection and the commission figure. The signature is the printed
  * receipt: a dashed tear line and figures set in mono.
  */
-.landing-page,
-.hd-scope {
+.landing-page {
   --lp-bg: #faf9f6;
   --lp-surface: #f2f0eb;
   --lp-card: #ffffff;
@@ -85,8 +84,7 @@
  * Dark is the default theme (next-themes, see main.tsx) and the visitor can
  * switch. Legal pages hard-code a light document, so they opt out with .lp-light.
  */
-html.dark .landing-page:not(.lp-light),
-html.dark .hd-scope {
+html.dark .landing-page:not(.lp-light) {
   color-scheme: dark;
   --lp-bg: #0e0d12;
   --lp-surface: #17161d;
@@ -394,8 +392,7 @@ input[type='range'] {
  * Faux product UI (hero demo and feature tiles). The portal's own look: white
  * surfaces, a deep navy primary, quiet gray filler bars. One shadow per job.
  */
-.landing-page,
-.hd-scope {
+.landing-page {
   --hd-ink: #1c1a17;
   --hd-ink-2: #57524a;
   --hd-ink-3: #8a847b;
@@ -421,8 +418,7 @@ input[type='range'] {
   --hd-shadow-satellite: 0 0 0 1px rgba(28, 26, 23, 0.06), 0 6px 16px rgba(28, 26, 23, 0.1);
 }
 
-html.dark .landing-page:not(.lp-light),
-html.dark .hd-scope {
+html.dark .landing-page:not(.lp-light) {
   --hd-ink: #f1eee8;
   --hd-ink-2: #bab4aa;
   --hd-ink-3: #8f897f;
@@ -502,15 +498,4 @@ html.dark .hd-scope {
 /* Fields draw their own focus (accent border and soft ring); the page outline would double it. */
 .landing-page :is(input, select, textarea):focus-visible {
   outline: none;
-}
-
-/*
- * The landing's product shots inside the portal (retailer dashboard). They take
- * the public page's tokens and type, but none of its page rules: no page
- * background, no full height, and nothing that reaches <body>.
- */
-.hd-scope {
-  background-color: transparent !important;
-  color: var(--lp-fg) !important;
-  min-height: 0;
 }

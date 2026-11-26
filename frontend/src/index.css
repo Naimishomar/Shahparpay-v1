@@ -573,3 +573,49 @@ html.lp-portal.dark {
 @media (prefers-reduced-motion: reduce) {
     .stage-wave { animation: none; }
 }
+
+/*
+ * Retailer portal ambient background: three soft glows in the brand's own
+ * pastels drifting slowly behind every page. Behind the content (cards stay
+ * opaque, so nothing over them changes contrast), never takes a click, moves
+ * only transform on the compositor, and stands still under reduced motion.
+ */
+.portal-ambient {
+    --ambient-strength: 34%;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+.dark .portal-ambient { --ambient-strength: 13%; }
+.portal-ambient > span {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(72px);
+    will-change: transform;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+}
+.portal-ambient > span:nth-child(1) {
+    width: 46vmax; height: 46vmax; left: -14vmax; top: -18vmax;
+    background: color-mix(in oklab, var(--brand-glow) var(--ambient-strength), transparent);
+    animation-name: ambient-a; animation-duration: 26s;
+}
+.portal-ambient > span:nth-child(2) {
+    width: 40vmax; height: 40vmax; right: -16vmax; top: 18vh;
+    background: color-mix(in oklab, #9FC5F0 var(--ambient-strength), transparent);
+    animation-name: ambient-b; animation-duration: 32s;
+}
+.portal-ambient > span:nth-child(3) {
+    width: 38vmax; height: 38vmax; left: 22vw; bottom: -22vmax;
+    background: color-mix(in oklab, var(--brand-glow-2) var(--ambient-strength), transparent);
+    animation-name: ambient-c; animation-duration: 38s;
+}
+@keyframes ambient-a { to { transform: translate3d(14vw, 10vh, 0) scale(1.12); } }
+@keyframes ambient-b { to { transform: translate3d(-12vw, 14vh, 0) scale(0.92); } }
+@keyframes ambient-c { to { transform: translate3d(10vw, -16vh, 0) scale(1.1); } }
+@media (prefers-reduced-motion: reduce) {
+    .portal-ambient > span { animation: none; }
+}
