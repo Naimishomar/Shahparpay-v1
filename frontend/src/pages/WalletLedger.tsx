@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import html2canvas from "html2canvas-pro"
 import { toast } from "sonner"
 import ReceiptPrinter from "../components/ReceiptPrinter"
+import StatusMark from "../components/StatusMark"
 import logo from "../assets/logo.png"
 import axios from "axios"
 import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, BookOpen, Download, Receipt } from "lucide-react"
-import { Segmented } from "../components/distributor/ui"
 import {
-    DayList, FIELD, Figures, PeriodPicker, ReportHeader, SearchBox, StatusPill, Toolbar,
+    DayList, Seg, FIELD, Figures, PeriodPicker, ReportHeader, SearchBox, StatusPill, Toolbar,
     dateTimeOf, downloadCsv, downloadPdf, money, plain, rangeOf, timeOf,
     type Figure, type Period, type Range,
 } from "../components/reports/kit"
@@ -156,8 +156,8 @@ const WalletLedger = () => {
 
             <Toolbar>
                 <div className="flex flex-wrap items-center gap-2">
-                    <Segmented label="Wallet" value={wallet} onChange={setWallet} options={[["ALL", "All wallets"], ["AEPS", "Trade Wallet"], ["MAIN", "Utility Wallet"]] as const} />
-                    <Segmented label="Direction" value={direction} onChange={setDirection} options={[["all", "All"], ["in", "Money in"], ["out", "Money out"]] as const} />
+                    <Seg label="Wallet" value={wallet} onChange={setWallet} options={[["ALL", "All wallets"], ["AEPS", "Trade Wallet"], ["MAIN", "Utility Wallet"]] as const} />
+                    <Seg label="Direction" value={direction} onChange={setDirection} options={[["all", "All"], ["in", "Money in"], ["out", "Money out"]] as const} />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     <SearchBox value={search} onChange={setSearch} placeholder="Search reference, details, service" />
@@ -283,7 +283,8 @@ const LedgerReceipt = ({ row: r, onClose }: { row: LedgerRow; onClose: () => voi
                     <img src={logo} alt="Shahparpay" className="mx-auto mb-2 h-auto w-56 max-w-full object-contain" />
                     <p className="text-sm font-bold uppercase tracking-widest text-slate-900">Ledger entry</p>
                 </div>
-                <div className="text-center">
+                <div className="flex flex-col items-center text-center">
+                    <StatusMark status={status === "SUCCESS" ? "done" : /FAIL|REJECT/.test(status) ? "failed" : "running"} size={44} strokeWidth={3} color="#f59e0b" doneColor="#10b981" errorColor="#ef4444" className="mb-2" />
                     <p className={`text-3xl font-bold tabular-nums ${change > 0 ? "text-emerald-600" : "text-slate-900"}`}>
                         {change > 0 ? "+" : change < 0 ? "−" : ""}{money(Math.abs(change))}
                     </p>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import html2canvas from 'html2canvas-pro';
 import ReceiptPrinter from '../components/ReceiptPrinter';
+import StatusMark from '../components/StatusMark';
 import axios from 'axios';
 import { toast } from 'sonner';
 import {
@@ -797,7 +798,7 @@ const ReceiptModal = ({ result, onClose }: { result: TxnResult; onClose: () => v
                         <p className="text-sm font-bold uppercase tracking-widest text-slate-900">{type} receipt</p>
                     </div>
                     <div className="flex flex-col items-center gap-1 text-center">
-                        {result.ok === true ? <CheckCircle2 className="h-12 w-12 text-emerald-500" /> : result.ok === 'pending' ? <Clock className="h-12 w-12 text-amber-500" /> : <XCircle className="h-12 w-12 text-red-500" />}
+                        <StatusMark status={result.ok === true ? 'done' : result.ok === 'pending' ? 'running' : 'failed'} size={48} strokeWidth={3} color="#f59e0b" doneColor="#10b981" errorColor="#ef4444" />
                         <p className={`text-lg font-bold ${tone}`}>{label}</p>
                         {result.message && result.message !== label && <p className="text-sm text-slate-500">{result.message}</p>}
                         <p className="text-xs text-slate-500">{result.at.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</p>

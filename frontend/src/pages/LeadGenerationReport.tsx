@@ -3,9 +3,8 @@ import axios from "axios"
 import { toast } from "sonner"
 import { ExternalLink, Loader2, RefreshCw, UserPlus } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
-import { Segmented } from "../components/distributor/ui"
 import {
-    DayList, FIELD, Figures, PeriodPicker, ReportHeader, SearchBox, StatusPill, Toolbar,
+    DayList, Seg, FIELD, Figures, PeriodPicker, ReportHeader, SearchBox, StatusPill, Toolbar,
     dateTimeOf, downloadCsv, downloadPdf, rangeOf, timeOf,
     type Period, type Range,
 } from "../components/reports/kit"
@@ -135,7 +134,7 @@ const LeadGenerationReport = () => {
             <Toolbar>
                 <div className="flex flex-wrap items-center gap-2">
                     <SearchBox value={search} onChange={setSearch} placeholder="Search name, mobile, ref ID" />
-                    <Segmented label="Status" value={outcome} onChange={setOutcome} options={[["ALL", "All"], ["APPROVED", "Approved"], ["PENDING", "In progress"], ["REJECTED", "Not approved"]] as const} />
+                    <Seg label="Status" value={outcome} onChange={setOutcome} options={[["ALL", "All"], ["APPROVED", "Approved"], ["PENDING", "In progress"], ["REJECTED", "Not approved"]] as const} />
                     <select aria-label="Product" value={product} onChange={(e) => setProduct(e.target.value)} className={FIELD}>
                         <option value="ALL">All products</option>
                         {Object.entries(PRODUCTS).map(([id, name]) => <option key={id} value={id}>{name}</option>)}

@@ -4,11 +4,10 @@ import {
     BarChart3, Building2, FileText, Fingerprint, IdCard, Receipt, Send, Smartphone, Wallet,
     ArrowDownLeft, ArrowUpRight, QrCode, Banknote, type LucideProps,
 } from "lucide-react"
-import { Segmented } from "../components/distributor/ui"
 import TransactionDetailModal, { reasonOf } from "../components/TransactionDetailModal"
 import { useAuth } from "../context/AuthContext"
 import {
-    DayList, Figures, Pager, PeriodPicker, ReportHeader, SearchBox, StatusPill, Toolbar,
+    DayList, Seg, Figures, Pager, PeriodPicker, ReportHeader, SearchBox, StatusPill, Toolbar,
     dateTimeOf, downloadCsv, downloadPdf, money, plain, rangeOf, timeOf, useDebounced,
     type Period, type Range,
 } from "../components/reports/kit"
@@ -208,7 +207,7 @@ const TxnReport = ({ kind }: { kind: ReportKind }) => {
             <Toolbar>
                 <div className="flex flex-wrap items-center gap-2">
                     <SearchBox value={search} onChange={setSearch} placeholder={cfg.search} />
-                    <Segmented label="Status" value={status} onChange={setStatus} options={[["ALL", "All"], ["SUCCESS", "Success"], ["PENDING", "Pending"], ["FAILED", "Failed"], ["REFUNDED", "Refunded"]] as const} />
+                    <Seg label="Status" value={status} onChange={setStatus} options={[["ALL", "All"], ["SUCCESS", "Success"], ["PENDING", "Pending"], ["FAILED", "Failed"], ["REFUNDED", "Refunded"]] as const} />
                 </div>
                 <PeriodPicker period={period} onPeriod={setPeriod} custom={custom} onCustom={setCustom} />
             </Toolbar>

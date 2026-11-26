@@ -11,6 +11,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from "sonner";
 import Counter from '../components/Counter';
 import PortalSpotlight from '../components/PortalSpotlight';
+import ShinyText from '../components/ShinyText';
+import GlareHover from '../components/GlareHover';
 import { ARRIVE, TRAVEL } from '../components/landing/beats';
 import { AnimatePresence, motion } from 'motion/react';
 
@@ -267,7 +269,7 @@ const Dashboard = () => {
                 <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                         <p className="text-sm font-medium text-white/80">
-                            {greeting()}{firstName ? `, ${firstName}` : ''} <span className="stage-wave" aria-hidden>👋</span>
+                            <ShinyText text={`${greeting()}${firstName ? `, ${firstName}` : ''}`} color="rgb(22 20 46 / 0.8)" shineColor="#7C6BD6" speed={2.6} delay={3} /> <span className="stage-wave" aria-hidden>👋</span>
                         </p>
                         <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-white/75">
                             Transaction volume · {rangeLabel}
@@ -402,8 +404,8 @@ const Dashboard = () => {
                     <h3 className="text-lg font-semibold mb-4">Quick actions</h3>
                     <div className="stage-list grid grid-cols-2 gap-3">
                         {QUICK_ACTIONS.filter((a) => isServiceEnabled(user, a.service)).map(({ title, hint, url, icon: Icon, accent }) => (
+                            <GlareHover key={url} width="100%" height="100%" borderRadius="0.75rem" glareColor="#B9A8F0" glareOpacity={0.45} blendMode="normal" rimGlint={false} style={{ display: 'grid', placeItems: 'stretch', borderWidth: 0 }}>
                             <button
-                                key={url}
                                 onClick={() => navigate(url)}
                                 className="group relative flex flex-col items-start gap-3 rounded-xl border bg-muted/40 p-4 text-left hover:border-foreground/20 active:scale-[0.98]"
                             >
@@ -416,6 +418,7 @@ const Dashboard = () => {
                                     <p className="text-xs text-muted-foreground">{hint}</p>
                                 </div>
                             </button>
+                            </GlareHover>
                         ))}
                     </div>
                 </PortalSpotlight>

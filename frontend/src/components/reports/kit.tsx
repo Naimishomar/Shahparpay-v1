@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Download, FileDown, Inbox, Loader2, Search }
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Roll } from '../landing/motion';
-import { Segmented } from '../distributor/ui';
+import RubberSegment from '../RubberSegment';
 import PortalSpotlight from '../PortalSpotlight';
 
 /*
@@ -30,6 +30,26 @@ export const useDebounced = <T,>(value: T, ms = 1000) => {
     return v;
 };
 
+/** React Bits' RubberSegment in the portal's own colours: one choice of a few, the thumb stretches to it. */
+export function Seg<T extends string>({ label, value, onChange, options }: {
+    label: string; value: T; onChange: (v: T) => void; options: readonly (readonly [T, string])[];
+}) {
+    return (
+        <RubberSegment
+            aria-label={label}
+            size="sm"
+            value={value}
+            onChange={(v) => onChange(v as T)}
+            items={options.map(([v, l]) => ({ value: v, label: l }))}
+            trackColor="var(--muted)"
+            thumbColor="var(--background)"
+            textColor="var(--muted-foreground)"
+            activeTextColor="var(--foreground)"
+            className="max-w-full overflow-x-auto no-scrollbar shadow-[inset_0_0_0_1px_var(--border)]"
+        />
+    );
+}
+
 // ---------- Dates ----------
 
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -53,9 +73,8 @@ export const PeriodPicker = ({ period, onPeriod, custom, onCustom }: {
     period: Period; onPeriod: (p: Period) => void; custom: Range; onCustom: (r: Range) => void;
 }) => (
     <div className="flex flex-wrap items-center gap-2">
-        <Segmented
+        <Seg
             label="Period"
-            size="sm"
             value={period}
             onChange={onPeriod}
             options={[['all', 'All time'], ['today', 'Today'], ['7', '7 days'], ['30', '30 days'], ['month', 'This month'], ['custom', 'Custom']] as const}

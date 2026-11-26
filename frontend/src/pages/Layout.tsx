@@ -4,6 +4,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Suspense, useEffect, useRef, useState } from "react"
 import { MotionConfig } from "motion/react"
 import ClickSpark, { type ClickSparkHandle } from "@/components/ClickSpark"
+import GradualBlur from "@/components/GradualBlur"
 import axios from "axios"
 import { Check, Loader2, LogOut, QrCode, RefreshCcw, Smartphone, XCircle } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
@@ -81,6 +82,8 @@ const Layout = () => {
                         </MotionConfig>
                     </div>
                 </div>
+                {/* React Bits GradualBlur: content softens as it scrolls under the bottom edge. Below dialogs (z-100). */}
+                {retailer && <GradualBlur target="parent" position="bottom" height="2.75rem" strength={1.2} layers={6} zIndex={30} />}
                 <SupportWidget />
                 {retailer && (
                     <ClickSpark
