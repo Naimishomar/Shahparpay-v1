@@ -69,7 +69,6 @@ const AdminPortal = () => {
     const [merchantCode, setMerchantCode] = useState('');
     const [isEmailVerified, setIsEmailVerified] = useState(false);
     const [verifyingEmail, setVerifyingEmail] = useState(false);
-    const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
 
 
     useEffect(() => {
@@ -81,19 +80,11 @@ const AdminPortal = () => {
         fetchDashboardData();
 
         const sse = new EventSource(`${import.meta.env.VITE_BACKEND_URL}/api/admin/live-transactions?token=${token}`);
+        // The header re-reads the admin wallet when a commission lands.
         sse.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                if (data.message === "Connected") return;
-                
-                setRecentTransactions(prev => {
-                    if (prev.some(t => t._id === data._id)) return prev;
-                    
-                    // The header re-reads the admin wallet on this event.
-                    if (data.commissions?.adminEarned > 0) window.dispatchEvent(new Event('wallet-updated'));
-                    
-                    return [data, ...prev].slice(0, 10);
-                });
+                if (data.commissions?.adminEarned > 0) window.dispatchEvent(new Event('wallet-updated'));
             } catch (err) {
                 console.error("Error parsing SSE data", err);
             }
@@ -110,10 +101,9 @@ const AdminPortal = () => {
 
     const fetchDashboardData = async () => {
         try {
-            const [profileRes, frRes, recentTxRes] = await Promise.all([
+            const [profileRes, frRes] = await Promise.all([
                 fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/profile`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${import.meta.env.VITE_BACKEND_URL}/api/fund-request/admin`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/recent-transactions`, { headers: { 'Authorization': `Bearer ${token}` } })
+                fetch(`${import.meta.env.VITE_BACKEND_URL}/api/fund-request/admin`, { headers: { 'Authorization': `Bearer ${token}` } })
             ]);
             
             if (profileRes.ok) {
@@ -123,10 +113,6 @@ const AdminPortal = () => {
             if (frRes.ok) {
                 const frData = await frRes.json();
                 setFundRequests(frData.data);
-            }
-            if (recentTxRes.ok) {
-                const txData = await recentTxRes.json();
-                setRecentTransactions(txData.data || []);
             }
         } catch (error) {
             console.error('Error fetching admin dashboard data:', error);
@@ -325,7 +311,6 @@ const AdminPortal = () => {
                 {activeTab === 'dashboard' && (
                     <AdminOverview
                         token={token}
-                        live={recentTransactions}
                         onNavigate={setActiveTab}
                         onOpenUser={openUser}
                         onOpenTransactions={openTransactions}

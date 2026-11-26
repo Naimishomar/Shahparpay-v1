@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
-import { motion } from 'motion/react';
 import { ALERT_ERROR } from '../landing/ui';
-import { TABLE, TD, TH, THEAD, TR, ago, delta, inr, inrShort, serviceLabel, useApiGet, type TrendPoint } from '../distributor/shared';
-import { Avatar, Empty, PageHeader, Panel, RangeSwitch, Segmented, ShareBar, Skeleton, StatStrip, StatusDot, TextLink, TrendChart } from '../distributor/ui';
+import { delta, inr, inrShort, serviceLabel, useApiGet, type TrendPoint } from '../distributor/shared';
+import { Avatar, Empty, PageHeader, Panel, RangeSwitch, Segmented, ShareBar, Skeleton, StatStrip, TextLink, TrendChart } from '../distributor/ui';
 
 type Money = { volume: number; count: number; adminEarned: number; distributorEarned: number; retailerEarned: number };
 type Overview = {
@@ -21,14 +20,10 @@ type Overview = {
     wallets: { mainFloat: number; aepsFloat: number; adminBalance: number };
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LiveTxn = any;
-
 const AdminOverview = ({
-    token, live, onNavigate, onOpenUser, onOpenTransactions,
+    token, onNavigate, onOpenUser, onOpenTransactions,
 }: {
     token: string | null;
-    live: LiveTxn[];
     onNavigate: (tab: string) => void;
     onOpenUser: (role: 'retailer' | 'distributor', id: string) => void;
     onOpenTransactions: (query: Record<string, string>) => void;
@@ -160,50 +155,6 @@ const AdminOverview = ({
                 ))}
             </div>
 
-            {/* Live feed from the existing SSE stream */}
-            <Panel
-                title={<span className="inline-flex items-center gap-2"><span className="relative flex size-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--lp-positive)] opacity-50" /><span className="relative inline-flex size-2 rounded-full bg-[var(--lp-positive)]" /></span>Live transactions</span>}
-                action={<TextLink onClick={() => onOpenTransactions({})}>Open explorer</TextLink>}
-                flush
-            >
-                {live.length === 0 ? (
-                    <Empty>Transactions appear here as they happen.</Empty>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className={TABLE}>
-                            <thead>
-                                <tr className={THEAD}>
-                                    <th className={TH}>User</th>
-                                    <th className={TH}>Type</th>
-                                    <th className={`${TH} text-right`}>Amount</th>
-                                    <th className={TH}>Status</th>
-                                    <th className={`${TH} text-right`}>When</th>
-                                </tr>
-                            </thead>
-                                <tbody>
-                                    {live.slice(0, 10).map((t: LiveTxn) => (
-                                        <motion.tr
-                                            key={t._id || t.transactionId}
-                                            layout
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            transition={{ duration: 0.4 }}
-                                            className={TR}
-                                        >
-                                            <td className={TD}>
-                                                <button type="button" onClick={() => t.userId?._id && onOpenUser('retailer', t.userId._id)} className="text-left text-foreground hover:underline">{t.userId?.name || '—'}</button>
-                                            </td>
-                                            <td className={TD}>{serviceLabel(t.type)}</td>
-                                            <td className={`${TD} lp-figure text-right text-foreground`}>{inr.format(t.amount || 0)}</td>
-                                            <td className={TD}><StatusDot status={t.status} /></td>
-                                            <td className={`${TD} whitespace-nowrap text-right text-muted-foreground`}>{ago(t.createdAt)}</td>
-                                        </motion.tr>
-                                    ))}
-                                </tbody>
-                        </table>
-                    </div>
-                )}
-            </Panel>
         </div>
     );
 };
