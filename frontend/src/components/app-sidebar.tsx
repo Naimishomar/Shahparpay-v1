@@ -47,8 +47,8 @@ const retailerGroups: NavGroup[] = [
     label: "Reports",
     collapsible: true,
     items: [
-      { name: "Ledgar", url: "/reports/wallet-ledger", icon: BookOpen },
-      { name: "All Reports", url: "/reports/ledger", icon: BarChart3 },
+      { name: "Wallet Ledger", url: "/reports/wallet-ledger", icon: BookOpen },
+      { name: "All Transactions", url: "/reports/ledger", icon: BarChart3 },
       { name: "AEPS Reports", url: "/reports/aeps", icon: Fingerprint },
       { name: "DMT Reports", url: "/reports/dmt", icon: Send },
       { name: "Payout Reports", url: "/reports/payout", icon: Landmark },

@@ -36,16 +36,8 @@ const FundRequest = page(() => import("./pages/FundRequest"))
 // Add Money (Razorpay) hidden for now; uncomment to bring it back.
 // const AddMoney = page(() => import("./pages/AddMoney"))
 const BiometricSupport = page(() => import("./pages/BiometricSupport"))
-const LedgerReport = page(() => import("./pages/LedgerReport"))
-const DmtReport = page(() => import("./pages/DmtReport"))
-const AepsReport = page(() => import("./pages/AepsReport"))
-const PayoutReport = page(() => import("./pages/PayoutReport"))
-const UpiReport = page(() => import("./pages/UpiReport"))
-const UpiCashWithdrawalReport = page(() => import("./pages/ServiceReport"))
-const PanReport = page(() => import("./pages/PanReport"))
-const ItrReport = page(() => import("./pages/ItrReport"))
+const TxnReport = page(() => import("./pages/TxnReport"))
 const LeadGenerationReport = page(() => import("./pages/LeadGenerationReport"))
-const ServiceReport = page(() => import("./pages/ServiceReport"))
 
 const CollectRedirect = () => {
   const params = new URLSearchParams(useLocation().search)
@@ -183,18 +175,18 @@ function App() {
         <Route path="/itr" element={<ServiceGate service="itr"><ITR/></ServiceGate>}/>
         
         {/* Reports Routes */}
-        <Route path="/reports/ledger" element={<LedgerReport/>}/>
-        <Route path="/reports/aeps" element={<AepsReport/>}/>
-        <Route path="/reports/dmt" element={<DmtReport/>}/>
-        <Route path="/reports/payout" element={<PayoutReport/>}/>
-        <Route path="/reports/upi" element={<UpiReport/>}/>
-        <Route path="/reports/upi-cash-withdrawal" element={<UpiCashWithdrawalReport kind="upiCashWithdrawal" title="UPI Cash Withdrawal Reports" description="UPI cash withdrawal transactions, customer details, status, and commission."/>}/>
-        <Route path="/reports/pan" element={<PanReport/>}/>
-        <Route path="/reports/itr" element={<ItrReport/>}/>
+        <Route path="/reports/ledger" element={<TxnReport key="all" kind="all"/>}/>
+        <Route path="/reports/aeps" element={<TxnReport key="aeps" kind="aeps"/>}/>
+        <Route path="/reports/dmt" element={<TxnReport key="dmt" kind="dmt"/>}/>
+        <Route path="/reports/payout" element={<TxnReport key="payout" kind="payout"/>}/>
+        <Route path="/reports/upi" element={<TxnReport key="upi" kind="upi"/>}/>
+        <Route path="/reports/upi-cash-withdrawal" element={<TxnReport key="upiCashWithdrawal" kind="upiCashWithdrawal"/>}/>
+        <Route path="/reports/pan" element={<TxnReport key="pan" kind="pan"/>}/>
+        <Route path="/reports/itr" element={<TxnReport key="itr" kind="itr"/>}/>
         <Route path="/reports/lead-generation" element={<LeadGenerationReport/>}/>
-        <Route path="/reports/recharge" element={<ServiceReport kind="recharge" title="Recharge Reports" description="Mobile prepaid and DTH recharge transactions and retailer commissions."/>}/>
-        <Route path="/reports/bbps" element={<ServiceReport kind="bbps" title="BBPS Reports" description="Bill payment transactions, statuses, amounts, and retailer commissions."/>}/>
-        <Route path="/reports/collect" element={<ServiceReport kind="collect" title="Collect Payment Reports" description="Payments collected by link and QR, with their statuses and amounts."/>}/>
+        <Route path="/reports/recharge" element={<TxnReport key="recharge" kind="recharge"/>}/>
+        <Route path="/reports/bbps" element={<TxnReport key="bbps" kind="bbps"/>}/>
+        <Route path="/reports/collect" element={<TxnReport key="collect" kind="collect"/>}/>
         <Route path="/reports/wallet-ledger" element={<WalletLedger/>}/>
 
         <Route path="/fund-request" element={<FundRequest/>}/>

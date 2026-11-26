@@ -1,26 +1,16 @@
-import { useState, useEffect, useMemo } from "react"
-import { FileText, Search, Download, FileDown, Loader2, ChevronLeft, ChevronRight, RefreshCw, ExternalLink, Users } from "lucide-react"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { useEffect, useMemo, useState } from "react"
 import axios from "axios"
-import jsPDF from "jspdf"
-import autoTable from "jspdf-autotable"
-import { toast } from 'sonner'
-import { useAuth } from '../context/AuthContext'
+import { toast } from "sonner"
+import { ExternalLink, Loader2, RefreshCw, UserPlus } from "lucide-react"
+import { useAuth } from "../context/AuthContext"
+import { Segmented } from "../components/distributor/ui"
+import {
+    DayList, FIELD, Figures, PeriodPicker, ReportHeader, SearchBox, StatusPill, Toolbar,
+    dateTimeOf, downloadCsv, downloadPdf, rangeOf, timeOf,
+    type Period, type Range,
+} from "../components/reports/kit"
 
-const PRODUCTS: { id: string; name: string }[] = [
-    { id: 'CC', name: 'Credit Card' },
-    { id: 'PL', name: 'Personal Loan' },
-    { id: 'BL', name: 'Business Loan' },
-    { id: 'IL', name: 'Instant Loan' },
-    { id: 'SA', name: 'Savings Account' }
-];
+const PRODUCTS: Record<string, string> = { CC: "Credit Card", PL: "Personal Loan", BL: "Business Loan", IL: "Instant Loan", SA: "Savings Account" };
 
 interface Lead {
     _id?: string;
@@ -36,401 +26,161 @@ interface Lead {
     createdAt?: string;
 }
 
-const getProductName = (id: string) => {
-    return PRODUCTS.find(p => p.id === id)?.name || id;
+/** The bank's word for a lead, folded into three outcomes a retailer acts on. */
+const outcomeOf = (l: Lead) => {
+    const s = String(l.executive_status || "PENDING").toUpperCase();
+    return s === "APPROVED" ? "APPROVED" : s === "REJECTED" || s === "NOT_INTERESTED" ? "REJECTED" : "PENDING";
 };
 
-const getStatusColor = (status: string) => {
-    if (status === 'APPROVED') return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-emerald-500/20';
-    if (status === 'REJECTED' || status === 'NOT_INTERESTED') return 'bg-rose-500/10 text-rose-700 dark:text-rose-400 ring-rose-500/20';
-    return 'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-amber-500/20';
+/** Lead links carry their payload as `encdata`, which the bank expects POSTed. */
+const openLink = (url: string) => {
+    try {
+        const u = new URL(url);
+        const encdata = u.searchParams.get("encdata");
+        if (!encdata) { window.open(url, "_blank", "noopener"); return; }
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = url.split("?")[0];
+        form.target = "_blank";
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "encdata";
+        input.value = encdata;
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
+    } catch {
+        window.open(url, "_blank", "noopener");
+    }
 };
 
 const LeadGenerationReport = () => {
     const { token } = useAuth();
     const [leads, setLeads] = useState<Lead[]>([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [currentPage, setCurrentPage] = useState(1);
-    const [statusFilter, setStatusFilter] = useState('ALL');
-    const [productFilter, setProductFilter] = useState('ALL');
-    const itemsPerPage = 20;
+    const [checking, setChecking] = useState<string | null>(null);
+    const [search, setSearch] = useState("");
+    const [outcome, setOutcome] = useState("ALL");
+    const [product, setProduct] = useState("ALL");
+    const [period, setPeriod] = useState<Period>("all");
+    const [custom, setCustom] = useState<Range>({ start: "", end: "" });
 
-    useEffect(() => {
-        const fetchHistory = async () => {
-            try {
-                const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/lead/history`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.data.success) {
-                    setLeads(res.data.data);
-                }
-            } catch (error) {
-                console.error("Failed to load leads history:", error);
-                toast.error("Failed to load leads history.");
-            } finally {
-                setLoading(false);
-            }
-        };
-        if (token) {
-            fetchHistory();
-        }
-    }, [token]);
-
-    const refreshHistory = async () => {
+    const load = async () => {
         try {
-            setLoading(true);
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/lead/history`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.data.success) {
-                setLeads(res.data.data);
-            }
-        } catch (error) {
-            console.error("Failed to load leads history:", error);
-            toast.error("Failed to load leads history.");
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/lead/history`, { headers: { Authorization: `Bearer ${token}` } });
+            if (res.data.success) setLeads(res.data.data || []);
+        } catch {
+            toast.error("Could not load your leads.");
         } finally {
             setLoading(false);
         }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => { if (token) load(); }, [token]);
 
-    const handleOpenLink = (url: string) => {
+    const checkStatus = async (refid: string) => {
+        setChecking(refid);
         try {
-            const urlObj = new URL(url);
-            const encdata = urlObj.searchParams.get('encdata');
-
-            if (encdata) {
-                const baseUrl = url.split('?')[0];
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = baseUrl;
-                form.target = '_blank';
-
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'encdata';
-                input.value = encdata;
-
-                form.appendChild(input);
-                document.body.appendChild(form);
-                form.submit();
-                document.body.removeChild(form);
-            } else {
-                window.open(url, '_blank');
-            }
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/lead/status/${refid}`, { headers: { Authorization: `Bearer ${token}` } });
+            if (res.data.success) {
+                toast.success(`Status: ${res.data.data?.executive_status || "Pending"}`);
+                await load();
+            } else toast.error(res.data.message || "Could not check the status.");
         } catch {
-            window.open(url, '_blank');
+            toast.error("Could not check the status.");
+        } finally {
+            setChecking(null);
         }
     };
 
-    const handleStatusCheck = async (refid: string) => {
-        try {
-            toast.info(`Checking status for ${refid}...`);
-            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/lead/status/${refid}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = res.data;
-            if (data.success) {
-                toast.success(`Status updated: ${data.data.executive_status || 'Pending'}`);
-                refreshHistory();
-            } else {
-                toast.error(data.message || "Failed to fetch status.");
-            }
-        } catch (error) {
-            console.error(error);
-            toast.error("An error occurred while checking status.");
-        }
-    };
+    const range = rangeOf(period, custom);
+    const inPeriod = useMemo(() => leads.filter((l) => {
+        if (!range.start || !l.createdAt) return true;
+        const d = l.createdAt.slice(0, 10);
+        return d >= range.start && d <= range.end;
+    }), [leads, range.start, range.end]);
 
-    const filteredLeads = useMemo(() => {
-        return leads.filter(lead => {
-            const matchesSearch = lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                lead.mobile_no?.includes(searchTerm) ||
-                lead.refid?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                lead.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const filtered = useMemo(() => {
+        const term = search.trim().toLowerCase();
+        return inPeriod.filter((l) =>
+            (outcome === "ALL" || outcomeOf(l) === outcome) &&
+            (product === "ALL" || l.product === product) &&
+            (!term || [l.name, l.mobile_no, l.refid, l.email].join(" ").toLowerCase().includes(term)));
+    }, [inPeriod, search, outcome, product]);
 
-            const matchesStatus = statusFilter === 'ALL' || lead.executive_status === statusFilter;
-            const matchesProduct = productFilter === 'ALL' || lead.product === productFilter;
+    const count = (o: string) => inPeriod.filter((l) => outcomeOf(l) === o).length;
+    const figures = [
+        { label: "Leads submitted", value: inPeriod.length.toLocaleString("en-IN"), hint: "In this period" },
+        { label: "Approved", value: count("APPROVED").toLocaleString("en-IN"), hint: "Commission is credited on approval", tone: "in" as const },
+        { label: "In progress", value: count("PENDING").toLocaleString("en-IN"), hint: "Use Check status to refresh" },
+        { label: "Not approved", value: count("REJECTED").toLocaleString("en-IN"), hint: "Rejected or not interested" },
+    ];
 
-            return matchesSearch && matchesStatus && matchesProduct;
-        });
-    }, [leads, searchTerm, statusFilter, productFilter]);
-
-    const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
-
-    const paginatedLeads = useMemo(() => {
-        const start = (currentPage - 1) * itemsPerPage;
-        return filteredLeads.slice(start, start + itemsPerPage);
-    }, [filteredLeads, currentPage]);
-
-    const handleDownloadCSV = () => {
-        const headers = ["S.No.", "Customer", "Mobile", "Email", "Product", "Ref ID", "Pincode", "State", "Status", "Date"];
-        const csvRows = [headers.join(",")];
-
-        filteredLeads.forEach((lead, idx) => {
-            const row = [
-                idx + 1,
-                lead.name || "N/A",
-                lead.mobile_no || "N/A",
-                lead.email || "N/A",
-                getProductName(lead.product),
-                lead.refid || "N/A",
-                lead.pincode || "N/A",
-                lead.state || "N/A",
-                lead.executive_status || "PENDING",
-                lead.createdAt ? new Date(lead.createdAt).toLocaleString() : "N/A"
-            ];
-            const escapedRow = row.map(v => `"${String(v).replace(/"/g, '""')}"`);
-            csvRows.push(escapedRow.join(","));
-        });
-
-        const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `LeadGenerationReport_${new Date().getTime()}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    const handleDownloadPDF = () => {
-        const doc = new jsPDF();
-        doc.text("Lead Generation Reports", 14, 15);
-
-        const tableColumn = ["S.No.", "Customer", "Mobile", "Email", "Product", "Ref ID", "Status", "Date"];
-        const tableRows: (string | number)[][] = [];
-
-        filteredLeads.forEach((lead, idx) => {
-            const txData = [
-                idx + 1,
-                lead.name || "N/A",
-                lead.mobile_no || "N/A",
-                lead.email || "N/A",
-                getProductName(lead.product),
-                lead.refid || "N/A",
-                lead.executive_status || "PENDING",
-                lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : "N/A"
-            ];
-            tableRows.push(txData);
-        });
-
-        autoTable(doc, {
-            head: [tableColumn],
-            body: tableRows,
-            startY: 20,
-        });
-
-        doc.save(`LeadGenerationReport_${new Date().getTime()}.pdf`);
-    };
-
-    const approvedCount = leads.filter(l => l.executive_status === 'APPROVED').length;
-    const rejectedCount = leads.filter(l => l.executive_status === 'REJECTED' || l.executive_status === 'NOT_INTERESTED').length;
+    const HEAD = ["Date", "Customer", "Mobile", "Email", "Product", "Ref ID", "Pincode", "State", "Status"];
+    const body = () => filtered.map((l) => [dateTimeOf(l.createdAt || ""), l.name || "", l.mobile_no || "", l.email || "", PRODUCTS[l.product] || l.product, l.refid, l.pincode || "", l.state || "", l.executive_status || "PENDING"]);
 
     return (
-        <div className="flex-1 w-full flex flex-col p-4 md:p-6 animate-in fade-in duration-200 max-w-[1600px] mx-auto h-[calc(100vh-64px)] overflow-hidden">
-            <div className="flex flex-col gap-6 h-full">
-                {/* Header */}
-                <div className="relative isolate overflow-hidden top-glow flex flex-col gap-4 w-full shrink-0 rounded-3xl border bg-card p-4 md:p-5 shadow-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 shrink-0">
-                        <div className="p-2.5 rounded-xl icon-chip">
-                            <Users className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">Lead Generation Reports</h1>
-                            <p className="text-xs md:text-sm text-muted-foreground">View all generated leads and track their application status.</p>
-                        </div>
-                    </div>
-                    <div className="flex gap-2 shrink-0">
-                                <button onClick={handleDownloadCSV} className="flex items-center justify-center gap-2 border bg-background hover:bg-black/5 dark:hover:bg-white/5 text-foreground px-3 md:px-4 py-2 rounded-xl text-sm font-medium transition-colors shadow-sm whitespace-nowrap">
-                                    <Download className="w-4 h-4" />
-                                    <span className="hidden sm:inline">Export CSV</span>
-                                    <span className="sm:hidden">CSV</span>
-                                </button>
-                                <button onClick={handleDownloadPDF} className="flex items-center justify-center gap-2 btn-primary px-3 md:px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap">
-                                    <FileDown className="w-4 h-4" />
-                                    <span className="hidden sm:inline">Export PDF</span>
-                                    <span className="sm:hidden">PDF</span>
-                                </button>
-                            </div>
-                    </div>
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+            <ReportHeader
+                icon={<UserPlus className="h-6 w-6" />}
+                title="Lead Generation Reports"
+                description="Customers you referred for cards, loans and accounts, and where each application stands."
+                onCsv={() => downloadCsv("LeadReport", HEAD, body())}
+                onPdf={() => downloadPdf("Lead Generation Report", `${filtered.length} leads`, HEAD, body())}
+            />
 
-                    <div className="flex flex-wrap items-center gap-2 w-full border-t pt-4">
-                        <div className="contents">
-                            <div className="relative flex-1 min-w-[220px] md:flex-none md:w-72">
-                                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                                <input
-                                    type="text"
-                                    placeholder="Search name, mobile, ref ID..."
-                                    value={searchTerm}
-                                    onChange={(e) => {
-                                        setSearchTerm(e.target.value);
-                                        setCurrentPage(1);
-                                    }}
-                                    className="pl-9 pr-4 py-2 w-full bg-background border rounded-xl text-sm text-foreground shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500"
-                                />
-                            </div>
+            <Figures items={figures} loading={loading} />
 
-                        </div>
-                    </div>
+            <Toolbar>
+                <div className="flex flex-wrap items-center gap-2">
+                    <SearchBox value={search} onChange={setSearch} placeholder="Search name, mobile, ref ID" />
+                    <Segmented label="Status" value={outcome} onChange={setOutcome} options={[["ALL", "All"], ["APPROVED", "Approved"], ["PENDING", "In progress"], ["REJECTED", "Not approved"]] as const} />
+                    <select aria-label="Product" value={product} onChange={(e) => setProduct(e.target.value)} className={FIELD}>
+                        <option value="ALL">All products</option>
+                        {Object.entries(PRODUCTS).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                    </select>
                 </div>
+                <PeriodPicker period={period} onPeriod={setPeriod} custom={custom} onCustom={setCustom} />
+            </Toolbar>
 
-                {/* Table Container */}
-                <div className="flex-1 bg-card rounded-2xl border shadow-sm overflow-hidden flex flex-col">
-                    <div className="overflow-x-auto flex-1">
-                        <Table>
-                            <TableHeader className="bg-zinc-50 dark:bg-zinc-900 sticky top-0 z-10">
-                                <TableRow>
-                                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 w-16 text-center">S.No.</TableHead>
-                                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 min-w-[140px]">Customer</TableHead>
-                                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 min-w-[110px]">Mobile</TableHead>
-                                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 min-w-[130px]">Product</TableHead>
-                                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 min-w-[140px]">Ref ID</TableHead>
-                                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 min-w-[100px]">State</TableHead>
-                                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 min-w-[100px]">Date</TableHead>
-                                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 text-center">Status</TableHead>
-                                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 text-center">Action</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {loading ? (
-                                    <TableRow>
-                                        <TableCell colSpan={9} className="h-64 text-center">
-                                            <div className="flex flex-col items-center justify-center text-muted-foreground gap-2">
-                                                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-                                                <span>Loading leads...</span>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ) : paginatedLeads.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={9} className="h-64 text-center text-muted-foreground">
-                                            No leads found.
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    paginatedLeads.map((lead, idx) => {
-                                        const serialNumber = ((currentPage - 1) * itemsPerPage) + idx + 1;
-                                        return (
-                                            <TableRow key={idx} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors">
-                                                <TableCell className="px-4 py-2 text-center text-sm font-medium text-muted-foreground">
-                                                    {serialNumber}
-                                                </TableCell>
-                                                <TableCell className="px-4 py-2">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-medium text-sm text-foreground truncate max-w-[140px]">{lead.name || "N/A"}</span>
-                                                        <span className="text-[11px] text-muted-foreground truncate max-w-[140px]">{lead.email || ""}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="px-4 py-2">
-                                                    <span className="text-xs text-foreground/80">{lead.mobile_no || "N/A"}</span>
-                                                </TableCell>
-                                                <TableCell className="px-4 py-2">
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-zinc-500/10 text-zinc-700 dark:text-zinc-300 border-zinc-500/20">
-                                                        {getProductName(lead.product)}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell className="px-4 py-2">
-                                                    <span className="text-xs font-mono text-foreground/80">{lead.refid || "N/A"}</span>
-                                                </TableCell>
-                                                <TableCell className="px-4 py-2">
-                                                    <span className="text-xs text-foreground/80">{lead.state || "N/A"}</span>
-                                                </TableCell>
-                                                <TableCell className="px-4 py-2">
-                                                    <span className="text-[11px] text-muted-foreground">{lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : "N/A"}</span>
-                                                </TableCell>
-                                                <TableCell className="px-4 py-2 text-center">
-                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full ring-1 text-[10px] font-bold uppercase tracking-wider ${getStatusColor(lead.executive_status || 'PENDING')}`}>
-                                                        {lead.executive_status || 'PENDING'}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell className="px-4 py-2 text-center">
-                                                    <div className="flex items-center justify-center gap-2 whitespace-nowrap">
-                                                        <button
-                                                            onClick={() => handleStatusCheck(lead.refid)}
-                                                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                                                            title="Check Status"
-                                                        >
-                                                            <RefreshCw className="w-3 h-3" />
-                                                        </button>
-                                                        {lead.url && (
-                                                            <button
-                                                                onClick={() => handleOpenLink(lead.url!)}
-                                                                className="inline-flex items-center gap-1 text-xs text-foreground font-medium hover:underline transition-colors"
-                                                                title="Open Link"
-                                                            >
-                                                                Link <ExternalLink className="w-3 h-3" />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-
-                    {/* Pagination Footer */}
-                    {!loading && filteredLeads.length > 0 && (
-                        <div className="p-3 border-t flex items-center justify-between bg-black/[0.02] dark:bg-white/[0.02]">
-                            <span className="text-xs text-muted-foreground hidden sm:block">
-                                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredLeads.length)} of {filteredLeads.length} entries
-                            </span>
-                            <span className="text-xs text-muted-foreground sm:hidden">
-                                {filteredLeads.length} total
-                            </span>
-
-                            <div className="flex items-center gap-1">
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                    disabled={currentPage === 1}
-                                    className="p-1.5 border rounded-lg text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 transition-colors"
-                                >
-                                    <ChevronLeft className="w-4 h-4" />
-                                </button>
-
-                                <div className="flex items-center gap-1 px-2">
-                                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                        let pageNum = currentPage;
-                                        if (currentPage <= 3) pageNum = i + 1;
-                                        else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
-                                        else pageNum = currentPage - 2 + i;
-
-                                        if (pageNum < 1 || pageNum > totalPages) return null;
-
-                                        return (
-                                            <button
-                                                key={pageNum}
-                                                onClick={() => setCurrentPage(pageNum)}
-                                                className={`w-7 h-7 rounded text-xs font-medium flex items-center justify-center transition-colors ${
-                                                    currentPage === pageNum
-                                                    ? "btn-primary"
-                                                    : "text-muted-foreground hover:bg-muted"
-                                                }`}
-                                            >
-                                                {pageNum}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                    disabled={currentPage === totalPages || totalPages === 0}
-                                    className="p-1.5 border rounded-lg text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 transition-colors"
-                                >
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
+            <DayList
+                rows={filtered}
+                loading={loading}
+                empty={leads.length ? "Nothing matches these filters." : "You have not submitted any leads yet."}
+                dateOf={(l) => l.createdAt || ""}
+                keyOf={(l, i) => l._id || l.refid || String(i)}
+                render={(l) => (
+                    <div className="flex items-start gap-3 px-4 py-3.5">
+                        <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground/70">
+                            <UserPlus className="h-[18px] w-[18px]" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-semibold text-foreground">{PRODUCTS[l.product] || l.product}</span>
+                                <StatusPill status={outcomeOf(l) === "PENDING" ? "PENDING" : outcomeOf(l)} label={l.executive_status ? l.executive_status.replace(/_/g, " ").toLowerCase().replace(/^./, (c) => c.toUpperCase()) : "Pending"} />
                             </div>
+                            <p className="mt-0.5 truncate text-[13px] text-muted-foreground">{[l.name, l.mobile_no, l.state].filter(Boolean).join(" · ") || "—"}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                                <span className="tabular-nums">{timeOf(l.createdAt || "")}</span> · <span className="font-mono">{l.refid}</span>
+                            </p>
                         </div>
-                    )}
-                </div>
-            </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                            <button type="button" onClick={() => checkStatus(l.refid)} disabled={checking === l.refid} className="flex h-8 items-center gap-1.5 rounded-lg border bg-background px-2.5 text-xs font-medium hover:bg-black/5 disabled:opacity-60 dark:hover:bg-white/5">
+                                {checking === l.refid ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                                <span className="hidden sm:inline">Check status</span>
+                            </button>
+                            {l.url && (
+                                <button type="button" onClick={() => openLink(l.url!)} className="flex h-8 items-center gap-1.5 rounded-lg border bg-background px-2.5 text-xs font-medium hover:bg-black/5 dark:hover:bg-white/5">
+                                    <ExternalLink className="h-3.5 w-3.5" /><span className="hidden sm:inline">Open</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
+            />
         </div>
-    )
-}
+    );
+};
 
 export default LeadGenerationReport;

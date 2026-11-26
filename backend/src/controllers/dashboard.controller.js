@@ -273,7 +273,10 @@ export const getRecentTransactions = async (req, res) => {
       if (wanted === 'REFUNDED') {
         query.status = { $in: ['FAILED', 'REFUNDED'] };
         query['metadata.refundStatus'] = 'COMPLETED';
-      } else if (['SUCCESS', 'FAILED', 'PENDING', 'PROCESSING'].includes(wanted)) {
+      } else if (wanted === 'PENDING') {
+        // Pending is one word to a retailer; the gateways write either status.
+        query.status = { $in: ['PENDING', 'PROCESSING'] };
+      } else if (['SUCCESS', 'FAILED', 'PROCESSING'].includes(wanted)) {
         query.status = wanted;
       }
       const term = String(search || '').trim().slice(0, 64);
@@ -337,6 +340,15 @@ export const getRecentTransactions = async (req, res) => {
               $sum: { $cond: [{ $eq: ['$status', 'SUCCESS'] }, { $toDouble: { $ifNull: ['$amount', 0] } }, 0] },
             },
             failed: { $sum: { $cond: [{ $eq: ['$status', 'FAILED'] }, 1, 0] } },
+            commission: {
+              $sum: {
+                $cond: [
+                  { $eq: ['$status', 'SUCCESS'] },
+                  { $toDouble: { $ifNull: ['$commissions.retailerEarned', 0] } },
+                  0,
+                ],
+              },
+            },
           },
         },
       ]);
@@ -345,6 +357,7 @@ export const getRecentTransactions = async (req, res) => {
         volume: agg?.volume ?? 0,
         success: agg?.success ?? 0,
         failed: agg?.failed ?? 0,
+        commission: agg?.commission ?? 0,
       };
     }
     return res.status(200).json({ success: true, data: reportTransactions, page: pageNo, hasMore, summary });
