@@ -2,6 +2,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import Header from "@/components/Header"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Suspense, useEffect, useRef, useState } from "react"
+import { MotionConfig } from "motion/react"
 import axios from "axios"
 import { Check, Loader2, LogOut, QrCode, RefreshCcw, Smartphone, XCircle } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
@@ -47,9 +48,15 @@ const Layout = () => {
                     <Header trigger={<SidebarTrigger className="shrink-0 text-foreground transition-transform hover:scale-105"/>}/>
                 </div>
                 <div className="w-full p-8 flex-1 min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain no-scrollbar relative">
-                    <Suspense fallback={null}>
-                        <Outlet />
-                    </Suspense>
+                    {/* Retailer pages arrive in stageshow beats (index.css, .stage-page). */}
+                    <div className={user?.role === 'retailer' ? 'stage-page' : undefined}>
+                        {/* Motion follows the reduce-motion setting everywhere in the portal. */}
+                        <MotionConfig reducedMotion="user">
+                            <Suspense fallback={null}>
+                                <Outlet />
+                            </Suspense>
+                        </MotionConfig>
+                    </div>
                 </div>
                 <SupportWidget />
             </main>

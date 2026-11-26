@@ -11,6 +11,9 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { navLinksFor } from './app-sidebar';
 import { isServiceEnabled, AEPS_STEP_LABELS } from '../lib/services';
 import TransactionDetailModal from './TransactionDetailModal';
+import { Roll } from './landing/motion';
+import { ARRIVE } from './landing/beats';
+import { AnimatePresence, motion } from 'motion/react';
 
 const API = import.meta.env.VITE_BACKEND_URL;
 const SUPPORT_PHONE = '+91 8240039776';
@@ -74,6 +77,47 @@ const StatusStrip = () => {
                 <Headset className="h-3.5 w-3.5" /> Contact support: <b className="font-semibold text-white">{SUPPORT_PHONE}</b>
             </a>
         </div>
+    );
+};
+
+/**
+ * The change a wallet just took, said once over its balance: "+₹2,008.00" rises
+ * in, holds, and leaves. Never on the first load, and never while balances are hidden.
+ */
+const WalletDelta = ({ value, ready, hidden }: { value: number; ready: boolean; hidden: boolean }) => {
+    const prev = useRef<number | null>(null);
+    const [delta, setDelta] = useState<{ id: number; amount: number } | null>(null);
+    useEffect(() => {
+        if (!ready) return;
+        const before = prev.current;
+        prev.current = value;
+        if (before === null || hidden) return;
+        const amount = Math.round((value - before) * 100) / 100;
+        if (!amount) return;
+        setDelta({ id: Date.now(), amount });
+    }, [value, ready, hidden]);
+    // Its own timer, so hiding balances mid-way cannot leave it stuck on screen.
+    useEffect(() => {
+        if (!delta) return;
+        const t = setTimeout(() => setDelta(null), 2600);
+        return () => clearTimeout(t);
+    }, [delta]);
+    return (
+        <AnimatePresence>
+            {delta && !hidden && (
+                <motion.span
+                    key={delta.id}
+                    role="status"
+                    initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.45, ease: ARRIVE }}
+                    className={`pointer-events-none absolute -top-2 right-2 z-10 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums shadow-sm ring-1 ${delta.amount > 0 ? 'bg-emerald-50 text-emerald-700 ring-emerald-500/25 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-background text-foreground ring-border'}`}
+                >
+                    {delta.amount > 0 ? '+' : '−'}₹{formatBalance(Math.abs(delta.amount))}
+                </motion.span>
+            )}
+        </AnimatePresence>
     );
 };
 
@@ -198,6 +242,7 @@ const Header = ({ trigger }: { trigger?: React.ReactNode }) => {
     const { user, token, logout } = useAuth();
     const [askLogout, setAskLogout] = useState(false);
     const [balances, setBalances] = useState({ aepsBalance: 0, mainBalance: 0, adminBalance: 0 });
+    const [balancesReady, setBalancesReady] = useState(false);
     // Kept across reloads: a retailer hides the money once for the counter.
     const [hidden, setHidden] = useState(() => localStorage.getItem('hideBalances') === '1');
     const toggleHidden = () => setHidden((h) => { localStorage.setItem('hideBalances', h ? '0' : '1'); return !h; });
@@ -207,7 +252,7 @@ const Header = ({ trigger }: { trigger?: React.ReactNode }) => {
             try {
                 if (user && token) {
                     const res = await axios.get(`${API}/api/wallet/balance?_t=${Date.now()}`, { headers: { Authorization: `Bearer ${token}` } });
-                    if (res.data.success) setBalances(res.data.data);
+                    if (res.data.success) { setBalances(res.data.data); setBalancesReady(true); }
                 }
             } catch (error) {
                 console.error("Error fetching balances:", error);
@@ -263,11 +308,12 @@ const Header = ({ trigger }: { trigger?: React.ReactNode }) => {
                 {user && (
                     <div className="order-4 flex w-full flex-wrap items-center gap-2 md:gap-3 xl:order-2 xl:w-auto xl:flex-nowrap">
                         {wallets.map(({ label, value, tone, Icon, link }) => (
-                            <div key={label} className={`flex min-w-[150px] flex-1 items-center gap-2.5 rounded-2xl py-1.5 pl-3 pr-1.5 md:flex-none 2xl:gap-3 2xl:py-2 2xl:pl-2 2xl:pr-2.5 ${tone.tile}`}>
+                            <div key={label} className={`relative flex min-w-[150px] flex-1 items-center gap-2.5 rounded-2xl py-1.5 pl-3 pr-1.5 md:flex-none 2xl:gap-3 2xl:py-2 2xl:pl-2 2xl:pr-2.5 ${tone.tile}`}>
+                                <WalletDelta value={Number(value) || 0} ready={balancesReady} hidden={hidden} />
                                 <span className={`hidden h-9 w-9 shrink-0 place-items-center rounded-xl 2xl:grid ${tone.icon}`}><Icon className="h-4 w-4" /></span>
                                 <div className="min-w-0 flex-1 md:flex-none">
                                     <p className={`truncate text-[10.5px] font-semibold uppercase tracking-wider ${tone.cap}`}>{label}</p>
-                                    <p className={`whitespace-nowrap text-[15px] font-bold text-foreground tabular-nums leading-tight transition 2xl:text-[17px] ${hidden ? 'blur-[7px] select-none' : ''}`}>₹ {formatBalance(value)}</p>
+                                    <p className={`whitespace-nowrap text-[15px] font-bold text-foreground tabular-nums leading-tight transition 2xl:text-[17px] ${hidden ? 'blur-[7px] select-none' : ''}`}>₹ <Roll value={formatBalance(value)} /></p>
                                 </div>
                                 {link && (
                                     <Link to={link.to} title={link.text} aria-label={link.text} className={`ml-1 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-background shadow-sm hover:opacity-90 ${tone.link}`}>

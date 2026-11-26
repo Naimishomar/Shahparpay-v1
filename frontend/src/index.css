@@ -510,3 +510,66 @@ html.lp-portal.dark {
     --lp-danger-soft: rgba(248, 113, 113, 0.08);
     --lp-danger-line: rgba(248, 113, 113, 0.24);
 }
+
+/*
+ * Retailer portal motion, after stageshow: a page arrives in beats, its
+ * sections rising one after another on the arrival curve, and table rows
+ * settle top to bottom. Colours are untouched; only position and opacity move.
+ * Elements animate when they are inserted, so content replacing a skeleton
+ * arrives the same way. Overlays (.fixed) open on their own and are left out.
+ * Fill is `backwards` only: a finished animation must not pin `transform`,
+ * or hover lifts and motion's layout transforms stop working.
+ */
+@keyframes stage-rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes stage-settle {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+}
+.stage-page > * > :not(.fixed) {
+    animation: stage-rise 560ms cubic-bezier(0.25, 0.8, 0.25, 1) backwards;
+}
+.stage-page > * > :nth-child(2) { animation-delay: 70ms; }
+.stage-page > * > :nth-child(3) { animation-delay: 140ms; }
+.stage-page > * > :nth-child(4) { animation-delay: 210ms; }
+.stage-page > * > :nth-child(5) { animation-delay: 280ms; }
+.stage-page > * > :nth-child(n + 6) { animation-delay: 350ms; }
+
+.stage-page tbody > tr,
+.stage-page .stage-list > * {
+    animation: stage-settle 380ms cubic-bezier(0.25, 0.8, 0.25, 1) backwards;
+}
+.stage-page tbody > tr:nth-child(2), .stage-page .stage-list > :nth-child(2) { animation-delay: 28ms; }
+.stage-page tbody > tr:nth-child(3), .stage-page .stage-list > :nth-child(3) { animation-delay: 56ms; }
+.stage-page tbody > tr:nth-child(4), .stage-page .stage-list > :nth-child(4) { animation-delay: 84ms; }
+.stage-page tbody > tr:nth-child(5), .stage-page .stage-list > :nth-child(5) { animation-delay: 112ms; }
+.stage-page tbody > tr:nth-child(6), .stage-page .stage-list > :nth-child(6) { animation-delay: 140ms; }
+.stage-page tbody > tr:nth-child(7), .stage-page .stage-list > :nth-child(7) { animation-delay: 168ms; }
+.stage-page tbody > tr:nth-child(8), .stage-page .stage-list > :nth-child(8) { animation-delay: 196ms; }
+.stage-page tbody > tr:nth-child(9), .stage-page .stage-list > :nth-child(9) { animation-delay: 224ms; }
+.stage-page tbody > tr:nth-child(10), .stage-page .stage-list > :nth-child(10) { animation-delay: 252ms; }
+.stage-page tbody > tr:nth-child(11), .stage-page .stage-list > :nth-child(11) { animation-delay: 280ms; }
+.stage-page tbody > tr:nth-child(12), .stage-page .stage-list > :nth-child(12) { animation-delay: 308ms; }
+.stage-page tbody > tr:nth-child(n + 13), .stage-page .stage-list > :nth-child(n + 13) { animation-delay: 336ms; }
+@media (prefers-reduced-motion: reduce) {
+    .stage-page > * > *,
+    .stage-page tbody > tr,
+    .stage-page .stage-list > * { animation: none; }
+}
+
+/* A hand that waves twice when the greeting first appears, then rests. */
+@keyframes stage-wave {
+    0%, 60%, 100% { transform: rotate(0deg); }
+    10%, 30% { transform: rotate(14deg); }
+    20%, 40% { transform: rotate(-8deg); }
+}
+.stage-wave {
+    display: inline-block;
+    transform-origin: 70% 70%;
+    animation: stage-wave 1.6s ease-in-out 0.6s 1 backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+    .stage-wave { animation: none; }
+}

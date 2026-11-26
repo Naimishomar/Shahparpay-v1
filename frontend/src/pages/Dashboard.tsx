@@ -9,6 +9,9 @@ import { useAuth } from '../context/AuthContext';
 import { isServiceEnabled } from '../lib/services';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "sonner";
+import { Roll } from '../components/landing/motion';
+import { ARRIVE, TRAVEL } from '../components/landing/beats';
+import { AnimatePresence, motion } from 'motion/react';
 
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
 
@@ -113,19 +116,25 @@ const VolumeChart = ({ points, start, end }: { points: number[]; start: Date; en
                             <stop offset="0%" stopColor="currentColor" stopOpacity="0.3" />
                             <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
                         </linearGradient>
+                        {/* The line draws itself in once, left to right; later data morphs in place. */}
+                        <clipPath id="dash-line-reveal">
+                            <motion.rect x="0" y="0" height={H} initial={{ width: 0 }} animate={{ width: W }} transition={{ duration: 1.4, ease: ARRIVE, delay: 0.25 }} />
+                        </clipPath>
                     </defs>
-                    <path d={`${line} L${W},${H} L0,${H} Z`} fill="url(#dash-line-fill)" style={morph} />
-                    <path d={line} fill="none" stroke="url(#dash-line-stroke)" strokeWidth="2.5" strokeLinejoin="miter" strokeMiterlimit="20" vectorEffect="non-scaling-stroke" style={morph} />
+                    <g clipPath="url(#dash-line-reveal)">
+                        <path d={`${line} L${W},${H} L0,${H} Z`} fill="url(#dash-line-fill)" style={morph} />
+                        <path d={line} fill="none" stroke="url(#dash-line-stroke)" strokeWidth="2.5" strokeLinejoin="miter" strokeMiterlimit="20" vectorEffect="non-scaling-stroke" style={morph} />
+                    </g>
                 </svg>
                 {hover !== null && tip && (
                     <>
-                        <div className="pointer-events-none absolute inset-y-0 w-px bg-white/50" style={{ left: pct(hover) }} />
+                        <div className="pointer-events-none absolute inset-y-0 w-px bg-white/50 transition-[left] duration-200 ease-out" style={{ left: pct(hover) }} />
                         <div
-                            className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#D9CCFF] shadow"
+                            className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#D9CCFF] shadow transition-[left,top] duration-200 ease-out"
                             style={{ left: pct(hover), top: `${(py(points[hover]) / H) * 100}%` }}
                         />
                         <div
-                            className={`pointer-events-none absolute top-0 z-10 whitespace-nowrap rounded-lg border bg-popover/95 text-popover-foreground backdrop-blur px-3 py-1.5 text-xs shadow-lg ${hover > n / 2 ? '-translate-x-full -ml-3' : 'ml-3'}`}
+                            className={`pointer-events-none absolute top-0 z-10 whitespace-nowrap rounded-lg border bg-popover/95 text-popover-foreground backdrop-blur px-3 py-1.5 text-xs shadow-lg transition-[left] duration-200 ease-out ${hover > n / 2 ? '-translate-x-full -ml-3' : 'ml-3'}`}
                             style={{ left: pct(hover) }}
                         >
                             <p className="text-muted-foreground">{tip.from} – {tip.to}</p>
@@ -160,6 +169,8 @@ const Dashboard = () => {
     const [customEnd, setCustomEnd] = useState('');
 
     const [range, setRange] = useState(() => ({ start: ymd(new Date()), end: ymd(new Date()) }));
+    // After the first list has unrolled, only genuinely new sales animate in.
+    const listShown = useRef(false);
 
     // `silent` refreshes swap numbers in place so the chart animates instead of blinking to skeletons.
     const fetchStats = async (start?: string, end?: string, silent = false) => {
@@ -248,29 +259,29 @@ const Dashboard = () => {
     const firstName = String(user?.name || '').trim().split(/\s+/)[0];
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="space-y-6">
             {/* Hero */}
             <section className="relative overflow-hidden rounded-3xl hero-panel p-6 md:p-8">
 
                 <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                         <p className="text-sm font-medium text-white/80">
-                            {greeting()}{firstName ? `, ${firstName}` : ''} 👋
+                            {greeting()}{firstName ? `, ${firstName}` : ''} <span className="stage-wave" aria-hidden>👋</span>
                         </p>
                         <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-white/75">
                             Transaction volume · {rangeLabel}
                         </p>
-                        {loading ? (
+                        {loading && !stats ? (
                             <Skeleton className="mt-2 h-11 w-56 bg-white/25" />
                         ) : (
                             <h1 className="mt-1 text-4xl md:text-5xl font-bold tracking-tight tabular-nums text-white">
-                                {inr.format(volume)}
+                                <Roll value={inr.format(volume)} />
                             </h1>
                         )}
-                        {loading ? <Skeleton className="mt-2 h-4 w-28 bg-white/25" /> : (
+                        {loading && !stats ? <Skeleton className="mt-2 h-4 w-28 bg-white/25" /> : (
                             <p className="mt-1.5 flex items-center gap-1.5 text-sm text-white/80">
                                 <Users className="h-3.5 w-3.5" />
-                                <span className="font-semibold tabular-nums text-white">{stats?.TotalCustomers || 0}</span> customers served
+                                <span className="font-semibold tabular-nums text-white"><Roll value={String(stats?.TotalCustomers || 0)} /></span> customers served
                             </p>
                         )}
                     </div>
@@ -289,9 +300,10 @@ const Dashboard = () => {
                                     <button
                                         key={type}
                                         onClick={() => setTempDateType(type)}
-                                        className={`px-3 py-2 text-sm text-left rounded-lg transition-colors ${tempDateType === type ? 'bg-primary/10 text-brand font-semibold' : 'text-foreground hover:bg-black/5 dark:hover:bg-white/10'}`}
+                                        className={`relative px-3 py-2 text-sm text-left rounded-lg transition-colors ${tempDateType === type ? 'text-brand font-semibold' : 'text-foreground hover:bg-black/5 dark:hover:bg-white/10'}`}
                                     >
-                                        {type}
+                                        {tempDateType === type && <motion.span layoutId="dash-range-pick" className="absolute inset-0 rounded-lg bg-primary/10" transition={{ duration: 0.35, ease: TRAVEL }} />}
+                                        <span className="relative">{type}</span>
                                     </button>
                                 ))}
 
@@ -351,27 +363,27 @@ const Dashboard = () => {
                     ],
                 ];
                 return rows.map((row, r) => (
-                    <section key={r} className={`grid gap-4 sm:grid-cols-2 ${row.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+                    <section key={r} className={`stage-list grid gap-4 sm:grid-cols-2 ${row.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
                         {row.map((card) => {
                             const a = ACCENTS[card.accent];
                             const Icon = card.icon;
                             return (
-                                <div key={card.title} className={`relative overflow-hidden rounded-2xl border border-white/70 p-5 shadow-sm transition-transform duration-300 hover:-translate-y-0.5 dark:border-white/10 ${a.card}`}>
+                                <div key={card.title} className={`group relative overflow-hidden rounded-2xl border border-white/70 p-5 shadow-sm transition-transform duration-300 hover:-translate-y-0.5 dark:border-white/10 ${a.card}`}>
                                     <div className="relative flex items-center justify-between gap-3">
                                         <span className="text-sm font-semibold">{card.title}</span>
-                                        <div className="rounded-xl border border-white/90 bg-white/65 p-2.5 dark:border-white/10 dark:bg-white/10">
+                                        <div className="rounded-xl border border-white/90 bg-white/65 p-2.5 transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110 dark:border-white/10 dark:bg-white/10">
                                             <Icon className="h-5 w-5" />
                                         </div>
                                     </div>
-                                    {loading ? <Skeleton className="relative mt-3 h-8 w-36" /> : (
-                                        <p className="relative mt-3 text-2xl font-bold tracking-tight tabular-nums">{card.value}</p>
+                                    {loading && !stats ? <Skeleton className="relative mt-3 h-8 w-36" /> : (
+                                        <p className="relative mt-3 text-2xl font-bold tracking-tight tabular-nums"><Roll value={card.value} /></p>
                                     )}
                                     {'share' in card ? (
                                         <div className="relative mt-4">
                                             <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/15">
-                                                <div className="h-full rounded-full bg-[#16142E] transition-[width] duration-700 dark:bg-white" style={{ width: `${loading ? 0 : card.share}%` }} />
+                                                <div className="h-full rounded-full bg-[#16142E] transition-[width] duration-1000 ease-[cubic-bezier(0.25,0.8,0.25,1)] dark:bg-white" style={{ width: `${loading && !stats ? 0 : card.share}%` }} />
                                             </div>
-                                            <p className="mt-1.5 text-xs opacity-70">{loading ? '\u00a0' : `${card.share}% of total volume`}</p>
+                                            <p className="mt-1.5 text-xs opacity-70">{loading && !stats ? '\u00a0' : `${card.share}% of total volume`}</p>
                                         </div>
                                     ) : (
                                         <p className="relative mt-4 text-xs opacity-70">{card.hint}</p>
@@ -387,7 +399,7 @@ const Dashboard = () => {
                 {/* Quick actions */}
                 <section className="lg:col-span-2 rounded-2xl border bg-card p-5 shadow-sm">
                     <h3 className="text-lg font-semibold mb-4">Quick actions</h3>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="stage-list grid grid-cols-2 gap-3">
                         {QUICK_ACTIONS.filter((a) => isServiceEnabled(user, a.service)).map(({ title, hint, url, icon: Icon, accent }) => (
                             <button
                                 key={url}
@@ -395,7 +407,7 @@ const Dashboard = () => {
                                 className="group relative flex flex-col items-start gap-3 rounded-xl border bg-muted/40 p-4 text-left hover:border-foreground/20 active:scale-[0.98]"
                             >
                                 <ArrowUpRight className="absolute right-3 top-3 h-4 w-4 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                                <div className={`rounded-full p-2.5 ${ACCENTS[accent].tile}`}>
+                                <div className={`rounded-full p-2.5 transition-transform duration-300 ease-out group-hover:-translate-y-0.5 group-hover:scale-110 ${ACCENTS[accent].tile}`}>
                                     <Icon className="h-5 w-5" />
                                 </div>
                                 <div>
@@ -416,11 +428,21 @@ const Dashboard = () => {
                         </div>
                     ) : recentSales.length > 0 ? (
                         <ul className="divide-y divide-border">
+                            <AnimatePresence initial={!listShown.current}>
                             {recentSales.map((sale, i) => {
                                 const Icon = SALE_ICON[sale.service] || Receipt;
                                 const tile = ACCENTS[SALE_ACCENT[sale.service] || 'pink'].tile;
                                 return (
-                                    <li key={i} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                                    <motion.li
+                                        key={`${sale.date}-${sale.service}-${sale.amount}-${sale.details || sale.email || ''}`}
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.45, ease: ARRIVE, delay: listShown.current ? 0 : i * 0.05 }}
+                                        onAnimationComplete={() => { listShown.current = true; }}
+                                        className="overflow-hidden"
+                                    >
+                                    <div className="flex items-center gap-3 py-3">
                                         <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${tile}`}>
                                             <Icon className="h-5 w-5" />
                                         </div>
@@ -441,9 +463,11 @@ const Dashboard = () => {
                                                 </span>
                                             </div>
                                         </div>
-                                    </li>
+                                    </div>
+                                    </motion.li>
                                 );
                             })}
+                            </AnimatePresence>
                         </ul>
                     ) : (
                         <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">

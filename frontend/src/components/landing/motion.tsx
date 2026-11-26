@@ -1,9 +1,11 @@
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { TRAVEL } from './beats';
 
 
 /** Changed characters roll; unchanged ones stay still. Keyed from the right so places line up. */
 export function Roll({ value }: { value: string }) {
+    const reduced = useReducedMotion();
+    if (reduced) return <>{value}</>;
     const chars = value.split('');
     return (
         <span className="inline-flex overflow-hidden align-bottom">
