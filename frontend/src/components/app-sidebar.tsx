@@ -2,7 +2,7 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/compone
 import { Link, useLocation } from "react-router-dom"
 import { useState } from "react"
 import {
-  History, BookOpen, BarChart3, Send, Smartphone, Receipt, Fingerprint, Landmark, ArrowRightLeft, LayoutDashboard, Users,
+  History, BookOpen, BarChart3, Send, Smartphone, Receipt, Fingerprint, Landmark, LayoutDashboard, Users,
   Store, UserPlus, UserCircle, FileText, IdCard, CreditCard, Bell, Headset, UserCheck, Wallet, ChevronDown, LineChart, Server,
   QrCode, BadgePercent, type LucideIcon,
 } from "lucide-react"
@@ -75,7 +75,6 @@ const adminGroups: NavGroup[] = [
   {
     label: "Money",
     items: [
-      { name: "Transactions", url: "/admin/transactions", icon: ArrowRightLeft },
       { name: "Fund Requests", url: "/admin/fund-requests", icon: Store },
       { name: "Icchhamati Account", url: "/admin/icchhamati", icon: Landmark },
       { name: "Ledger", url: "/reports/ledger", icon: BookOpen },
