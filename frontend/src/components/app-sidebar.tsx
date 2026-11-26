@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom"
 import { useState } from "react"
 import {
   History, BookOpen, BarChart3, Send, Smartphone, Receipt, Fingerprint, Landmark, LayoutDashboard, Users,
-  Store, UserPlus, UserCircle, FileText, IdCard, CreditCard, Bell, Headset, UserCheck, Wallet, ChevronDown, LineChart, Server,
+  Store, UserPlus, UserCircle, FileText, IdCard, CreditCard, Bell, Headset, UserCheck, Wallet, ChevronDown, Server,
   QrCode, BadgePercent, type LucideIcon,
 } from "lucide-react"
 import logo from "../assets/logo.png"
@@ -69,7 +69,6 @@ const adminGroups: NavGroup[] = [
   {
     items: [
       { name: "Overview", url: "/admin", icon: LayoutDashboard },
-      { name: "Visitors", url: "/admin/analytics", icon: LineChart },
     ],
   },
   {
@@ -147,7 +146,7 @@ const ICON_TONES = [
 const NAME_TONE: Record<string, number> = {
   Dashboard: 0, Overview: 0, AEPS: 1, 'Micro ATM': 2, DMT: 3, 'Trade Wallet Settlement': 4,
   Recharge: 5, BBPS: 6, 'Fund Request': 7, 'PAN Card': 8, 'TaxSuite Filing': 1, 'Lead Generation': 2,
-  'Support Center': 3, 'Customer Support': 3, Visitors: 6, Server: 7,
+  'Support Center': 3, 'Customer Support': 3, Server: 7,
 };
 const iconTone = (name: string) =>
   ICON_TONES[NAME_TONE[name] ?? [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % ICON_TONES.length];
