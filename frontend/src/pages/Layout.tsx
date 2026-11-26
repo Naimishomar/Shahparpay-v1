@@ -3,6 +3,7 @@ import Header from "@/components/Header"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Suspense, useEffect, useRef, useState } from "react"
 import { MotionConfig } from "motion/react"
+import ClickSpark, { type ClickSparkHandle } from "@/components/ClickSpark"
 import axios from "axios"
 import { Check, Loader2, LogOut, QrCode, RefreshCcw, Smartphone, XCircle } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
@@ -33,6 +34,20 @@ const Layout = () => {
     useEffect(() => {
         document.documentElement.classList.toggle('rp-motion', retailer);
         return () => document.documentElement.classList.remove('rp-motion');
+    }, [retailer]);
+
+    // React Bits ClickSpark, only for primary actions: a press on any .btn-primary
+    // throws a few pastel sparks from the pointer. The layer takes no clicks.
+    const sparkRef = useRef<ClickSparkHandle>(null);
+    useEffect(() => {
+        if (!retailer) return;
+        const onDown = (e: PointerEvent) => {
+            const target = e.target instanceof Element ? e.target.closest('.btn-primary') : null;
+            if (!target || (target as HTMLButtonElement).disabled) return;
+            sparkRef.current?.spark(e.clientX, e.clientY);
+        };
+        document.addEventListener('pointerdown', onDown);
+        return () => document.removeEventListener('pointerdown', onDown);
     }, [retailer]);
 
     if (!token) {
@@ -67,6 +82,18 @@ const Layout = () => {
                     </div>
                 </div>
                 <SupportWidget />
+                {retailer && (
+                    <ClickSpark
+                        ref={sparkRef}
+                        sparkColor={['#B9A8F0', '#9FC5F0', '#F5B9A0']}
+                        sparkCount={10}
+                        sparkRadius={26}
+                        sparkSize={10}
+                        shape="star"
+                        duration={520}
+                        style={{ position: 'fixed', inset: 0, zIndex: 120, pointerEvents: 'none' }}
+                    />
+                )}
             </main>
         </SidebarProvider>
         </LocationProvider>

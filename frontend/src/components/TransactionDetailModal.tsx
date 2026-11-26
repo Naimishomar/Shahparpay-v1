@@ -1,9 +1,10 @@
 import { useRef } from "react"
 import html2canvas from "html2canvas-pro"
 import { jsPDF } from "jspdf"
-import { Download, Printer, X } from "lucide-react"
+import { Download, Printer } from "lucide-react"
 import { toast } from "sonner"
 import logo from "../assets/logo.png"
+import ReceiptPrinter from "./ReceiptPrinter"
 
 /** Why the gateway ended the transaction the way it did. */
 export const reasonOf = (tx: any) =>
@@ -81,14 +82,15 @@ const TransactionDetailModal = ({ tx, onClose }: { tx: any; onClose: () => void 
     };
 
     return (
-        <div role="dialog" aria-modal="true" aria-label="Transaction details" onClick={onClose} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div onClick={(e) => e.stopPropagation()} className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl animate-in zoom-in-95 duration-200">
-                <div className="flex items-center justify-between btn-primary px-5 py-3">
-                    <h3 className="text-lg font-bold">Transaction Details</h3>
-                    <button onClick={onClose} aria-label="Close" className="rounded-full p-1.5 hover:bg-white/15 transition-colors"><X className="h-5 w-5" /></button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto no-scrollbar">
+        <ReceiptPrinter
+            label="Transaction details"
+            onClose={onClose}
+            width="max-w-2xl"
+            actions={<>
+                <button onClick={print} className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-100"><Printer className="h-4 w-4" /> Print</button>
+                <button onClick={download} className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-100"><Download className="h-4 w-4" /> Download PDF</button>
+            </>}
+        >
                     <div ref={ref} className="bg-white p-6 text-slate-800">
                         <img src={logo} alt="Shahparpay" className="mx-auto mb-6 h-auto w-64 max-w-full object-contain" />
                         <dl className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
@@ -118,14 +120,7 @@ const TransactionDetailModal = ({ tx, onClose }: { tx: any; onClose: () => void 
                             </div>
                         )}
                     </div>
-                </div>
-
-                <div className="flex justify-end gap-3 border-t border-slate-200 bg-white px-5 py-3">
-                    <button onClick={print} className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"><Printer className="h-4 w-4" /> Print</button>
-                    <button onClick={download} className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"><Download className="h-4 w-4" /> Download PDF</button>
-                </div>
-            </div>
-        </div>
+        </ReceiptPrinter>
     );
 };
 

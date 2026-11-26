@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import html2canvas from "html2canvas-pro"
+import { toast } from "sonner"
+import ReceiptPrinter from "../components/ReceiptPrinter"
+import logo from "../assets/logo.png"
 import axios from "axios"
-import { AnimatePresence, motion } from "motion/react"
-import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, BookOpen, ChevronDown } from "lucide-react"
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, BookOpen, Download, Receipt } from "lucide-react"
 import { Segmented } from "../components/distributor/ui"
 import {
     DayList, FIELD, Figures, PeriodPicker, ReportHeader, SearchBox, StatusPill, Toolbar,
@@ -57,7 +60,7 @@ const WalletLedger = () => {
     const [direction, setDirection] = useState<Direction>("all");
     const [txnType, setTxnType] = useState("ALL");
     const [shown, setShown] = useState(PAGE);
-    const [open, setOpen] = useState<string | null>(null);
+    const [open, setOpen] = useState<LedgerRow | null>(null);
 
     const range = rangeOf(period, custom);
 
@@ -140,6 +143,7 @@ const WalletLedger = () => {
 
     return (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+            {open && <LedgerReceipt row={open} onClose={() => setOpen(null)} />}
             <ReportHeader
                 icon={<BookOpen className="h-6 w-6" />}
                 title="Wallet Ledger"
@@ -171,10 +175,7 @@ const WalletLedger = () => {
                 empty={error || "No entries in this period."}
                 dateOf={(r) => r.DATE}
                 keyOf={(r, i) => `${r.UTR}-${r.DATE}-${i}`}
-                render={(r) => {
-                    const key = `${r.UTR}-${r.DATE}`;
-                    return <Entry row={r} open={open === key} onToggle={() => setOpen(open === key ? null : key)} />;
-                }}
+                render={(r) => <Entry row={r} onOpen={() => setOpen(r)} />}
             />
 
             {filtered.length > shown && (
@@ -186,8 +187,8 @@ const WalletLedger = () => {
     );
 };
 
-/** One ledger line, and its full breakdown when opened. */
-const Entry = ({ row: r, open, onToggle }: { row: LedgerRow; open: boolean; onToggle: () => void }) => {
+/** One ledger line; opening it prints the entry's receipt. */
+const Entry = ({ row: r, onOpen }: { row: LedgerRow; onOpen: () => void }) => {
     const change = changeOf(r);
     const dir = change > 0 ? "in" : change < 0 ? "out" : "none";
     const transfer = r.TYPE === "transfer";
@@ -199,77 +200,107 @@ const Entry = ({ row: r, open, onToggle }: { row: LedgerRow; open: boolean; onTo
     const status = String(r.remarks || "SUCCESS").toUpperCase();
 
     return (
-        <div>
-            <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-black/[0.02] dark:hover:bg-white/[0.03]">
-                <span className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${tile}`}>
-                    <Icon className="h-[18px] w-[18px]" />
+        <button type="button" onClick={onOpen} aria-haspopup="dialog" className="group flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-black/[0.02] dark:hover:bg-white/[0.03]">
+            <span className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${tile}`}>
+                <Icon className="h-[18px] w-[18px]" />
+            </span>
+            <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold text-foreground">{r.TXNTYPE || "Transaction"}</span>
+                    {status !== "SUCCESS" && <StatusPill status={status} />}
                 </span>
-                <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-semibold text-foreground">{r.TXNTYPE || "Transaction"}</span>
-                        {status !== "SUCCESS" && <StatusPill status={status} />}
-                    </span>
-                    <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">{r.NARRATION || "—"}</span>
-                    <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                        <span className="tabular-nums">{timeOf(r.DATE)}</span>
-                        <span aria-hidden>·</span>
-                        <span>{walletName(r.WALLET)} Wallet</span>
-                        {commission > 0 && (
-                            <>
-                                <span aria-hidden>·</span>
-                                <span className="tabular-nums">
-                                    {money(r.AMOUNT)} <span className="text-emerald-600 dark:text-emerald-400">+ {money(commission)} commission</span>
-                                    {num(r.TDS) > 0 && <> − {money(r.TDS)} TDS</>}
-                                </span>
-                            </>
-                        )}
-                    </span>
-                    {isFailed(r) && r.REASON && <span className="mt-1 block text-xs text-rose-600 dark:text-rose-400">{r.REASON}</span>}
+                <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">{r.NARRATION || "—"}</span>
+                <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                    <span className="tabular-nums">{timeOf(r.DATE)}</span>
+                    <span aria-hidden>·</span>
+                    <span>{walletName(r.WALLET)} Wallet</span>
+                    {commission > 0 && (
+                        <>
+                            <span aria-hidden>·</span>
+                            <span className="tabular-nums">
+                                {money(r.AMOUNT)} <span className="text-emerald-600 dark:text-emerald-400">+ {money(commission)} commission</span>
+                                {num(r.TDS) > 0 && <> − {money(r.TDS)} TDS</>}
+                            </span>
+                        </>
+                    )}
                 </span>
-                <span className="shrink-0 text-right">
-                    <span className={`block text-[15px] font-semibold tabular-nums ${dir === "in" ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}>
-                        {dir === "in" ? "+" : dir === "out" ? "−" : ""}{money(Math.abs(change))}
-                    </span>
-                    <span className="mt-0.5 block text-xs text-muted-foreground tabular-nums">Bal {money(r.CLOSING)}</span>
+                {isFailed(r) && r.REASON && <span className="mt-1 block text-xs text-rose-600 dark:text-rose-400">{r.REASON}</span>}
+            </span>
+            <span className="shrink-0 text-right">
+                <span className={`block text-[15px] font-semibold tabular-nums ${dir === "in" ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}>
+                    {dir === "in" ? "+" : dir === "out" ? "−" : ""}{money(Math.abs(change))}
                 </span>
-                <ChevronDown aria-hidden className={`mt-3 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
-            </button>
-            <AnimatePresence initial={false}>
-                {open && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.35, ease: [0.45, 0, 0.1, 1] }}
-                        className="overflow-hidden"
-                    >
-                        <dl className="mx-4 mb-4 grid grid-cols-2 gap-x-6 gap-y-3 rounded-xl bg-muted/40 p-4 text-sm sm:grid-cols-4 sm:ml-[68px]">
-                            <Item label="Balance before" value={money(r.OPENING)} />
-                            <Item label="Transaction amount" value={money(r.AMOUNT)} />
-                            <Item label="Commission" value={commission ? `+ ${money(commission)}` : "—"} />
-                            <Item label="TDS" value={num(r.TDS) ? `− ${money(r.TDS)}` : "—"} />
-                            {num(r.GST) > 0 && <Item label="GST" value={money(r.GST)} />}
-                            <Item label="Wallet change" value={`${change > 0 ? "+ " : change < 0 ? "− " : ""}${money(Math.abs(change))}`} />
-                            <Item label="Balance after" value={money(r.CLOSING)} strong />
-                            <Item label="Status" value={<StatusPill status={status} />} />
-                            <Item label="Date" value={dateTimeOf(r.DATE)} />
-                            <div className="col-span-2">
-                                <dt className="text-xs text-muted-foreground">Reference</dt>
-                                <dd className="mt-0.5 break-all font-mono text-[13px]">{r.UTR || "—"}</dd>
-                            </div>
-                        </dl>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
+                <span className="mt-0.5 block text-xs text-muted-foreground tabular-nums">Bal {money(r.CLOSING)}</span>
+            </span>
+            <Receipt aria-hidden className="mt-3 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300 group-hover:-translate-y-0.5" />
+        </button>
     );
 };
 
-const Item = ({ label, value, strong }: { label: string; value: ReactNode; strong?: boolean }) => (
-    <div>
-        <dt className="text-xs text-muted-foreground">{label}</dt>
-        <dd className={`mt-0.5 tabular-nums ${strong ? "font-semibold text-foreground" : "text-foreground/90"}`}>{value}</dd>
-    </div>
-);
+/** The entry as a printed slip: what happened, how the balance moved, and its reference. */
+const LedgerReceipt = ({ row: r, onClose }: { row: LedgerRow; onClose: () => void }) => {
+    const ref = useRef<HTMLDivElement>(null);
+    const change = changeOf(r);
+    const status = String(r.remarks || "SUCCESS").toUpperCase();
+    const commission = num(r.COMMISSION);
+    const rows: [string, string, boolean?][] = [
+        ["Service", r.TXNTYPE || "Transaction"],
+        ["Details", r.NARRATION || "—"],
+        ["Wallet", `${walletName(r.WALLET)} Wallet`],
+        ["Date", dateTimeOf(r.DATE)],
+        ["Balance before", money(r.OPENING)],
+        ["Transaction amount", money(r.AMOUNT)],
+        ...(commission ? [["Commission", `+ ${money(commission)}`] as [string, string]] : []),
+        ...(num(r.TDS) ? [["TDS", `− ${money(r.TDS)}`] as [string, string]] : []),
+        ...(num(r.GST) ? [["GST", money(r.GST)] as [string, string]] : []),
+        ["Wallet change", `${change > 0 ? "+ " : change < 0 ? "− " : ""}${money(Math.abs(change))}`, true],
+        ["Balance after", money(r.CLOSING), true],
+        ...(isFailed(r) && r.REASON ? [["Reason", r.REASON] as [string, string]] : []),
+    ];
+    const download = async () => {
+        if (!ref.current) return;
+        try {
+            const canvas = await html2canvas(ref.current, { scale: 2, backgroundColor: "#ffffff" });
+            const a = document.createElement("a");
+            a.href = canvas.toDataURL("image/png");
+            a.download = `Ledger_${r.UTR || Date.now()}.png`;
+            a.click();
+        } catch {
+            toast.error("Could not download the receipt.");
+        }
+    };
+    return (
+        <ReceiptPrinter
+            label="Ledger entry"
+            onClose={onClose}
+            actions={<>
+                <button onClick={download} className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-100"><Download className="h-4 w-4" /> Download</button>
+                <button onClick={onClose} className="btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold">Done</button>
+            </>}
+        >
+            <div ref={ref} className="space-y-4 bg-white p-6 text-slate-800">
+                <div className="border-b border-dashed border-slate-300 pb-4 text-center">
+                    <img src={logo} alt="Shahparpay" className="mx-auto mb-2 h-auto w-56 max-w-full object-contain" />
+                    <p className="text-sm font-bold uppercase tracking-widest text-slate-900">Ledger entry</p>
+                </div>
+                <div className="text-center">
+                    <p className={`text-3xl font-bold tabular-nums ${change > 0 ? "text-emerald-600" : "text-slate-900"}`}>
+                        {change > 0 ? "+" : change < 0 ? "−" : ""}{money(Math.abs(change))}
+                    </p>
+                    <p className={`mt-1 text-sm font-semibold ${status === "SUCCESS" ? "text-emerald-600" : /FAIL|REJECT/.test(status) ? "text-rose-600" : "text-amber-600"}`}>{status.charAt(0) + status.slice(1).toLowerCase()}</p>
+                </div>
+                <dl className="space-y-2 text-sm">
+                    {rows.map(([k, v, key]) => (
+                        <div key={k} className="flex justify-between gap-3 border-b border-dashed border-slate-200 pb-2 last:border-0">
+                            <dt className={key ? "font-semibold text-slate-900" : "text-slate-500"}>{k}</dt>
+                            <dd className={`break-all text-right tabular-nums ${key ? "text-base font-bold text-slate-900" : "font-medium"}`}>{v}</dd>
+                        </div>
+                    ))}
+                </dl>
+                <p className="break-all text-center font-mono text-[11px] text-slate-400">Ref {r.UTR || "—"}</p>
+            </div>
+        </ReceiptPrinter>
+    );
+};
 
 export default WalletLedger;

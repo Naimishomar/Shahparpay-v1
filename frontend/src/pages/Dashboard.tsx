@@ -9,7 +9,8 @@ import { useAuth } from '../context/AuthContext';
 import { isServiceEnabled } from '../lib/services';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "sonner";
-import { Roll } from '../components/landing/motion';
+import Counter from '../components/Counter';
+import PortalSpotlight from '../components/PortalSpotlight';
 import { ARRIVE, TRAVEL } from '../components/landing/beats';
 import { AnimatePresence, motion } from 'motion/react';
 
@@ -275,13 +276,13 @@ const Dashboard = () => {
                             <Skeleton className="mt-2 h-11 w-56 bg-white/25" />
                         ) : (
                             <h1 className="mt-1 text-4xl md:text-5xl font-bold tracking-tight tabular-nums text-white">
-                                <Roll value={inr.format(volume)} />
+                                <Counter value={volume} locale="en-IN" prefix="₹" decimals={2} fontSize="1em" />
                             </h1>
                         )}
                         {loading && !stats ? <Skeleton className="mt-2 h-4 w-28 bg-white/25" /> : (
                             <p className="mt-1.5 flex items-center gap-1.5 text-sm text-white/80">
                                 <Users className="h-3.5 w-3.5" />
-                                <span className="font-semibold tabular-nums text-white"><Roll value={String(stats?.TotalCustomers || 0)} /></span> customers served
+                                <span className="font-semibold tabular-nums text-white"><Counter value={Number(stats?.TotalCustomers) || 0} locale="en-IN" fontSize="1em" /></span> customers served
                             </p>
                         )}
                     </div>
@@ -344,10 +345,10 @@ const Dashboard = () => {
             {(() => {
                 const service = (title: string, key: string, icon: typeof Banknote, accent: keyof typeof ACCENTS) => {
                     const value = Number(stats?.[key]) || 0;
-                    return { title, icon, accent, value: inr.format(value), share: volume > 0 ? Math.round((value / volume) * 100) : 0 };
+                    return { title, icon, accent, amount: value, share: volume > 0 ? Math.round((value / volume) * 100) : 0 };
                 };
-                const plain = (title: string, value: string, hint: string, icon: typeof Banknote, accent: keyof typeof ACCENTS) =>
-                    ({ title, icon, accent, value, hint });
+                const plain = (title: string, amount: number, hint: string, icon: typeof Banknote, accent: keyof typeof ACCENTS) =>
+                    ({ title, icon, accent, amount, hint });
                 const rows = [
                     [
                         service('Total Success DMT', 'DMT', Banknote, 'blue'),
@@ -358,8 +359,8 @@ const Dashboard = () => {
                     [
                         service('Total Success BBPS', 'BILL_PAYMENT', Receipt, 'pink'),
                         service('Total Success UPI', 'WALLET_TOPUP', Wallet, 'cyan'),
-                        plain('Total Earnings', inr.format(Number(stats?.TotalCommission) || 0), 'Credited to wallet, after TDS', IndianRupee, 'lilac'),
-                        plain('Total Commission', inr.format(Number(stats?.TotalGrossCommission) || 0), 'Gross, before TDS', IndianRupee, 'blue'),
+                        plain('Total Earnings', Number(stats?.TotalCommission) || 0, 'Credited to wallet, after TDS', IndianRupee, 'lilac'),
+                        plain('Total Commission', Number(stats?.TotalGrossCommission) || 0, 'Gross, before TDS', IndianRupee, 'blue'),
                     ],
                 ];
                 return rows.map((row, r) => (
@@ -376,7 +377,7 @@ const Dashboard = () => {
                                         </div>
                                     </div>
                                     {loading && !stats ? <Skeleton className="relative mt-3 h-8 w-36" /> : (
-                                        <p className="relative mt-3 text-2xl font-bold tracking-tight tabular-nums"><Roll value={card.value} /></p>
+                                        <p className="relative mt-3 text-2xl font-bold tracking-tight tabular-nums"><Counter value={card.amount} locale="en-IN" prefix="₹" decimals={2} fontSize="1em" /></p>
                                     )}
                                     {'share' in card ? (
                                         <div className="relative mt-4">
@@ -397,7 +398,7 @@ const Dashboard = () => {
 
             <div className="grid gap-6 lg:grid-cols-5">
                 {/* Quick actions */}
-                <section className="lg:col-span-2 rounded-2xl border bg-card p-5 shadow-sm">
+                <PortalSpotlight className="lg:col-span-2 rounded-2xl p-5">
                     <h3 className="text-lg font-semibold mb-4">Quick actions</h3>
                     <div className="stage-list grid grid-cols-2 gap-3">
                         {QUICK_ACTIONS.filter((a) => isServiceEnabled(user, a.service)).map(({ title, hint, url, icon: Icon, accent }) => (
@@ -417,10 +418,10 @@ const Dashboard = () => {
                             </button>
                         ))}
                     </div>
-                </section>
+                </PortalSpotlight>
 
                 {/* Recent activity */}
-                <section className="lg:col-span-3 rounded-2xl border bg-card p-5 shadow-sm">
+                <PortalSpotlight className="lg:col-span-3 rounded-2xl p-5">
                     <h3 className="text-lg font-semibold mb-4">Recent activity</h3>
                     {loading ? (
                         <div className="space-y-3">
@@ -475,7 +476,7 @@ const Dashboard = () => {
                             <p className="text-sm">No activity in this period</p>
                         </div>
                     )}
-                </section>
+                </PortalSpotlight>
             </div>
 
         </div>

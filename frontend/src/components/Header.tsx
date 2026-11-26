@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { navLinksFor } from './app-sidebar';
 import { isServiceEnabled, AEPS_STEP_LABELS } from '../lib/services';
 import TransactionDetailModal from './TransactionDetailModal';
-import { Roll } from './landing/motion';
+import Counter from './Counter';
 import { ARRIVE } from './landing/beats';
 import { AnimatePresence, motion } from 'motion/react';
 
@@ -313,7 +313,7 @@ const Header = ({ trigger }: { trigger?: React.ReactNode }) => {
                                 <span className={`hidden h-9 w-9 shrink-0 place-items-center rounded-xl 2xl:grid ${tone.icon}`}><Icon className="h-4 w-4" /></span>
                                 <div className="min-w-0 flex-1 md:flex-none">
                                     <p className={`truncate text-[10.5px] font-semibold uppercase tracking-wider ${tone.cap}`}>{label}</p>
-                                    <p className={`whitespace-nowrap text-[15px] font-bold text-foreground tabular-nums leading-tight transition 2xl:text-[17px] ${hidden ? 'blur-[7px] select-none' : ''}`}>₹ <Roll value={formatBalance(value)} /></p>
+                                    <p className={`whitespace-nowrap text-[15px] font-bold text-foreground tabular-nums leading-tight transition 2xl:text-[17px] ${hidden ? 'blur-[7px] select-none' : ''}`}>₹ <Counter value={Number(value) || 0} locale="en-IN" decimals={2} fontSize="1em" /></p>
                                 </div>
                                 {link && (
                                     <Link to={link.to} title={link.text} aria-label={link.text} className={`ml-1 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-background shadow-sm hover:opacity-90 ${tone.link}`}>

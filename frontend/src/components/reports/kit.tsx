@@ -5,6 +5,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Roll } from '../landing/motion';
 import { Segmented } from '../distributor/ui';
+import PortalSpotlight from '../PortalSpotlight';
 
 /*
  * The parts every report page is made of: a header with its exports, a row of
@@ -138,7 +139,7 @@ export type Figure = { label: string; value: string; hint?: string; tone?: 'in' 
 export const Figures = ({ items, loading }: { items: Figure[]; loading?: boolean }) => (
     <section className={`grid gap-3 sm:grid-cols-2 ${items.length >= 4 ? 'xl:grid-cols-4' : 'lg:grid-cols-3'}`}>
         {items.map((f) => (
-            <div key={f.label} className="rounded-2xl border bg-card p-4 shadow-sm">
+            <PortalSpotlight key={f.label} className="rounded-2xl p-4">
                 <p className="text-xs font-medium text-muted-foreground">{f.label}</p>
                 {loading ? (
                     <div className="mt-2 h-7 w-32 animate-pulse rounded-md bg-black/10 dark:bg-white/10" />
@@ -148,7 +149,7 @@ export const Figures = ({ items, loading }: { items: Figure[]; loading?: boolean
                     </p>
                 )}
                 {f.hint && <p className="mt-1 text-xs text-muted-foreground">{f.hint}</p>}
-            </div>
+            </PortalSpotlight>
         ))}
     </section>
 );
@@ -162,7 +163,7 @@ export const SearchBox = ({ value, onChange, placeholder }: { value: string; onC
 );
 
 export const Toolbar = ({ children }: { children: ReactNode }) => (
-    <div className="flex flex-col gap-3 rounded-2xl border bg-card p-3 shadow-sm">{children}</div>
+    <PortalSpotlight className="flex flex-col gap-3 rounded-2xl p-3">{children}</PortalSpotlight>
 );
 
 const STATUS: Record<string, string> = {
@@ -213,12 +214,12 @@ export const DayList = <T,>({ rows, loading, empty, dateOf, keyOf, render }: {
     return (
         <div className="space-y-4">
             {byDay(rows, dateOf).map((g) => (
-                <section key={g.key} aria-label={g.label} className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+                <PortalSpotlight key={g.key} role="region" aria-label={g.label} className="rounded-2xl">
                     <h2 className="border-b bg-muted/40 px-4 py-2 text-xs font-semibold text-muted-foreground">{g.label}</h2>
                     <ul className="stage-list divide-y">
                         {g.rows.map((r, i) => <li key={keyOf(r, i)}>{render(r)}</li>)}
                     </ul>
-                </section>
+                </PortalSpotlight>
             ))}
         </div>
     );

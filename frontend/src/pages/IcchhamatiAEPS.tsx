@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import html2canvas from 'html2canvas-pro';
+import ReceiptPrinter from '../components/ReceiptPrinter';
 import axios from 'axios';
 import { toast } from 'sonner';
 import {
     ArrowLeft, BadgeCheck, CheckCircle2, Clock, CreditCard, FileText, Fingerprint, IndianRupee, Landmark, Loader2, MapPin,
-    Download, RefreshCcw, ShieldCheck, Store, Upload, Video, Wallet, X, XCircle,
+    Download, RefreshCcw, ShieldCheck, Store, Upload, Video, Wallet, XCircle,
 } from 'lucide-react';
 import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, inr } from '../components/distributor/shared';
 import { useLocationContext } from '../context/LocationContext';
@@ -782,9 +783,14 @@ const ReceiptModal = ({ result, onClose }: { result: TxnResult; onClose: () => v
     };
 
     return (
-        <div role="dialog" aria-modal="true" aria-label="Transaction receipt" onClick={onClose} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <div onClick={(e) => e.stopPropagation()} className="relative max-h-[90vh] w-full max-w-md overflow-y-auto no-scrollbar rounded-2xl bg-white shadow-2xl">
-                <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 rounded-full p-1.5 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+        <ReceiptPrinter
+            label="Transaction receipt"
+            onClose={onClose}
+            actions={<>
+                <button onClick={download} className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-100"><Download size={16} /> Download</button>
+                <button onClick={onClose} className="btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold">Next transaction</button>
+            </>}
+        >
                 <div ref={ref} className="space-y-4 bg-white p-6 text-slate-800">
                     <div className="border-b border-dashed border-slate-300 pb-4 text-center">
                         <img src={logo} alt="Shahparpay" className="mx-auto mb-2 h-auto w-64 max-w-full object-contain" />
@@ -814,12 +820,7 @@ const ReceiptModal = ({ result, onClose }: { result: TxnResult; onClose: () => v
                     )}
                     <p className="text-center text-[11px] text-slate-400">System generated receipt; no signature required.</p>
                 </div>
-                <div className="flex gap-3 border-t p-4">
-                    <button onClick={download} className={`${SECONDARY_BUTTON} flex-1`}><Download size={16} /> Download</button>
-                    <button onClick={onClose} className={`${PRIMARY_BUTTON} flex-1`}>Next transaction</button>
-                </div>
-            </div>
-        </div>
+        </ReceiptPrinter>
     );
 };
 

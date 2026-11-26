@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Send, Plus, Building2, Clock, RefreshCw, SearchCheck, Landmark, Phone, KeyRound, IndianRupee, ShieldCheck, CheckCircle2, XCircle, Download, X, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import html2canvas from 'html2canvas-pro';
+import ReceiptPrinter from '../components/ReceiptPrinter';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import logo from '../assets/logo.png';
@@ -560,9 +561,14 @@ const SettlementReceipt = ({ receipt, onClose }: { receipt: SettlementReceiptDat
     };
 
     return (
-        <div role="dialog" aria-modal="true" aria-label="Settlement receipt" onClick={onClose} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <div onClick={(e) => e.stopPropagation()} className="relative max-h-[90vh] w-full max-w-md overflow-y-auto no-scrollbar rounded-2xl bg-white shadow-2xl">
-                <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 rounded-full p-1.5 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+        <ReceiptPrinter
+            label="Settlement receipt"
+            onClose={onClose}
+            actions={<>
+                <button onClick={download} className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-100"><Download size={16} /> Download</button>
+                <button onClick={onClose} className="btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold">Done</button>
+            </>}
+        >
                 <div ref={ref} className="space-y-4 bg-white p-6 text-slate-800">
                     <div className="border-b border-dashed border-slate-300 pb-4 text-center">
                         <img src={logo} alt="Shahparpay" className="mx-auto mb-2 h-auto w-64 max-w-full object-contain" />
@@ -583,12 +589,7 @@ const SettlementReceipt = ({ receipt, onClose }: { receipt: SettlementReceiptDat
                     </dl>
                     <p className="text-center text-[11px] text-slate-400">System generated receipt; no signature required.</p>
                 </div>
-                <div className="flex gap-3 border-t p-4">
-                    <button onClick={download} className="flex flex-1 items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold hover:bg-black/5"><Download size={16} /> Download</button>
-                    <button onClick={onClose} className={`flex-1 rounded-xl py-2.5 text-sm font-semibold ${ACTIVE_BUTTON}`}>Done</button>
-                </div>
-            </div>
-        </div>
+        </ReceiptPrinter>
     );
 };
 
