@@ -158,7 +158,8 @@ const NavLink = ({ item, active }: { item: NavItem; active: boolean }) => {
     <Link
       to={item.url}
       aria-current={active ? 'page' : undefined}
-      className={`relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-[1.04rem] transition-colors focus-visible:outline-2 focus-visible:outline-foreground ${
+      title={item.name}
+      className={`relative flex min-h-10 items-center gap-3 rounded-lg px-3 group-data-[collapsible=icon]:justify-center text-[1.04rem] transition-colors focus-visible:outline-2 focus-visible:outline-foreground ${
         active
           ? 'tint-lavender font-semibold'
           : 'text-foreground/70 hover:bg-black/[0.04] hover:text-foreground dark:hover:bg-white/[0.05]'
@@ -167,7 +168,7 @@ const NavLink = ({ item, active }: { item: NavItem; active: boolean }) => {
       {/* The active page: colour, weight and a bar, so it never rests on colour alone. */}
       {active && <span aria-hidden="true" className="absolute -left-3 top-2.5 bottom-2.5 w-[3px] rounded-r bg-foreground" />}
       <Icon aria-hidden="true" className={`nav-icon h-5 w-5 shrink-0 ${iconTone(item.name)}`} strokeWidth={active ? 2.2 : 1.8} />
-      <span className="truncate">{item.name}</span>
+      <span className="truncate group-data-[collapsible=icon]:hidden">{item.name}</span>
     </Link>
   );
 };
@@ -186,17 +187,17 @@ const Group = ({ group, isActive }: { group: NavGroup; isActive: (url: string) =
             type="button"
             onClick={() => setOpen(!shown)}
             aria-expanded={shown}
-            className="flex w-full items-center justify-between rounded-md px-3 pt-5 pb-2 text-[11.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground/80 hover:text-foreground"
+            className="flex w-full items-center justify-between rounded-md px-3 pt-5 group-data-[collapsible=icon]:hidden pb-2 text-[11.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground/80 hover:text-foreground"
           >
             {group.label}
             <ChevronDown aria-hidden="true" className={`h-4 w-4 transition-transform ${shown ? '' : '-rotate-90'}`} />
           </button>
         ) : (
-          <p className="px-3 pt-5 pb-2 text-[11.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground/80">{group.label}</p>
+          <p className="group-data-[collapsible=icon]:hidden px-3 pt-5 pb-2 text-[11.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground/80">{group.label}</p>
         )
       )}
-      {shown && (
-        <div className="flex flex-col gap-0.5">
+      {(
+        <div className={`flex-col gap-0.5 ${shown ? 'flex' : 'hidden group-data-[collapsible=icon]:flex'}`}>
           {group.items.map((item) => <NavLink key={item.url} item={item} active={isActive(item.url)} />)}
         </div>
       )}
@@ -213,10 +214,10 @@ export function AppSidebar() {
   const isActive = (url: string) => pathname === url || (url.split('/').length > 2 && pathname.startsWith(`${url}/`));
 
   return (
-    <Sidebar className="border-r border-border">
-      <SidebarHeader className="bg-card px-6 pt-6 pb-8">
+    <Sidebar collapsible="icon" className="border-r border-border">
+      <SidebarHeader className="bg-card px-6 pt-6 pb-8 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:pb-4">
         <Link to={groups[0]?.items[0]?.url || '/'} className="mx-auto block w-fit rounded-lg focus-visible:outline-2 focus-visible:outline-foreground" aria-label="Shahparpay home">
-          <img src={logo} alt="Shahparpay" className="mx-auto h-auto w-[200px] max-w-full object-contain dark:brightness-0 dark:invert dark:opacity-90" />
+          <img src={logo} alt="Shahparpay" className="mx-auto h-auto w-[200px] max-w-full object-contain group-data-[collapsible=icon]:h-9 group-data-[collapsible=icon]:w-9 group-data-[collapsible=icon]:object-cover group-data-[collapsible=icon]:object-left dark:brightness-0 dark:invert dark:opacity-90" />
         </Link>
       </SidebarHeader>
       <SidebarContent className="bg-card px-3 pb-3 no-scrollbar">

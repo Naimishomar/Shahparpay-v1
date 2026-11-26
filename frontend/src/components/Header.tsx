@@ -244,7 +244,7 @@ const Header = ({ trigger }: { trigger?: React.ReactNode }) => {
     return (
         <div className="w-full">
             <TranslateHost />
-            <StatusStrip />
+            {user?.role !== 'admin' && <StatusStrip />}
 
             {/*
               One line on a laptop (xl+): wallets, eye, search, then the
