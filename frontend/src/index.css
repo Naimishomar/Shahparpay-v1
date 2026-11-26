@@ -581,18 +581,18 @@ html.lp-portal.dark {
  * only transform on the compositor, and stands still under reduced motion.
  */
 .portal-ambient {
-    --ambient-strength: 34%;
+    --ambient-strength: 52%;
     position: absolute;
     inset: 0;
     z-index: 0;
     overflow: hidden;
     pointer-events: none;
 }
-.dark .portal-ambient { --ambient-strength: 13%; }
+.dark .portal-ambient { --ambient-strength: 30%; }
 .portal-ambient > span {
     position: absolute;
     border-radius: 9999px;
-    filter: blur(72px);
+    filter: blur(64px);
     will-change: transform;
     animation-timing-function: ease-in-out;
     animation-iteration-count: infinite;
@@ -601,21 +601,86 @@ html.lp-portal.dark {
 .portal-ambient > span:nth-child(1) {
     width: 46vmax; height: 46vmax; left: -14vmax; top: -18vmax;
     background: color-mix(in oklab, var(--brand-glow) var(--ambient-strength), transparent);
-    animation-name: ambient-a; animation-duration: 26s;
+    animation-name: ambient-a; animation-duration: 18s;
 }
 .portal-ambient > span:nth-child(2) {
     width: 40vmax; height: 40vmax; right: -16vmax; top: 18vh;
     background: color-mix(in oklab, #9FC5F0 var(--ambient-strength), transparent);
-    animation-name: ambient-b; animation-duration: 32s;
+    animation-name: ambient-b; animation-duration: 22s;
 }
 .portal-ambient > span:nth-child(3) {
     width: 38vmax; height: 38vmax; left: 22vw; bottom: -22vmax;
     background: color-mix(in oklab, var(--brand-glow-2) var(--ambient-strength), transparent);
-    animation-name: ambient-c; animation-duration: 38s;
+    animation-name: ambient-c; animation-duration: 26s;
 }
-@keyframes ambient-a { to { transform: translate3d(14vw, 10vh, 0) scale(1.12); } }
-@keyframes ambient-b { to { transform: translate3d(-12vw, 14vh, 0) scale(0.92); } }
-@keyframes ambient-c { to { transform: translate3d(10vw, -16vh, 0) scale(1.1); } }
+@keyframes ambient-a { to { transform: translate3d(24vw, 16vh, 0) scale(1.2); } }
+@keyframes ambient-b { to { transform: translate3d(-22vw, 22vh, 0) scale(0.85); } }
+@keyframes ambient-c { to { transform: translate3d(18vw, -26vh, 0) scale(1.18); } }
 @media (prefers-reduced-motion: reduce) {
     .portal-ambient > span { animation: none; }
+}
+
+/*
+ * Retailer portal, everywhere (html.rp-motion, set by Layout for retailers):
+ * small continuous touches on the pieces every screen shares. Each one is slow
+ * and low in amplitude, none moves layout or text, and reduced motion stops them.
+ */
+@keyframes rp-drift {
+    from { background-position: 0% 0%; }
+    to { background-position: 100% 100%; }
+}
+@keyframes rp-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+@keyframes rp-nudge {
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    30% { transform: rotate(-10deg) scale(1.12); }
+    60% { transform: rotate(6deg) scale(1.08); }
+}
+
+/* Pastel surfaces (wallet tiles, stat cards, active nav item, activity icons): the wash slowly drifts. */
+html.rp-motion [class*="tint-"] {
+    background-size: 170% 170%;
+    animation: rp-drift 11s ease-in-out infinite alternate;
+}
+html.rp-motion :nth-child(2n) > [class*="tint-"],
+html.rp-motion [class*="tint-"]:nth-child(2n) { animation-duration: 14s; animation-delay: -5s; }
+html.rp-motion [class*="tint-"]:nth-child(3n) { animation-duration: 17s; animation-delay: -9s; }
+
+/* The dashboard banner breathes the same way, slower. */
+html.rp-motion .hero-panel {
+    background-size: 160% 160%, 160% 160%, 220% 220%;
+    animation: rp-drift 16s ease-in-out infinite alternate;
+}
+
+/* Primary buttons: the gradient drifts; on hover a glint crosses once. */
+html.rp-motion .btn-primary {
+    background-image:
+        linear-gradient(110deg, transparent 40%, rgb(255 255 255 / 0.55) 50%, transparent 60%),
+        linear-gradient(135deg, #E4DAFF 0%, #D3E7FB 30%, #FBE2D4 60%, #E4DAFF 100%);
+    background-size: 250% 100%, 220% 220%;
+    background-position: 160% 0, 0% 0%;
+    background-repeat: no-repeat;
+    transition: background-position 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), filter 0.2s;
+    animation: rp-drift-btn 9s ease-in-out infinite alternate;
+}
+html.rp-motion .btn-primary:hover { background-position: -60% 0, 100% 100%; animation-play-state: paused; }
+@keyframes rp-drift-btn {
+    from { background-position: 160% 0, 0% 0%; }
+    to { background-position: 160% 0, 100% 100%; }
+}
+
+/* Page header icon chips float a little. */
+html.rp-motion .icon-chip { animation: rp-float 4.5s ease-in-out infinite; }
+
+/* Sidebar icons answer the pointer. */
+html.rp-motion a:hover > .nav-icon { animation: rp-nudge 0.6s ease-in-out; }
+
+@media (prefers-reduced-motion: reduce) {
+    html.rp-motion [class*="tint-"],
+    html.rp-motion .hero-panel,
+    html.rp-motion .btn-primary,
+    html.rp-motion .icon-chip,
+    html.rp-motion a:hover > .nav-icon { animation: none; }
 }

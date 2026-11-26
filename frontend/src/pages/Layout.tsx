@@ -28,6 +28,12 @@ const Layout = () => {
         document.documentElement.classList.toggle('lp-portal', pro);
         return () => document.documentElement.classList.remove('lp-portal');
     }, [pro]);
+    // Retailers get the portal's small continuous motion (index.css, html.rp-motion).
+    const retailer = user?.role === 'retailer';
+    useEffect(() => {
+        document.documentElement.classList.toggle('rp-motion', retailer);
+        return () => document.documentElement.classList.remove('rp-motion');
+    }, [retailer]);
 
     if (!token) {
         return <Navigate to="/login" replace />;
