@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { QrCode, Phone, IndianRupee, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
+import { QrCode, Phone, IndianRupee, RefreshCw, XCircle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { useLocationContext } from '../context/LocationContext';
 import PrimaryCta from '../components/PrimaryCta';
+import Lottie, { Confetti } from '../components/Lottie';
 
 const SILVER_TILE = 'icon-chip';
 const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500';
@@ -109,7 +110,7 @@ const UpiCashWithdrawal = () => {
                     {result ? (
                         <div className="flex flex-col items-center gap-3 text-center py-6">
                             {result.status === 'SUCCESS'
-                                ? <CheckCircle2 className="h-14 w-14 text-emerald-500" />
+                                ? <><Lottie name="payment" size={150} loop={false} className="-my-4" /><Confetti /></>
                                 : <XCircle className="h-14 w-14 text-red-500" />}
                             <h2 className="text-xl font-bold">
                                 {result.status === 'SUCCESS' ? `Received ₹${result.amount.toLocaleString('en-IN')}` : 'Payment failed'}
@@ -120,7 +121,7 @@ const UpiCashWithdrawal = () => {
                                     : result.message || 'No money was received. Do not give cash.'}
                             </p>
                             {result.bankRRN && <p className="text-xs text-muted-foreground">RRN {result.bankRRN}{result.payerName ? ` · ${result.payerName}` : ''}{result.accountNumber ? ` · A/C ${result.accountNumber}` : ''}</p>}
-                            <button onClick={reset} className="mt-2 btn-primary rounded-xl px-5 py-2.5 text-sm font-semibold">New withdrawal</button>
+                            <PrimaryCta type="button" onClick={reset} className="mt-2 py-2.5 text-sm font-semibold">New withdrawal</PrimaryCta>
                         </div>
                     ) : qr ? (
                         <div className="flex flex-col items-center gap-4 text-center">

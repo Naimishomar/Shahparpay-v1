@@ -6,7 +6,7 @@ import autoTable from 'jspdf-autotable';
 import { Roll } from '../landing/motion';
 import RubberSegment from '../RubberSegment';
 import PortalSpotlight from '../PortalSpotlight';
-import LottieEmpty from '../LottieEmpty';
+import Lottie from '../Lottie';
 
 /*
  * The parts every report page is made of: a header with its exports, a row of
@@ -226,7 +226,7 @@ export const DayList = <T,>({ rows, loading, empty, dateOf, keyOf, render }: {
     if (rows.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center rounded-2xl border bg-card px-4 py-16 text-center text-muted-foreground shadow-sm">
-                <LottieEmpty />
+                <Lottie name="empty" />
                 <p className="text-sm">{empty}</p>
             </div>
         );

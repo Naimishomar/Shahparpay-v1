@@ -6,7 +6,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import PrimaryCta from '../components/PrimaryCta';
-import LottieEmpty from '../components/LottieEmpty';
+import Lottie from '../components/Lottie';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -179,7 +179,7 @@ const FundRequest = () => {
                             {shown.length === 0 ? (
                                 <tr>
                                     <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
-                                        <div className="flex justify-center"><LottieEmpty size={96} /></div>
+                                        <div className="flex justify-center"><Lottie name="empty" size={96} /></div>
                                         No fund requests found.
                                     </td>
                                 </tr>

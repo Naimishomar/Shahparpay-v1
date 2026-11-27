@@ -17,6 +17,7 @@ import { Outlet, Navigate, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import SupportWidget from "../components/SupportWidget"
 import { LocationProvider } from "../context/LocationContext"
+import Lottie from "../components/Lottie"
 
 const Layout = () => {
     const { user, token } = useAuth();
@@ -76,7 +77,7 @@ const Layout = () => {
                     <div className={user?.role === 'retailer' ? 'stage-page' : undefined}>
                         {/* Motion follows the reduce-motion setting everywhere in the portal. */}
                         <MotionConfig reducedMotion="user">
-                            <Suspense fallback={null}>
+                            <Suspense fallback={<div className="flex justify-center py-24"><Lottie name="loading" size={96} /></div>}>
                                 <Outlet />
                             </Suspense>
                         </MotionConfig>

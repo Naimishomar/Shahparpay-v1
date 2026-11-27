@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import PrimaryCta from '../components/PrimaryCta';
+import Lottie, { Confetti } from '../components/Lottie';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -571,11 +572,11 @@ const DMT = () => {
             {successTxn && (
                 <div className={OVERLAY}>
                     <div className={`${DIALOG} max-w-sm p-8 text-center`}>
-                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ring-8 ${successTxn.pending ? 'bg-amber-500/10 ring-amber-500/5' : 'bg-emerald-500/10 ring-emerald-500/5'}`}>
-                            {successTxn.pending
-                                ? <Clock className="w-8 h-8 text-amber-500" />
-                                : <CheckCircle2 className="w-8 h-8 text-emerald-500" />}
-                        </div>
+                        {successTxn.pending ? (
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ring-8 bg-amber-500/10 ring-amber-500/5">
+                                <Clock className="w-8 h-8 text-amber-500" />
+                            </div>
+                        ) : <Lottie name="payment" size={130} loop={false} className="mx-auto -mt-4 mb-1" />}
                         <h2 className="text-2xl font-bold text-foreground mb-1">
                             {successTxn.pending ? 'Transfer Pending' : 'Transfer Successful'}
                         </h2>
@@ -595,9 +596,10 @@ const DMT = () => {
                             </div>
                         </div>
 
-                        <button onClick={() => setSuccessTxn(null)} className={`w-full rounded-xl py-3 font-semibold ${ACTIVE_BUTTON}`}>
+                        <PrimaryCta type="button" onClick={() => setSuccessTxn(null)} className="w-full font-semibold">
                             Done
-                        </button>
+                        </PrimaryCta>
+                        {!successTxn.pending && <Confetti />}
                     </div>
                 </div>
             )}

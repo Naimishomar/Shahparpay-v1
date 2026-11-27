@@ -6,7 +6,7 @@ import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
 import { toast } from 'sonner';
 import PrimaryCta from '../components/PrimaryCta';
-import LottieEmpty from '../components/LottieEmpty';
+import Lottie from '../components/Lottie';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -478,7 +478,7 @@ const Recharge = () => {
                                 )) : (
                                     <tr>
                                         <td colSpan={9} className="px-4 py-10 text-center text-muted-foreground">
-                                            <div className="flex justify-center"><LottieEmpty size={96} /></div>
+                                            <div className="flex justify-center"><Lottie name="empty" size={96} /></div>
                                             No recharge transaction found
                                         </td>
                                     </tr>

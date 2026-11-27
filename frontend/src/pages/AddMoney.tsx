@@ -4,6 +4,7 @@ import { QrCode, RefreshCw, CheckCircle2, Clock, XCircle, Zap, Inbox, Wallet } f
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import PrimaryCta from '../components/PrimaryCta';
+import Lottie, { Confetti } from '../components/Lottie';
 
 /**
  * Self-service wallet top-up.
@@ -245,6 +246,7 @@ const AddMoney = () => {
                   <RefreshCw className="h-4 w-4 animate-spin" /> Waiting for payment…
                 </p>
               )}
+              {status === 'SUCCESS' && <><Lottie name="payment" size={140} loop={false} className="mx-auto -my-3" /><Confetti /></>}
               {status === 'SUCCESS' && (
                 <p className="flex items-center justify-center gap-2 rounded-full bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/20">
                   <CheckCircle2 className="h-4 w-4" /> Added to your Trade Wallet

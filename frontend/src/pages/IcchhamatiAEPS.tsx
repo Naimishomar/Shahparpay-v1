@@ -12,6 +12,8 @@ import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, inr 
 import { useLocationContext } from '../context/LocationContext';
 import logo from '../assets/logo.png';
 import { captureBiometric, DEVICE_BRANDS, DEVICE_LABELS, type DeviceBrand } from '../utils/rdService';
+import { Confetti } from '../components/Lottie';
+import PrimaryCta from '../components/PrimaryCta';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -699,9 +701,9 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
                         </div>
                     )}
                     <DevicePicker {...device} />
-                    <button disabled={busy} onClick={submit} className={`${PRIMARY_BUTTON} w-full py-4! text-base! rounded-2xl`}>
+                    <PrimaryCta type="button" disabled={busy} onClick={submit} className="w-full py-4 text-base font-semibold">
                         {busy ? <Loader2 size={20} className="animate-spin" /> : <Fingerprint size={20} />} Scan customer fingerprint & submit
-                    </button>
+                    </PrimaryCta>
                 </section>
 
                 <section className={CARD}>
@@ -789,7 +791,8 @@ const ReceiptModal = ({ result, onClose }: { result: TxnResult; onClose: () => v
             onClose={onClose}
             actions={<>
                 <button onClick={download} className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition-colors hover:bg-slate-100"><Download size={16} /> Download</button>
-                <button onClick={onClose} className="btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold">Next transaction</button>
+                <PrimaryCta type="button" onClick={onClose} className="py-2.5 text-sm font-semibold">Next transaction</PrimaryCta>
+                {result.ok === true && <Confetti />}
             </>}
         >
                 <div ref={ref} className="space-y-4 bg-white p-6 text-slate-800">
