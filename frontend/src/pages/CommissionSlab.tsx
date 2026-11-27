@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BadgePercent, Loader2 } from 'lucide-react';
 import { rateSections, type RateSection } from '../lib/rateCard';
-import { TitleText } from '../components/BlurText';
 
 /** The retailer's rate card inside the portal: one page instead of a hint on every service. */
 const CommissionSlab = () => {
@@ -21,7 +20,7 @@ const CommissionSlab = () => {
                 <div className="flex items-center gap-4">
                     <div className="rounded-2xl p-3 icon-chip"><BadgePercent className="h-7 w-7" /></div>
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight"><TitleText text="Commission Slab" /></h1>
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Commission Slab</h1>
                         <p className="text-sm text-muted-foreground">What you earn and pay on every service. Commission is credited as each transaction succeeds.</p>
                     </div>
                 </div>

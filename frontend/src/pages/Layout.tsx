@@ -74,7 +74,7 @@ const Layout = () => {
                 <ScrollProgressProvider>
                 <div className="sticky top-0 z-50 bg-background/70 backdrop-blur-md border-b border-border">
                     <Header trigger={<SidebarTrigger className="shrink-0 text-foreground transition-transform hover:scale-105"/>}/>
-                    {retailer && <ScrollProgress mode="scaleX" aria-hidden className="absolute inset-x-0 -bottom-px h-0.5 origin-left bg-gradient-to-r from-[#0A84FF] via-[#BF5AF2] to-[#FF375F]" />}
+                    {retailer && <ScrollProgress mode="scaleX" aria-hidden className="absolute inset-x-0 -bottom-px h-0.5 origin-left bg-gradient-to-r from-[#B9A8F0] via-[#9FC5F0] to-[#F5B9A0]" />}
                 </div>
                 <ScrollProgressContainer asChild>
                 <div className="w-full p-8 flex-1 min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain no-scrollbar relative">
@@ -96,7 +96,7 @@ const Layout = () => {
                 {retailer && (
                     <ClickSpark
                         ref={sparkRef}
-                        sparkColor={['#0A84FF', '#BF5AF2', '#FF375F']}
+                        sparkColor={['#B9A8F0', '#9FC5F0', '#F5B9A0']}
                         sparkCount={10}
                         sparkRadius={26}
                         sparkSize={10}

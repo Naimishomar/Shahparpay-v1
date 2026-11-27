@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import locationsData from '../../data/locations.json';
-import { TitleText } from '../BlurText';
 
 type SubTab = 'SERVICE' | 'COUPON' | 'STATUS';
 
@@ -333,7 +332,7 @@ const EsevaPanTab: React.FC = () => {
                                 <CreditCard className="h-7 w-7" />
                             </div>
                             <div>
-                                <h1 className="text-2xl md:text-3xl font-bold tracking-tight"><TitleText text="PAN Card Services" /></h1>
+                                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">PAN Card Services</h1>
                                 <p className="text-sm text-muted-foreground">Get your PSA ID, buy UTI PAN coupons and track applications.</p>
                             </div>
                         </div>

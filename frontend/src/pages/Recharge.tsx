@@ -9,8 +9,6 @@ import { SlidingNumber } from '../components/animate-ui/primitives/texts/sliding
 import PrimaryCta, { PILL_HIGHLIGHT } from '../components/PrimaryCta';
 import Lottie from '../components/Lottie';
 import { Highlight, HighlightItem } from '../components/animate-ui/primitives/effects/highlight';
-import PortalDialog from '../components/PortalDialog';
-import { TitleText } from '../components/BlurText';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -295,7 +293,7 @@ const Recharge = () => {
                             <Smartphone className="h-7 w-7" />
                         </div>
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight"><TitleText text="Recharge" /></h1>
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Recharge</h1>
                             <p className="text-sm text-muted-foreground">Instant prepaid mobile and DTH recharges.</p>
                         </div>
                     </div>
@@ -499,8 +497,8 @@ const Recharge = () => {
 
             {/* Plans Modal */}
             {showPlansModal && (
-                <PortalDialog label="Recharge plans" onClose={() => { setShowPlansModal(false); setPlanSearch(""); }}>
-                    <div className="bg-card border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-card border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="p-5 border-b flex justify-between items-center">
                             <div className="flex items-center gap-3 min-w-0">
                                 {planMeta?.logo ? <img src={planMeta.logo} alt={planMeta.operatorName || 'Operator'} className="w-10 h-10 rounded-full object-contain bg-white border border-border p-1" /> : <div className={`rounded-xl p-2 ${SILVER_TILE}`}><Smartphone className="h-5 w-5" /></div>}
@@ -554,13 +552,13 @@ const Recharge = () => {
                             ))}
                         </div>
                     </div>
-                </PortalDialog>
+                </div>
             )}
 
             {/* Receipt Modal */}
             {showReceiptModal && receiptData && (
-                <PortalDialog label="Recharge receipt" onClose={() => setShowReceiptModal(false)}>
-                    <div className="bg-card border rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-card border rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="p-4 border-b border-border flex justify-between items-center bg-muted/30">
                             <h3 className="font-bold text-lg flex items-center gap-2">
                                 Transaction Receipt
@@ -625,7 +623,7 @@ const Recharge = () => {
                             </button>
                         </div>
                     </div>
-                </PortalDialog>
+                </div>
             )}
         </div>
     );

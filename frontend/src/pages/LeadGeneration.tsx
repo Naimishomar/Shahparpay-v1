@@ -4,7 +4,6 @@ import PrimaryCta from '../components/PrimaryCta';
 import { toast } from 'sonner';
 import { CreditCard, UserPlus, Wallet, Briefcase, Zap, PiggyBank, User, Phone, Mail, MapPin, Map as MapIcon, Link2, Loader2, CheckCircle2 } from 'lucide-react';
 import { INDIAN_STATES } from '../constants';
-import { TitleText } from '../components/BlurText';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -155,7 +154,7 @@ const LeadGeneration = () => {
                             <UserPlus className="h-7 w-7" />
                         </div>
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight"><TitleText text="Lead Generation" /></h1>
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Lead Generation</h1>
                             <p className="text-sm text-muted-foreground">Generate leads for credit cards, loans and accounts, and track their status.</p>
                         </div>
                     </div>

@@ -30,9 +30,8 @@ const greeting = () => {
 
 // Full class strings: Tailwind only ships classes it can find literally.
 const TONES = {
-    // Inherit the tile's own type colour (white on the retailer's vivid tiles, ink on admin's plain ones).
-    trade: { tile: 'tint-lavender', icon: 'bg-current/15', cap: 'opacity-75', link: 'bg-current/15' },
-    utility: { tile: 'tint-lime', icon: 'bg-current/15', cap: 'opacity-75', link: 'bg-current/15' },
+    trade: { tile: 'tint-lavender', icon: 'bg-white/70 text-[#16142E] dark:bg-white/10 dark:text-white', cap: 'text-[#16142E]/70 dark:text-white/70', link: 'text-[#16142E] dark:text-white' },
+    utility: { tile: 'tint-lime', icon: 'bg-white/70 text-[#16142E] dark:bg-white/10 dark:text-white', cap: 'text-[#16142E]/70 dark:text-white/70', link: 'text-[#16142E] dark:text-white' },
 };
 
 /** The navy line on top: AEPS login and last settlement for a retailer, support for everyone. */
@@ -314,10 +313,10 @@ const Header = ({ trigger }: { trigger?: React.ReactNode }) => {
                                 <span className={`hidden h-9 w-9 shrink-0 place-items-center rounded-xl 2xl:grid ${tone.icon}`}><Icon className="h-4 w-4" /></span>
                                 <div className="min-w-0 flex-1 md:flex-none">
                                     <p className={`truncate text-[10.5px] font-semibold uppercase tracking-wider ${tone.cap}`}>{label}</p>
-                                    <p className={`whitespace-nowrap text-[15px] font-bold tabular-nums leading-tight transition 2xl:text-[17px] ${hidden ? 'blur-[7px] select-none' : ''}`}>₹ <Counter value={Number(value) || 0} locale="en-IN" decimals={2} fontSize="1em" /></p>
+                                    <p className={`whitespace-nowrap text-[15px] font-bold text-foreground tabular-nums leading-tight transition 2xl:text-[17px] ${hidden ? 'blur-[7px] select-none' : ''}`}>₹ <Counter value={Number(value) || 0} locale="en-IN" decimals={2} fontSize="1em" /></p>
                                 </div>
                                 {link && (
-                                    <Link to={link.to} title={link.text} aria-label={link.text} className={`ml-1 grid h-8 w-8 shrink-0 place-items-center rounded-lg hover:opacity-90 ${tone.link}`}>
+                                    <Link to={link.to} title={link.text} aria-label={link.text} className={`ml-1 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-background shadow-sm hover:opacity-90 ${tone.link}`}>
                                         <link.icon className="h-4 w-4" strokeWidth={2.5} />
                                     </Link>
                                 )}

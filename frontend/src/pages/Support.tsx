@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { Highlight, HighlightItem } from '../components/animate-ui/primitives/effects/highlight';
 import { PILL_HIGHLIGHT } from '../components/PrimaryCta';
-import { TitleText } from '../components/BlurText';
 
 const statusStyle: Record<string, string> = {
     OPEN: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-amber-500/20',
@@ -56,7 +55,7 @@ const Support = () => {
                             <Headset className="h-7 w-7" />
                         </div>
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight"><TitleText text="Support Center" /></h1>
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Support Center</h1>
                             <p className="text-sm text-muted-foreground">Raise an issue, share screenshots, and track resolution.</p>
                         </div>
                     </div>

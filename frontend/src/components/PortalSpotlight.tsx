@@ -13,18 +13,15 @@ const PortalSpotlight = ({ style, ...rest }: HTMLAttributes<HTMLDivElement>) => 
     return (
         <SpotlightCard
             theme={dark ? 'dark' : 'light'}
-            spotlightColor={dark ? '#0A84FF' : '#5AC8FA'}
-            intensity={dark ? 0.14 : 0.22}
+            spotlightColor={dark ? '#B9A8F0' : '#C9BCF5'}
+            intensity={dark ? 0.1 : 0.28}
             spotlightSize={260}
             borderGlow={0.6}
             proximity={60}
             style={{
                 '--spotlight-card-surface': 'var(--card)',
                 '--spotlight-card-border': 'var(--border)',
-                '--spotlight-card-shadow': '0 1px 2px rgb(0 0 0 / 0.04), 0 12px 32px -18px rgb(0 0 0 / 0.18)',
-                // Frosted glass, the way iOS draws a card over its wallpaper.
-                backdropFilter: 'blur(28px) saturate(1.8)',
-                WebkitBackdropFilter: 'blur(28px) saturate(1.8)',
+                '--spotlight-card-shadow': '0 1px 2px rgb(0 0 0 / 0.05)',
                 ...style,
             } as CSSProperties}
             {...rest}

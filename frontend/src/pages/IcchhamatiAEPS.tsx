@@ -15,7 +15,6 @@ import { captureBiometric, DEVICE_BRANDS, DEVICE_LABELS, type DeviceBrand } from
 import Lottie, { Confetti } from '../components/Lottie';
 import { Highlight, HighlightItem } from '../components/animate-ui/primitives/effects/highlight';
 import PrimaryCta, { Busy, PILL_HIGHLIGHT } from '../components/PrimaryCta';
-import { TitleText } from '../components/BlurText';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -230,7 +229,7 @@ const IcchhamatiAEPS = () => {
                     <div className="flex items-center gap-4">
                         <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><Fingerprint className="h-7 w-7" /></div>
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight"><TitleText text="AEPS" /></h1>
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">AEPS</h1>
                             <p className="text-sm text-muted-foreground">Aadhaar Enabled Payment System{status.outletId && <> · Outlet <span className="font-mono">{status.outletId}</span></>}</p>
                         </div>
                     </div>

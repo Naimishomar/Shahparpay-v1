@@ -8,7 +8,6 @@ import { useLocationContext } from '../context/LocationContext';
 import { CopyButton } from '../components/animate-ui/components/buttons/copy';
 import PrimaryCta, { Busy } from '../components/PrimaryCta';
 import Lottie, { Confetti } from '../components/Lottie';
-import { TitleText } from '../components/BlurText';
 
 const SILVER_TILE = 'icon-chip';
 const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500';
@@ -101,7 +100,7 @@ const UpiCashWithdrawal = () => {
                 <div className="flex items-center gap-4">
                     <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><QrCode className="h-7 w-7" /></div>
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight"><TitleText text="UPI Cash Withdrawal" /></h1>
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">UPI Cash Withdrawal</h1>
                         <p className="text-sm text-muted-foreground">The customer scans a QR and pays from any UPI app; you hand over cash once it is confirmed.</p>
                     </div>
                 </div>

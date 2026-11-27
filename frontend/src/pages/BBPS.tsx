@@ -7,8 +7,6 @@ import logo from '../assets/logo.png';
 import { billerField, billerInputValid, cleanBillerInput } from '../lib/billerField';
 import { toast } from "sonner";
 import PrimaryCta, { Busy } from '../components/PrimaryCta';
-import PortalDialog from '../components/PortalDialog';
-import { TitleText } from '../components/BlurText';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -286,7 +284,7 @@ const BBPS = () => {
                             <ReceiptText className="h-7 w-7" />
                         </div>
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight"><TitleText text="Bill Payments" /></h1>
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Bill Payments</h1>
                             <p className="text-sm text-muted-foreground">Bharat Bill Payment System for instant bill payments.</p>
                         </div>
                     </div>
@@ -334,8 +332,8 @@ const BBPS = () => {
 
             {/* Service Form Modal */}
             {selectedService && (
-                <PortalDialog label="Pay bill" onClose={() => setSelectedService(null)}>
-                    <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border bg-card p-6 shadow-2xl">
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200">
                         <div>
                             <div className="flex justify-between items-center mb-6 border-b pb-4">
                                 <div className="flex items-center gap-3">
@@ -513,13 +511,13 @@ const BBPS = () => {
                             </div>
                         </div>
                     </div>
-                </PortalDialog>
+                </div>
             )}
 
             {/* Receipt Modal */}
             {showReceiptModal && receiptData && (
-                <PortalDialog label="Bill payment receipt" onClose={() => setShowReceiptModal(false)}>
-                    <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border bg-card p-6 shadow-2xl">
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className={`text-xl font-bold flex items-center gap-2 ${receiptIsPending ? 'text-amber-500' : receiptIsSuccess ? 'text-emerald-500' : 'text-destructive'}`}>
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${receiptIsPending ? 'bg-amber-500/20' : receiptIsSuccess ? 'bg-emerald-500/20' : 'bg-destructive/20'}`}>
@@ -618,7 +616,7 @@ const BBPS = () => {
                             Download PDF Receipt
                         </button>
                     </div>
-                </PortalDialog>
+                </div>
             )}
         </div>
     );

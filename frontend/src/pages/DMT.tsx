@@ -7,8 +7,6 @@ import { CopyButton } from '../components/animate-ui/components/buttons/copy';
 import { SlidingNumber } from '../components/animate-ui/primitives/texts/sliding-number';
 import PrimaryCta, { Busy } from '../components/PrimaryCta';
 import Lottie, { Confetti } from '../components/Lottie';
-import PortalDialog from '../components/PortalDialog';
-import { TitleText } from '../components/BlurText';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -183,8 +181,8 @@ const DMT = () => {
     const initials = (name?: string) =>
         String(name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
     const verifiedCount = beneficiaries.filter((b) => b.verified).length;
-
-    const DIALOG = 'relative w-full rounded-2xl border bg-card p-6 shadow-2xl';
+    const OVERLAY = 'fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200';
+    const DIALOG = 'relative w-full rounded-2xl border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200';
 
     return (
         <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
@@ -197,7 +195,7 @@ const DMT = () => {
                             <Send className="h-7 w-7" />
                         </div>
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight"><TitleText text="Domestic Money Transfer" /></h1>
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Domestic Money Transfer</h1>
                             <p className="text-sm text-muted-foreground">Instantly transfer funds to any bank account in India.</p>
                         </div>
                     </div>
@@ -397,7 +395,7 @@ const DMT = () => {
 
             {/* Add Beneficiary */}
             {showAddBene && (
-                <PortalDialog label="Add beneficiary" onClose={() => setShowAddBene(false)}>
+                <div className={OVERLAY}>
                     <div className={`${DIALOG} max-w-md`}>
                         <button onClick={() => setShowAddBene(false)} className="absolute top-4 right-4 rounded-lg p-1 text-muted-foreground hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5">
                             <X className="w-5 h-5" />
@@ -436,12 +434,12 @@ const DMT = () => {
                             </button>
                         </div>
                     </div>
-                </PortalDialog>
+                </div>
             )}
 
             {/* OTP — activation or deletion */}
             {otpFor && (
-                <PortalDialog label="Enter OTP" onClose={() => { setOtpFor(null); setOtp(''); }}>
+                <div className={OVERLAY}>
                     <div className={`${DIALOG} max-w-sm text-center`}>
                         <button onClick={() => { setOtpFor(null); setOtp(''); }} className="absolute top-4 right-4 rounded-lg p-1 text-muted-foreground hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5">
                             <X className="w-5 h-5" />
@@ -477,12 +475,12 @@ const DMT = () => {
                             Resend OTP
                         </button>
                     </div>
-                </PortalDialog>
+                </div>
             )}
 
             {/* Transfer */}
             {transferBene && !successTxn && (
-                <PortalDialog label="Send money" onClose={() => { setTransferBene(null); setPin(''); setAmount(''); }}>
+                <div className={OVERLAY}>
                     <div className={`${DIALOG} max-w-md`}>
                         <button onClick={() => { setTransferBene(null); setPin(''); setAmount(''); }} className="absolute top-4 right-4 rounded-lg p-1 text-muted-foreground hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5">
                             <X className="w-5 h-5" />
@@ -569,12 +567,12 @@ const DMT = () => {
                             </PrimaryCta>
                         </div>
                     </div>
-                </PortalDialog>
+                </div>
             )}
 
             {/* Receipt */}
             {successTxn && (
-                <PortalDialog label="Transfer receipt" onClose={() => setSuccessTxn(null)}>
+                <div className={OVERLAY}>
                     <div className={`${DIALOG} max-w-sm p-8 text-center`}>
                         {successTxn.pending ? (
                             <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ring-8 bg-amber-500/10 ring-amber-500/5">
@@ -605,7 +603,7 @@ const DMT = () => {
                         </PrimaryCta>
                         {!successTxn.pending && <Confetti />}
                     </div>
-                </PortalDialog>
+                </div>
             )}
         </div>
     );

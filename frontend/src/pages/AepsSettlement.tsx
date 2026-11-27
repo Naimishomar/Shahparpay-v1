@@ -9,8 +9,6 @@ import { toast } from 'sonner';
 import logo from '../assets/logo.png';
 import PrimaryCta, { Busy } from '../components/PrimaryCta';
 import { Confetti } from '../components/Lottie';
-import PortalDialog from '../components/PortalDialog';
-import { TitleText } from '../components/BlurText';
 
 // Payout charge from the retailer rate card; the backend debits the same (getSettlementFee).
 const SETTLEMENT_BASE_CHARGE = 5;
@@ -201,7 +199,7 @@ const AepsSettlement = () => {
                             <Building2 className="h-7 w-7" />
                         </div>
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight"><TitleText text="Trade Wallet Settlement" /></h1>
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Trade Wallet Settlement</h1>
                             <p className="text-sm text-muted-foreground">Move your Trade Wallet balance to your bank account</p>
                         </div>
                     </div>
@@ -655,8 +653,8 @@ const AddSettlementBank = ({ headers, resumeId = '', onClose, onAdded }: { heade
     );
 
     return (
-        <PortalDialog label="Settlement bank" onClose={onClose} closeOnOutside>
-            <div className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+            <div className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
                 <div className="mb-5 flex items-center justify-between">
                     <h2 className="text-lg font-semibold">{beneId ? 'Verify Bank Account' : 'Add Settlement Bank'}</h2>
                     <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1 hover:bg-muted"><X className="h-5 w-5" /></button>
@@ -682,7 +680,7 @@ const AddSettlementBank = ({ headers, resumeId = '', onClose, onAdded }: { heade
                     </form>
                 )}
             </div>
-        </PortalDialog>
+        </div>
     );
 };
 
@@ -717,8 +715,8 @@ const DeleteSettlementBank = ({ bank, headers, onClose, onDeleted }: { bank: any
     };
 
     return (
-        <PortalDialog label="Delete bank account" onClose={onClose} closeOnOutside>
-            <div className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+            <div className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
                 <div className="mb-4 flex items-center justify-between">
                     <h2 className="text-lg font-semibold">Delete Bank Account</h2>
                     <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1 hover:bg-muted"><X className="h-5 w-5" /></button>
@@ -739,7 +737,7 @@ const DeleteSettlementBank = ({ bank, headers, onClose, onDeleted }: { bank: any
                     <button type="button" disabled={busy} onClick={sendOtp} className="w-full rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50">{busy ? 'Sending...' : 'Send OTP to delete'}</button>
                 )}
             </div>
-        </PortalDialog>
+        </div>
     );
 };
 
