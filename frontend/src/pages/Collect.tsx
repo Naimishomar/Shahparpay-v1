@@ -5,6 +5,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { useVisiblePolling } from '../hooks/use-visible-polling';
 
 // Same black (light) / silver (dark) language as the dashboard.
@@ -192,15 +193,16 @@ const Collect = ({ embedded = false, left, between }: { embedded?: boolean; left
                 </div>
             </section>}
 
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className={`grid gap-6 ${left ? 'lg:grid-cols-2' : ''}`}>
                 {left}
                 {/* New request: the form, and beside it the link's QR once created */}
                 <section id="payment-request" className="scroll-mt-24 rounded-2xl border bg-card p-6 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold">New Payment Request</h2>
-                    <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_200px]">
-                        <div className="flex min-w-0 flex-col gap-3">
+                    <h2 className="text-lg font-semibold">New payment link</h2>
+                    <p className="mb-5 text-sm text-muted-foreground">Send the customer a link or let them scan its QR. Your wallet is credited once the payment is confirmed.</p>
+                    <div className={`grid gap-6 ${left ? 'sm:grid-cols-[minmax(0,1fr)_200px]' : 'md:grid-cols-[minmax(0,1fr)_280px]'}`}>
+                        <div className={`grid min-w-0 content-start gap-4 ${left ? '' : 'sm:grid-cols-2'}`}>
                             {fields.map(({ key, label, icon: Icon, type, placeholder, clean }) => (
-                                <div key={key} className="flex flex-col gap-1.5">
+                                <div key={key} className={`flex flex-col gap-1.5 ${key === 'email' ? 'sm:col-span-full' : ''}`}>
                                     <label className="text-sm font-medium text-foreground">{label}</label>
                                     <div className="relative">
                                         <Icon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -208,11 +210,11 @@ const Collect = ({ embedded = false, left, between }: { embedded?: boolean; left
                                     </div>
                                 </div>
                             ))}
-                            <div className="flex flex-col gap-1.5">
+                            <div className="flex flex-col gap-1.5 sm:col-span-full">
                                 <label className="text-sm font-medium text-foreground">Amount</label>
                                 <div className="relative">
                                     <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-semibold text-muted-foreground">₹</span>
-                                    <input type="text" inputMode="numeric" className={`${INPUT} pl-8 text-lg font-semibold tabular-nums`} value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value.replace(/\D/g, '') })} placeholder="Minimum ₹200" />
+                                    <input type="text" inputMode="numeric" className={cn(INPUT, 'h-14 pl-9 text-2xl font-bold tabular-nums')} value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value.replace(/\D/g, '') })} placeholder="Minimum ₹200" />
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">
                                     {[200, 500, 1000, 2000, 5000].map((v) => (
@@ -227,7 +229,7 @@ const Collect = ({ embedded = false, left, between }: { embedded?: boolean; left
                                     ))}
                                 </div>
                             </div>
-                            <button onClick={createOrder} disabled={loading} className={`mt-1 flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold disabled:opacity-50 disabled:shadow-none ${ACTIVE_BUTTON}`}>
+                            <button onClick={createOrder} disabled={loading} className={`mt-1 flex w-full sm:col-span-full items-center justify-center gap-2 rounded-xl py-3 font-bold disabled:opacity-50 disabled:shadow-none ${ACTIVE_BUTTON}`}>
                                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Link2 className="h-5 w-5" />}
                                 {loading ? 'Creating...' : 'Create Payment Link'}
                             </button>
@@ -237,7 +239,7 @@ const Collect = ({ embedded = false, left, between }: { embedded?: boolean; left
                             <div className="flex flex-col items-center gap-3 rounded-2xl border bg-background/50 p-4 text-center">
                                 {order.paymentUrl && (
                                     <div className="rounded-xl bg-white p-2 shadow-sm">
-                                        <QRCodeSVG value={order.paymentUrl} size={148} />
+                                        <QRCodeSVG value={order.paymentUrl} size={left ? 148 : 200} />
                                     </div>
                                 )}
                                 <p className="text-2xl font-bold tracking-tight tabular-nums">₹{Number(order.amount).toLocaleString('en-IN')}</p>
@@ -263,7 +265,7 @@ const Collect = ({ embedded = false, left, between }: { embedded?: boolean; left
                                 </p>
                             </div>
                         ) : (
-                            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed p-4 text-center">
+                            <div className="flex min-h-56 flex-col items-center justify-center rounded-2xl border border-dashed bg-background/40 p-4 text-center">
                                 <div className={`mb-3 rounded-2xl p-3 ${SILVER_TILE}`}>
                                     <QrCode className="h-7 w-7" />
                                 </div>

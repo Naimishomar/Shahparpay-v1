@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Send, Plus, X, FileText, Trash2, Landmark, Hash, Paperclip } from 'lucide-react';
+import { Send, Plus, X, FileText, Trash2, Landmark, Hash, Paperclip, Link2, Zap, UserCheck } from 'lucide-react';
+import { motion } from 'motion/react';
 import Collect from './Collect';
 import { isServiceEnabled } from '../lib/services';
 import axios from 'axios';
@@ -26,6 +27,8 @@ const FundRequest = () => {
     const [loading, setLoading] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [statusFilter, setStatusFilter] = useState('ALL');
+    // Which way of adding funds is open. The payment link first: it credits without waiting on anyone.
+    const [method, setMethod] = useState<'link' | 'bank'>(canCollect ? 'link' : 'bank');
     // The pending request the delete dialog is asking about.
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [deleting, setDeleting] = useState(false);
@@ -130,33 +133,31 @@ const FundRequest = () => {
         { label: 'Approved amount', value: `₹${approvedTotal.toLocaleString('en-IN')}`, dot: 'bg-emerald-500' },
     ];
 
-    // The two ways to add funds sit side by side: a bank deposit the distributor approves, and a payment link.
+    // Bank deposit: what it is and the one action on the left, the figures on the right.
     const bankCard = (
-        <section className="flex flex-col rounded-2xl border bg-card p-6 shadow-sm">
-            <div className="mb-5 flex items-start gap-3">
-                <div className={`rounded-xl p-2.5 ${SILVER_TILE}`}><Landmark className="h-5 w-5" /></div>
-                <div>
-                    <h2 className="text-lg font-semibold">Bank Deposit Request</h2>
-                    <p className="text-sm text-muted-foreground">Deposited money in the bank? Ask your distributor to add it to your Trade Wallet.</p>
+        <section className="rounded-2xl border bg-card p-5 shadow-sm sm:p-6">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-start gap-3">
+                    <div className={`rounded-xl p-2.5 ${SILVER_TILE}`}><Landmark className="h-5 w-5" /></div>
+                    <div>
+                        <h2 className="text-lg font-semibold">Bank deposit request</h2>
+                        <p className="text-sm text-muted-foreground">Deposited money in the bank? Ask your distributor to add it to your Trade Wallet.</p>
+                    </div>
                 </div>
+                <PrimaryCta onClick={() => setShowAddModal(true)} className="shrink-0 font-semibold lg:w-auto lg:px-6">
+                    <Plus className="h-5 w-5" /> New deposit request
+                </PrimaryCta>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <dl className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-4">
                 {stats.map((stat) => (
-                    <div key={stat.label} className="rounded-xl border bg-background/60 p-4">
-                        <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    <div key={stat.label} className="bg-background/80 px-4 py-3">
+                        <dt className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                             <span className={`h-1.5 w-1.5 rounded-full ${stat.dot}`} />{stat.label}
-                        </p>
-                        <p className="mt-1 text-xl font-bold tabular-nums">{stat.value}</p>
+                        </dt>
+                        <dd className="mt-1 text-xl font-bold tabular-nums">{stat.value}</dd>
                     </div>
                 ))}
-            </div>
-            <button
-                onClick={() => setShowAddModal(true)}
-                className={`mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold lg:mt-auto ${ACTIVE_BUTTON}`}
-            >
-                <Plus className="w-5 h-5" />
-                Create Bank Deposit Request
-            </button>
+            </dl>
         </section>
     );
 
@@ -252,13 +253,51 @@ const FundRequest = () => {
                 </div>
             </section>
 
-            {canCollect ? (
-                <Collect embedded left={bankCard} between={requestsList} />
+            {/* Two ways to add funds: pick one, and only that one is shown below. */}
+            {canCollect && (
+                <div role="radiogroup" aria-label="How to add funds" className="grid gap-3 sm:grid-cols-2">
+                    {([
+                        { key: 'link', icon: Link2, title: 'Payment link', text: 'The customer pays online by UPI, card or netbanking.', tag: 'Instant', tagIcon: Zap },
+                        { key: 'bank', icon: Landmark, title: 'Bank deposit', text: 'You deposited money in the bank; your distributor adds it.', tag: 'Needs approval', tagIcon: UserCheck },
+                    ] as const).map(({ key, icon: Icon, title, text, tag, tagIcon: TagIcon }) => {
+                        const on = method === key;
+                        return (
+                            <button
+                                key={key}
+                                type="button"
+                                role="radio"
+                                aria-checked={on}
+                                onClick={() => setMethod(key)}
+                                className={`relative flex items-start gap-4 rounded-2xl border bg-card p-5 text-left shadow-sm transition-all active:scale-[0.99] ${on ? 'border-transparent' : 'hover:-translate-y-0.5 hover:shadow-md'}`}
+                            >
+                                {/* The ring slides to the chosen method. */}
+                                {on && <motion.span layoutId="fund-method" aria-hidden transition={{ type: 'spring', bounce: 0.18, duration: 0.45 }} className="absolute inset-0 rounded-2xl ring-2 ring-primary" />}
+                                <span className={`grid size-11 shrink-0 place-items-center rounded-xl ${on ? 'btn-primary' : SILVER_TILE}`}><Icon className="h-5 w-5" /></span>
+                                <span className="min-w-0 flex-1">
+                                    <span className="flex flex-wrap items-center gap-2">
+                                        <span className="text-base font-semibold">{title}</span>
+                                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ${key === 'link' ? 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-700 ring-amber-500/20 dark:text-amber-400'}`}>
+                                            <TagIcon className="h-3 w-3" />{tag}
+                                        </span>
+                                    </span>
+                                    <span className="mt-1 block text-sm text-muted-foreground">{text}</span>
+                                </span>
+                                <span aria-hidden className={`mt-1 grid size-5 shrink-0 place-items-center rounded-full border-2 ${on ? 'border-primary' : 'border-muted-foreground/30'}`}>
+                                    {on && <span className="size-2.5 rounded-full bg-primary" />}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+
+            {method === 'link' && canCollect ? (
+                <Collect key="link" embedded />
             ) : (
-                <>
-                    <div className="grid gap-6 lg:grid-cols-2">{bankCard}</div>
+                <div key="bank" className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    {bankCard}
                     {requestsList}
-                </>
+                </div>
             )}
 
             {/* Add Fund Request Modal */}
