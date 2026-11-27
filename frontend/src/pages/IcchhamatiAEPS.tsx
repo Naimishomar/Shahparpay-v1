@@ -13,7 +13,8 @@ import { useLocationContext } from '../context/LocationContext';
 import logo from '../assets/logo.png';
 import { captureBiometric, DEVICE_BRANDS, DEVICE_LABELS, type DeviceBrand } from '../utils/rdService';
 import { Confetti } from '../components/Lottie';
-import PrimaryCta from '../components/PrimaryCta';
+import { Highlight, HighlightItem } from '../components/animate-ui/primitives/effects/highlight';
+import PrimaryCta, { Busy } from '../components/PrimaryCta';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -702,7 +703,7 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
                     )}
                     <DevicePicker {...device} />
                     <PrimaryCta type="button" disabled={busy} onClick={submit} className="w-full py-4 text-base font-semibold">
-                        {busy ? <Loader2 size={20} className="animate-spin" /> : <Fingerprint size={20} />} Scan customer fingerprint & submit
+                        {busy ? <Loader2 size={20} className="animate-spin" /> : <Fingerprint size={20} />} {busy ? <Busy text="Waiting for the fingerprint…" /> : 'Scan customer fingerprint & submit'}
                     </PrimaryCta>
                 </section>
 
@@ -828,13 +829,18 @@ const ReceiptModal = ({ result, onClose }: { result: TxnResult; onClose: () => v
     );
 };
 
+// animate-ui Highlight: the selected pill slides from tab to tab.
 const TxnTabs = ({ tab, setTab }: { tab: TxnType; setTab: (t: TxnType) => void }) => (
     <div className="flex w-full gap-1 overflow-x-auto no-scrollbar rounded-2xl border bg-card p-1.5 md:w-max">
-        {TXN_TABS.map(({ key, label, icon: Icon, tone }) => (
-            <button key={key} onClick={() => setTab(key)} className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${tab === key ? 'btn-primary' : 'text-foreground/75 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}>
-                <Icon size={17} strokeWidth={2.2} className={tone} /> {label}
-            </button>
-        ))}
+        <Highlight controlledItems value={tab} click={false} className="inset-0 rounded-xl bg-primary shadow-[0_10px_22px_-14px_rgb(70_50_160_/_0.6)]">
+            {TXN_TABS.map(({ key, label, icon: Icon, tone }) => (
+                <HighlightItem key={key} value={key}>
+                    <button onClick={() => setTab(key)} aria-pressed={tab === key} className={`relative flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${tab === key ? 'text-primary-foreground' : 'text-foreground/75 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}>
+                        <Icon size={17} strokeWidth={2.2} className={tone} /> {label}
+                    </button>
+                </HighlightItem>
+            ))}
+        </Highlight>
     </div>
 );
 

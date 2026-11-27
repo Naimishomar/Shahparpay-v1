@@ -3,7 +3,9 @@ import { Search, UserPlus, Send, Plus, CreditCard, Lock, CheckCircle2, X, Trash,
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
-import PrimaryCta from '../components/PrimaryCta';
+import { CopyButton } from '../components/animate-ui/components/buttons/copy';
+import { SlidingNumber } from '../components/animate-ui/primitives/texts/sliding-number';
+import PrimaryCta, { Busy } from '../components/PrimaryCta';
 import Lottie, { Confetti } from '../components/Lottie';
 
 // Same black (light) / silver (dark) language as the dashboard.
@@ -561,7 +563,7 @@ const DMT = () => {
 
                             <PrimaryCta onClick={handleTransfer} disabled={loading || !amount || Number(amount) < 10 || pin.length !== 4} className="w-full text-base font-bold">
                                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                                {loading ? 'Processing...' : 'Confirm Transfer'}
+                                {loading ? <Busy text="Processing..." /> : 'Confirm Transfer'}
                             </PrimaryCta>
                         </div>
                     </div>
@@ -583,7 +585,7 @@ const DMT = () => {
                         <p className="text-sm text-muted-foreground mb-5">
                             {successTxn.message || (successTxn.pending ? 'The bank has not confirmed it yet.' : 'Your money is on its way!')}
                         </p>
-                        <p className="mb-5 text-4xl font-bold tracking-tight tabular-nums">₹{Number(successTxn.amount).toLocaleString('en-IN')}</p>
+                        <p className="mb-5 flex justify-center text-4xl font-bold tracking-tight tabular-nums">₹<SlidingNumber initiallyStable number={Number(successTxn.amount) || 0} thousandSeparator="," decimalPlaces={Number.isInteger(Number(successTxn.amount)) ? 0 : 2} /></p>
 
                         <div className="rounded-xl border bg-background/50 p-4 text-left space-y-3 mb-6 text-sm">
                             <div className="flex justify-between gap-3">
@@ -592,7 +594,7 @@ const DMT = () => {
                             </div>
                             <div className="flex justify-between gap-3 border-t pt-3">
                                 <span className="text-muted-foreground">Ref No</span>
-                                <span className="font-mono font-medium">{successTxn.rrn || successTxn.txnid || successTxn.transactionId}</span>
+                                <span className="flex items-center gap-1 font-mono font-medium">{successTxn.rrn || successTxn.txnid || successTxn.transactionId}<CopyButton content={String(successTxn.rrn || successTxn.txnid || successTxn.transactionId || '')} variant="ghost" size="xs" aria-label="Copy reference number" /></span>
                             </div>
                         </div>
 

@@ -6,7 +6,7 @@ import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
 import { billerField, billerInputValid, cleanBillerInput } from '../lib/billerField';
 import { toast } from "sonner";
-import PrimaryCta from '../components/PrimaryCta';
+import PrimaryCta, { Busy } from '../components/PrimaryCta';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -492,7 +492,7 @@ const BBPS = () => {
                                             {loading ? (
                                                 <div className="flex items-center justify-center gap-2">
                                                     <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                                                    Processing...
+                                                    <Busy text="Processing..." />
                                                 </div>
                                             ) : (
                                                 selectedOperator?.viewbill === "true" ? "Pay Bill Securely" : "Pay Securely"

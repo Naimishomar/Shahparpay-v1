@@ -7,7 +7,7 @@ import StatusMark from '../components/StatusMark';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import logo from '../assets/logo.png';
-import PrimaryCta from '../components/PrimaryCta';
+import PrimaryCta, { Busy } from '../components/PrimaryCta';
 import { Confetti } from '../components/Lottie';
 
 // Payout charge from the retailer rate card; the backend debits the same (getSettlementFee).
@@ -410,7 +410,7 @@ const AepsSettlement = () => {
 
                     <PrimaryCta disabled={loading || !selectedBankId} className="w-full font-bold">
                         <Send className="w-4 h-4" />
-                        {loading ? 'Processing...' : 'Submit Settlement'}
+                        {loading ? <Busy text="Processing..." /> : 'Submit Settlement'}
                     </PrimaryCta>
                 </section>
             </form>

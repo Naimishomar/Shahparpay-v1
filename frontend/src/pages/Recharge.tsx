@@ -5,6 +5,7 @@ import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
 import { toast } from 'sonner';
+import { SlidingNumber } from '../components/animate-ui/primitives/texts/sliding-number';
 import PrimaryCta from '../components/PrimaryCta';
 import Lottie from '../components/Lottie';
 
@@ -274,7 +275,7 @@ const Recharge = () => {
                         className="font-bold"
                     >
                         {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Zap className="h-5 w-5" />}
-                        Recharge{Number(amount) > 0 ? ` ₹${amount}` : ''}
+                        Recharge{Number(amount) > 0 && <> ₹<SlidingNumber initiallyStable number={Number(amount)} decimalPlaces={Number.isInteger(Number(amount)) ? 0 : 2} /></>}
                     </PrimaryCta>
                 </div>
             </section>

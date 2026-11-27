@@ -5,7 +5,8 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { useLocationContext } from '../context/LocationContext';
-import PrimaryCta from '../components/PrimaryCta';
+import { CopyButton } from '../components/animate-ui/components/buttons/copy';
+import PrimaryCta, { Busy } from '../components/PrimaryCta';
 import Lottie, { Confetti } from '../components/Lottie';
 
 const SILVER_TILE = 'icon-chip';
@@ -120,7 +121,7 @@ const UpiCashWithdrawal = () => {
                                     ? <>Credited to your Trade Wallet. <b className="text-foreground">Hand over ₹{result.amount.toLocaleString('en-IN')} cash now.</b></>
                                     : result.message || 'No money was received. Do not give cash.'}
                             </p>
-                            {result.bankRRN && <p className="text-xs text-muted-foreground">RRN {result.bankRRN}{result.payerName ? ` · ${result.payerName}` : ''}{result.accountNumber ? ` · A/C ${result.accountNumber}` : ''}</p>}
+                            {result.bankRRN && <p className="flex items-center gap-1 text-xs text-muted-foreground">RRN {result.bankRRN} <CopyButton content={result.bankRRN} variant="ghost" size="xs" aria-label="Copy RRN" />{result.payerName ? ` · ${result.payerName}` : ''}{result.accountNumber ? ` · A/C ${result.accountNumber}` : ''}</p>}
                             <PrimaryCta type="button" onClick={reset} className="mt-2 py-2.5 text-sm font-semibold">New withdrawal</PrimaryCta>
                         </div>
                     ) : qr ? (
@@ -158,7 +159,7 @@ const UpiCashWithdrawal = () => {
                                 {mobileError && <span className="text-xs font-normal text-red-600">{mobileError}</span>}
                             </label>
                             <PrimaryCta disabled={busy || !valid} className="text-sm font-semibold">
-                                <QrCode className="h-4 w-4" />{busy ? 'Generating…' : 'Generate QR'}
+                                <QrCode className="h-4 w-4" />{busy ? <Busy text="Generating…" /> : 'Generate QR'}
                             </PrimaryCta>
                         </form>
                     )}

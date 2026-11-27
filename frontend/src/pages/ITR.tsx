@@ -3,9 +3,9 @@ import { FileText, Loader2, ArrowUpRight, CheckCircle2, AlertCircle, Wallet, Key
 import { toast } from 'sonner';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import PrimaryCta, { Busy } from '../components/PrimaryCta';
 
 // Same black (light) / silver (dark) language as the dashboard.
-const ACTIVE_BUTTON = 'btn-primary';
 const SILVER_TILE = 'icon-chip';
 
 const ITR: React.FC = () => {
@@ -63,15 +63,15 @@ const ITR: React.FC = () => {
                         </div>
                     </div>
 
-                    <button
+                    <PrimaryCta
                         onClick={handleLaunchPortal}
                         disabled={loading}
-                        className={`group flex shrink-0 items-center justify-center gap-2 rounded-2xl px-8 py-4 text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed ${ACTIVE_BUTTON}`}
+                        className="group shrink-0 px-8 py-4 text-base font-bold"
                     >
                         {loading ? (
                             <>
                                 <Loader2 className="h-5 w-5 animate-spin" />
-                                <span>Generating secure link...</span>
+                                <Busy text="Generating secure link..." />
                             </>
                         ) : (
                             <>
@@ -79,7 +79,7 @@ const ITR: React.FC = () => {
                                 <ArrowUpRight className="h-5 w-5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                             </>
                         )}
-                    </button>
+                    </PrimaryCta>
                 </div>
             </section>
 

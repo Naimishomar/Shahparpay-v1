@@ -13,6 +13,7 @@ import Counter from '../components/Counter';
 import PortalSpotlight from '../components/PortalSpotlight';
 import ShinyText from '../components/ShinyText';
 import GlareHover from '../components/GlareHover';
+import { Tilt, TiltContent } from '../components/animate-ui/primitives/effects/tilt';
 import { ARRIVE, TRAVEL } from '../components/landing/beats';
 import { AnimatePresence, motion } from 'motion/react';
 
@@ -371,7 +372,9 @@ const Dashboard = () => {
                             const a = ACCENTS[card.accent];
                             const Icon = card.icon;
                             return (
-                                <div key={card.title} className={`group relative overflow-hidden rounded-2xl border border-white/70 p-5 shadow-sm transition-transform duration-300 hover:-translate-y-0.5 dark:border-white/10 ${a.card}`}>
+                                // animate-ui Tilt: the card leans toward the pointer.
+                                <Tilt key={card.title} maxTilt={6} perspective={900}>
+                                <TiltContent className={`group relative h-full overflow-hidden rounded-2xl border border-white/70 p-5 shadow-sm dark:border-white/10 ${a.card}`}>
                                     <div className="relative flex items-center justify-between gap-3">
                                         <span className="text-sm font-semibold">{card.title}</span>
                                         <div className="rounded-xl border border-white/90 bg-white/65 p-2.5 transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110 dark:border-white/10 dark:bg-white/10">
@@ -391,7 +394,8 @@ const Dashboard = () => {
                                     ) : (
                                         <p className="relative mt-4 text-xs opacity-70">{card.hint}</p>
                                     )}
-                                </div>
+                                </TiltContent>
+                                </Tilt>
                             );
                         })}
                     </section>

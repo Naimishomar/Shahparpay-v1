@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { CheckCircle2, Clock, CreditCard, Loader2, RefreshCcw, Usb, Bluetooth, XCircle } from 'lucide-react';
 import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, inr } from '../components/distributor/shared';
 import { useLocationContext } from '../context/LocationContext';
-import PrimaryCta from '../components/PrimaryCta';
+import PrimaryCta, { Busy } from '../components/PrimaryCta';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -189,7 +189,7 @@ const IcchhamatiMATM = () => {
                             </label>
                         </div>
                         <PrimaryCta disabled={busy} className="w-full text-sm font-semibold">
-                            {busy ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />} {busy ? 'Follow the device…' : 'Start — insert or swipe the card'}
+                            {busy ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />} {busy ? <Busy text="Follow the device…" /> : 'Start — insert or swipe the card'}
                         </PrimaryCta>
                     </form>
                     <section className={CARD}>

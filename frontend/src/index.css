@@ -70,6 +70,10 @@
     --popover-foreground: #15131F;
     --primary: #16142E;
     --primary-foreground: #FFFFFF;
+    /* The retailer portal's buttons (html.rp-motion .btn-primary, PrimaryCta): the fill that rises on hover. */
+    --cta-fill: #E4DAFF;
+    --cta-fg-hover: #16142E;
+    --cta-shimmer: #B9A8F0;
     --secondary: #F1EFF8;
     --secondary-foreground: #15131F;
     --muted: #F2F1F6;
@@ -110,6 +114,9 @@
     --popover-foreground: #FFFFFF;
     --primary: #D9CCFF;
     --primary-foreground: #16142E;
+    --cta-fill: #FFFFFF;
+    --cta-fg-hover: #16142E;
+    --cta-shimmer: #7C6BD6;
     --secondary: #232325;
     --secondary-foreground: #FFFFFF;
     --muted: #232325;
@@ -654,22 +661,26 @@ html.rp-motion .hero-panel {
     animation: rp-drift 16s ease-in-out infinite alternate;
 }
 
-/* Primary buttons: the gradient drifts; on hover a glint crosses once. */
+/* Primary buttons, all alike: the same look as PrimaryCta (animate-ui LiquidButton).
+   A solid button with a thin line of the fill along its bottom; on hover the fill
+   rises like liquid and the text changes colour. Selected tabs and chips use it too. */
 html.rp-motion .btn-primary {
-    background-image:
-        linear-gradient(110deg, transparent 40%, rgb(255 255 255 / 0.55) 50%, transparent 60%),
-        linear-gradient(135deg, #E4DAFF 0%, #D3E7FB 30%, #FBE2D4 60%, #E4DAFF 100%);
-    background-size: 250% 100%, 220% 220%;
-    background-position: 160% 0, 0% 0%;
+    background-color: var(--primary);
+    background-image: linear-gradient(var(--cta-fill) 0 0);
     background-repeat: no-repeat;
-    transition: background-position 0.9s cubic-bezier(0.25, 0.8, 0.25, 1), filter 0.2s;
-    animation: rp-drift-btn 9s ease-in-out infinite alternate;
+    background-position: 50% 100%;
+    background-size: 100% 2px;
+    color: var(--primary-foreground);
+    border-color: transparent;
+    box-shadow: 0 10px 22px -14px rgb(70 50 160 / 0.6);
+    transition: background-size 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s 0.12s, transform 0.15s;
 }
-html.rp-motion .btn-primary:hover { background-position: -60% 0, 100% 100%; animation-play-state: paused; }
-@keyframes rp-drift-btn {
-    from { background-position: 160% 0, 0% 0%; }
-    to { background-position: 160% 0, 100% 100%; }
+html.rp-motion .btn-primary:not(:disabled):hover {
+    background-size: 100% 100%;
+    color: var(--cta-fg-hover);
+    filter: none;
 }
+html.rp-motion button.btn-primary:not(:disabled):active { transform: scale(0.97); }
 
 /* Page header icon chips float a little. */
 html.rp-motion .icon-chip { animation: rp-float 4.5s ease-in-out infinite; }
@@ -680,7 +691,6 @@ html.rp-motion a:hover > .nav-icon { animation: rp-nudge 0.6s ease-in-out; }
 @media (prefers-reduced-motion: reduce) {
     html.rp-motion [class*="tint-"],
     html.rp-motion .hero-panel,
-    html.rp-motion .btn-primary,
     html.rp-motion .icon-chip,
     html.rp-motion a:hover > .nav-icon { animation: none; }
 }

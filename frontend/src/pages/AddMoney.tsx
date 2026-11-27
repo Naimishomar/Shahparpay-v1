@@ -3,7 +3,7 @@ import axios from 'axios';
 import { QrCode, RefreshCw, CheckCircle2, Clock, XCircle, Zap, Inbox, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
-import PrimaryCta from '../components/PrimaryCta';
+import PrimaryCta, { Busy } from '../components/PrimaryCta';
 import Lottie, { Confetti } from '../components/Lottie';
 
 /**
@@ -199,7 +199,7 @@ const AddMoney = () => {
             ) : (
               <PrimaryCta disabled={loading} className="w-full font-bold">
                 {loading ? <RefreshCw className="h-5 w-5 animate-spin" /> : <QrCode className="h-5 w-5" />}
-                {loading ? 'Generating…' : 'Generate UPI QR'}
+                {loading ? <Busy text="Generating…" /> : 'Generate UPI QR'}
               </PrimaryCta>
             )}
 

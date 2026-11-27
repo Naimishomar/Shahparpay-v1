@@ -5,6 +5,7 @@ import { Suspense, useEffect, useRef, useState } from "react"
 import { MotionConfig } from "motion/react"
 import ClickSpark, { type ClickSparkHandle } from "@/components/ClickSpark"
 import GradualBlur from "@/components/GradualBlur"
+import { ScrollProgress, ScrollProgressContainer, ScrollProgressProvider } from "@/components/animate-ui/primitives/animate/scroll-progress"
 import axios from "axios"
 import { Check, Loader2, LogOut, QrCode, RefreshCcw, Smartphone, XCircle } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
@@ -69,9 +70,13 @@ const Layout = () => {
             <main className="flex-1 h-svh min-h-0 bg-background top-glow text-foreground flex flex-col overflow-hidden w-full relative">
                 {/* Ambient glows behind every retailer page (index.css, .portal-ambient). */}
                 {user?.role === 'retailer' && <div aria-hidden className="portal-ambient"><span /><span /><span /></div>}
+                {/* animate-ui ScrollProgress: a thin line under the header fills as the page scrolls. */}
+                <ScrollProgressProvider>
                 <div className="sticky top-0 z-50 bg-background/70 backdrop-blur-md border-b border-border">
                     <Header trigger={<SidebarTrigger className="shrink-0 text-foreground transition-transform hover:scale-105"/>}/>
+                    {retailer && <ScrollProgress mode="scaleX" aria-hidden className="absolute inset-x-0 -bottom-px h-0.5 origin-left bg-gradient-to-r from-[#B9A8F0] via-[#9FC5F0] to-[#F5B9A0]" />}
                 </div>
+                <ScrollProgressContainer asChild>
                 <div className="w-full p-8 flex-1 min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain no-scrollbar relative">
                     {/* Retailer pages arrive in stageshow beats (index.css, .stage-page). */}
                     <div className={user?.role === 'retailer' ? 'stage-page' : undefined}>
@@ -83,6 +88,8 @@ const Layout = () => {
                         </MotionConfig>
                     </div>
                 </div>
+                </ScrollProgressContainer>
+                </ScrollProgressProvider>
                 {/* React Bits GradualBlur: content softens as it scrolls under the bottom edge. Below dialogs (z-100). */}
                 {retailer && <GradualBlur target="parent" position="bottom" height="2.75rem" strength={1.2} layers={6} zIndex={30} />}
                 <SupportWidget />

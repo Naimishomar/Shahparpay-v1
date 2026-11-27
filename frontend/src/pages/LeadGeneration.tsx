@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import PrimaryCta from '../components/PrimaryCta';
 import { toast } from 'sonner';
 import { CreditCard, UserPlus, Wallet, Briefcase, Zap, PiggyBank, User, Phone, Mail, MapPin, Map as MapIcon, Link2, Loader2, CheckCircle2 } from 'lucide-react';
 import { INDIAN_STATES } from '../constants';
@@ -249,11 +250,7 @@ const LeadGeneration = () => {
                             </div>
                         </div>
 
-                        <button
-                            type="submit"
-                            disabled={submitting}
-                            className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold disabled:opacity-50 ${ACTIVE_BUTTON}`}
-                        >
+                        <PrimaryCta disabled={submitting} className="w-full font-semibold">
                             {submitting ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />
                             ) : (
@@ -262,7 +259,7 @@ const LeadGeneration = () => {
                                     Generate {productName(formData.product)} Link
                                 </>
                             )}
-                        </button>
+                        </PrimaryCta>
                     </form>
                 </section>
 

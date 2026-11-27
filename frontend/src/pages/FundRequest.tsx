@@ -5,7 +5,7 @@ import { isServiceEnabled } from '../lib/services';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
-import PrimaryCta from '../components/PrimaryCta';
+import PrimaryCta, { Busy } from '../components/PrimaryCta';
 import Lottie from '../components/Lottie';
 
 // Same black (light) / silver (dark) language as the dashboard.
@@ -359,7 +359,7 @@ const FundRequest = () => {
                                     Cancel
                                 </button>
                                 <PrimaryCta disabled={loading} className="flex-[2] font-bold">
-                                    {loading ? 'Submitting...' : 'Submit Request'}
+                                    {loading ? <Busy text="Submitting..." /> : 'Submit Request'}
                                 </PrimaryCta>
                             </div>
                         </form>
