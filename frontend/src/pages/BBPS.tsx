@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from '@/components/ui/combobox';
-import { Zap, Flame, Shield, CreditCard, Droplet, Smartphone, XCircle, ReceiptText, Car, Wifi, Tv, Building2 } from "lucide-react";
+import { Zap, Flame, Shield, CreditCard, Droplet, Smartphone, XCircle, ReceiptText, Car, Wifi, Tv, Building2, Search, ArrowRight, GraduationCap, Landmark, Ticket, PlugZap, Clock } from "lucide-react";
 import axios from "axios";
 import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
@@ -33,6 +33,10 @@ const CATEGORY_STYLE: { match: RegExp; icon: any; color: string; border: string 
     { match: /broadband|internet|wifi/i, icon: Wifi, color: "bg-sky-500/10 text-sky-600 dark:text-sky-400 ring-sky-500/20", border: "hover:border-sky-500/40" },
     { match: /dth|cable|tv/i, icon: Tv, color: "bg-teal-500/10 text-teal-600 dark:text-teal-400 ring-teal-500/20", border: "hover:border-teal-500/40" },
     { match: /postpaid|mobile|landline/i, icon: Smartphone, color: SILVER_TILE, border: "hover:border-zinc-400" },
+    { match: /educat|school|fee/i, icon: GraduationCap, color: "bg-violet-500/10 text-violet-600 dark:text-violet-400 ring-violet-500/20", border: "hover:border-violet-500/40" },
+    { match: /pension|nps/i, icon: Landmark, color: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 ring-indigo-500/20", border: "hover:border-indigo-500/40" },
+    { match: /voucher|subscription|club/i, icon: Ticket, color: "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 ring-fuchsia-500/20", border: "hover:border-fuchsia-500/40" },
+    { match: /\bev\b|ev recharge/i, icon: PlugZap, color: "bg-lime-500/10 text-lime-700 dark:text-lime-400 ring-lime-500/20", border: "hover:border-lime-500/40" },
     { match: /mun[i]?cipal|tax|housing/i, icon: Building2, color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-amber-500/20", border: "hover:border-amber-500/40" },
 ];
 
@@ -42,6 +46,13 @@ const styleFor = (name: string) =>
 
 const BBPS = () => {
     const [bbpsServices, setBbpsServices] = useState<any[]>([]);
+    const [categoryQuery, setCategoryQuery] = useState("");
+    // Live categories first, the rest after; both follow the search.
+    const [liveServices, soonServices] = useMemo(() => {
+        const q = categoryQuery.trim().toLowerCase();
+        const shown = q ? bbpsServices.filter((sv) => String(sv.name).toLowerCase().includes(q)) : bbpsServices;
+        return [shown.filter((sv) => sv.available), shown.filter((sv) => !sv.available)];
+    }, [bbpsServices, categoryQuery]);
     const [selectedService, setSelectedService] = useState<any>(null);
     const [operators, setOperators] = useState<any[]>([]);
     // The biller list portals here, inside the Pay bill dialog (see ComboboxContent).
@@ -305,34 +316,84 @@ const BBPS = () => {
                 </div>
             </section>
 
-            {/* Categories */}
-            <section className="rounded-2xl border bg-card p-6 shadow-sm">
-                <h2 className="mb-5 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Choose a category</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-4">
-                    {bbpsServices.map((service) => (
-                        <div
-                            key={service.id}
-                            onClick={() => handleServiceClick(service)}
-                            title={service.available ? undefined : `${service.name} is not live on our BBPS provider yet`}
-                            className={`group/card relative flex flex-col items-center justify-center gap-3 rounded-2xl border bg-background/50 p-5 text-center transition-all ${
-                                service.available
-                                    ? `cursor-pointer hover:-translate-y-0.5 hover:shadow-lg ${service.border}`
-                                    : 'cursor-not-allowed opacity-40 grayscale'
-                            }`}
-                        >
-                            <div className={`rounded-2xl p-3.5 ring-1 ${service.color} ${service.available ? 'group-hover/card:scale-110 transition-transform' : ''}`}>
-                                <service.icon className="h-7 w-7" />
-                            </div>
-                            <span className="text-sm font-semibold capitalize leading-tight text-foreground">{service.name}</span>
-                            {!service.available && (
-                                <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Coming soon</span>
-                            )}
-                        </div>
-                    ))}
-                    {bbpsServices.length === 0 && [0, 1, 2, 3, 4, 5, 6].map((i) => (
-                        <div key={i} className="aspect-square animate-pulse rounded-2xl bg-black/5 dark:bg-white/10" />
-                    ))}
+            {/* Categories: live ones as big cards first, the ones still coming as a quiet list under them. */}
+            <section className="rounded-2xl border bg-card p-5 shadow-sm sm:p-6">
+                <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 className="text-lg font-semibold">Pay a bill</h2>
+                        <p className="text-sm text-muted-foreground">Choose what the customer is paying for.</p>
+                    </div>
+                    <label className="relative block sm:w-72">
+                        <span className="sr-only">Search categories</span>
+                        <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                            type="search"
+                            value={categoryQuery}
+                            onChange={(e) => setCategoryQuery(e.target.value)}
+                            placeholder="Search electricity, FASTag…"
+                            className={`${INPUT} py-2.5 pl-10`}
+                        />
+                    </label>
                 </div>
+
+                {bbpsServices.length === 0 ? (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <div key={i} className="h-[76px] animate-pulse rounded-2xl bg-black/5 dark:bg-white/10" />)}
+                    </div>
+                ) : (
+                    <>
+                        {liveServices.length > 0 && (
+                            <ul className="stage-list grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                {liveServices.map((service) => (
+                                    <li key={service.id}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleServiceClick(service)}
+                                            className={`group/card flex w-full items-center gap-4 rounded-2xl border bg-background/60 p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-foreground ${service.border}`}
+                                        >
+                                            <span className={`grid size-12 shrink-0 place-items-center rounded-xl ring-1 transition-transform duration-300 group-hover/card:scale-110 group-hover/card:-rotate-6 ${service.color}`}>
+                                                <service.icon className="h-6 w-6" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block truncate text-[15px] font-semibold capitalize text-foreground">{service.name}</span>
+                                                <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                    <span className="size-1.5 rounded-full bg-emerald-500" /> Live
+                                                </span>
+                                            </span>
+                                            <ArrowRight aria-hidden className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-all duration-200 group-hover/card:translate-x-0.5 group-hover/card:opacity-100" />
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+
+                        {soonServices.length > 0 && (
+                            <div className={liveServices.length > 0 ? 'mt-6 border-t pt-5' : ''}>
+                                <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    <Clock aria-hidden className="h-3.5 w-3.5" /> Coming soon · {soonServices.length}
+                                </p>
+                                <ul className="flex flex-wrap gap-2">
+                                    {soonServices.map((service) => (
+                                        <li
+                                            key={service.id}
+                                            title={`${service.name} is not live on our BBPS provider yet`}
+                                            className="flex items-center gap-2 rounded-full border border-dashed bg-background/40 py-1.5 pl-1.5 pr-3 text-sm text-muted-foreground"
+                                        >
+                                            <span className="grid size-6 place-items-center rounded-full bg-black/[0.04] dark:bg-white/[0.06]">
+                                                <service.icon aria-hidden className="h-3.5 w-3.5" />
+                                            </span>
+                                            <span className="capitalize">{service.name}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        {liveServices.length === 0 && soonServices.length === 0 && (
+                            <p className="py-8 text-center text-sm text-muted-foreground">No category matches “{categoryQuery}”.</p>
+                        )}
+                    </>
+                )}
             </section>
 
             {/* Service Form Modal */}
