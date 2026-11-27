@@ -5,6 +5,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { useLocationContext } from '../context/LocationContext';
+import PrimaryCta from '../components/PrimaryCta';
 
 const SILVER_TILE = 'icon-chip';
 const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500';
@@ -155,9 +156,9 @@ const UpiCashWithdrawal = () => {
                                 <input required inputMode="numeric" value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile" className={INPUT} />
                                 {mobileError && <span className="text-xs font-normal text-red-600">{mobileError}</span>}
                             </label>
-                            <button disabled={busy || !valid} className="flex items-center justify-center gap-2 btn-primary rounded-xl py-3 text-sm font-semibold disabled:opacity-60">
+                            <PrimaryCta disabled={busy || !valid} className="text-sm font-semibold">
                                 <QrCode className="h-4 w-4" />{busy ? 'Generating…' : 'Generate QR'}
-                            </button>
+                            </PrimaryCta>
                         </form>
                     )}
                 </section>

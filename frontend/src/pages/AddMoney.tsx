@@ -3,6 +3,7 @@ import axios from 'axios';
 import { QrCode, RefreshCw, CheckCircle2, Clock, XCircle, Zap, Inbox, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
+import PrimaryCta from '../components/PrimaryCta';
 
 /**
  * Self-service wallet top-up.
@@ -195,14 +196,10 @@ const AddMoney = () => {
                 {status === 'PENDING' ? 'Cancel and start over' : 'Add more money'}
               </button>
             ) : (
-              <button
-                type="submit"
-                disabled={loading}
-                className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 font-bold disabled:opacity-60 ${ACTIVE_BUTTON}`}
-              >
+              <PrimaryCta disabled={loading} className="w-full font-bold">
                 {loading ? <RefreshCw className="h-5 w-5 animate-spin" /> : <QrCode className="h-5 w-5" />}
                 {loading ? 'Generating…' : 'Generate UPI QR'}
-              </button>
+              </PrimaryCta>
             )}
 
             <ul className="grid gap-2 border-t pt-5 text-xs text-muted-foreground sm:grid-cols-3">

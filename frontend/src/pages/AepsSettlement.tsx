@@ -7,6 +7,7 @@ import StatusMark from '../components/StatusMark';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import logo from '../assets/logo.png';
+import PrimaryCta from '../components/PrimaryCta';
 
 // Payout charge from the retailer rate card; the backend debits the same (getSettlementFee).
 const SETTLEMENT_BASE_CHARGE = 5;
@@ -406,14 +407,10 @@ const AepsSettlement = () => {
                         <li className="flex items-center gap-2"><ShieldCheck className="h-3.5 w-3.5 shrink-0" /> Only active (verified) accounts can receive funds</li>
                     </ul>
 
-                    <button
-                        type="submit"
-                        disabled={loading || !selectedBankId}
-                        className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold disabled:opacity-50 disabled:shadow-none ${ACTIVE_BUTTON}`}
-                    >
+                    <PrimaryCta disabled={loading || !selectedBankId} className="w-full font-bold">
                         <Send className="w-4 h-4" />
                         {loading ? 'Processing...' : 'Submit Settlement'}
-                    </button>
+                    </PrimaryCta>
                 </section>
             </form>
 

@@ -5,6 +5,8 @@ import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
 import { toast } from 'sonner';
+import PrimaryCta from '../components/PrimaryCta';
+import LottieEmpty from '../components/LottieEmpty';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -266,14 +268,14 @@ const Recharge = () => {
                             />
                         </div>
                     </div>
-                    <button
+                    <PrimaryCta
                         onClick={() => handleRechargeSubmit(type)}
                         disabled={loading}
-                        className={`flex items-center justify-center gap-2 rounded-xl px-8 py-3 font-bold disabled:opacity-50 disabled:shadow-none ${ACTIVE_BUTTON}`}
+                        className="font-bold"
                     >
                         {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Zap className="h-5 w-5" />}
                         Recharge{Number(amount) > 0 ? ` ₹${amount}` : ''}
-                    </button>
+                    </PrimaryCta>
                 </div>
             </section>
         );
@@ -476,6 +478,7 @@ const Recharge = () => {
                                 )) : (
                                     <tr>
                                         <td colSpan={9} className="px-4 py-10 text-center text-muted-foreground">
+                                            <div className="flex justify-center"><LottieEmpty size={96} /></div>
                                             No recharge transaction found
                                         </td>
                                     </tr>

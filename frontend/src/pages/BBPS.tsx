@@ -6,6 +6,7 @@ import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
 import { billerField, billerInputValid, cleanBillerInput } from '../lib/billerField';
 import { toast } from "sonner";
+import PrimaryCta from '../components/PrimaryCta';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -483,10 +484,10 @@ const BBPS = () => {
                                             />
                                         </div>
 
-                                        <button 
+                                        <PrimaryCta
                                             onClick={handlePayment}
                                             disabled={loading}
-                                            className={`w-full font-bold py-3.5 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2 ${ACTIVE_BUTTON}`}
+                                            className="mt-2 w-full font-bold"
                                         >
                                             {loading ? (
                                                 <div className="flex items-center justify-center gap-2">
@@ -496,7 +497,7 @@ const BBPS = () => {
                                             ) : (
                                                 selectedOperator?.viewbill === "true" ? "Pay Bill Securely" : "Pay Securely"
                                             )}
-                                        </button>
+                                        </PrimaryCta>
                                         
                                         {!!fetchedBill && <button 
                                             onClick={() => setFetchedBill(null)}

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Send, Plus, X, FileText, Trash2, Inbox, Landmark, Hash, Paperclip } from 'lucide-react';
+import { Send, Plus, X, FileText, Trash2, Landmark, Hash, Paperclip } from 'lucide-react';
 import Collect from './Collect';
 import { isServiceEnabled } from '../lib/services';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import PrimaryCta from '../components/PrimaryCta';
+import LottieEmpty from '../components/LottieEmpty';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -177,7 +179,7 @@ const FundRequest = () => {
                             {shown.length === 0 ? (
                                 <tr>
                                     <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
-                                        <Inbox className="mx-auto mb-2 h-8 w-8 opacity-60" />
+                                        <div className="flex justify-center"><LottieEmpty size={96} /></div>
                                         No fund requests found.
                                     </td>
                                 </tr>
@@ -356,13 +358,9 @@ const FundRequest = () => {
                                 <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 rounded-xl border py-3 font-medium hover:bg-black/5 dark:hover:bg-white/5">
                                     Cancel
                                 </button>
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className={`flex-[2] rounded-xl py-3 font-bold disabled:opacity-50 disabled:cursor-not-allowed ${ACTIVE_BUTTON}`}
-                                >
+                                <PrimaryCta disabled={loading} className="flex-[2] font-bold">
                                     {loading ? 'Submitting...' : 'Submit Request'}
-                                </button>
+                                </PrimaryCta>
                             </div>
                         </form>
                     </div>

@@ -43,7 +43,7 @@ const Layout = () => {
     useEffect(() => {
         if (!retailer) return;
         const onDown = (e: PointerEvent) => {
-            const target = e.target instanceof Element ? e.target.closest('.btn-primary') : null;
+            const target = e.target instanceof Element ? e.target.closest('.btn-primary, [data-cta]') : null;
             if (!target || (target as HTMLButtonElement).disabled) return;
             sparkRef.current?.spark(e.clientX, e.clientY);
         };

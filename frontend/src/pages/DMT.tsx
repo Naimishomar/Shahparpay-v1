@@ -3,6 +3,7 @@ import { Search, UserPlus, Send, Plus, CreditCard, Lock, CheckCircle2, X, Trash,
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import PrimaryCta from '../components/PrimaryCta';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -557,10 +558,10 @@ const DMT = () => {
                                 <span className="text-xl font-bold tabular-nums">₹ {amount || '0'}</span>
                             </div>
 
-                            <button onClick={handleTransfer} disabled={loading || !amount || Number(amount) < 10 || pin.length !== 4} className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-base font-bold disabled:opacity-50 disabled:shadow-none ${ACTIVE_BUTTON}`}>
+                            <PrimaryCta onClick={handleTransfer} disabled={loading || !amount || Number(amount) < 10 || pin.length !== 4} className="w-full text-base font-bold">
                                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                                 {loading ? 'Processing...' : 'Confirm Transfer'}
-                            </button>
+                            </PrimaryCta>
                         </div>
                     </div>
                 </div>
