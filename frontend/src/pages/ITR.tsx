@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import PrimaryCta, { Busy } from '../components/PrimaryCta';
+import { TitleText } from '../components/BlurText';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const SILVER_TILE = 'icon-chip';
@@ -54,7 +55,7 @@ const ITR: React.FC = () => {
                         </div>
                         <div>
                             <div className="flex flex-wrap items-center gap-2">
-                                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">TaxSuite Filing Services</h1>
+                                <h1 className="text-2xl md:text-3xl font-bold tracking-tight"><TitleText text="TaxSuite Filing Services" /></h1>
                                 <span className="rounded-full border bg-background/60 px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground">eSevaTech partner</span>
                             </div>
                             <p className="mt-1 max-w-xl text-sm text-muted-foreground">

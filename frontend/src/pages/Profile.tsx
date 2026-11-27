@@ -4,6 +4,8 @@ import { User, Mail, Phone, MapPin, Building2, ShieldCheck, KeyRound, Lock, Chev
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { aepsKycDone } from '../lib/services';
+import PortalDialog from '../components/PortalDialog';
+import { TitleText } from '../components/BlurText';
 
 const ACTIVE_BUTTON = 'btn-primary';
 const SILVER_TILE = 'icon-chip';
@@ -286,7 +288,7 @@ const Profile = () => {
                         </button>
 
                         <div className="min-w-0">
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground truncate">{user?.name || 'Retailer Name'}</h1>
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground"><TitleText text={user?.name || 'Retailer Name'} /></h1>
                             {user?.email && <p className="text-sm text-muted-foreground truncate">{user.email}</p>}
                             <div className="mt-3 flex flex-wrap items-center gap-2">
                                 <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${SILVER_TILE}`}>
@@ -493,7 +495,7 @@ const Profile = () => {
 
             {/* Password / PIN modal */}
             {isPasswordModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                <PortalDialog label="Change password or PIN" onClose={closeSecurityModal}>
                     <div className="relative w-full max-w-md rounded-3xl border bg-card p-6 sm:p-8 shadow-2xl">
                         <button
                             onClick={closeSecurityModal}
@@ -600,7 +602,7 @@ const Profile = () => {
                             )}
                         </div>
                     </div>
-                </div>
+                </PortalDialog>
             )}
         </div>
     );

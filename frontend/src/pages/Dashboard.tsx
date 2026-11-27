@@ -10,6 +10,7 @@ import { isServiceEnabled } from '../lib/services';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "sonner";
 import Counter from '../components/Counter';
+import { Meteors } from '../components/ui/meteors';
 import PortalSpotlight from '../components/PortalSpotlight';
 import ShinyText from '../components/ShinyText';
 import GlareHover from '../components/GlareHover';
@@ -135,7 +136,7 @@ const VolumeChart = ({ points, start, end }: { points: number[]; start: Date; en
                     <>
                         <div className="pointer-events-none absolute inset-y-0 w-px bg-white/50 transition-[left] duration-200 ease-out" style={{ left: pct(hover) }} />
                         <div
-                            className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#D9CCFF] shadow transition-[left,top] duration-200 ease-out"
+                            className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#0A84FF] shadow transition-[left,top] duration-200 ease-out"
                             style={{ left: pct(hover), top: `${(py(points[hover]) / H) * 100}%` }}
                         />
                         <div
@@ -267,11 +268,13 @@ const Dashboard = () => {
         <div className="space-y-6">
             {/* Hero */}
             <section className="relative overflow-hidden rounded-3xl hero-panel p-6 md:p-8">
+                {/* Aceternity Meteors: violet streaks fall slowly behind the figures. */}
+                <Meteors number={16} className="bg-white/80 shadow-none before:from-white/80" />
 
                 <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                         <p className="text-sm font-medium text-white/80">
-                            <ShinyText text={`${greeting()}${firstName ? `, ${firstName}` : ''}`} color="rgb(22 20 46 / 0.8)" shineColor="#7C6BD6" speed={2.6} delay={3} /> <span className="stage-wave" aria-hidden>👋</span>
+                            <ShinyText text={`${greeting()}${firstName ? `, ${firstName}` : ''}`} color="rgb(255 255 255 / 0.85)" shineColor="#FFFFFF" speed={2.6} delay={3} /> <span className="stage-wave" aria-hidden>👋</span>
                         </p>
                         <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-white/75">
                             Transaction volume · {rangeLabel}
@@ -378,7 +381,7 @@ const Dashboard = () => {
                                 <TiltContent className={`group relative h-full overflow-hidden rounded-2xl border border-white/70 p-5 shadow-sm dark:border-white/10 ${a.card}`}>
                                     <div className="relative flex items-center justify-between gap-3">
                                         <span className="text-sm font-semibold">{card.title}</span>
-                                        <div className="rounded-xl border border-white/90 bg-white/65 p-2.5 transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110 dark:border-white/10 dark:bg-white/10">
+                                        <div className="rounded-xl border border-current/20 bg-current/15 p-2.5 transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110 ">
                                             <Icon className="h-5 w-5" />
                                         </div>
                                     </div>
@@ -387,7 +390,7 @@ const Dashboard = () => {
                                     )}
                                     {'share' in card ? (
                                         <div className="relative mt-4">
-                                            <Progress value={loading && !stats ? 0 : card.share} className="h-1.5 bg-black/10 dark:bg-white/15" />
+                                            <Progress value={loading && !stats ? 0 : card.share} className="h-1.5 bg-current/20 [&>*]:!bg-current" />
                                             <p className="mt-1.5 text-xs opacity-70">{loading && !stats ? '\u00a0' : `${card.share}% of total volume`}</p>
                                         </div>
                                     ) : (
@@ -407,7 +410,7 @@ const Dashboard = () => {
                     <h3 className="text-lg font-semibold mb-4">Quick actions</h3>
                     <div className="stage-list grid grid-cols-2 gap-3">
                         {QUICK_ACTIONS.filter((a) => isServiceEnabled(user, a.service)).map(({ title, hint, url, icon: Icon, accent }) => (
-                            <GlareHover key={url} width="100%" height="100%" borderRadius="0.75rem" glareColor="#B9A8F0" glareOpacity={0.45} blendMode="normal" rimGlint={false} style={{ display: 'grid', placeItems: 'stretch', borderWidth: 0 }}>
+                            <GlareHover key={url} width="100%" height="100%" borderRadius="0.75rem" glareColor="#0A84FF" glareOpacity={0.45} blendMode="normal" rimGlint={false} style={{ display: 'grid', placeItems: 'stretch', borderWidth: 0 }}>
                             <button
                                 onClick={() => navigate(url)}
                                 className="group relative flex flex-col items-start gap-3 rounded-xl border bg-muted/40 p-4 text-left hover:border-foreground/20 active:scale-[0.98]"

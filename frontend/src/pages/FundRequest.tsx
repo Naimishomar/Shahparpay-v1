@@ -7,6 +7,8 @@ import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import PrimaryCta, { Busy } from '../components/PrimaryCta';
 import Lottie from '../components/Lottie';
+import PortalDialog from '../components/PortalDialog';
+import { TitleText } from '../components/BlurText';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -233,7 +235,7 @@ const FundRequest = () => {
                         <Send className="h-7 w-7" />
                     </div>
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Fund Request</h1>
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight"><TitleText text="Fund Request" /></h1>
                         <p className="text-sm text-muted-foreground">
                             {canCollect ? 'Add funds by a bank deposit request or a payment link the customer pays online.' : 'Request Trade Wallet funds from your distributor against a bank deposit.'}
                         </p>
@@ -252,8 +254,8 @@ const FundRequest = () => {
 
             {/* Add Fund Request Modal */}
             {showAddModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border bg-card shadow-2xl animate-in zoom-in-95 duration-200">
+                <PortalDialog label="New fund request" onClose={() => setShowAddModal(false)}>
+                    <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border bg-card shadow-2xl">
                         <div className="flex items-center justify-between border-b p-6">
                             <div className="flex items-center gap-3">
                                 <div className={`rounded-xl p-2.5 ${SILVER_TILE}`}>
@@ -364,7 +366,7 @@ const FundRequest = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </PortalDialog>
             )}
         </div>
     );
