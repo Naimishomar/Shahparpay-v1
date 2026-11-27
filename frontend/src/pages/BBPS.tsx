@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from '@/components/ui/combobox';
 import { Zap, Flame, Shield, CreditCard, Droplet, Smartphone, XCircle, ReceiptText, Car, Wifi, Tv, Building2 } from "lucide-react";
 import axios from "axios";
 import html2canvas from 'html2canvas-pro';
@@ -44,6 +44,8 @@ const BBPS = () => {
     const [bbpsServices, setBbpsServices] = useState<any[]>([]);
     const [selectedService, setSelectedService] = useState<any>(null);
     const [operators, setOperators] = useState<any[]>([]);
+    // The biller list portals here, inside the Pay bill dialog (see ComboboxContent).
+    const [billerHost, setBillerHost] = useState<HTMLDivElement | null>(null);
     const [loading, setLoading] = useState(false);
     
     const [operatorId, setOperatorId] = useState("");
@@ -336,6 +338,8 @@ const BBPS = () => {
             {/* Service Form Modal */}
             {selectedService && (
                 <PortalDialog label="Pay bill" onClose={() => setSelectedService(null)}>
+                    {/* Outside the panel (its overflow would clip the list), inside the dialog (its focus trap). */}
+                    <div ref={setBillerHost} className="contents" />
                     <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border bg-card p-6 shadow-2xl">
                         <div>
                             <div className="flex justify-between items-center mb-6 border-b pb-4">
@@ -352,11 +356,13 @@ const BBPS = () => {
                             
                             <div className="space-y-5">
                                 <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-foreground">Operator / Biller</label>
-                                    <Select
-                                        value={operatorId}
-                                        onValueChange={(v) => {
-                                            setOperatorId(v);
+                                    <label htmlFor="bbps-biller" className="text-sm font-medium text-foreground">Operator / Biller</label>
+                                    {/* animate-ui Combobox: type to filter a long biller list instead of scrolling it. */}
+                                    <Combobox
+                                        items={operators}
+                                        value={selectedOperator ?? null}
+                                        onValueChange={(op: any) => {
+                                            setOperatorId(op ? String(op.id) : "");
                                             setConsumerNumber("");
                                             setCustomerMobile("");
                                             setNeedsDob(false);
@@ -364,16 +370,24 @@ const BBPS = () => {
                                             setAmount("");
                                             setFetchedBill(null);
                                         }}
+                                        itemToStringLabel={(op: any) => op?.name ?? ""}
+                                        isItemEqualToValue={(a: any, b: any) => String(a?.id) === String(b?.id)}
                                     >
-                                        <SelectTrigger aria-label="Operator / Biller" className={`${INPUT} data-[size=default]:h-auto`}>
-                                            <SelectValue placeholder="Select Biller" />
-                                        </SelectTrigger>
-                                        <SelectContent position="popper" className="z-[110]">
-                                            {operators.map((op: any) => (
-                                                <SelectItem key={op.id} value={String(op.id)}>{op.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                        <ComboboxInput
+                                            id="bbps-biller"
+                                            placeholder={operators.length ? "Search biller by name" : "Loading billers…"}
+                                            disabled={!operators.length}
+                                            className="h-12 rounded-xl bg-background shadow-sm [&_input]:text-sm"
+                                        />
+                                        <ComboboxContent container={billerHost}>
+                                            <ComboboxEmpty>No biller matches that name.</ComboboxEmpty>
+                                            <ComboboxList>
+                                                {(op: any) => (
+                                                    <ComboboxItem key={op.id} value={op}>{op.name}</ComboboxItem>
+                                                )}
+                                            </ComboboxList>
+                                        </ComboboxContent>
+                                    </Combobox>
                                 </div>
 
                                 {/* Nothing but the biller until one is chosen: the fields below are that biller's. */}
