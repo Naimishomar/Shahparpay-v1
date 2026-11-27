@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { QrCode, RefreshCw, XCircle, ScanLine, Banknote, ShieldAlert, Timer } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import axios from 'axios';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { useLocationContext } from '../context/LocationContext';
@@ -177,7 +178,7 @@ const UpiCashWithdrawal = () => {
                                     <label htmlFor="upicw-amount" className="text-sm font-semibold">Amount</label>
                                     <div className="relative mt-2">
                                         <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-semibold text-muted-foreground">₹</span>
-                                        <input id="upicw-amount" required inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').slice(0, 5))} placeholder="0" aria-describedby="upicw-amount-hint" className={`${INPUT} h-16 pl-11 text-3xl font-bold tabular-nums`} />
+                                        <input id="upicw-amount" required inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').slice(0, 5))} placeholder="0" aria-describedby="upicw-amount-hint" className={cn(INPUT, 'h-16 pl-11 text-3xl font-bold tabular-nums')} />
                                     </div>
                                     <div className="mt-3 flex flex-wrap gap-2">
                                         {QUICK.map((v) => (
@@ -198,7 +199,7 @@ const UpiCashWithdrawal = () => {
                                     <label htmlFor="upicw-mobile" className="text-sm font-semibold">Customer mobile</label>
                                     <div className="relative mt-2">
                                         <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">+91</span>
-                                        <input id="upicw-mobile" required inputMode="numeric" value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile" className={`${INPUT} h-12 pl-14 text-base font-semibold tracking-wider tabular-nums`} />
+                                        <input id="upicw-mobile" required inputMode="numeric" value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile" className={cn(INPUT, 'h-12 pl-14 text-base font-semibold tracking-wider tabular-nums')} />
                                     </div>
                                     {mobileError && <p className="mt-2 text-xs text-red-600">{mobileError}</p>}
                                 </div>

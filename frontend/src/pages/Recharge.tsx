@@ -5,6 +5,7 @@ import axios from "axios";
 import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { SlidingNumber } from '../components/animate-ui/primitives/texts/sliding-number';
 import PrimaryCta, { PILL_HIGHLIGHT } from '../components/PrimaryCta';
@@ -291,7 +292,7 @@ const Recharge = () => {
                                 onChange={e => setAmount(e.target.value)}
                                 onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                 placeholder="0"
-                                className={`${INPUT} h-14 pl-10 text-2xl font-bold tabular-nums`}
+                                className={cn(INPUT, 'h-14 pl-10 text-2xl font-bold tabular-nums')}
                             />
                         </div>
                         {type === 'prepaid' && resolvedOperator && (
@@ -313,7 +314,7 @@ const Recharge = () => {
                             onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                             onKeyDown={e => { if (e.key === 'Enter' && !loading) handleRechargeSubmit(type); }}
                             placeholder="••••"
-                            className={`${INPUT} h-12 pl-11 text-lg tracking-[0.5em]`}
+                            className={cn(INPUT, 'h-12 pl-11 text-lg tracking-[0.5em]')}
                         />
                     </div>
                 </Step>
@@ -455,7 +456,7 @@ const Recharge = () => {
                                         setResolvedCircle("");
                                     }}
                                     onKeyDown={e => { if (e.key === 'Enter' && /^[6-9]\d{9}$/.test(mobileNumber) && !loading) handleBrowsePlan(); }}
-                                    className={`${INPUT} h-14 pl-14 pr-40 text-lg font-semibold tracking-wider tabular-nums`}
+                                    className={cn(INPUT, 'h-14 pl-14 pr-40 text-lg font-semibold tracking-wider tabular-nums')}
                                 />
                                 {/* Browse Plans sits in the field: it is the next thing to do with the number. */}
                                 <button
@@ -501,13 +502,13 @@ const Recharge = () => {
                                         placeholder="DTH number"
                                         value={dthNumber}
                                         onChange={e => setDthNumber(e.target.value)}
-                                        className={`${INPUT} h-12 pl-11 font-semibold tracking-wider`}
+                                        className={cn(INPUT, 'h-12 pl-11 font-semibold tracking-wider')}
                                     />
                                 </div>
                                 <div className="relative">
                                     <Tv className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                     <Select value={dthOperator} onValueChange={setDthOperator}>
-                                        <SelectTrigger aria-label="DTH operator" className={`${INPUT} h-12 pl-11 data-[size=default]:h-12`}>
+                                        <SelectTrigger aria-label="DTH operator" className={cn(INPUT, 'h-12 pl-11 data-[size=default]:h-12')}>
                                             <SelectValue placeholder="Select operator" />
                                         </SelectTrigger>
                                         <SelectContent position="popper" className="z-[110]">
@@ -619,7 +620,7 @@ const Recharge = () => {
                                     placeholder="Search by amount or validity (e.g., 299 or 28 Days)" 
                                     value={planSearch}
                                     onChange={(e) => setPlanSearch(e.target.value)}
-                                    className={`${INPUT} pl-10`}
+                                    className={cn(INPUT, 'pl-10')}
                                 />
                             </div>
                         </div>

@@ -6,6 +6,7 @@ import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
 import { billerField, billerInputValid, cleanBillerInput } from '../lib/billerField';
+import { cn } from '@/lib/utils';
 import { toast } from "sonner";
 import PrimaryCta, { Busy } from '../components/PrimaryCta';
 import PortalDialog from '../components/PortalDialog';
@@ -331,7 +332,7 @@ const BBPS = () => {
                             value={categoryQuery}
                             onChange={(e) => setCategoryQuery(e.target.value)}
                             placeholder="Search electricity, FASTag…"
-                            className={`${INPUT} py-2.5 pl-10`}
+                            className={cn(INPUT, 'py-2.5 pl-10')}
                         />
                     </label>
                 </div>
@@ -544,7 +545,7 @@ const BBPS = () => {
                                                     min="10"
                                                     step="1"
                                                     inputMode="numeric"
-                                                    className={`${INPUT} pl-8 text-lg font-semibold tabular-nums`}
+                                                    className={cn(INPUT, 'pl-8 text-lg font-semibold tabular-nums')}
                                                     placeholder="0.00"
                                                     value={amount}
                                                     onChange={(e) => setAmount(e.target.value)}
@@ -557,7 +558,7 @@ const BBPS = () => {
                                             <label className="text-sm font-medium text-foreground">T-PIN</label>
                                             <input 
                                                 type="password"
-                                                className={`${INPUT} text-center text-lg tracking-[0.5em]`}
+                                                className={cn(INPUT, 'text-center text-lg tracking-[0.5em]')}
                                                 placeholder="••••"
                                                 value={pin}
                                                 onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
