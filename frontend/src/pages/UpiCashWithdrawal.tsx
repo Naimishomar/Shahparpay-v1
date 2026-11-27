@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { QrCode, Phone, IndianRupee, RefreshCw, XCircle } from 'lucide-react';
+import { QrCode, RefreshCw, XCircle, ScanLine, Banknote, ShieldAlert, Timer } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -16,9 +16,16 @@ const POLL_MS = 4000;
 // Rate card range; the backend refuses anything outside it.
 const MIN = 500;
 const MAX = 5000;
+// One tap for the usual amounts, all inside the rate card range.
+const QUICK = [500, 1000, 2000, 3000, 5000];
+const STEPS = [
+    { icon: QrCode, title: 'Generate the QR', text: 'Enter the amount and the customer’s mobile.' },
+    { icon: ScanLine, title: 'Customer scans and pays', text: 'From any UPI app: PhonePe, GPay, Paytm, BHIM.' },
+    { icon: Banknote, title: 'Hand over the cash', text: 'Only after this screen says the payment is received.' },
+] as const;
 
 type Txn = { transactionId: string; amount: number; status: string; customerMobile?: string; bankRRN?: string; payerName?: string; accountNumber?: string; message?: string; createdAt?: string };
-type Qr = { transactionId: string; qrCode?: string; qrImage?: string; amount: number; expiresAt: number };
+type Qr = { transactionId: string; qrCode?: string; qrImage?: string; amount: number; expiresAt: number; ttl: number };
 
 /**
  * UPI cash withdrawal: the customer scans a QR for the amount and pays from their
@@ -80,7 +87,7 @@ const UpiCashWithdrawal = () => {
                 longitude: location.longitude,
             }, headers);
             const d = res.data.data;
-            setQr({ transactionId: d.transactionId, qrCode: d.qrCode || undefined, qrImage: d.qrImage || undefined, amount: d.amount, expiresAt: Date.now() + d.expiresIn * 1000 });
+            setQr({ transactionId: d.transactionId, qrCode: d.qrCode || undefined, qrImage: d.qrImage || undefined, amount: d.amount, expiresAt: Date.now() + d.expiresIn * 1000, ttl: d.expiresIn });
             setNow(Date.now());
         } catch (err: any) {
             toast.error(err?.response?.data?.message || 'Could not start the UPI cash withdrawal');
@@ -126,43 +133,101 @@ const UpiCashWithdrawal = () => {
                             <PrimaryCta type="button" onClick={reset} className="mt-2 py-2.5 text-sm font-semibold">New withdrawal</PrimaryCta>
                         </div>
                     ) : qr ? (
-                        <div className="flex flex-col items-center gap-4 text-center">
+                        <div className="mx-auto flex max-w-md flex-col items-center gap-4 text-center">
                             <p className="text-sm text-muted-foreground">Ask the customer to scan and pay</p>
-                            <p className="text-3xl font-bold tabular-nums">₹{qr.amount.toLocaleString('en-IN')}</p>
-                            <div className={`rounded-2xl bg-white p-4 ${secondsLeft ? '' : 'opacity-30'}`}>
+                            <p className="text-4xl font-bold tracking-tight tabular-nums">₹{qr.amount.toLocaleString('en-IN')}</p>
+                            <div className={`relative rounded-3xl bg-white p-4 shadow-lg ring-1 ring-black/5 transition-opacity ${secondsLeft ? '' : 'opacity-30'}`}>
+                                {/* Corner marks frame the code like a scanner viewfinder. */}
+                                {['left-1.5 top-1.5 border-l-2 border-t-2 rounded-tl-xl', 'right-1.5 top-1.5 border-r-2 border-t-2 rounded-tr-xl', 'left-1.5 bottom-1.5 border-l-2 border-b-2 rounded-bl-xl', 'right-1.5 bottom-1.5 border-r-2 border-b-2 rounded-br-xl'].map((c) => (
+                                    <span key={c} aria-hidden className={`absolute size-6 border-[#7C6BD6] ${c}`} />
+                                ))}
                                 {qr.qrImage ? (
-                                    <img src={qr.qrImage} alt="UPI payment QR code" width={320} height={320} className="h-auto w-full max-w-[320px] object-contain" />
+                                    <img src={qr.qrImage} alt="UPI payment QR code" width={280} height={280} className="h-auto w-full max-w-[280px] object-contain" />
                                 ) : qr.qrCode ? (
-                                    <QRCodeSVG value={qr.qrCode} size={320} className="h-auto w-full max-w-[320px]" />
+                                    <QRCodeSVG value={qr.qrCode} size={280} className="h-auto w-full max-w-[280px]" />
                                 ) : null}
                             </div>
-                            <p className="text-sm font-medium">
-                                {secondsLeft
-                                    ? `Expires in ${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')} · waiting for payment…`
-                                    : 'QR expired. If the customer already paid, check the status.'}
+                            {/* Time left as a draining bar, then in words. */}
+                            <div className="w-full max-w-[312px]">
+                                <div className="h-1.5 overflow-hidden rounded-full bg-black/10 dark:bg-white/15">
+                                    <div
+                                        className={`h-full rounded-full transition-[width] duration-1000 ease-linear ${secondsLeft > 30 ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                                        style={{ width: `${qr.ttl ? Math.min(100, (secondsLeft / qr.ttl) * 100) : 0}%` }}
+                                    />
+                                </div>
+                                <p className="mt-2 flex items-center justify-center gap-1.5 text-sm font-medium">
+                                    <Timer aria-hidden className="h-4 w-4 text-muted-foreground" />
+                                    {secondsLeft
+                                        ? <>Expires in <span className="tabular-nums">{Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, '0')}</span> · waiting for payment…</>
+                                        : 'QR expired. If the customer already paid, check the status.'}
+                                </p>
+                            </div>
+                            <p className="flex items-center gap-2 rounded-xl bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-700 ring-1 ring-amber-500/20 dark:text-amber-400">
+                                <ShieldAlert aria-hidden className="h-4 w-4" /> Do not give cash until this screen shows success.
                             </p>
-                            <p className="text-xs font-semibold text-amber-600">Do not give cash until this screen shows success.</p>
                             <div className="flex gap-2">
-                                <button onClick={() => checkStatus(qr.transactionId)} className="flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold"><RefreshCw className="h-4 w-4" />Check status</button>
-                                <button onClick={reset} className="rounded-xl px-4 py-2 text-sm text-muted-foreground">Cancel</button>
+                                <button onClick={() => checkStatus(qr.transactionId)} className="flex items-center gap-2 rounded-xl border bg-background px-4 py-2.5 text-sm font-semibold hover:bg-black/5 dark:hover:bg-white/5"><RefreshCw className="h-4 w-4" />Check status</button>
+                                <button onClick={reset} className="rounded-xl px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
                             </div>
                         </div>
                     ) : (
-                        <form onSubmit={start} className="flex flex-col gap-4">
-                            <label className="flex flex-col gap-1.5 text-sm font-medium">
-                                <span className="flex items-center gap-1.5"><IndianRupee className="h-3.5 w-3.5" />Amount</span>
-                                <input required inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))} placeholder="e.g. 500" className={INPUT} />
-                                <span className={`text-xs font-normal ${amountError ? 'text-red-600' : 'text-muted-foreground'}`}>{amountError || `₹${MIN} – ₹${MAX.toLocaleString('en-IN')}`}</span>
-                            </label>
-                            <label className="flex flex-col gap-1.5 text-sm font-medium">
-                                <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" />Customer Mobile</span>
-                                <input required inputMode="numeric" value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile" className={INPUT} />
-                                {mobileError && <span className="text-xs font-normal text-red-600">{mobileError}</span>}
-                            </label>
-                            <PrimaryCta disabled={busy || !valid} className="text-sm font-semibold">
-                                <QrCode className="h-4 w-4" />{busy ? <Busy text="Generating…" /> : 'Generate QR'}
-                            </PrimaryCta>
-                        </form>
+                        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+                            <form onSubmit={start} className="flex flex-col gap-6">
+                                <div>
+                                    <label htmlFor="upicw-amount" className="text-sm font-semibold">Amount</label>
+                                    <div className="relative mt-2">
+                                        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-semibold text-muted-foreground">₹</span>
+                                        <input id="upicw-amount" required inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').slice(0, 5))} placeholder="0" aria-describedby="upicw-amount-hint" className={`${INPUT} h-16 pl-11 text-3xl font-bold tabular-nums`} />
+                                    </div>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {QUICK.map((v) => (
+                                            <button
+                                                key={v}
+                                                type="button"
+                                                onClick={() => setAmount(String(v))}
+                                                aria-pressed={Number(amount) === v}
+                                                className={`rounded-full border px-3.5 py-1.5 text-sm font-semibold tabular-nums transition-all active:scale-95 ${Number(amount) === v ? 'btn-primary' : 'bg-background hover:bg-black/5 dark:hover:bg-white/5'}`}
+                                            >
+                                                ₹{v.toLocaleString('en-IN')}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p id="upicw-amount-hint" className={`mt-2 text-xs ${amountError ? 'text-red-600' : 'text-muted-foreground'}`}>{amountError || `Any amount from ₹${MIN} to ₹${MAX.toLocaleString('en-IN')}.`}</p>
+                                </div>
+                                <div>
+                                    <label htmlFor="upicw-mobile" className="text-sm font-semibold">Customer mobile</label>
+                                    <div className="relative mt-2">
+                                        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">+91</span>
+                                        <input id="upicw-mobile" required inputMode="numeric" value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile" className={`${INPUT} h-12 pl-14 text-base font-semibold tracking-wider tabular-nums`} />
+                                    </div>
+                                    {mobileError && <p className="mt-2 text-xs text-red-600">{mobileError}</p>}
+                                </div>
+                                <PrimaryCta disabled={busy || !valid} className="w-full font-semibold">
+                                    <QrCode className="h-4 w-4" />{busy ? <Busy text="Generating…" /> : valid ? `Generate QR for ₹${Number(amount).toLocaleString('en-IN')}` : 'Generate QR'}
+                                </PrimaryCta>
+                            </form>
+
+                            {/* How it goes, so a new retailer never hands over cash early. */}
+                            <aside className="rounded-2xl border bg-background/50 p-5">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">How it works</p>
+                                <ol className="mt-4 space-y-5">
+                                    {STEPS.map(({ icon: Icon, title, text }, i) => (
+                                        <li key={title} className="relative flex gap-3">
+                                            {i < STEPS.length - 1 && <span aria-hidden className="absolute left-[17px] top-10 bottom-[-1.25rem] w-px bg-border" />}
+                                            <span className={`grid size-9 shrink-0 place-items-center rounded-full ${SILVER_TILE}`}><Icon className="h-4 w-4" /></span>
+                                            <span>
+                                                <span className="block text-sm font-semibold">{i + 1}. {title}</span>
+                                                <span className="block text-xs leading-relaxed text-muted-foreground">{text}</span>
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ol>
+                                <p className="mt-5 flex items-start gap-2 rounded-xl bg-amber-500/10 p-3 text-xs font-medium leading-relaxed text-amber-700 ring-1 ring-amber-500/20 dark:text-amber-400">
+                                    <ShieldAlert aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
+                                    A screenshot from the customer is not proof. Wait for success here.
+                                </p>
+                            </aside>
+                        </div>
                     )}
                 </section>
             </div>
