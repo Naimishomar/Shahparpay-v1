@@ -6,6 +6,7 @@ import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, inr 
 import { useLocationContext } from '../context/LocationContext';
 import PrimaryCta, { Busy, PILL_HIGHLIGHT } from '../components/PrimaryCta';
 import { Highlight, HighlightItem } from '../components/animate-ui/primitives/effects/highlight';
+import { TitleText } from '../components/BlurText';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -138,7 +139,7 @@ const IcchhamatiMATM = () => {
                 <div className="relative flex items-center gap-4">
                     <div className={`rounded-2xl p-3 ${SILVER_TILE}`}><CreditCard className="h-7 w-7" /></div>
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Micro ATM</h1>
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight"><TitleText text="Micro ATM" /></h1>
                         <p className="text-sm text-muted-foreground">Card cash withdrawal and balance enquiry</p>
                     </div>
                 </div>

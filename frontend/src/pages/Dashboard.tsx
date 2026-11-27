@@ -10,6 +10,7 @@ import { isServiceEnabled } from '../lib/services';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "sonner";
 import Counter from '../components/Counter';
+import { Meteors } from '../components/ui/meteors';
 import PortalSpotlight from '../components/PortalSpotlight';
 import ShinyText from '../components/ShinyText';
 import GlareHover from '../components/GlareHover';
@@ -267,6 +268,8 @@ const Dashboard = () => {
         <div className="space-y-6">
             {/* Hero */}
             <section className="relative overflow-hidden rounded-3xl hero-panel p-6 md:p-8">
+                {/* Aceternity Meteors: violet streaks fall slowly behind the figures. */}
+                <Meteors number={16} className="bg-[#7C6BD6]/70 shadow-none before:from-[#7C6BD6]/60" />
 
                 <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                     <div>

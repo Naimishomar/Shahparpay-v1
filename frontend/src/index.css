@@ -702,3 +702,15 @@ html.rp-motion a:hover > .nav-icon { animation: rp-nudge 0.6s ease-in-out; }
     mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / var(--zig) 100%;
     padding-bottom: var(--zig);
 }
+
+/* Aceternity Meteors (components/ui/meteors.tsx). */
+@keyframes meteor {
+    0% { transform: rotate(215deg) translateX(0); opacity: 1; }
+    70% { opacity: 1; }
+    100% { transform: rotate(215deg) translateX(-500px); opacity: 0; }
+}
+.animate-meteor-effect { animation: meteor 5s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+    .animate-meteor-effect { display: none; }
+}
+

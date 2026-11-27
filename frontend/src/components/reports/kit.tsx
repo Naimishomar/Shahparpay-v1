@@ -7,6 +7,7 @@ import { Roll } from '../landing/motion';
 import RubberSegment from '../RubberSegment';
 import PortalSpotlight from '../PortalSpotlight';
 import Lottie from '../Lottie';
+import { TitleText } from '../BlurText';
 
 /*
  * The parts every report page is made of: a header with its exports, a row of
@@ -132,7 +133,7 @@ export const ReportHeader = ({ icon, title, description, onCsv, onPdf, exporting
         <div className="flex min-w-0 items-start gap-3">
             <div className="icon-chip shrink-0 rounded-xl p-2.5">{icon}</div>
             <div className="min-w-0">
-                <h1 className="text-xl font-bold tracking-tight text-foreground md:text-2xl">{title}</h1>
+                <h1 className="text-xl font-bold tracking-tight text-foreground md:text-2xl"><TitleText text={title} /></h1>
                 <p className="mt-0.5 max-w-2xl text-sm text-muted-foreground">{description}</p>
             </div>
         </div>
