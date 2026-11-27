@@ -9,6 +9,10 @@ import PrimaryCta, { Busy } from '../components/PrimaryCta';
 import Lottie from '../components/Lottie';
 import PortalDialog from '../components/PortalDialog';
 import { TitleText } from '../components/BlurText';
+import {
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+    AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/animate-ui/components/radix/alert-dialog';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -22,6 +26,9 @@ const FundRequest = () => {
     const [loading, setLoading] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [statusFilter, setStatusFilter] = useState('ALL');
+    // The pending request the delete dialog is asking about.
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [deleting, setDeleting] = useState(false);
     
     // Form States
     const [formData, setFormData] = useState({
@@ -88,18 +95,20 @@ const FundRequest = () => {
     };
 
     const handleDeleteRequest = async (id: string) => {
-        if (!window.confirm("Are you sure you want to delete this fund request?")) return;
-        
+        setDeleting(true);
         try {
             const res = await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/fund-request/delete/${id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.data.success) {
                 toast.success("Fund request deleted successfully");
+                setDeleteId(null);
                 fetchRequests();
             }
         } catch (error: any) {
             toast.error(error.response?.data?.message || "Failed to delete fund request");
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -210,7 +219,7 @@ const FundRequest = () => {
                                         <td className="px-4 py-3">
                                             {req.status === 'PENDING' && (
                                                 <button
-                                                    onClick={() => handleDeleteRequest(req._id)}
+                                                    onClick={() => setDeleteId(req._id)}
                                                     className="rounded-lg p-2 text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400"
                                                     title="Delete Request"
                                                 >
@@ -368,6 +377,26 @@ const FundRequest = () => {
                     </div>
                 </PortalDialog>
             )}
+
+            {/* animate-ui AlertDialog: deleting a request asks first. */}
+            <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open && !deleting) setDeleteId(null); }}>
+                <AlertDialogContent className="rounded-2xl border-border bg-popover">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this fund request?</AlertDialogTitle>
+                        <AlertDialogDescription>The request is withdrawn and an admin will not review it. This cannot be undone.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={deleting} className="rounded-xl">Keep it</AlertDialogCancel>
+                        <AlertDialogAction
+                            disabled={deleting}
+                            onClick={(e) => { e.preventDefault(); if (deleteId) handleDeleteRequest(deleteId); }}
+                            className="rounded-xl bg-rose-600 text-white hover:bg-rose-700"
+                        >
+                            {deleting ? 'Deleting...' : 'Delete request'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

@@ -19,6 +19,7 @@ import { useAuth } from "../context/AuthContext"
 import SupportWidget from "../components/SupportWidget"
 import { LocationProvider } from "../context/LocationContext"
 import Lottie from "../components/Lottie"
+import RetailerBottomNav from "../components/RetailerBottomNav"
 
 const Layout = () => {
     const { user, token } = useAuth();
@@ -77,7 +78,7 @@ const Layout = () => {
                     {retailer && <ScrollProgress mode="scaleX" aria-hidden className="absolute inset-x-0 -bottom-px h-0.5 origin-left bg-gradient-to-r from-[#B9A8F0] via-[#9FC5F0] to-[#F5B9A0]" />}
                 </div>
                 <ScrollProgressContainer asChild>
-                <div className="w-full p-8 flex-1 min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain no-scrollbar relative">
+                <div className={`w-full p-8 flex-1 min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain no-scrollbar relative ${retailer ? 'max-md:pb-28' : ''}`}>
                     {/* Retailer pages arrive in stageshow beats (index.css, .stage-page). */}
                     <div className={user?.role === 'retailer' ? 'stage-page' : undefined}>
                         {/* Motion follows the reduce-motion setting everywhere in the portal. */}
@@ -93,6 +94,8 @@ const Layout = () => {
                 {/* React Bits GradualBlur: content softens as it scrolls under the bottom edge. Below dialogs (z-100). */}
                 {retailer && <GradualBlur target="parent" position="bottom" height="2.75rem" strength={1.2} layers={6} zIndex={30} />}
                 <SupportWidget />
+                {/* animate-ui BottomNavigation: retailers on phones get the main pages under the thumb. */}
+                {retailer && <RetailerBottomNav />}
                 {retailer && (
                     <ClickSpark
                         ref={sparkRef}

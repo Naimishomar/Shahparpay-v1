@@ -17,6 +17,12 @@ import { Highlight, HighlightItem } from '../components/animate-ui/primitives/ef
 import PrimaryCta, { Busy, PILL_HIGHLIGHT } from '../components/PrimaryCta';
 import { TitleText } from '../components/BlurText';
 import { Particles, ParticlesEffect } from '../components/animate-ui/primitives/effects/particles';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { REGEXP_ONLY_DIGITS } from 'input-otp';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+
+/** Six OTP boxes (animate-ui InputOTP); the codes here are 4 to 6 digits. */
+const OTP_SLOTS = [0, 1, 2, 3, 4, 5].map((i) => <InputOTPSlot key={i} index={i} className="size-11 bg-background text-base font-semibold" />);
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -139,9 +145,12 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
 const DevicePicker = ({ brand, setBrand, serial, setSerial }: { brand: DeviceBrand; setBrand: (b: DeviceBrand) => void; serial: string; setSerial: (s: string) => void }) => (
     <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Scanner">
-            <select value={brand} onChange={(e) => setBrand(e.target.value as DeviceBrand)} className={INPUT}>
-                {DEVICE_BRANDS.map((b) => <option key={b} value={b}>{DEVICE_LABELS[b]}</option>)}
-            </select>
+            <Select value={brand} onValueChange={(v) => setBrand(v as DeviceBrand)}>
+                <SelectTrigger className={`${INPUT} h-auto data-[size=default]:h-auto`}><SelectValue /></SelectTrigger>
+                <SelectContent position="popper">
+                    {DEVICE_BRANDS.map((b) => <SelectItem key={b} value={b}>{DEVICE_LABELS[b]}</SelectItem>)}
+                </SelectContent>
+            </Select>
         </Field>
         <Field label="Scanner serial number">
             <input value={serial} onChange={(e) => setSerial(e.target.value.trim())} placeholder="Printed under the scanner" className={`${INPUT} font-mono`} />
@@ -361,10 +370,12 @@ const OnboardingStep = ({ status, busy, run, coords, device, ensureDevice, captu
                         <Field label="City"><input required value={form.shop_city} onChange={set('shop_city')} className={INPUT} /></Field>
                         <Field label="District"><input required value={form.shop_district} onChange={set('shop_district')} className={INPUT} /></Field>
                         <Field label="State">
-                            <select required value={form.state_id} onChange={set('state_id')} className={INPUT}>
-                                <option value="" disabled>Select state</option>
-                                {states.map((s) => <option key={s.stateId} value={s.stateId}>{s.stateName}</option>)}
-                            </select>
+                            <Select required value={form.state_id} onValueChange={(v) => setForm({ ...form, state_id: v })}>
+                                <SelectTrigger className={`${INPUT} h-auto data-[size=default]:h-auto`}><SelectValue placeholder="Select state" /></SelectTrigger>
+                                <SelectContent position="popper" className="max-h-72">
+                                    {states.map((s) => <SelectItem key={s.stateId} value={String(s.stateId)}>{s.stateName}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                         </Field>
                         <Field label="Pincode"><input required inputMode="numeric" pattern="\d{6}" maxLength={6} value={form.shop_pin_code} onChange={set('shop_pin_code')} className={INPUT} /></Field>
                         <Field label="Bank name">
@@ -406,7 +417,7 @@ const OnboardingStep = ({ status, busy, run, coords, device, ensureDevice, captu
                         }}>{busy && <Loader2 size={16} className="animate-spin" />} Send OTP</button>
                     ) : (
                         <div className="flex max-w-sm gap-2">
-                            <input value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="6-digit OTP" inputMode="numeric" className={`${INPUT} font-mono tracking-[0.4em]`} />
+                            <InputOTP maxLength={6} pattern={REGEXP_ONLY_DIGITS} value={otp} onChange={setOtp} aria-label="6-digit OTP" containerClassName="flex-1"><InputOTPGroup>{OTP_SLOTS}</InputOTPGroup></InputOTP>
                             <button disabled={busy || otp.length < 4} className={PRIMARY_BUTTON} onClick={() => run(`/${kind}/verify-otp`, { otp, txnid })}>Verify</button>
                         </div>
                     )}
@@ -495,7 +506,7 @@ const OnboardingStep = ({ status, busy, run, coords, device, ensureDevice, captu
                         }}>{busy && <Loader2 size={16} className="animate-spin" />} Send OTP</button>
                     ) : !ekycOtpOk ? (
                         <div className="flex max-w-sm gap-2">
-                            <input value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="6-digit OTP" inputMode="numeric" className={`${INPUT} font-mono tracking-[0.4em]`} />
+                            <InputOTP maxLength={6} pattern={REGEXP_ONLY_DIGITS} value={otp} onChange={setOtp} aria-label="6-digit OTP" containerClassName="flex-1"><InputOTPGroup>{OTP_SLOTS}</InputOTPGroup></InputOTP>
                             <button disabled={busy || otp.length < 4} className={PRIMARY_BUTTON} onClick={async () => {
                                 const res = await run('/ekyc/verify-otp', { otp, deviceIMEI: device.serial, ...fpIds }, { reload: false });
                                 if (res.success) setEkycOtpOk(true);
@@ -555,10 +566,12 @@ const EditDetails = ({ status, busy, run, onDone }: Pick<StepProps, 'status' | '
                 <Field label="City"><input required value={form.shop_city || ''} onChange={set('shop_city')} className={INPUT} /></Field>
                 <Field label="District"><input required value={form.shop_district || ''} onChange={set('shop_district')} className={INPUT} /></Field>
                 <Field label="State">
-                    <select required value={form.state_id || ''} onChange={set('state_id')} className={INPUT}>
-                        <option value="" disabled>{states.length ? 'Select state' : 'Loading states…'}</option>
-                        {states.map((st) => <option key={st.stateId} value={st.stateId}>{st.stateName}</option>)}
-                    </select>
+                    <Select required value={form.state_id || ''} onValueChange={(v) => setForm({ ...form, state_id: v })}>
+                        <SelectTrigger className={`${INPUT} h-auto data-[size=default]:h-auto`}><SelectValue placeholder={states.length ? 'Select state' : 'Loading states…'} /></SelectTrigger>
+                        <SelectContent position="popper" className="max-h-72">
+                            {states.map((st) => <SelectItem key={st.stateId} value={String(st.stateId)}>{st.stateName}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                 </Field>
                 <Field label="Pincode"><input required inputMode="numeric" pattern="\d{6}" value={form.shop_pin_code || ''} onChange={(e) => setForm({ ...form, shop_pin_code: e.target.value.replace(/\D/g, '').slice(0, 6) })} className={INPUT} /></Field>
                 <Field label="Bank name">
@@ -687,10 +700,12 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
                             <input value={mobile} onChange={(e) => { setMobile(e.target.value.replace(/\D/g, '').slice(0, 10)); resetOtp(); }} inputMode="numeric" placeholder="10-digit mobile" className={INPUT} />
                         </Field>
                         <Field label="Bank">
-                            <select value={bankID} onChange={(e) => { setBankID(e.target.value); resetOtp(); }} className={INPUT}>
-                                <option value="" disabled>{banks.length ? 'Select bank' : 'Loading banks…'}</option>
-                                {banks.map((b) => <option key={b.iinno} value={b.iinno}>{b.bankName}</option>)}
-                            </select>
+                            <Select value={bankID} onValueChange={(v) => { setBankID(v); resetOtp(); }}>
+                                <SelectTrigger className={`${INPUT} h-auto data-[size=default]:h-auto`}><SelectValue placeholder={banks.length ? 'Select bank' : 'Loading banks…'} /></SelectTrigger>
+                                <SelectContent position="popper" className="max-h-72">
+                                    {banks.map((b) => <SelectItem key={b.iinno} value={String(b.iinno)}>{b.bankName}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                         </Field>
                         {moves && (
                             <Field label={tab === 'CD' ? 'Amount (paid from your Trade Wallet)' : 'Amount'}>
@@ -704,7 +719,7 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
                             {!otpRef ? (
                                 <button disabled={busy} onClick={sendOtp} className={SECONDARY_BUTTON}>{busy && <Loader2 size={16} className="animate-spin" />} Send OTP to customer</button>
                             ) : (
-                                <input value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Customer OTP" inputMode="numeric" className={`${INPUT} max-w-xs font-mono tracking-[0.4em]`} />
+                                <InputOTP maxLength={6} pattern={REGEXP_ONLY_DIGITS} value={otp} onChange={setOtp} aria-label="Customer OTP" containerClassName=""><InputOTPGroup>{OTP_SLOTS}</InputOTPGroup></InputOTP>
                             )}
                         </div>
                     )}

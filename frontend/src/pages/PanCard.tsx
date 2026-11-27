@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import locationsData from '../data/locations.json';
 import StandardPsaTab from '../components/pancard/StandardPsaTab';
 import EsevaPanTab from '../components/pancard/EsevaPanTab';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const PanCard: React.FC = () => {
     const { token } = useAuth();
@@ -326,15 +327,14 @@ const PanCard: React.FC = () => {
                                                     placeholder={`PSA ID (e.g. ${existingPsa.psa_id || 'ANNECHM-808'})`}
                                                     defaultValue={existingPsa.psa_id || ''}
                                                 />
-                                                <select
-                                                    value={manualStatus}
-                                                    onChange={(e) => setManualStatus(e.target.value)}
-                                                    className="px-3 py-2 bg-background border border-border/50 rounded-xl text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                                                >
-                                                    <option value="REJECTED">REJECTED</option>
-                                                    <option value="PENDING">PENDING</option>
-                                                    <option value="APPROVED">APPROVED</option>
-                                                </select>
+                                                <Select value={manualStatus} onValueChange={setManualStatus}>
+                                                    <SelectTrigger aria-label="Status" className="px-3 py-2 bg-background border border-border/50 rounded-xl text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all h-auto data-[size=default]:h-auto"><SelectValue /></SelectTrigger>
+                                                    <SelectContent position="popper">
+                                                        <SelectItem value="REJECTED">REJECTED</SelectItem>
+                                                        <SelectItem value="PENDING">PENDING</SelectItem>
+                                                        <SelectItem value="APPROVED">APPROVED</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
                                             <button
                                                 type="submit"
@@ -373,15 +373,14 @@ const PanCard: React.FC = () => {
                                                     placeholder={`PSA ID (e.g. ${existingPsa.psa_id || 'ANNECHM-808'})`}
                                                     defaultValue={existingPsa.psa_id || ''}
                                                 />
-                                                <select
-                                                    value={manualStatus}
-                                                    onChange={(e) => setManualStatus(e.target.value)}
-                                                    className="px-3 py-2 bg-background border border-border/50 rounded-xl text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                                                >
-                                                    <option value="APPROVED">APPROVED</option>
-                                                    <option value="REJECTED">REJECTED</option>
-                                                    <option value="PENDING">PENDING</option>
-                                                </select>
+                                                <Select value={manualStatus} onValueChange={setManualStatus}>
+                                                    <SelectTrigger aria-label="Status" className="px-3 py-2 bg-background border border-border/50 rounded-xl text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all h-auto data-[size=default]:h-auto"><SelectValue /></SelectTrigger>
+                                                    <SelectContent position="popper">
+                                                        <SelectItem value="APPROVED">APPROVED</SelectItem>
+                                                        <SelectItem value="REJECTED">REJECTED</SelectItem>
+                                                        <SelectItem value="PENDING">PENDING</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
                                             <button
                                                 type="submit"
@@ -620,35 +619,26 @@ const PanCard: React.FC = () => {
 
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div>
-                                            <label className="text-sm font-medium text-foreground mb-1.5 block">State</label>
-                                            <select
-                                                name="state_id"
-                                                value={formData.state_id}
-                                                onChange={(e) => setFormData({ ...formData, state_id: e.target.value, district_id: '' })}
-                                                className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                                                required
-                                            >
-                                                <option value="" disabled>Select State</option>
-                                                {locationsData.map((state) => (
-                                                    <option key={state.id} value={state.id}>{state.name}</option>
-                                                ))}
-                                            </select>
+                                            <label htmlFor="psa-state" className="text-sm font-medium text-foreground mb-1.5 block">State</label>
+                                            <Select name="state_id" required value={formData.state_id} onValueChange={(v) => setFormData({ ...formData, state_id: v, district_id: '' })}>
+                                                <SelectTrigger id="psa-state" className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all h-auto data-[size=default]:h-auto"><SelectValue placeholder="Select State" /></SelectTrigger>
+                                                <SelectContent position="popper" className="max-h-72">
+                                                    {locationsData.map((state) => (
+                                                        <SelectItem key={state.id} value={state.id}>{state.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                         <div>
-                                            <label className="text-sm font-medium text-foreground mb-1.5 block">District</label>
-                                            <select
-                                                name="district_id"
-                                                value={formData.district_id}
-                                                onChange={handleChange}
-                                                className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                                                required
-                                                disabled={!formData.state_id}
-                                            >
-                                                <option value="" disabled>Select District</option>
-                                                {locationsData.find(s => s.id === formData.state_id)?.districts.map((district) => (
-                                                    <option key={district.id} value={district.id}>{district.name}</option>
-                                                ))}
-                                            </select>
+                                            <label htmlFor="psa-district" className="text-sm font-medium text-foreground mb-1.5 block">District</label>
+                                            <Select name="district_id" required disabled={!formData.state_id} value={formData.district_id} onValueChange={(v) => setFormData({ ...formData, district_id: v })}>
+                                                <SelectTrigger id="psa-district" className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all h-auto data-[size=default]:h-auto"><SelectValue placeholder="Select District" /></SelectTrigger>
+                                                <SelectContent position="popper" className="max-h-72">
+                                                    {locationsData.find(s => s.id === formData.state_id)?.districts.map((district) => (
+                                                        <SelectItem key={district.id} value={district.id}>{district.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                         <div>
                                             <label className="text-sm font-medium text-foreground mb-1.5 block">Location / City</label>

@@ -11,6 +11,16 @@ import PrimaryCta, { Busy } from '../components/PrimaryCta';
 import { Confetti } from '../components/Lottie';
 import PortalDialog from '../components/PortalDialog';
 import { TitleText } from '../components/BlurText';
+import {
+    AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+    AlertDialogHeader, AlertDialogTitle,
+} from '@/components/animate-ui/components/radix/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { REGEXP_ONLY_DIGITS } from 'input-otp';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+
+/** Six OTP boxes (animate-ui InputOTP); the OTP length is not checked here, 6 assumed. */
+const OTP_SLOTS = [0, 1, 2, 3, 4, 5].map((i) => <InputOTPSlot key={i} index={i} className="size-11 bg-background text-base font-semibold" />);
 
 // Payout charge from the retailer rate card; the backend debits the same (getSettlementFee).
 const SETTLEMENT_BASE_CHARGE = 5;
@@ -284,21 +294,16 @@ const AepsSettlement = () => {
                             <div className="flex gap-2">
                                 <div className="relative flex-1">
                                     <Landmark className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                    <select
-                                        value={selectedBankId}
-                                        onChange={(e) => setSelectedBankId(e.target.value)}
-                                        className={`${INPUT} pl-10`}
-                                    >
-                                        {savedBanks.length === 0 ? (
-                                            <option value="">No banks added</option>
-                                        ) : (
-                                            savedBanks.map(bank => (
-                                                <option key={bank._id} value={bank._id}>
+                                    <Select value={selectedBankId} onValueChange={setSelectedBankId} disabled={savedBanks.length === 0}>
+                                        <SelectTrigger aria-label="Settlement bank" className={`${INPUT} pl-10 h-auto data-[size=default]:h-auto`}><SelectValue placeholder="No banks added" /></SelectTrigger>
+                                        <SelectContent position="popper" className="max-h-72">
+                                            {savedBanks.map(bank => (
+                                                <SelectItem key={bank._id} value={String(bank._id)}>
                                                     {bank.bankName} · {String(bank.accountNumber || '').slice(-4)}
-                                                </option>
-                                            ))
-                                        )}
-                                    </select>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 {selectedBank && (
                                     <button
@@ -666,7 +671,7 @@ const AddSettlementBank = ({ headers, resumeId = '', onClose, onAdded }: { heade
                         <p className="text-sm text-muted-foreground">Enter the OTP sent to your registered mobile.</p>
                         <label className="flex flex-col gap-1.5 text-sm font-medium">
                             OTP
-                            <input required inputMode="numeric" autoComplete="one-time-code" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} className={INPUT} />
+                            <InputOTP required maxLength={6} pattern={REGEXP_ONLY_DIGITS} value={otp} onChange={setOtp} aria-label="OTP" containerClassName=""><InputOTPGroup>{OTP_SLOTS}</InputOTPGroup></InputOTP>
                         </label>
                         <button type="submit" disabled={busy} className={`rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50 ${ACTIVE_BUTTON}`}>{busy ? 'Verifying...' : 'Verify & Activate'}</button>
                         <button type="button" disabled={busy} onClick={() => sendOtp(beneId).catch((err) => fail(err, 'Could not send the OTP'))} className="text-sm font-medium text-muted-foreground hover:text-foreground">Resend OTP</button>
@@ -717,20 +722,21 @@ const DeleteSettlementBank = ({ bank, headers, onClose, onDeleted }: { bank: any
     };
 
     return (
-        <PortalDialog label="Delete bank account" onClose={onClose} closeOnOutside>
-            <div className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-xl">
-                <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">Delete Bank Account</h2>
-                    <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1 hover:bg-muted"><X className="h-5 w-5" /></button>
-                </div>
-                <p className="mb-4 text-sm text-muted-foreground">
-                    <span className="font-semibold text-foreground">{bank.accountHolderName || 'Account'}</span> · {bank.bankName} · •••• {String(bank.accountNumber || '').slice(-4)}
-                </p>
+        // animate-ui AlertDialog: asks before deleting, then takes the OTP in the same window.
+        <AlertDialog open onOpenChange={(open) => { if (!open && !busy) onClose(); }}>
+            <AlertDialogContent className="max-w-md rounded-2xl border-border bg-popover sm:max-w-md">
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this bank account?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        <span className="font-semibold text-foreground">{bank.accountHolderName || 'Account'}</span> · {bank.bankName} · •••• {String(bank.accountNumber || '').slice(-4)}.
+                        {' '}Settlements can no longer go to it; you would need to add it again.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
                 {otpSent ? (
                     <form onSubmit={remove} className="flex flex-col gap-4">
                         <label className="flex flex-col gap-1.5 text-sm font-medium">
                             Enter the OTP
-                            <input required inputMode="numeric" autoComplete="one-time-code" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} className={INPUT} />
+                            <InputOTP required maxLength={6} pattern={REGEXP_ONLY_DIGITS} value={otp} onChange={setOtp} aria-label="OTP" containerClassName=""><InputOTPGroup>{OTP_SLOTS}</InputOTPGroup></InputOTP>
                         </label>
                         <button type="submit" disabled={busy} className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50">{busy ? 'Deleting...' : 'Delete Account'}</button>
                         <button type="button" disabled={busy} onClick={sendOtp} className="text-sm font-medium text-muted-foreground hover:text-foreground">Resend OTP</button>
@@ -738,8 +744,9 @@ const DeleteSettlementBank = ({ bank, headers, onClose, onDeleted }: { bank: any
                 ) : (
                     <button type="button" disabled={busy} onClick={sendOtp} className="w-full rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50">{busy ? 'Sending...' : 'Send OTP to delete'}</button>
                 )}
-            </div>
-        </PortalDialog>
+                <AlertDialogCancel disabled={busy} className="rounded-xl">Keep it</AlertDialogCancel>
+            </AlertDialogContent>
+        </AlertDialog>
     );
 };
 

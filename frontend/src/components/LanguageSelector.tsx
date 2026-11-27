@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Languages } from 'lucide-react';
+import { DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from '@/components/animate-ui/components/radix/dropdown-menu';
 
 declare global {
     interface Window { google?: any; googleTranslateElementInit?: () => void; }
@@ -50,13 +51,19 @@ const LanguageSelector = () => {
         select.dispatchEvent(new Event('change'));
     };
 
-    return <label className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer">
-        <Languages className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm font-medium text-foreground">Language</span>
-        <select aria-label="Translate application" value={language} onChange={(e) => changeLanguage(e.target.value)} className="ml-auto rounded-lg border bg-background px-2 py-1 text-sm text-foreground outline-none cursor-pointer">
-            {languages.map(([code, label]) => <option key={code} value={code} className="bg-background text-foreground">{label}</option>)}
-        </select>
-    </label>;
+    // A submenu of the profile menu (animate-ui DropdownMenu): one radio item per language.
+    return <DropdownMenuSub>
+        <DropdownMenuSubTrigger className="gap-3 rounded-xl px-3 py-2.5 font-medium">
+            <Languages className="w-4 h-4 text-muted-foreground" />
+            Language
+            <span className="ml-auto text-xs text-muted-foreground">{languages.find(([code]) => code === language)?.[1]}</span>
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent className="max-h-80 overflow-y-auto rounded-xl">
+            <DropdownMenuRadioGroup value={language} onValueChange={changeLanguage}>
+                {languages.map(([code, label]) => <DropdownMenuRadioItem key={code} value={code}>{label}</DropdownMenuRadioItem>)}
+            </DropdownMenuRadioGroup>
+        </DropdownMenuSubContent>
+    </DropdownMenuSub>;
 };
 
 export default LanguageSelector;

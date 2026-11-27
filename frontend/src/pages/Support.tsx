@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Headset, MessageCircle, Paperclip, Send, Fingerprint, ArrowLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -7,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { Highlight, HighlightItem } from '../components/animate-ui/primitives/effects/highlight';
 import { PILL_HIGHLIGHT } from '../components/PrimaryCta';
 import { TitleText } from '../components/BlurText';
+import { ImageZoom } from '../components/animate-ui/primitives/effects/image-zoom';
 
 const statusStyle: Record<string, string> = {
     OPEN: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-amber-500/20',
@@ -134,12 +136,15 @@ const Support = () => {
                             <div className="mt-2">{statusPill(selected.status)}</div>
                         </div>
                         {user?.role === 'distributor' && (
-                            <select value={selected.status} onChange={(e) => updateStatus(e.target.value)} className={`${INPUT} h-fit w-auto`}>
-                                <option value="OPEN">Open</option>
-                                <option value="IN_PROGRESS">In progress</option>
-                                <option value="RESOLVED">Resolved</option>
-                                <option value="CLOSED">Closed</option>
-                            </select>
+                            <Select value={selected.status} onValueChange={updateStatus}>
+                                <SelectTrigger aria-label="Ticket status" className={`${INPUT} w-auto data-[size=default]:h-auto`}><SelectValue /></SelectTrigger>
+                                <SelectContent position="popper" align="end" className="z-[110]">
+                                    <SelectItem value="OPEN">Open</SelectItem>
+                                    <SelectItem value="IN_PROGRESS">In progress</SelectItem>
+                                    <SelectItem value="RESOLVED">Resolved</SelectItem>
+                                    <SelectItem value="CLOSED">Closed</SelectItem>
+                                </SelectContent>
+                            </Select>
                         )}
                     </div>
                     <div className="min-h-[300px] space-y-3 bg-black/[0.015] p-5 dark:bg-white/[0.015]">
@@ -148,9 +153,13 @@ const Support = () => {
                                 <div className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${item.senderRole === 'user' ? `${ACTIVE_BUTTON} rounded-br-md` : 'border bg-card text-foreground rounded-bl-md'}`}>
                                     <p className="text-sm whitespace-pre-wrap">{item.message}</p>
                                     {item.attachments?.map((file: any) => (
-                                        <a key={file.url} href={file.url} target="_blank" rel="noreferrer" className="block mt-2">
-                                            <img src={file.url} alt={file.name || 'Support attachment'} className="max-h-52 rounded-lg" />
-                                        </a>
+                                        <div key={file.url} className="mt-2">
+                                            {/* animate-ui ImageZoom: hover magnifies the screenshot, click locks it. */}
+                                            <ImageZoom width="fit-content" height="auto" zoomScale={2} aria-label={file.name || 'Support attachment'} className="rounded-lg">
+                                                <img src={file.url} alt={file.name || 'Support attachment'} className="max-h-52 rounded-lg" />
+                                            </ImageZoom>
+                                            <a href={file.url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-[11px] underline opacity-70 hover:opacity-100">Open full size</a>
+                                        </div>
                                     ))}
                                     <p className="text-[10px] opacity-60 mt-1">{new Date(item.createdAt).toLocaleString('en-IN')}</p>
                                 </div>

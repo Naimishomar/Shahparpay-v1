@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import axios from "axios"
 import { toast } from "sonner"
 import { ExternalLink, Loader2, RefreshCw, UserPlus } from "lucide-react"
@@ -135,10 +136,13 @@ const LeadGenerationReport = () => {
                 <div className="flex flex-wrap items-center gap-2">
                     <SearchBox value={search} onChange={setSearch} placeholder="Search name, mobile, ref ID" />
                     <Seg label="Status" value={outcome} onChange={setOutcome} options={[["ALL", "All"], ["APPROVED", "Approved"], ["PENDING", "In progress"], ["REJECTED", "Not approved"]] as const} />
-                    <select aria-label="Product" value={product} onChange={(e) => setProduct(e.target.value)} className={FIELD}>
-                        <option value="ALL">All products</option>
-                        {Object.entries(PRODUCTS).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-                    </select>
+                    <Select value={product} onValueChange={setProduct}>
+                        <SelectTrigger aria-label="Product" className={`${FIELD} data-[size=default]:h-9`}><SelectValue /></SelectTrigger>
+                        <SelectContent position="popper" className="z-[110]">
+                            <SelectItem value="ALL">All products</SelectItem>
+                            {Object.entries(PRODUCTS).map(([id, name]) => <SelectItem key={id} value={id}>{name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                 </div>
                 <PeriodPicker period={period} onPeriod={setPeriod} custom={custom} onCustom={setCustom} />
             </Toolbar>

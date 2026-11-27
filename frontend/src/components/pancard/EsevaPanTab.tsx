@@ -5,6 +5,12 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import locationsData from '../../data/locations.json';
 import { TitleText } from '../BlurText';
+import { PILL_HIGHLIGHT } from '../PrimaryCta';
+import { Tabs, TabsList, TabsTrigger, TabsContent, TabsHighlight, TabsHighlightItem } from '../animate-ui/primitives/radix/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+// animate-ui Tabs panels: a quick blur cross-fade, not the 0.5 s default.
+const PANEL = { duration: 0.25, ease: 'easeOut' } as const;
 
 type SubTab = 'SERVICE' | 'COUPON' | 'STATUS';
 
@@ -322,7 +328,8 @@ const EsevaPanTab: React.FC = () => {
     );
 
     return (
-        <div className="space-y-6">
+        // animate-ui Tabs: the selected pill slides between tabs; panels cross-fade.
+        <Tabs value={activeSubTab} onValueChange={(v) => setActiveSubTab(v as SubTab)} className="space-y-6">
             {/* Hero */}
             <section className="relative overflow-hidden top-glow rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
 
@@ -348,26 +355,29 @@ const EsevaPanTab: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex gap-1 overflow-x-auto no-scrollbar rounded-2xl border bg-background/60 backdrop-blur p-1.5 w-full md:w-max">
+                    <TabsList aria-label="PAN services" className="flex gap-1 overflow-x-auto no-scrollbar rounded-2xl border bg-background/60 backdrop-blur p-1.5 w-full md:w-max">
+                        <TabsHighlight className={PILL_HIGHLIGHT}>
                         {([
                             ['SERVICE', 'PAN Service', FileText],
                             ['COUPON', 'PAN Coupon', ShoppingBag],
                             ['STATUS', 'Status & History', History],
                         ] as const).map(([key, label, Icon]) => (
-                            <button
-                                key={key}
-                                onClick={() => setActiveSubTab(key)}
-                                className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition-all ${activeSubTab === key ? ACTIVE_BUTTON : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
+                            <TabsHighlightItem key={key} value={key}>
+                            <TabsTrigger
+                                value={key}
+                                className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-foreground ${activeSubTab === key ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
                             >
                                 <Icon className="w-4 h-4" />
                                 {label}
-                            </button>
+                            </TabsTrigger>
+                            </TabsHighlightItem>
                         ))}
-                    </div>
+                        </TabsHighlight>
+                    </TabsList>
                 </div>
             </section>
 
-            {activeSubTab === 'SERVICE' && (
+            <TabsContent value="SERVICE" transition={PANEL}>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-1 space-y-6">
                         <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
@@ -492,31 +502,22 @@ const EsevaPanTab: React.FC = () => {
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
-                                        <label className="text-sm font-medium text-foreground mb-1.5 block">State</label>
-                                        <select
-                                            name="state_name"
-                                            value={serviceForm.state_name}
-                                            onChange={handleServiceChange}
-                                            className="w-full px-4 py-2.5 bg-background border rounded-xl shadow-sm outline-none focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500 text-foreground transition-all"
-                                            required
-                                        >
-                                            <option value="">Select State</option>
-                                            {states.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                                        </select>
+                                        <label htmlFor="eseva-state" className="text-sm font-medium text-foreground mb-1.5 block">State</label>
+                                        <Select name="state_name" required value={serviceForm.state_name} onValueChange={(value) => handleServiceChange({ target: { name: 'state_name', value } } as React.ChangeEvent<HTMLSelectElement>)}>
+                                            <SelectTrigger id="eseva-state" className="w-full px-4 py-2.5 bg-background border rounded-xl shadow-sm outline-none focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500 text-foreground transition-all h-auto data-[size=default]:h-auto"><SelectValue placeholder="Select State" /></SelectTrigger>
+                                            <SelectContent position="popper" className="max-h-72">
+                                                {states.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-foreground mb-1.5 block">District</label>
-                                        <select
-                                            name="district_name"
-                                            value={serviceForm.district_name}
-                                            onChange={handleServiceChange}
-                                            className="w-full px-4 py-2.5 bg-background border rounded-xl shadow-sm outline-none focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500 text-foreground transition-all"
-                                            required
-                                            disabled={!serviceForm.state_name}
-                                        >
-                                            <option value="">Select District</option>
-                                            {districts.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
-                                        </select>
+                                        <label htmlFor="eseva-district" className="text-sm font-medium text-foreground mb-1.5 block">District</label>
+                                        <Select name="district_name" required disabled={!serviceForm.state_name} value={serviceForm.district_name} onValueChange={(value) => handleServiceChange({ target: { name: 'district_name', value } } as React.ChangeEvent<HTMLSelectElement>)}>
+                                            <SelectTrigger id="eseva-district" className="w-full px-4 py-2.5 bg-background border rounded-xl shadow-sm outline-none focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500 text-foreground transition-all h-auto data-[size=default]:h-auto"><SelectValue placeholder="Select District" /></SelectTrigger>
+                                            <SelectContent position="popper" className="max-h-72">
+                                                {districts.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div>
                                         <label className="text-sm font-medium text-foreground mb-1.5 block">Pincode</label>
@@ -568,8 +569,9 @@ const EsevaPanTab: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            )}
-            {activeSubTab === 'COUPON' && (() => {
+            </TabsContent>
+            <TabsContent value="COUPON" transition={PANEL}>
+            {(() => {
                 const count = Math.max(0, Number(couponForm.number_of_coupons) || 0);
                 const setCount = (n: number) => setCouponForm(prev => ({ ...prev, number_of_coupons: String(Math.max(1, n)) }));
                 const psaVerified = !!myPsaId && couponForm.psa_id.trim() === myPsaId;
@@ -719,8 +721,9 @@ const EsevaPanTab: React.FC = () => {
                 </div>
                 );
             })()}
+            </TabsContent>
 
-            {activeSubTab === 'STATUS' && (
+            <TabsContent value="STATUS" transition={PANEL}>
                 <div className="space-y-6">
                     {/* Manual Status Check */}
                     <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
@@ -884,8 +887,8 @@ const EsevaPanTab: React.FC = () => {
                         )}
                     </div>
                 </div>
-            )}
-        </div>
+            </TabsContent>
+        </Tabs>
     );
 };
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Zap, Flame, Shield, CreditCard, Droplet, Smartphone, XCircle, ReceiptText, Car, Wifi, Tv, Building2 } from "lucide-react";
 import axios from "axios";
 import html2canvas from 'html2canvas-pro';
@@ -352,11 +353,10 @@ const BBPS = () => {
                             <div className="space-y-5">
                                 <div className="space-y-1.5">
                                     <label className="text-sm font-medium text-foreground">Operator / Biller</label>
-                                    <select 
-                                        className={INPUT}
+                                    <Select
                                         value={operatorId}
-                                        onChange={(e) => {
-                                            setOperatorId(e.target.value);
+                                        onValueChange={(v) => {
+                                            setOperatorId(v);
                                             setConsumerNumber("");
                                             setCustomerMobile("");
                                             setNeedsDob(false);
@@ -365,11 +365,15 @@ const BBPS = () => {
                                             setFetchedBill(null);
                                         }}
                                     >
-                                        <option value="">Select Biller</option>
-                                        {operators.map((op: any) => (
-                                            <option key={op.id} value={op.id}>{op.name}</option>
-                                        ))}
-                                    </select>
+                                        <SelectTrigger aria-label="Operator / Biller" className={`${INPUT} data-[size=default]:h-auto`}>
+                                            <SelectValue placeholder="Select Biller" />
+                                        </SelectTrigger>
+                                        <SelectContent position="popper" className="z-[110]">
+                                            {operators.map((op: any) => (
+                                                <SelectItem key={op.id} value={String(op.id)}>{op.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
                                 {/* Nothing but the biller until one is chosen: the fields below are that biller's. */}

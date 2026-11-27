@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import { Search, UserPlus, Send, Plus, CreditCard, Lock, CheckCircle2, X, Trash, ShieldCheck, Clock, Loader2, Smartphone, Users, User, Landmark } from 'lucide-react';
+import {
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+    AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/animate-ui/components/radix/alert-dialog';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -9,6 +13,8 @@ import PrimaryCta, { Busy } from '../components/PrimaryCta';
 import Lottie, { Confetti } from '../components/Lottie';
 import PortalDialog from '../components/PortalDialog';
 import { TitleText } from '../components/BlurText';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { REGEXP_ONLY_DIGITS } from 'input-otp';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -39,6 +45,8 @@ const DMT = () => {
     // The beneficiary an OTP is currently being collected for, and what that OTP
     // is meant to do — activating a new one, or authorising a deletion.
     const [otpFor, setOtpFor] = useState<{ bene: any; action: 'verify' | 'delete' } | null>(null);
+    // The beneficiary the delete dialog is asking about, before any OTP is sent.
+    const [confirmDelete, setConfirmDelete] = useState<any>(null);
     const [otp, setOtp] = useState('');
 
     const [transferBene, setTransferBene] = useState<any>(null);
@@ -310,7 +318,7 @@ const DMT = () => {
                                                 <p className="truncate text-xs text-muted-foreground">{bene.bank || 'Bank'}{bene.branch ? ` · ${bene.branch}` : ''}</p>
                                             </div>
                                             <button
-                                                onClick={() => requestOtp(bene, 'delete')}
+                                                onClick={() => setConfirmDelete(bene)}
                                                 className="rounded-lg p-1.5 text-muted-foreground opacity-60 hover:bg-rose-500/10 hover:text-rose-600 hover:opacity-100 dark:hover:text-rose-400"
                                                 title="Delete Beneficiary"
                                             >
@@ -439,6 +447,24 @@ const DMT = () => {
                 </PortalDialog>
             )}
 
+            {/* animate-ui AlertDialog: deleting a beneficiary asks first, then sends the OTP. */}
+            <AlertDialog open={!!confirmDelete} onOpenChange={(open) => { if (!open) setConfirmDelete(null); }}>
+                <AlertDialogContent className="rounded-2xl border-border bg-popover">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete {confirmDelete?.name || 'this beneficiary'}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            We will send an OTP to +91 {sender} to confirm. Once deleted, you will need to add and verify this account again to send money to it.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="rounded-xl">Keep it</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => requestOtp(confirmDelete, 'delete')} className="rounded-xl bg-rose-600 text-white hover:bg-rose-700">
+                            Send OTP to delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {/* OTP — activation or deletion */}
             {otpFor && (
                 <PortalDialog label="Enter OTP" onClose={() => { setOtpFor(null); setOtp(''); }}>
@@ -457,15 +483,12 @@ const DMT = () => {
                                 ? `Enter the OTP sent to +91 ${sender} to activate ${otpFor.bene.name}.`
                                 : `Enter the OTP sent to +91 ${sender} to delete ${otpFor.bene.name}.`}
                         </p>
-                        <input
-                            type="text"
-                            inputMode="numeric"
-                            maxLength={6}
-                            value={otp}
-                            onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
-                            placeholder="000000"
-                            className={`${INPUT} py-3 text-center tracking-[0.5em] text-2xl font-bold`}
-                        />
+                        {/* animate-ui InputOTP: one box per digit, each digit springs in. */}
+                        <InputOTP aria-label="OTP" autoFocus maxLength={6} pattern={REGEXP_ONLY_DIGITS} value={otp} onChange={setOtp} containerClassName="justify-center">
+                            <InputOTPGroup>
+                                {[0, 1, 2, 3, 4, 5].map((i) => <InputOTPSlot key={i} index={i} className="h-12 w-11 text-xl font-bold sm:w-12" />)}
+                            </InputOTPGroup>
+                        </InputOTP>
                         <button
                             onClick={handleOtpSubmit}
                             disabled={loading || otp.length !== 6}

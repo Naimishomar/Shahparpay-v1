@@ -6,6 +6,9 @@ import { toast } from 'sonner';
 import { aepsKycDone } from '../lib/services';
 import PortalDialog from '../components/PortalDialog';
 import { TitleText } from '../components/BlurText';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { REGEXP_ONLY_DIGITS } from 'input-otp';
+import { ImageZoom } from '../components/animate-ui/primitives/effects/image-zoom';
 
 const ACTIVE_BUTTON = 'btn-primary';
 const SILVER_TILE = 'icon-chip';
@@ -240,12 +243,15 @@ const Profile = () => {
             <p className={LABEL}>{label}</p>
             <p className="text-sm font-mono text-foreground">{number || 'Not provided'}</p>
             {picture ? (
-                <a href={picture} target="_blank" rel="noreferrer" className="block relative group overflow-hidden rounded-xl border w-full max-w-[14rem] aspect-[3/2] shadow-sm">
-                    <img src={picture} alt={label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="text-sm font-medium text-white">View full</span>
+                <div className="w-full max-w-[14rem] space-y-1.5">
+                    {/* animate-ui ImageZoom: hover magnifies where the pointer is, click or tap locks the zoom. */}
+                    <div className="overflow-hidden rounded-xl border aspect-[3/2] shadow-sm">
+                        <ImageZoom zoomScale={2.5} aria-label={label}>
+                            <img src={picture} alt={label} className="h-full w-full object-cover" />
+                        </ImageZoom>
                     </div>
-                </a>
+                    <a href={picture} target="_blank" rel="noreferrer" className="text-xs font-medium text-muted-foreground hover:text-foreground">Open full size</a>
+                </div>
             ) : (
                 <div className="flex w-full max-w-[14rem] aspect-[3/2] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">Not uploaded</div>
             )}
@@ -549,15 +555,12 @@ const Profile = () => {
                             {passwordStep === 2 && (
                                 <>
                                     <div className="text-left space-y-1.5">
-                                        <label className="text-sm font-medium text-foreground">OTP</label>
-                                        <input
-                                            type="text"
-                                            maxLength={6}
-                                            placeholder="6-digit OTP"
-                                            value={passwordFormData.otp}
-                                            onChange={(e) => setPasswordFormData({...passwordFormData, otp: e.target.value.replace(/\D/g, '')})}
-                                            className={`${INPUT} tabular-nums`}
-                                        />
+                                        <label id="profile-otp-label" className="text-sm font-medium text-foreground">OTP</label>
+                                        <InputOTP aria-labelledby="profile-otp-label" autoFocus maxLength={6} pattern={REGEXP_ONLY_DIGITS} value={passwordFormData.otp} onChange={(otp) => setPasswordFormData({...passwordFormData, otp})}>
+                                            <InputOTPGroup>
+                                                {[0, 1, 2, 3, 4, 5].map((i) => <InputOTPSlot key={i} index={i} className="h-11 w-10 text-lg font-semibold tabular-nums" />)}
+                                            </InputOTPGroup>
+                                        </InputOTP>
                                     </div>
                                     {securityMode === 'pin' ? (
                                         <div className="text-left space-y-1.5">

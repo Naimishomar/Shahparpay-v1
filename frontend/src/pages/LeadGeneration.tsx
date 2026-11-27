@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '../context/AuthContext';
 import PrimaryCta from '../components/PrimaryCta';
 import { toast } from 'sonner';
@@ -237,16 +238,16 @@ const LeadGeneration = () => {
                                 <label className="text-sm font-medium text-foreground">State</label>
                                 <div className="relative">
                                     <MapIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                    <select
-                                        value={formData.state}
-                                        onChange={e => setFormData({ ...formData, state: e.target.value })}
-                                        className={`${INPUT} pl-10`}
-                                    >
-                                        <option value="" disabled className="bg-background text-foreground">Select State</option>
-                                        {INDIAN_STATES.map((state) => (
-                                            <option key={state} value={state} className="bg-background text-foreground">{state}</option>
-                                        ))}
-                                    </select>
+                                    <Select value={formData.state} onValueChange={(v) => setFormData({ ...formData, state: v })}>
+                                        <SelectTrigger aria-label="State" className={`${INPUT} pl-10 data-[size=default]:h-auto`}>
+                                            <SelectValue placeholder="Select State" />
+                                        </SelectTrigger>
+                                        <SelectContent position="popper" className="z-[110] max-h-72">
+                                            {INDIAN_STATES.map((state) => (
+                                                <SelectItem key={state} value={state}>{state}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
                         </div>

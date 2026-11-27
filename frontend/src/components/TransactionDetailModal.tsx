@@ -5,6 +5,7 @@ import { Download, Printer } from "lucide-react"
 import { toast } from "sonner"
 import logo from "../assets/logo.png"
 import ReceiptPrinter from "./ReceiptPrinter"
+import { CopyButton } from "./animate-ui/components/buttons/copy"
 
 /** Why the gateway ended the transaction the way it did. */
 export const reasonOf = (tx: any) =>
@@ -34,6 +35,8 @@ const statusTone = (s: string) =>
     s === "SUCCESS" ? "text-emerald-600" : /FAIL|REJECT/i.test(s) ? "text-rose-600" : "text-amber-600";
 
 /** Full detail of one wallet transaction, shared by every report that lists them. */
+const COPYABLE = new Set(["Txn ID", "Order ID", "RRN"]);
+
 const TransactionDetailModal = ({ tx, onClose }: { tx: any; onClose: () => void }) => {
     const ref = useRef<HTMLDivElement>(null);
     if (!tx) return null;
@@ -97,7 +100,11 @@ const TransactionDetailModal = ({ tx, onClose }: { tx: any; onClose: () => void 
                             {shown.map(([k, v]) => (
                                 <div key={k}>
                                     <dt className="text-sm font-semibold text-slate-900">{k}</dt>
-                                    <dd className={`break-all ${k === "Transaction Status" ? `text-sm font-bold ${statusTone(status)}` : ["Type", "Amount", "Bank Balance"].includes(k) ? "text-base font-bold capitalize text-slate-900" : "text-sm text-slate-600"}`}>{v}</dd>
+                                    <dd className={`break-all ${COPYABLE.has(k) ? "flex items-center gap-1 " : ""}${k === "Transaction Status" ? `text-sm font-bold ${statusTone(status)}` : ["Type", "Amount", "Bank Balance"].includes(k) ? "text-base font-bold capitalize text-slate-900" : "text-sm text-slate-600"}`}>
+                                        {v}
+                                        {/* html2canvas skips it, so the PDF and print stay clean. */}
+                                        {COPYABLE.has(k) && <CopyButton data-html2canvas-ignore content={String(v)} variant="ghost" size="xs" aria-label={`Copy ${k}`} />}
+                                    </dd>
                                 </div>
                             ))}
                         </dl>

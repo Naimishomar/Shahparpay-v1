@@ -8,6 +8,8 @@ import RubberSegment from '../RubberSegment';
 import PortalSpotlight from '../PortalSpotlight';
 import Lottie from '../Lottie';
 import { TitleText } from '../BlurText';
+import { Root as PaginationRoot } from '@animate-ui/react/primitives/pagination';
+import { ScrollFade } from '@animate-ui/react/primitives/effects/scroll-fade';
 
 /*
  * The parts every report page is made of: a header with its exports, a row of
@@ -36,7 +38,9 @@ export const useDebounced = <T,>(value: T, ms = 1000) => {
 export function Seg<T extends string>({ label, value, onChange, options }: {
     label: string; value: T; onChange: (v: T) => void; options: readonly (readonly [T, string])[];
 }) {
+    // animate-ui ScrollFade: on a narrow screen the edges fade where more choices are off-screen.
     return (
+        <ScrollFade orientation="horizontal" size={24} className="max-w-full overflow-x-auto no-scrollbar">
         <RubberSegment
             aria-label={label}
             size="sm"
@@ -47,8 +51,9 @@ export function Seg<T extends string>({ label, value, onChange, options }: {
             thumbColor="var(--background)"
             textColor="var(--muted-foreground)"
             activeTextColor="var(--foreground)"
-            className="max-w-full overflow-x-auto no-scrollbar shadow-[inset_0_0_0_1px_var(--border)]"
+            className="shadow-[inset_0_0_0_1px_var(--border)]"
         />
+        </ScrollFade>
     );
 }
 
@@ -247,6 +252,19 @@ export const DayList = <T,>({ rows, loading, empty, dateOf, keyOf, render }: {
 };
 
 /** Previous / next with where we are; `total` when known, otherwise `hasMore`. */
+/** Page numbers to show: first, last and the current one's neighbours, with … over the gaps. */
+export const pageWindow = (page: number, last: number): (number | '…')[] => {
+    const set = new Set([1, last, page - 1, page, page + 1].filter((p) => p >= 1 && p <= last));
+    const out: (number | '…')[] = [];
+    [...set].sort((a, b) => a - b).forEach((p, i, arr) => {
+        if (i && p - arr[i - 1] > 1) out.push('…');
+        out.push(p);
+    });
+    return out;
+};
+
+const PAGE_BTN = 'flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs tabular-nums transition-colors';
+
 export const Pager = ({ page, onPage, shown, total, hasMore, pageSize }: {
     page: number; onPage: (p: number) => void; shown: number; total?: number; hasMore?: boolean; pageSize: number;
 }) => {
@@ -254,21 +272,37 @@ export const Pager = ({ page, onPage, shown, total, hasMore, pageSize }: {
     const to = (page - 1) * pageSize + shown;
     const next = total !== undefined ? to < total : !!hasMore;
     if (page === 1 && !next) return null;
+    const last = total !== undefined ? Math.max(1, Math.ceil(total / pageSize)) : page + (next ? 1 : 0);
     return (
-        <nav aria-label="Pages" className="flex items-center justify-between gap-3 px-1">
+        <div className="flex items-center justify-between gap-3 px-1">
             <span className="text-xs text-muted-foreground tabular-nums">
                 {from}–{to}{total !== undefined ? ` of ${total.toLocaleString('en-IN')}` : ''}
             </span>
-            <div className="flex items-center gap-1">
-                <button type="button" aria-label="Previous page" disabled={page === 1} onClick={() => onPage(page - 1)} className="flex h-8 w-8 items-center justify-center rounded-lg border bg-background text-muted-foreground hover:bg-black/5 disabled:opacity-40 dark:hover:bg-white/5">
+            {/* animate-ui Pagination: the lavender pill slides to the page picked. */}
+            <PaginationRoot aria-label="Pages" className="relative flex items-center gap-1 [&>[data-slot=pagination-indicator]]:rounded-lg">
+                <button type="button" aria-label="Previous page" disabled={page === 1} onClick={() => onPage(page - 1)} className={`${PAGE_BTN} border bg-background text-muted-foreground hover:bg-black/5 disabled:opacity-40 dark:hover:bg-white/5`}>
                     <ChevronLeft className="h-4 w-4" />
                 </button>
-                <span className="min-w-14 text-center text-xs tabular-nums">Page {page}</span>
-                <button type="button" aria-label="Next page" disabled={!next} onClick={() => onPage(page + 1)} className="flex h-8 w-8 items-center justify-center rounded-lg border bg-background text-muted-foreground hover:bg-black/5 disabled:opacity-40 dark:hover:bg-white/5">
+                {pageWindow(page, last).map((p, i) => p === '…' ? (
+                    <span key={`gap-${i}`} data-slot="pagination-ellipsis" aria-hidden className="px-1 text-xs text-muted-foreground">…</span>
+                ) : (
+                    <button
+                        key={p}
+                        type="button"
+                        data-slot="pagination-link"
+                        aria-current={p === page ? 'page' : undefined}
+                        aria-label={`Page ${p}`}
+                        onClick={() => p !== page && onPage(p)}
+                        className={`${PAGE_BTN} ${p === page ? 'bg-primary font-semibold text-primary-foreground' : 'text-muted-foreground hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5'}`}
+                    >
+                        {p}
+                    </button>
+                ))}
+                <button type="button" aria-label="Next page" disabled={!next} onClick={() => onPage(page + 1)} className={`${PAGE_BTN} border bg-background text-muted-foreground hover:bg-black/5 disabled:opacity-40 dark:hover:bg-white/5`}>
                     <ChevronRight className="h-4 w-4" />
                 </button>
-            </div>
-        </nav>
+            </PaginationRoot>
+        </div>
     );
 };
 

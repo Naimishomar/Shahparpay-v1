@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import html2canvas from "html2canvas-pro"
 import { toast } from "sonner"
 import ReceiptPrinter from "../components/ReceiptPrinter"
@@ -161,10 +162,13 @@ const WalletLedger = () => {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     <SearchBox value={search} onChange={setSearch} placeholder="Search reference, details, service" />
-                    <select aria-label="Service" value={txnType} onChange={(e) => setTxnType(e.target.value)} className={FIELD}>
-                        <option value="ALL">All services</option>
-                        {txnTypes.map((t) => <option key={t} value={t}>{t}</option>)}
-                    </select>
+                    <Select value={txnType} onValueChange={setTxnType}>
+                        <SelectTrigger aria-label="Service" className={`${FIELD} data-[size=default]:h-9`}><SelectValue /></SelectTrigger>
+                        <SelectContent position="popper" className="z-[110]">
+                            <SelectItem value="ALL">All services</SelectItem>
+                            {txnTypes.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                     <PeriodPicker period={period} onPeriod={setPeriod} custom={custom} onCustom={setCustom} />
                 </div>
             </Toolbar>

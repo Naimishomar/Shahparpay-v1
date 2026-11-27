@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import locationsData from '../../data/locations.json';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const StandardPsaTab: React.FC = () => {
     const { token } = useAuth();
@@ -346,19 +347,23 @@ const StandardPsaTab: React.FC = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">State</label>
-                    <select name="state" value={formData.state} onChange={handleInputChange} className="w-full px-3 py-2 bg-background border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" required>
-                        <option value="">Select State</option>
-                        {states.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                    </select>
+                    <label htmlFor="psa-std-state" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">State</label>
+                    <Select name="state" required value={formData.state} onValueChange={(value) => handleInputChange({ target: { name: 'state', value } } as React.ChangeEvent<HTMLSelectElement>)}>
+                        <SelectTrigger id="psa-std-state" className="w-full px-3 py-2 bg-background border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all h-auto data-[size=default]:h-auto"><SelectValue placeholder="Select State" /></SelectTrigger>
+                        <SelectContent position="popper" className="max-h-72">
+                            {states.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                 </div>
 
                 <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">District</label>
-                    <select name="district" value={formData.district} onChange={handleInputChange} className="w-full px-3 py-2 bg-background border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" required disabled={!formData.state}>
-                        <option value="">Select District</option>
-                        {districts.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
-                    </select>
+                    <label htmlFor="psa-std-district" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">District</label>
+                    <Select name="district" required disabled={!formData.state} value={formData.district} onValueChange={(value) => handleInputChange({ target: { name: 'district', value } } as React.ChangeEvent<HTMLSelectElement>)}>
+                        <SelectTrigger id="psa-std-district" className="w-full px-3 py-2 bg-background border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all h-auto data-[size=default]:h-auto"><SelectValue placeholder="Select District" /></SelectTrigger>
+                        <SelectContent position="popper" className="max-h-72">
+                            {districts.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                 </div>
 
                 <div className="space-y-1.5 md:col-span-2">

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { XCircle, Clock, Smartphone, Tv, Search, Lock, Loader2, Zap, ListFilter, Radio, MapPin, Hash, ReceiptText } from "lucide-react";
 import axios from "axios";
 import html2canvas from 'html2canvas-pro';
@@ -408,16 +409,16 @@ const Recharge = () => {
                                 <label className="text-sm font-medium text-foreground">DTH Operator</label>
                                 <div className="relative">
                                     <Tv className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                    <select
-                                        value={dthOperator}
-                                        onChange={e => setDthOperator(e.target.value)}
-                                        className={`${INPUT} pl-10`}
-                                    >
-                                        <option value="">Select DTH Operator</option>
-                                        {dthOperators.map((op: any) => (
-                                            <option key={op.id} value={op.id}>{op.name}</option>
-                                        ))}
-                                    </select>
+                                    <Select value={dthOperator} onValueChange={setDthOperator}>
+                                        <SelectTrigger aria-label="DTH Operator" className={`${INPUT} pl-10 data-[size=default]:h-auto`}>
+                                            <SelectValue placeholder="Select DTH Operator" />
+                                        </SelectTrigger>
+                                        <SelectContent position="popper" className="z-[110]">
+                                            {dthOperators.map((op: any) => (
+                                                <SelectItem key={op.id} value={String(op.id)}>{op.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
                         </div>
