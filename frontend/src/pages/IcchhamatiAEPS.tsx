@@ -20,6 +20,7 @@ import { Particles, ParticlesEffect } from '../components/animate-ui/primitives/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { cn } from '@/lib/utils';
 
 /** Six OTP boxes (animate-ui InputOTP); the codes here are 4 to 6 digits. */
 const OTP_SLOTS = [0, 1, 2, 3, 4, 5].map((i) => <InputOTPSlot key={i} index={i} className="size-11 bg-background text-base font-semibold" />);
@@ -686,91 +687,164 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
     }
 
     const statement = statementOf(result);
+    const label = TXN_TABS.find((t) => t.key === tab)?.label || '';
+    const amt = Number(amount) || 0;
+    // The button says what the press does.
+    const action = tab === 'BE' ? 'Check balance' : tab === 'MS' ? 'Get mini statement'
+        : tab === 'CW' ? (amt ? `Withdraw ₹${amt.toLocaleString('en-IN')}` : 'Withdraw cash')
+        : tab === 'M' ? (amt ? `Collect ₹${amt.toLocaleString('en-IN')}` : 'Collect payment')
+        : (amt ? `Deposit ₹${amt.toLocaleString('en-IN')}` : 'Deposit cash');
+    let n = 0;
 
     return (
         <div className="flex flex-col gap-6">
             <TxnTabs tab={tab} setTab={(t) => { setTab(t); setResult(null); resetOtp(); }} />
-            <div className="grid gap-6 xl:grid-cols-[1fr_400px]">
-                <section className={`${CARD} space-y-5`}>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <Field label="Customer Aadhaar">
-                            <input value={aadhaar} onChange={(e) => { setAadhaar(e.target.value.replace(/\D/g, '').slice(0, 12)); resetOtp(); }} inputMode="numeric" placeholder="12-digit Aadhaar" className={`${INPUT} font-mono tracking-wider`} />
-                        </Field>
-                        <Field label="Customer mobile">
-                            <input value={mobile} onChange={(e) => { setMobile(e.target.value.replace(/\D/g, '').slice(0, 10)); resetOtp(); }} inputMode="numeric" placeholder="10-digit mobile" className={INPUT} />
-                        </Field>
-                        <Field label="Bank">
-                            <Select value={bankID} onValueChange={(v) => { setBankID(v); resetOtp(); }}>
-                                <SelectTrigger className={`${INPUT} h-auto data-[size=default]:h-auto`}><SelectValue placeholder={banks.length ? 'Select bank' : 'Loading banks…'} /></SelectTrigger>
-                                <SelectContent position="popper" className="max-h-72">
-                                    {banks.map((b) => <SelectItem key={b.iinno} value={String(b.iinno)}>{b.bankName}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </Field>
-                        {moves && (
-                            <Field label={tab === 'CD' ? 'Amount (paid from your Trade Wallet)' : 'Amount'}>
-                                <input value={amount} onChange={(e) => { setAmount(e.target.value.replace(/\D/g, '').slice(0, 5)); resetOtp(); }} inputMode="numeric" placeholder="Up to ₹10,000" className={INPUT} />
+            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+                <section className={`${CARD} flex flex-col gap-6`}>
+                    <TxnStep n={++n} title="Customer" hint="Aadhaar, mobile and the bank linked to that Aadhaar">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <Field label="Customer Aadhaar">
+                                <input value={aadhaar} onChange={(e) => { setAadhaar(e.target.value.replace(/\D/g, '').slice(0, 12)); resetOtp(); }} inputMode="numeric" placeholder="12-digit Aadhaar" className={cn(INPUT, 'h-12 font-mono text-base tracking-wider')} />
                             </Field>
-                        )}
-                    </div>
-                    {needsOtp && (
-                        <div className="rounded-xl border bg-background p-4">
-                            <p className="mb-3 text-sm">Above ₹{OTP_THRESHOLD.toLocaleString('en-IN')} the customer confirms with an OTP.</p>
-                            {!otpRef ? (
-                                <button disabled={busy} onClick={sendOtp} className={SECONDARY_BUTTON}>{busy && <Loader2 size={16} className="animate-spin" />} Send OTP to customer</button>
-                            ) : (
-                                <InputOTP maxLength={6} pattern={REGEXP_ONLY_DIGITS} value={otp} onChange={setOtp} aria-label="Customer OTP" containerClassName=""><InputOTPGroup>{OTP_SLOTS}</InputOTPGroup></InputOTP>
-                            )}
+                            <Field label="Customer mobile">
+                                <input value={mobile} onChange={(e) => { setMobile(e.target.value.replace(/\D/g, '').slice(0, 10)); resetOtp(); }} inputMode="numeric" placeholder="10-digit mobile" className={cn(INPUT, 'h-12 text-base tabular-nums')} />
+                            </Field>
+                            <div className="sm:col-span-2">
+                                <Field label="Bank">
+                                    <Select value={bankID} onValueChange={(v) => { setBankID(v); resetOtp(); }}>
+                                        <SelectTrigger className={cn(INPUT, 'h-12 data-[size=default]:h-12')}><SelectValue placeholder={banks.length ? 'Select bank' : 'Loading banks…'} /></SelectTrigger>
+                                        <SelectContent position="popper" className="max-h-72">
+                                            {banks.map((b) => <SelectItem key={b.iinno} value={String(b.iinno)}>{b.bankName}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </Field>
+                            </div>
                         </div>
+                    </TxnStep>
+
+                    {moves && (
+                        <TxnStep n={++n} title="Amount" hint={tab === 'CD' ? 'Paid from your Trade Wallet · ₹1 to ₹10,000' : '₹1 to ₹10,000'}>
+                            <div className="relative">
+                                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-semibold text-muted-foreground">₹</span>
+                                <input aria-label="Amount" value={amount} onChange={(e) => { setAmount(e.target.value.replace(/\D/g, '').slice(0, 5)); resetOtp(); }} inputMode="numeric" placeholder="0" className={cn(INPUT, 'h-16 pl-11 text-3xl font-bold tabular-nums')} />
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                {[500, 1000, 2000, 5000, 10000].map((v) => (
+                                    <button
+                                        key={v}
+                                        type="button"
+                                        onClick={() => { setAmount(String(v)); resetOtp(); }}
+                                        aria-pressed={amt === v}
+                                        className={`rounded-full border px-3.5 py-1.5 text-sm font-semibold tabular-nums transition-all active:scale-95 ${amt === v ? 'btn-primary' : 'bg-background hover:bg-black/5 dark:hover:bg-white/5'}`}
+                                    >
+                                        ₹{v.toLocaleString('en-IN')}
+                                    </button>
+                                ))}
+                            </div>
+                            {needsOtp && (
+                                <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+                                    <p className="mb-3 text-sm">Above ₹{OTP_THRESHOLD.toLocaleString('en-IN')} the customer confirms with an OTP.</p>
+                                    {!otpRef ? (
+                                        <button disabled={busy} onClick={sendOtp} className={SECONDARY_BUTTON}>{busy && <Loader2 size={16} className="animate-spin" />} Send OTP to customer</button>
+                                    ) : (
+                                        <InputOTP maxLength={6} pattern={REGEXP_ONLY_DIGITS} value={otp} onChange={setOtp} aria-label="Customer OTP" containerClassName=""><InputOTPGroup>{OTP_SLOTS}</InputOTPGroup></InputOTP>
+                                    )}
+                                </div>
+                            )}
+                        </TxnStep>
                     )}
-                    <DevicePicker {...device} />
+
+                    <TxnStep n={++n} title="Fingerprint" hint="The scanner the customer will press their finger on" last>
+                        <DevicePicker {...device} />
+                    </TxnStep>
+
                     <PrimaryCta type="button" disabled={busy} onClick={submit} className="w-full py-4 text-base font-semibold">
-                        {busy ? <Loader2 size={20} className="animate-spin" /> : <Fingerprint size={20} />} {busy ? <Busy text="Waiting for the fingerprint…" /> : 'Scan customer fingerprint & submit'}
+                        {busy ? <Loader2 size={20} className="animate-spin" /> : <Fingerprint size={20} />} {busy ? <Busy text="Waiting for the fingerprint…" /> : `${action} · scan fingerprint`}
                     </PrimaryCta>
                 </section>
 
-                <section className={CARD}>
-                    <p className={`${LABEL} mb-4`}>Result</p>
-                    {!result ? (
-                        <p className="text-sm text-muted-foreground">The bank’s answer appears here.</p>
-                    ) : (
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2">
-                                {result.ok === true ? (
-                                    // animate-ui Particles: a small green burst from the tick when the bank says yes.
-                                    <Particles key={result.at.getTime()} className="grid place-items-center">
-                                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                                        <ParticlesEffect side="top" sideOffset={-10} count={8} radius={18} spread={360} delay={0.1} className="size-1 rounded-full bg-emerald-500" />
-                                    </Particles>
-                                ) : result.ok === 'pending' ? <Clock className="h-5 w-5 text-amber-500" /> : <XCircle className="h-5 w-5 text-red-500" />}
-                                <p className="font-semibold">{result.message}</p>
-                            </div>
-                            <dl className="space-y-2 text-sm">
-                                {receiptRows(result).map(([k, v]) => (
-                                    <div key={k} className="flex justify-between gap-3"><dt className="text-muted-foreground">{k}</dt><dd className="font-medium tabular-nums">{v}</dd></div>
+                <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
+                    {/* Until the bank answers: what this press will send. */}
+                    {!result && (
+                        <section className={CARD}>
+                            <p className={`${LABEL} mb-4`}>Summary</p>
+                            <dl className="space-y-2.5 text-sm">
+                                {([
+                                    ['Service', label],
+                                    ['Aadhaar', aadhaar.length === 12 ? `XXXX XXXX ${aadhaar.slice(-4)}` : null],
+                                    ['Mobile', /^[6-9]\d{9}$/.test(mobile) ? mobile : null],
+                                    ['Bank', bank?.bankName || null],
+                                ] as const).map(([k, v]) => (
+                                    <div key={k} className="flex items-baseline justify-between gap-3">
+                                        <dt className="text-muted-foreground">{k}</dt>
+                                        <dd className={`truncate text-right ${v ? 'font-semibold' : 'text-xs text-muted-foreground/70'}`}>{v || 'Not entered'}</dd>
+                                    </div>
                                 ))}
                             </dl>
-                            <button onClick={() => setShowReceipt(true)} className={`${SECONDARY_BUTTON} w-full`}><FileText size={16} /> View receipt</button>
-                            {statement && (
-                                <div className="max-h-72 overflow-auto rounded-xl border">
-                                    <table className="w-full text-xs">
-                                        <tbody className="divide-y">
-                                            {statement.map((row, i) => (
-                                                <tr key={i}>{Object.values(row).map((v, j) => <td key={j} className="px-2 py-1.5">{String(v ?? '')}</td>)}</tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                            {moves && (
+                                <div className="mt-4 flex items-baseline justify-between border-t border-dashed pt-4">
+                                    <span className="text-sm font-medium">Amount</span>
+                                    <span className="text-2xl font-bold tabular-nums">₹{amt.toLocaleString('en-IN')}</span>
                                 </div>
                             )}
-                        </div>
+                            <p className="mt-4 text-xs text-muted-foreground">The bank’s answer and the receipt appear here.</p>
+                        </section>
                     )}
-                </section>
+                    {result && (
+                        <section className={`${CARD} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                            <div className="flex items-center justify-between">
+                                <p className={LABEL}>Result</p>
+                                <button onClick={() => setResult(null)} className="text-xs font-semibold text-muted-foreground hover:text-foreground">New transaction</button>
+                            </div>
+                            <div className="mt-4 space-y-4">
+                                <div className={`flex items-center gap-2 rounded-xl p-3 ring-1 ${result.ok === true ? 'bg-emerald-500/10 ring-emerald-500/20' : result.ok === 'pending' ? 'bg-amber-500/10 ring-amber-500/20' : 'bg-rose-500/10 ring-rose-500/20'}`}>
+                                    {result.ok === true ? (
+                                        // animate-ui Particles: a small green burst from the tick when the bank says yes.
+                                        <Particles key={result.at.getTime()} className="grid place-items-center">
+                                            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                                            <ParticlesEffect side="top" sideOffset={-10} count={8} radius={18} spread={360} delay={0.1} className="size-1 rounded-full bg-emerald-500" />
+                                        </Particles>
+                                    ) : result.ok === 'pending' ? <Clock className="h-5 w-5 text-amber-500" /> : <XCircle className="h-5 w-5 text-red-500" />}
+                                    <p className="font-semibold">{result.message}</p>
+                                </div>
+                                <dl className="space-y-2 text-sm">
+                                    {receiptRows(result).map(([k, v]) => (
+                                        <div key={k} className="flex justify-between gap-3"><dt className="text-muted-foreground">{k}</dt><dd className="font-medium tabular-nums">{v}</dd></div>
+                                    ))}
+                                </dl>
+                                <button onClick={() => setShowReceipt(true)} className={`${SECONDARY_BUTTON} w-full`}><FileText size={16} /> View receipt</button>
+                                {statement && (
+                                    <div className="max-h-72 overflow-auto rounded-xl border">
+                                        <table className="w-full text-xs">
+                                            <tbody className="divide-y">
+                                                {statement.map((row, i) => (
+                                                    <tr key={i}>{Object.values(row).map((v, j) => <td key={j} className="px-2 py-1.5">{String(v ?? '')}</td>)}</tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        </section>
+                    )}
+                </aside>
             </div>
             {stage && <TxnProgress stage={stage} />}
             {result && showReceipt && <ReceiptModal result={result} onClose={() => setShowReceipt(false)} />}
         </div>
     );
 };
+
+/** One numbered step of the transaction form, joined to the next by a thin rail. */
+const TxnStep = ({ n, title, hint, last = false, children }: { n: number; title: string; hint?: string; last?: boolean; children: React.ReactNode }) => (
+    <div className="relative pl-10">
+        {!last && <span aria-hidden className="absolute left-[13px] top-8 bottom-[-1.5rem] w-px bg-border" />}
+        <span aria-hidden className="absolute left-0 top-0 grid size-7 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-sm">{n}</span>
+        <p className="text-sm font-semibold leading-7">{title}</p>
+        {hint && <p className="-mt-0.5 text-xs text-muted-foreground">{hint}</p>}
+        <div className="mt-3">{children}</div>
+    </div>
+);
 
 type TxnStage = 'scan' | 'bank';
 
