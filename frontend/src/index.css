@@ -672,7 +672,7 @@ html.rp-motion .btn-primary {
     background-size: 100% 2px;
     color: var(--primary-foreground);
     border-color: transparent;
-    box-shadow: 0 10px 22px -14px rgb(70 50 160 / 0.6);
+    box-shadow: 0 8px 18px -14px rgb(70 50 160 / 0.35);
     transition: background-size 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s 0.12s, transform 0.15s;
 }
 html.rp-motion .btn-primary:not(:disabled):hover {

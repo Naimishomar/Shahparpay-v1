@@ -832,7 +832,7 @@ const ReceiptModal = ({ result, onClose }: { result: TxnResult; onClose: () => v
 // animate-ui Highlight: the selected pill slides from tab to tab.
 const TxnTabs = ({ tab, setTab }: { tab: TxnType; setTab: (t: TxnType) => void }) => (
     <div className="flex w-full gap-1 overflow-x-auto no-scrollbar rounded-2xl border bg-card p-1.5 md:w-max">
-        <Highlight controlledItems value={tab} click={false} className="inset-0 rounded-xl bg-primary shadow-[0_10px_22px_-14px_rgb(70_50_160_/_0.6)]">
+        <Highlight controlledItems value={tab} click={false} className="inset-0 rounded-xl bg-primary shadow-[0_8px_18px_-14px_rgb(70_50_160_/_0.35)]">
             {TXN_TABS.map(({ key, label, icon: Icon, tone }) => (
                 <HighlightItem key={key} value={key}>
                     <button onClick={() => setTab(key)} aria-pressed={tab === key} className={`relative flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${tab === key ? 'text-primary-foreground' : 'text-foreground/75 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}>

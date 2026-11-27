@@ -36,7 +36,7 @@ export default function PrimaryCta({ type = 'submit', className = '', ...rest }:
             delay="0.35s"
             fillHeight="3px"
             data-cta=""
-            className={`[--liquid-button-background-color:var(--primary)] [--liquid-button-color:var(--cta-fill)] hover:text-[color:var(--cta-fg-hover)] shadow-[0_12px_28px_-12px_rgb(70_50_160_/_0.6)] ${className}`}
+            className={`[--liquid-button-background-color:var(--primary)] [--liquid-button-color:var(--cta-fill)] hover:text-[color:var(--cta-fg-hover)] shadow-[0_8px_20px_-14px_rgb(70_50_160_/_0.35)] ${className}`}
             {...rest}
         />
     );

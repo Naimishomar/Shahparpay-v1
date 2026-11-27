@@ -13,10 +13,10 @@ const PortalSpotlight = ({ style, ...rest }: HTMLAttributes<HTMLDivElement>) => 
     return (
         <SpotlightCard
             theme={dark ? 'dark' : 'light'}
-            spotlightColor={dark ? '#B9A8F0' : '#7C6BD6'}
-            intensity={dark ? 0.14 : 0.5}
+            spotlightColor={dark ? '#B9A8F0' : '#C9BCF5'}
+            intensity={dark ? 0.1 : 0.28}
             spotlightSize={260}
-            borderGlow={0.9}
+            borderGlow={0.6}
             proximity={60}
             style={{
                 '--spotlight-card-surface': 'var(--card)',
