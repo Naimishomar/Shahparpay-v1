@@ -179,7 +179,6 @@ function App() {
         <Route path="/reports/aeps" element={<TxnReport key="aeps" kind="aeps"/>}/>
         <Route path="/reports/dmt" element={<TxnReport key="dmt" kind="dmt"/>}/>
         <Route path="/reports/payout" element={<TxnReport key="payout" kind="payout"/>}/>
-        <Route path="/reports/upi" element={<TxnReport key="upi" kind="upi"/>}/>
         <Route path="/reports/upi-cash-withdrawal" element={<TxnReport key="upiCashWithdrawal" kind="upiCashWithdrawal"/>}/>
         <Route path="/reports/pan" element={<TxnReport key="pan" kind="pan"/>}/>
         <Route path="/reports/itr" element={<TxnReport key="itr" kind="itr"/>}/>

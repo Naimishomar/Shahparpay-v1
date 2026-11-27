@@ -346,7 +346,6 @@ const simpleReport = (type: string, file: string, icon: string): React.FC => {
 export const DmtReport = simpleReport('DMT', 'DmtReport', 'bank-transfer');
 /** The web's Payout report lists AEPS settlements from the transaction log. */
 export const PayoutReport = simpleReport('AEPS_SETTLEMENT', 'PayoutReport', 'cash-fast');
-export const UpiReport = simpleReport('UPI', 'UpiReport', 'qrcode');
 
 /** Recharge and BBPS: the web's ServiceReport. */
 const SERVICE_STATUSES = ['ALL', 'SUCCESS', 'PROCESSING', 'FAILED', 'REFUNDED'];

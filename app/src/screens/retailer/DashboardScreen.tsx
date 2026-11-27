@@ -167,7 +167,7 @@ export const DashboardScreen: React.FC = () => {
     service('Total Success AEPS', 'AEPS_WITHDRAWAL', 'fingerprint'),
     service('Total Success Payout', 'AEPS_SETTLEMENT', 'bank-outline'),
     service('Total Success BBPS', 'BILL_PAYMENT', 'receipt'),
-    service('Total Success UPI', 'WALLET_TOPUP', 'wallet-outline'),
+    service('Total Success UPI Cash Withdrawal', 'UPI_CASH_WITHDRAWAL', 'qrcode-scan'),
     { title: 'Total Earnings', icon: 'currency-inr', value: money(Number(stats?.TotalCommission) || 0), hint: 'Credited to wallet, after TDS' },
     { title: 'Total Commission', icon: 'currency-inr', value: money(Number(stats?.TotalGrossCommission) || 0), hint: 'Gross, before TDS' },
   ];

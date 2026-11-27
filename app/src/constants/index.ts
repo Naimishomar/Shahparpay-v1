@@ -131,7 +131,6 @@ export const REPORT_ITEMS: ReportEntry[] = [
   { name: 'AEPS Reports', route: 'AepsReport', icon: 'fingerprint', hint: 'View your Aadhaar Enabled Payment System transactions.', type: 'AEPS' },
   { name: 'DMT Reports', route: 'DmtReport', icon: 'bank-transfer', hint: 'View your Domestic Money Transfer transactions.', type: 'DMT' },
   { name: 'Payout Reports', route: 'PayoutReport', icon: 'cash-fast', hint: 'View your Direct Payout settlements and transfers.', type: 'AEPS_SETTLEMENT' },
-  { name: 'UPI Reports', route: 'UpiReport', icon: 'qrcode', hint: 'View your UPI Payments history.', type: 'UPI' },
   { name: 'PAN Reports', route: 'PanReport', icon: 'card-account-details-outline', hint: 'View all PAN Card service transactions (Biometric, Standard & eSevaTech).' },
   { name: 'ITR Reports', route: 'ItrReport', icon: 'file-document-outline', hint: 'View all Income Tax Return filings and transactions.' },
   { name: 'Lead Generation Reports', route: 'LeadReport', icon: 'account-plus-outline', hint: 'View all generated leads and track their application status.' },

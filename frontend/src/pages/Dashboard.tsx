@@ -1,5 +1,5 @@
 import {
-    Banknote, Smartphone, Fingerprint, Building2, Receipt, Wallet, IndianRupee, Users, CreditCard, FileText,
+    Banknote, Smartphone, Fingerprint, Building2, Receipt, Wallet, QrCode, IndianRupee, Users, CreditCard, FileText,
     CalendarDays, ChevronDown, ArrowUpRight, Inbox,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/animate-ui/components/radix/popover';
@@ -16,7 +16,10 @@ import ShinyText from '../components/ShinyText';
 import GlareHover from '../components/GlareHover';
 import { Tilt, TiltContent } from '../components/animate-ui/primitives/effects/tilt';
 import { ARRIVE, TRAVEL } from '../components/landing/beats';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { Shine } from '@/components/animate-ui/primitives/effects/shine';
+import { Magnetic } from '@/components/animate-ui/primitives/effects/magnetic';
+import { AutoHeight } from '@/components/animate-ui/primitives/effects/auto-height';
 import { Progress } from '@/components/animate-ui/components/radix/progress';
 
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
@@ -164,6 +167,7 @@ const Skeleton = ({ className = '' }: { className?: string }) => (
 
 const Dashboard = () => {
     const navigate = useNavigate();
+    const reduceMotion = useReducedMotion();
     const { token, user } = useAuth();
     const [stats, setStats] = useState<any>(null);
     const [recentSales, setRecentSales] = useState<any[]>([]);
@@ -303,6 +307,8 @@ const Dashboard = () => {
                             </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-60 p-2 rounded-2xl bg-popover border-border shadow-xl" align="end">
+                            {/* animate-ui AutoHeight: picking Custom Range grows the panel instead of jumping. */}
+                            <AutoHeight deps={[tempDateType]} transition={reduceMotion ? { duration: 0 } : undefined}>
                             <div className="flex flex-col space-y-1">
                                 {['Today', 'Yesterday', 'Last 7 Days', 'Last 30 Days', 'This Month', 'Last Month', 'Custom Range'].map((type) => (
                                     <button
@@ -333,6 +339,7 @@ const Dashboard = () => {
                                     <button onClick={() => setPopoverOpen(false)} className="flex-1 px-4 py-1.5 text-sm font-medium text-foreground hover:bg-black/5 dark:hover:bg-white/10 rounded-lg">Cancel</button>
                                 </div>
                             </div>
+                            </AutoHeight>
                         </PopoverContent>
                     </Popover>
                 </div>
@@ -365,7 +372,7 @@ const Dashboard = () => {
                     ],
                     [
                         service('Total Success BBPS', 'BILL_PAYMENT', Receipt, 'pink'),
-                        service('Total Success UPI', 'WALLET_TOPUP', Wallet, 'cyan'),
+                        service('Total Success UPI Cash Withdrawal', 'UPI_CASH_WITHDRAWAL', QrCode, 'cyan'),
                         plain('Total Earnings', Number(stats?.TotalCommission) || 0, 'Credited to wallet, after TDS', IndianRupee, 'lilac'),
                         plain('Total Commission', Number(stats?.TotalGrossCommission) || 0, 'Gross, before TDS', IndianRupee, 'blue'),
                     ],
@@ -378,6 +385,8 @@ const Dashboard = () => {
                             return (
                                 // animate-ui Tilt: the card leans toward the pointer.
                                 <Tilt key={card.title} maxTilt={6} perspective={900}>
+                                {/* animate-ui Shine: a light sweeps across the card on hover. */}
+                                <Shine asChild enableOnHover enable={!reduceMotion} color="#ffffff" opacity={0.55} duration={900}>
                                 <TiltContent className={`group relative h-full overflow-hidden rounded-2xl border border-white/70 p-5 shadow-sm dark:border-white/10 ${a.card}`}>
                                     <div className="relative flex items-center justify-between gap-3">
                                         <span className="text-sm font-semibold">{card.title}</span>
@@ -397,6 +406,7 @@ const Dashboard = () => {
                                         <p className="relative mt-4 text-xs opacity-70">{card.hint}</p>
                                     )}
                                 </TiltContent>
+                                </Shine>
                                 </Tilt>
                             );
                         })}
@@ -416,9 +426,12 @@ const Dashboard = () => {
                                 className="group relative flex flex-col items-start gap-3 rounded-xl border bg-muted/40 p-4 text-left hover:border-foreground/20 active:scale-[0.98]"
                             >
                                 <ArrowUpRight className="absolute right-3 top-3 h-4 w-4 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                                <div className={`rounded-full p-2.5 transition-transform duration-300 ease-out group-hover:-translate-y-0.5 group-hover:scale-110 ${ACCENTS[accent].tile}`}>
+                                {/* animate-ui Magnetic: the icon leans toward the pointer as it nears. */}
+                                <Magnetic strength={reduceMotion ? 0 : 0.35} range={90}>
+                                <div className={`rounded-full p-2.5 transition-transform duration-300 ease-out group-hover:scale-110 ${ACCENTS[accent].tile}`}>
                                     <Icon className="h-5 w-5" />
                                 </div>
+                                </Magnetic>
                                 <div>
                                     <p className="font-semibold text-sm">{title}</p>
                                     <p className="text-xs text-muted-foreground">{hint}</p>

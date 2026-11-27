@@ -16,6 +16,7 @@ import Lottie, { Confetti } from '../components/Lottie';
 import { Highlight, HighlightItem } from '../components/animate-ui/primitives/effects/highlight';
 import PrimaryCta, { Busy, PILL_HIGHLIGHT } from '../components/PrimaryCta';
 import { TitleText } from '../components/BlurText';
+import { Particles, ParticlesEffect } from '../components/animate-ui/primitives/effects/particles';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -720,7 +721,13 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
                     ) : (
                         <div className="space-y-4">
                             <div className="flex items-center gap-2">
-                                {result.ok === true ? <CheckCircle2 className="h-5 w-5 text-emerald-500" /> : result.ok === 'pending' ? <Clock className="h-5 w-5 text-amber-500" /> : <XCircle className="h-5 w-5 text-red-500" />}
+                                {result.ok === true ? (
+                                    // animate-ui Particles: a small green burst from the tick when the bank says yes.
+                                    <Particles key={result.at.getTime()} className="grid place-items-center">
+                                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                                        <ParticlesEffect side="top" sideOffset={-10} count={8} radius={18} spread={360} delay={0.1} className="size-1 rounded-full bg-emerald-500" />
+                                    </Particles>
+                                ) : result.ok === 'pending' ? <Clock className="h-5 w-5 text-amber-500" /> : <XCircle className="h-5 w-5 text-red-500" />}
                                 <p className="font-semibold">{result.message}</p>
                             </div>
                             <dl className="space-y-2 text-sm">

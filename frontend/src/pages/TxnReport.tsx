@@ -21,7 +21,7 @@ import {
 type Icon = ComponentType<LucideProps>;
 type Tx = any;
 
-export type ReportKind = "all" | "aeps" | "dmt" | "payout" | "upi" | "upiCashWithdrawal" | "pan" | "itr" | "recharge" | "bbps" | "collect";
+export type ReportKind = "all" | "aeps" | "dmt" | "payout" | "upiCashWithdrawal" | "pan" | "itr" | "recharge" | "bbps" | "collect";
 
 const m = (tx: Tx) => tx.metadata || {};
 const last4 = (v: unknown) => { const d = String(v ?? "").replace(/\D/g, ""); return d.length >= 4 ? d.slice(-4) : ""; };
@@ -90,7 +90,6 @@ const KINDS: Record<ReportKind, { type: string; title: string; description: stri
     aeps: { type: "AEPS_WITHDRAWAL,AEPS_BALANCE_ENQUIRY,AEPS_MINI_STATEMENT,AADHAAR_PAY,AEPS_DEPOSIT", title: "AEPS Reports", description: "Aadhaar withdrawals, balance enquiries, mini statements and cash deposits.", icon: Fingerprint, search: "Search ID, customer, mobile", commission: true },
     dmt: { type: "DMT", title: "DMT Reports", description: "Money transfers to bank accounts, with the fee charged on each.", icon: Send, search: "Search ID, beneficiary, account", commission: false },
     payout: { type: "AEPS_SETTLEMENT,DIRECT_PAYOUT", title: "Payout Reports", description: "Money settled from your Trade Wallet to your bank account.", icon: Building2, search: "Search ID, bank, account", commission: false },
-    upi: { type: "WALLET_TOPUP", title: "UPI Reports", description: "Money added to your wallet by UPI.", icon: Wallet, search: "Search ID, UTR", commission: false },
     upiCashWithdrawal: { type: "UPI_CASH_WITHDRAWAL", title: "UPI Cash Withdrawal Reports", description: "Cash given to customers who paid you by UPI, and the commission on each.", icon: Wallet, search: "Search ID, customer, mobile", commission: true },
     pan: { type: "PAN_CARD,STD_PAN_CARD,PAN_SERVICE,PAN_COUPON", title: "PAN Reports", description: "PAN card applications and coupons, with their status.", icon: IdCard, search: "Search ID, applicant, application no.", commission: true },
     itr: { type: "ITR", title: "ITR Reports", description: "Income tax returns filed through TaxSuite, with their status and fee.", icon: FileText, search: "Search ID, applicant, PAN", commission: false },

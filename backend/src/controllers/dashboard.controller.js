@@ -45,6 +45,7 @@ export const getRetailerStats = async (req, res) => {
       DIRECT_PAYOUT: 0,
       BILL_PAYMENT: 0,
       WALLET_TOPUP: 0, // UPI is sometimes wallet topup
+      UPI_CASH_WITHDRAWAL: 0,
       TotalCommission: 0,
       TotalGrossCommission: 0,
       TotalCustomers: 0,
