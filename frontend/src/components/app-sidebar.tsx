@@ -1,4 +1,5 @@
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar"
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, useSidebar } from "@/components/ui/sidebar"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/animate-ui/components/radix/tooltip"
 import { Link, useLocation } from "react-router-dom"
 import { useState } from "react"
 import {
@@ -153,11 +154,13 @@ const iconTone = (name: string) =>
 
 const NavLink = ({ item, active }: { item: NavItem; active: boolean }) => {
   const Icon = item.icon;
-  return (
+  // Collapsed to icons, each link names itself in an animate-ui tooltip.
+  const { state, isMobile } = useSidebar();
+  const link = (
     <Link
       to={item.url}
       aria-current={active ? 'page' : undefined}
-      title={item.name}
+      aria-label={item.name}
       className={`relative flex min-h-10 items-center gap-3 rounded-lg px-3 group-data-[collapsible=icon]:justify-center text-[1.04rem] transition-colors focus-visible:outline-2 focus-visible:outline-foreground ${
         active
           ? 'tint-lavender font-semibold'
@@ -169,6 +172,13 @@ const NavLink = ({ item, active }: { item: NavItem; active: boolean }) => {
       <Icon aria-hidden="true" className={`nav-icon h-5 w-5 shrink-0 ${iconTone(item.name)}`} strokeWidth={active ? 2.2 : 1.8} />
       <span className="truncate group-data-[collapsible=icon]:hidden">{item.name}</span>
     </Link>
+  );
+  if (state !== 'collapsed' || isMobile) return link;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{link}</TooltipTrigger>
+      <TooltipContent side="right" sideOffset={10}>{item.name}</TooltipContent>
+    </Tooltip>
   );
 };
 

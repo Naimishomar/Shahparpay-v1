@@ -1,4 +1,5 @@
 import { Fingerprint, Download, ExternalLink, HelpCircle, HardDrive, Smartphone, Monitor, Phone, Mail, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/animate-ui/components/radix/accordion';
 
 const BiometricSupport = () => {
     const devices = [
@@ -104,8 +105,13 @@ const BiometricSupport = () => {
                                         <ExternalLink className="w-4 h-4 opacity-70" />
                                     </a>
                                 </div>
-                                <div className="mt-6 pt-5 border-t border-border" id={`${device.id}-steps`}>
-                                    <h4 className="font-bold text-foreground mb-3 flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-primary" /> Enable {device.name}</h4>
+                                {/* animate-ui Accordion: the setup steps fold away until needed. */}
+                                <Accordion type="single" collapsible className="mt-6 border-t border-border" id={`${device.id}-steps`}>
+                                    <AccordionItem value="steps">
+                                    <AccordionTrigger className="font-bold text-base text-foreground hover:no-underline">
+                                        <span className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-primary" /> Enable {device.name}</span>
+                                    </AccordionTrigger>
+                                    <AccordionContent>
                                     <ol className="space-y-2 text-sm text-muted-foreground">
                                         <li className="flex gap-2"><span className="font-bold text-primary">1.</span> Uninstall old RD Service and old scanner drivers from Windows, then restart the computer.</li>
                                         <li className="flex gap-2"><span className="font-bold text-primary">2.</span> Open the official download link above and install the Windows driver as Administrator.</li>
@@ -115,7 +121,9 @@ const BiometricSupport = () => {
                                         <li className="flex gap-2"><span className="font-bold text-primary">6.</span> Open the RD Service status page and confirm the device is detected and registered.</li>
                                         <li className="flex gap-2"><span className="font-bold text-primary">7.</span> Return to ShahparPay → AEPS/Merchant eKYC, allow browser permissions, select this device, and click Capture.</li>
                                     </ol>
-                                </div>
+                                    </AccordionContent>
+                                    </AccordionItem>
+                                </Accordion>
                             </div>
                         ))}
                     </div>
