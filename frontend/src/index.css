@@ -588,14 +588,14 @@ html.lp-portal.dark {
  * only transform on the compositor, and stands still under reduced motion.
  */
 .portal-ambient {
-    --ambient-strength: 52%;
+    --ambient-strength: 24%;
     position: absolute;
     inset: 0;
     z-index: 0;
     overflow: hidden;
     pointer-events: none;
 }
-.dark .portal-ambient { --ambient-strength: 30%; }
+.dark .portal-ambient { --ambient-strength: 16%; }
 .portal-ambient > span {
     position: absolute;
     border-radius: 9999px;
