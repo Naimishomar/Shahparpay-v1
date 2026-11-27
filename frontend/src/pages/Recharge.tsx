@@ -6,8 +6,9 @@ import { jsPDF } from 'jspdf';
 import logo from '../assets/logo.png';
 import { toast } from 'sonner';
 import { SlidingNumber } from '../components/animate-ui/primitives/texts/sliding-number';
-import PrimaryCta from '../components/PrimaryCta';
+import PrimaryCta, { PILL_HIGHLIGHT } from '../components/PrimaryCta';
 import Lottie from '../components/Lottie';
+import { Highlight, HighlightItem } from '../components/animate-ui/primitives/effects/highlight';
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -297,20 +298,24 @@ const Recharge = () => {
                         </div>
                     </div>
                     <div className="flex gap-1 overflow-x-auto no-scrollbar rounded-2xl border bg-background/60 backdrop-blur p-1.5 w-full md:w-max">
+                        <Highlight controlledItems value={activeTab} click={false} className={PILL_HIGHLIGHT}>
                         {([
                             ['prepaid', 'Prepaid', Smartphone],
                             ['dth', 'DTH', Tv],
                             ['history', 'History', Clock],
                         ] as const).map(([key, label, Icon]) => (
+                            <HighlightItem key={key} value={key}>
                             <button
-                                key={key}
                                 onClick={() => setActiveTab(key)}
-                                className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-5 py-2 text-sm font-medium transition-all ${activeTab === key ? ACTIVE_BUTTON : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
+                                aria-pressed={activeTab === key}
+                                className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-5 py-2 text-sm font-medium transition-colors ${activeTab === key ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
                             >
                                 <Icon className="h-4 w-4" />
                                 {label}
                             </button>
+                            </HighlightItem>
                         ))}
+                        </Highlight>
                     </div>
                 </div>
             </section>

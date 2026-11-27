@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
  *   payment  "Payment successful": a payment that went through
  *   confetti "Success confetti": one burst over a success
  *   update   "App update": a service not switched on yet
+ *   fingerprint "Fingerprint scan animation", recoloured violet: an AEPS scan
  * The player and each animation load only when shown. Under reduced motion an
  * animation holds a still frame and a one-shot one is skipped (onComplete).
  */
@@ -17,6 +18,7 @@ const FILES = {
     payment: () => import('../assets/lottie/payment-success.json'),
     confetti: () => import('../assets/lottie/confetti.json'),
     update: () => import('../assets/lottie/app-update.json'),
+    fingerprint: () => import('../assets/lottie/fingerprint-scan.json'),
 };
 
 type Props = {

@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
+import { Highlight, HighlightItem } from '../components/animate-ui/primitives/effects/highlight';
+import { PILL_HIGHLIGHT } from '../components/PrimaryCta';
 
 const statusStyle: Record<string, string> = {
     OPEN: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-amber-500/20',
@@ -82,16 +84,20 @@ const Support = () => {
                         <div className="flex flex-col gap-1.5">
                             <label className="text-sm font-medium">Contact</label>
                             <div className="grid grid-cols-2 gap-1 rounded-xl border bg-background/60 p-1 sm:w-96">
+                                <Highlight controlledItems value={form.recipient} click={false} className={PILL_HIGHLIGHT}>
                                 {[['distributor', 'My Distributor'], ['admin', 'ShahparPay Admin']].map(([value, label]) => (
+                                    <HighlightItem key={value} value={value}>
                                     <button
-                                        key={value}
                                         type="button"
                                         onClick={() => setForm({ ...form, recipient: value })}
-                                        className={`rounded-lg py-2 text-sm font-semibold transition-all ${form.recipient === value ? ACTIVE_BUTTON : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
+                                        aria-pressed={form.recipient === value}
+                                        className={`w-full rounded-lg py-2 text-sm font-semibold transition-colors ${form.recipient === value ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
                                     >
                                         {label}
                                     </button>
+                                    </HighlightItem>
                                 ))}
+                                </Highlight>
                             </div>
                         </div>
                     )}

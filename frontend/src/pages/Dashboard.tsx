@@ -2,7 +2,7 @@ import {
     Banknote, Smartphone, Fingerprint, Building2, Receipt, Wallet, IndianRupee, Users, CreditCard, FileText,
     CalendarDays, ChevronDown, ArrowUpRight, Inbox,
 } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/animate-ui/components/radix/popover';
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -16,6 +16,7 @@ import GlareHover from '../components/GlareHover';
 import { Tilt, TiltContent } from '../components/animate-ui/primitives/effects/tilt';
 import { ARRIVE, TRAVEL } from '../components/landing/beats';
 import { AnimatePresence, motion } from 'motion/react';
+import { Progress } from '@/components/animate-ui/components/radix/progress';
 
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
 
@@ -386,9 +387,7 @@ const Dashboard = () => {
                                     )}
                                     {'share' in card ? (
                                         <div className="relative mt-4">
-                                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/15">
-                                                <div className="h-full rounded-full bg-[#16142E] transition-[width] duration-1000 ease-[cubic-bezier(0.25,0.8,0.25,1)] dark:bg-white" style={{ width: `${loading && !stats ? 0 : card.share}%` }} />
-                                            </div>
+                                            <Progress value={loading && !stats ? 0 : card.share} className="h-1.5 bg-black/10 dark:bg-white/15" />
                                             <p className="mt-1.5 text-xs opacity-70">{loading && !stats ? '\u00a0' : `${card.share}% of total volume`}</p>
                                         </div>
                                     ) : (

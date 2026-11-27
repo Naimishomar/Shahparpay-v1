@@ -46,3 +46,6 @@ export default function PrimaryCta({ type = 'submit', className = '', ...rest }:
 export const Busy = ({ text }: { text: string }) => (
     <ShimmeringText text={text} duration={1.2} color="currentColor" shimmeringColor="var(--cta-shimmer)" />
 );
+
+/** The selected pill for animate-ui Highlight tab rows: the primary button's colour, sliding between tabs. */
+export const PILL_HIGHLIGHT = 'inset-0 rounded-xl bg-primary shadow-[0_8px_18px_-14px_rgb(70_50_160_/_0.35)]';

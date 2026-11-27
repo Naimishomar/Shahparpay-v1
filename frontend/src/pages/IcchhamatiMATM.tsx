@@ -4,7 +4,8 @@ import { toast } from 'sonner';
 import { CheckCircle2, Clock, CreditCard, Loader2, RefreshCcw, Usb, Bluetooth, XCircle } from 'lucide-react';
 import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, inr } from '../components/distributor/shared';
 import { useLocationContext } from '../context/LocationContext';
-import PrimaryCta, { Busy } from '../components/PrimaryCta';
+import PrimaryCta, { Busy, PILL_HIGHLIGHT } from '../components/PrimaryCta';
+import { Highlight, HighlightItem } from '../components/animate-ui/primitives/effects/highlight';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -171,9 +172,13 @@ const IcchhamatiMATM = () => {
                 <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
                     <form onSubmit={submit} className={`${CARD} space-y-5`}>
                         <div className="flex gap-1 rounded-2xl border bg-background p-1.5 sm:w-max">
+                            <Highlight controlledItems value={txn} click={false} className={PILL_HIGHLIGHT}>
                             {([['CW', 'Cash withdrawal'], ['BE', 'Balance enquiry']] as const).map(([key, label]) => (
-                                <button type="button" key={key} onClick={() => setTxn(key)} className={`flex-1 rounded-xl px-4 py-2 text-sm font-medium sm:flex-none ${txn === key ? 'btn-primary' : 'text-muted-foreground'}`}>{label}</button>
+                                <HighlightItem key={key} value={key} className="flex-1 sm:flex-none">
+                                    <button type="button" onClick={() => setTxn(key)} aria-pressed={txn === key} className={`w-full rounded-xl px-4 py-2 text-sm font-medium transition-colors ${txn === key ? 'text-primary-foreground' : 'text-muted-foreground'}`}>{label}</button>
+                                </HighlightItem>
                             ))}
+                            </Highlight>
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2">
                             <label className="block space-y-1.5"><span className="text-sm font-medium">Customer mobile</span>

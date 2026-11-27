@@ -7,7 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import NotificationCenter from './NotificationCenter';
 import LanguageSelector, { TranslateHost } from './LanguageSelector';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/animate-ui/components/radix/popover';
 import { navLinksFor } from './app-sidebar';
 import { isServiceEnabled, AEPS_STEP_LABELS } from '../lib/services';
 import TransactionDetailModal from './TransactionDetailModal';

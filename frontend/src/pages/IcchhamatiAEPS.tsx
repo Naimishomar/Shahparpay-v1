@@ -12,9 +12,9 @@ import { CARD, INPUT, LABEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SILVER_TILE, inr 
 import { useLocationContext } from '../context/LocationContext';
 import logo from '../assets/logo.png';
 import { captureBiometric, DEVICE_BRANDS, DEVICE_LABELS, type DeviceBrand } from '../utils/rdService';
-import { Confetti } from '../components/Lottie';
+import Lottie, { Confetti } from '../components/Lottie';
 import { Highlight, HighlightItem } from '../components/animate-ui/primitives/effects/highlight';
-import PrimaryCta, { Busy } from '../components/PrimaryCta';
+import PrimaryCta, { Busy, PILL_HIGHLIGHT } from '../components/PrimaryCta';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -600,6 +600,8 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
     const [otp, setOtp] = useState('');
     const [otpRef, setOtpRef] = useState('');
     const [busy, setBusy] = useState(false);
+    // Where a transaction is between the press and the receipt (TxnProgress).
+    const [stage, setStage] = useState<TxnStage | null>(null);
     const [result, setResult] = useState<TxnResult | null>(null);
     const [showReceipt, setShowReceipt] = useState(false);
 
@@ -642,9 +644,12 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
         if (needsOtp && (!otpRef || otp.length < 4)) return toast.error('Enter the OTP the customer received.');
         if (!(await ensureDevice())) return;
         setBusy(true);
+        setStage('scan');
         const xml = await capture(needsOtp ? { otp } : {});
-        if (!xml) return setBusy(false);
+        if (!xml) { setStage(null); return setBusy(false); }
+        setStage('bank');
         const res = await call('/transaction', { ...base(), xml, deviceType: BRAND_NAME[device.brand], otp: needsOtp ? otp : undefined, txnOtpRequestId: needsOtp ? otpRef : undefined });
+        setStage(null);
         setBusy(false);
         setResult({ ok: res.success ? true : res.data?.verification === 'PENDING' ? 'pending' : false, message: res.message, data: res.data || {}, at: new Date() });
         setShowReceipt(true);
@@ -738,7 +743,52 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
                     )}
                 </section>
             </div>
+            {stage && <TxnProgress stage={stage} />}
             {result && showReceipt && <ReceiptModal result={result} onClose={() => setShowReceipt(false)} />}
+        </div>
+    );
+};
+
+type TxnStage = 'scan' | 'bank';
+
+const TXN_STEPS: { key: TxnStage | 'receipt'; label: string }[] = [
+    { key: 'scan', label: 'Fingerprint' },
+    { key: 'bank', label: 'Bank' },
+    { key: 'receipt', label: 'Receipt' },
+];
+
+/**
+ * Between the press and the receipt: the fingerprint scan (a LottieFiles scan,
+ * in violet), then the wait for the bank (the portal's loading animation), with
+ * the three steps underneath. It cannot be dismissed; it goes when the bank
+ * answers or the scan is cancelled, and the printed receipt takes its place.
+ */
+const TxnProgress = ({ stage }: { stage: TxnStage }) => {
+    const current = TXN_STEPS.findIndex((s) => s.key === stage);
+    return (
+        <div role="status" aria-live="polite" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-sm rounded-3xl border bg-card p-6 text-center shadow-2xl animate-in zoom-in-95 duration-300">
+                <div className="flex h-40 items-center justify-center">
+                    <Lottie key={stage} name={stage === 'scan' ? 'fingerprint' : 'loading'} size={stage === 'scan' ? 150 : 110} />
+                </div>
+                <p className="mt-1 text-lg font-bold"><Busy text={stage === 'scan' ? 'Scanning fingerprint…' : 'Waiting for the bank…'} /></p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                    {stage === 'scan' ? 'Ask the customer to place their finger on the scanner and hold still.' : 'The bank is confirming the transaction. Do not close or refresh this page.'}
+                </p>
+                <ol className="mt-6 flex items-center justify-center">
+                    {TXN_STEPS.map((s, i) => (
+                        <li key={s.key} className="flex items-center">
+                            {i > 0 && <span className={`mx-2 h-px w-8 transition-colors duration-500 ${i <= current ? 'bg-primary' : 'bg-border'}`} />}
+                            <span className="flex flex-col items-center gap-1.5">
+                                <span className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold transition-colors duration-500 ${i < current ? 'bg-emerald-500 text-white' : i === current ? 'bg-primary text-primary-foreground animate-pulse' : 'border bg-background text-muted-foreground'}`}>
+                                    {i < current ? <CheckCircle2 size={15} /> : i + 1}
+                                </span>
+                                <span className={`text-[11px] font-medium ${i === current ? 'text-foreground' : 'text-muted-foreground'}`}>{s.label}</span>
+                            </span>
+                        </li>
+                    ))}
+                </ol>
+            </div>
         </div>
     );
 };
@@ -832,7 +882,7 @@ const ReceiptModal = ({ result, onClose }: { result: TxnResult; onClose: () => v
 // animate-ui Highlight: the selected pill slides from tab to tab.
 const TxnTabs = ({ tab, setTab }: { tab: TxnType; setTab: (t: TxnType) => void }) => (
     <div className="flex w-full gap-1 overflow-x-auto no-scrollbar rounded-2xl border bg-card p-1.5 md:w-max">
-        <Highlight controlledItems value={tab} click={false} className="inset-0 rounded-xl bg-primary shadow-[0_8px_18px_-14px_rgb(70_50_160_/_0.35)]">
+        <Highlight controlledItems value={tab} click={false} className={PILL_HIGHLIGHT}>
             {TXN_TABS.map(({ key, label, icon: Icon, tone }) => (
                 <HighlightItem key={key} value={key}>
                     <button onClick={() => setTab(key)} aria-pressed={tab === key} className={`relative flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${tab === key ? 'text-primary-foreground' : 'text-foreground/75 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}>
