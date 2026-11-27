@@ -18,6 +18,19 @@ const ACTIVE_BUTTON = 'btn-primary';
 const SILVER_TILE = 'icon-chip';
 const INPUT = 'w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-400/15 dark:focus:border-zinc-500';
 
+/** One numbered step of the form: a dot, a title and a hint, then its fields indented under it. */
+const Step = ({ n, title, hint, last = false, children }: { n: number; title: string; hint?: string; last?: boolean; children: React.ReactNode }) => (
+    <div className="relative pl-10">
+        {/* The rail joining this step to the next. */}
+        {!last && <span aria-hidden className="absolute left-[13px] top-8 bottom-[-1.25rem] w-px bg-border" />}
+        <span aria-hidden className="absolute left-0 top-0 grid size-7 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-sm">{n}</span>
+        <p className="text-sm font-semibold leading-7">{title}</p>
+        {hint && <p className="-mt-0.5 mb-3 text-xs text-muted-foreground">{hint}</p>}
+        {!hint && <div className="mb-3" />}
+        {children}
+    </div>
+);
+
 const Recharge = () => {
     // UI State
     const [activeTab, setActiveTab] = useState("prepaid");
@@ -232,57 +245,150 @@ const Recharge = () => {
             : status === 'PENDING' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-amber-500/20'
                 : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 ring-rose-500/20';
 
-    const amountAndPin = (type: 'prepaid' | 'dth') => {
+    const isDth = (item: any) => String(item.metadata?.mode || item.metadata?.rechargeType || '').toLowerCase() === 'dth';
+    const numberOf = (item: any) => String(item.metadata?.caNumber || item.metadata?.number || '');
+    // The last few distinct numbers recharged successfully, newest first: one tap fills them in.
+    const recents = (type: 'prepaid' | 'dth') => {
+        const seen = new Set<string>();
+        return history
+            .filter((item: any) => item.status === 'SUCCESS' && isDth(item) === (type === 'dth') && numberOf(item))
+            .filter((item: any) => !seen.has(numberOf(item)) && seen.add(numberOf(item)))
+            .slice(0, 4);
+    };
+    const fillRecent = (type: 'prepaid' | 'dth', item: any) => {
+        const num = numberOf(item);
+        if (type === 'prepaid') {
+            setMobileNumber(num.replace(/\D/g, '').slice(-10));
+            setResolvedOperator("");
+            setResolvedCircle("");
+        } else {
+            setDthNumber(num);
+            const name = String(item.metadata?.operatorName || item.metadata?.operator || '').toLowerCase();
+            const op = dthOperators.find((o: any) => String(o.name).toLowerCase() === name);
+            if (op) setDthOperator(String(op.id));
+        }
+    };
+
+    /** Steps 2 and 3 and the button, the same for prepaid and DTH. */
+    const payment = (type: 'prepaid' | 'dth') => {
         const amount = type === 'prepaid' ? prepaidAmount : dthAmount;
         const setAmount = type === 'prepaid' ? setPrepaidAmount : setDthAmount;
         const pin = type === 'prepaid' ? prepaidPin : dthPin;
         const setPin = type === 'prepaid' ? setPrepaidPin : setDthPin;
         return (
-            <section className="rounded-2xl border bg-card p-6 shadow-sm">
-                <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Payment</h3>
-                <div className="grid gap-4 md:grid-cols-2 md:items-end">
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-foreground">Amount</label>
-                        <div className="relative">
-                            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 font-semibold text-muted-foreground">₹</span>
+            <>
+                <Step n={2} title="Amount" hint={type === 'prepaid' ? 'Pick a plan, or type the plan amount' : 'The amount to add to the DTH account'}>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <div className="relative flex-1">
+                            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl font-semibold text-muted-foreground">₹</span>
                             <input
                                 type="number"
                                 min="10"
                                 step="1"
                                 inputMode="numeric"
+                                aria-label="Amount"
                                 value={amount}
                                 onChange={e => setAmount(e.target.value)}
                                 onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                 placeholder="0"
-                                className={`${INPUT} pl-8 text-lg font-semibold tabular-nums`}
+                                className={`${INPUT} h-14 pl-10 text-2xl font-bold tabular-nums`}
                             />
                         </div>
+                        {type === 'prepaid' && resolvedOperator && (
+                            <button type="button" onClick={() => setShowPlansModal(true)} className="flex items-center justify-center gap-2 rounded-xl border bg-background px-4 py-3 text-sm font-semibold hover:bg-black/5 dark:hover:bg-white/5">
+                                <ListFilter className="h-4 w-4" /> See plans
+                            </button>
+                        )}
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-foreground">Transaction PIN</label>
-                        <div className="relative">
-                            <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <input
-                                type="password"
-                                inputMode="numeric"
-                                maxLength={4}
-                                value={pin}
-                                onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                                placeholder="••••"
-                                className={`${INPUT} pl-10 text-lg tracking-[0.5em]`}
-                            />
-                        </div>
+                </Step>
+                <Step n={3} title="Transaction PIN" hint="Your 4-digit PIN confirms the payment" last>
+                    <div className="relative max-w-[240px]">
+                        <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={4}
+                            aria-label="Transaction PIN"
+                            value={pin}
+                            onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                            onKeyDown={e => { if (e.key === 'Enter' && !loading) handleRechargeSubmit(type); }}
+                            placeholder="••••"
+                            className={`${INPUT} h-12 pl-11 text-lg tracking-[0.5em]`}
+                        />
                     </div>
-                    <PrimaryCta
-                        onClick={() => handleRechargeSubmit(type)}
-                        disabled={loading}
-                        className="font-bold"
-                    >
-                        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Zap className="h-5 w-5" />}
-                        Recharge{Number(amount) > 0 && <> ₹<SlidingNumber initiallyStable number={Number(amount)} decimalPlaces={Number.isInteger(Number(amount)) ? 0 : 2} /></>}
-                    </PrimaryCta>
-                </div>
-            </section>
+                </Step>
+                <PrimaryCta
+                    onClick={() => handleRechargeSubmit(type)}
+                    disabled={loading}
+                    className="mt-2 w-full font-bold"
+                >
+                    {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Zap className="h-5 w-5" />}
+                    Recharge{Number(amount) > 0 && <> ₹<SlidingNumber initiallyStable number={Number(amount)} decimalPlaces={Number.isInteger(Number(amount)) ? 0 : 2} /></>}
+                </PrimaryCta>
+            </>
+        );
+    };
+
+    /** The side panel: what is about to be paid, and the numbers recharged lately. */
+    const summary = (type: 'prepaid' | 'dth') => {
+        const amount = Number(type === 'prepaid' ? prepaidAmount : dthAmount) || 0;
+        const dthName = dthOperators.find((o: any) => String(o.id) === dthOperator)?.name;
+        const rows: [string, string | null, string][] = type === 'prepaid'
+            ? [
+                ['Mobile', /^[6-9]\d{9}$/.test(mobileNumber) ? `+91 ${mobileNumber.slice(0, 5)} ${mobileNumber.slice(5)}` : null, 'Enter the number'],
+                ['Operator', resolvedOperator || null, 'Found when you browse plans'],
+                ['Circle', resolvedCircle || null, 'Found when you browse plans'],
+            ]
+            : [
+                ['DTH number', dthNumber.trim() || null, 'Enter the number'],
+                ['Operator', dthName || null, 'Choose the operator'],
+            ];
+        const recent = recents(type);
+        return (
+            <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
+                <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Summary</p>
+                    <dl className="mt-3 space-y-2.5 text-sm">
+                        {rows.map(([label, value, empty]) => (
+                            <div key={label} className="flex items-baseline justify-between gap-3">
+                                <dt className="text-muted-foreground">{label}</dt>
+                                <dd className={`truncate text-right ${value ? 'font-semibold' : 'text-xs text-muted-foreground/70'}`}>{value || empty}</dd>
+                            </div>
+                        ))}
+                    </dl>
+                    <div className="mt-4 flex items-baseline justify-between border-t border-dashed pt-4">
+                        <span className="text-sm font-medium">You pay</span>
+                        <span className="text-2xl font-bold tabular-nums">₹{amount > 0 ? <SlidingNumber initiallyStable number={amount} decimalPlaces={Number.isInteger(amount) ? 0 : 2} /> : '0'}</span>
+                    </div>
+                    <p className="mt-1 text-right text-xs text-muted-foreground">From your Utility Wallet</p>
+                </section>
+
+                {recent.length > 0 && (
+                    <section className="rounded-2xl border bg-card p-5 shadow-sm">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Recharged lately</p>
+                        <ul className="mt-3 space-y-1">
+                            {recent.map((item: any) => (
+                                <li key={item._id}>
+                                    <button
+                                        type="button"
+                                        onClick={() => fillRecent(type, item)}
+                                        className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-black/[0.04] active:scale-[0.99] dark:hover:bg-white/[0.05]"
+                                    >
+                                        <span className={`grid size-9 shrink-0 place-items-center rounded-full ${SILVER_TILE}`}>
+                                            {type === 'prepaid' ? <Smartphone className="h-4 w-4" /> : <Tv className="h-4 w-4" />}
+                                        </span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block truncate text-sm font-semibold tabular-nums">{numberOf(item)}</span>
+                                            <span className="block truncate text-xs text-muted-foreground">{item.metadata?.operatorName || item.metadata?.operator || 'Recharge'}</span>
+                                        </span>
+                                        <span className="text-sm font-semibold tabular-nums">₹{item.amount}</span>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
+            </aside>
         );
     };
 
@@ -323,95 +429,86 @@ const Recharge = () => {
                 </div>
             </section>
 
-            {/* PREPAID TAB */}
+            {/* PREPAID TAB: the form in numbered steps, the summary beside it. */}
             {activeTab === 'prepaid' && (
-                <div className="flex flex-col gap-6 animate-in fade-in duration-300">
-                    <section className="rounded-2xl border bg-card p-6 shadow-sm">
-                        <h3 className="mb-4 text-lg font-semibold">Mobile Prepaid Recharge</h3>
-                        <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-medium text-foreground">Mobile Number</label>
-                                <div className="relative">
-                                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">+91</span>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        maxLength={10}
-                                        placeholder="10-digit mobile number"
-                                        value={mobileNumber}
-                                        onChange={e => {
-                                            const val = e.target.value.replace(/\D/g, '');
-                                            if (val.length > 10) {
-                                                toast.error("Mobile number cannot exceed 10 digits");
-                                                return;
-                                            }
-                                            setMobileNumber(val);
-                                            setResolvedOperator("");
-                                            setResolvedCircle("");
-                                        }}
-                                        className={`${INPUT} pl-12 text-lg font-semibold tracking-wider tabular-nums`}
-                                    />
+                <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px] animate-in fade-in duration-300">
+                    <section className="flex flex-col gap-5 rounded-2xl border bg-card p-5 shadow-sm sm:p-6">
+                        <h2 className="text-lg font-semibold">Mobile prepaid recharge</h2>
+                        <Step n={1} title="Mobile number" hint="Then browse plans: that finds the operator and circle">
+                            <div className="relative">
+                                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">+91</span>
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    maxLength={10}
+                                    aria-label="Mobile number"
+                                    placeholder="10-digit mobile number"
+                                    value={mobileNumber}
+                                    onChange={e => {
+                                        const val = e.target.value.replace(/\D/g, '');
+                                        if (val.length > 10) {
+                                            toast.error("Mobile number cannot exceed 10 digits");
+                                            return;
+                                        }
+                                        setMobileNumber(val);
+                                        setResolvedOperator("");
+                                        setResolvedCircle("");
+                                    }}
+                                    onKeyDown={e => { if (e.key === 'Enter' && /^[6-9]\d{9}$/.test(mobileNumber) && !loading) handleBrowsePlan(); }}
+                                    className={`${INPUT} h-14 pl-14 pr-40 text-lg font-semibold tracking-wider tabular-nums`}
+                                />
+                                {/* Browse Plans sits in the field: it is the next thing to do with the number. */}
+                                <button
+                                    type="button"
+                                    onClick={handleBrowsePlan}
+                                    disabled={loading || !/^[6-9]\d{9}$/.test(mobileNumber)}
+                                    className={`absolute inset-y-2 right-2 flex items-center gap-2 rounded-lg px-4 text-sm font-semibold transition-opacity disabled:opacity-40 ${ACTIVE_BUTTON}`}
+                                >
+                                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ListFilter className="h-4 w-4" />}
+                                    Browse plans
+                                </button>
+                            </div>
+                            {resolvedOperator && resolvedCircle && (
+                                <div className="mt-3 flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-1 duration-300">
+                                    {([[resolvedOperator, Radio], [resolvedCircle, MapPin]] as const).map(([value, Icon]) => (
+                                        <span key={value} className="inline-flex items-center gap-1.5 rounded-full border bg-background/60 px-3 py-1 text-xs font-semibold">
+                                            <Icon className="h-3.5 w-3.5 text-muted-foreground" /> {value}
+                                        </span>
+                                    ))}
                                 </div>
-                            </div>
-                            <button
-                                onClick={handleBrowsePlan}
-                                disabled={loading || !/^[6-9]\d{9}$/.test(mobileNumber)}
-                                className="flex items-center justify-center gap-2 rounded-xl border bg-background px-6 py-3 font-semibold hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50"
-                            >
-                                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ListFilter className="h-4 w-4" />}
-                                Browse Plans
-                            </button>
-                        </div>
-
-                        {resolvedOperator && resolvedCircle && (
-                            <div className="mt-4 grid grid-cols-2 gap-3">
-                                {([
-                                    ['Detected operator', resolvedOperator, Radio],
-                                    ['Customer circle', resolvedCircle, MapPin],
-                                ] as const).map(([label, value, Icon]) => (
-                                    <div key={label} className="flex items-center gap-3 rounded-xl border bg-background/50 p-3">
-                                        <div className={`rounded-lg p-2 ${SILVER_TILE}`}><Icon className="h-4 w-4" /></div>
-                                        <div className="min-w-0">
-                                            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</p>
-                                            <p className="truncate text-sm font-semibold">{value}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                            )}
+                        </Step>
+                        {payment('prepaid')}
                     </section>
-                    {amountAndPin('prepaid')}
+                    {summary('prepaid')}
                 </div>
             )}
 
-            {/* DTH TAB */}
+            {/* DTH TAB: same shape as prepaid. */}
             {activeTab === 'dth' && (
-                <div className="flex flex-col gap-6 animate-in fade-in duration-300">
-                    <section className="rounded-2xl border bg-card p-6 shadow-sm">
-                        <h3 className="mb-4 text-lg font-semibold">DTH Recharge</h3>
-                        <div className="grid gap-4 md:grid-cols-2 md:items-end">
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-medium text-foreground">DTH Number</label>
+                <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px] animate-in fade-in duration-300">
+                    <section className="flex flex-col gap-5 rounded-2xl border bg-card p-5 shadow-sm sm:p-6">
+                        <h2 className="text-lg font-semibold">DTH recharge</h2>
+                        <Step n={1} title="DTH account" hint="The subscriber or VC number, and the operator">
+                            <div className="grid gap-3 sm:grid-cols-2">
                                 <div className="relative">
-                                    <Hash className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    <Hash className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                     <input
                                         type="text"
                                         inputMode="text"
                                         maxLength={20}
-                                        placeholder="Enter DTH Number"
+                                        aria-label="DTH number"
+                                        placeholder="DTH number"
                                         value={dthNumber}
                                         onChange={e => setDthNumber(e.target.value)}
-                                        className={`${INPUT} pl-10 font-semibold tracking-wider`}
+                                        className={`${INPUT} h-12 pl-11 font-semibold tracking-wider`}
                                     />
                                 </div>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-medium text-foreground">DTH Operator</label>
                                 <div className="relative">
-                                    <Tv className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    <Tv className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                     <Select value={dthOperator} onValueChange={setDthOperator}>
-                                        <SelectTrigger aria-label="DTH Operator" className={`${INPUT} pl-10 data-[size=default]:h-auto`}>
-                                            <SelectValue placeholder="Select DTH Operator" />
+                                        <SelectTrigger aria-label="DTH operator" className={`${INPUT} h-12 pl-11 data-[size=default]:h-12`}>
+                                            <SelectValue placeholder="Select operator" />
                                         </SelectTrigger>
                                         <SelectContent position="popper" className="z-[110]">
                                             {dthOperators.map((op: any) => (
@@ -421,10 +518,10 @@ const Recharge = () => {
                                     </Select>
                                 </div>
                             </div>
-                        </div>
-
+                        </Step>
+                        {payment('dth')}
                     </section>
-                    {amountAndPin('dth')}
+                    {summary('dth')}
                 </div>
             )}
 
