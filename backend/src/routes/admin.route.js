@@ -24,7 +24,20 @@ import {
   getNoticeReasons,
   sendUserNotice,
 } from '../controllers/adminConsole.controller.js';
-import { getWallets, getWalletLedger, getPayouts, selfTransfer, getProviderUpiCwHistory } from '../controllers/adminIcchhamati.controller.js';
+import {
+  getWallets,
+  getWalletLedger,
+  getPayouts,
+  selfTransfer,
+  getProviderUpiCwHistory,
+  getLedgerMatch,
+  getReconciliation,
+  getStatusCheck,
+  getBeneficiaries,
+  getAepsOnboarding,
+  getLowBalanceAlerts,
+  setLowBalanceAlert,
+} from '../controllers/adminIcchhamati.controller.js';
 import {
   getAnalytics,
   getHealth,
@@ -71,6 +84,13 @@ router.get('/icchhamati/wallets/:id/ledger', getWalletLedger);
 router.get('/icchhamati/payouts', getPayouts);
 router.get('/icchhamati/upicw/history', getProviderUpiCwHistory);
 router.post('/icchhamati/self-transfer', selfTransfer);
+router.get('/icchhamati/ledger-match', getLedgerMatch);
+router.get('/icchhamati/reconcile', getReconciliation);
+router.get('/icchhamati/status', getStatusCheck);
+router.get('/icchhamati/beneficiaries', getBeneficiaries);
+router.get('/icchhamati/aeps-onboarding', getAepsOnboarding);
+router.get('/icchhamati/alerts', getLowBalanceAlerts);
+router.put('/icchhamati/alerts', setLowBalanceAlert);
 // System: visitors, server health and logs, restart, deploy, platform-wide service switches.
 // Restart and deploy need an emailed code (authLimiter caps the guesses).
 router.get('/system/analytics', getAnalytics);

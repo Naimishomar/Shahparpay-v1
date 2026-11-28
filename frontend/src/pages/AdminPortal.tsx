@@ -342,7 +342,7 @@ const AdminPortal = () => {
 
                 {activeTab === 'activity' && <ActivityLog token={token} onOpenUser={openUser} />}
 
-                {activeTab === 'icchhamati' && <IcchhamatiAccount token={token} />}
+                {activeTab === 'icchhamati' && <IcchhamatiAccount token={token} onOpenTransactions={openTransactions} onOpenUser={openUser} />}
 
                 {activeTab === 'fund_requests' && (
                     <AdminFundRequests

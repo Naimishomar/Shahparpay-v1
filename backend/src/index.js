@@ -177,6 +177,7 @@ import contactRouter from './routes/contact.route.js';
 import commissionRouter from './routes/commission.route.js';
 import { checkAgentWallet } from './controllers/itr.controller.js';
 import { startReconciliationWorker } from './workers/reconciliation.worker.js';
+import { startIcchhamatiBalanceWatch } from './workers/icchhamatiBalance.worker.js';
 import { trackVisit } from './controllers/system.controller.js';
 import { rateLimit } from './middlewares/rateLimit.middleware.js';
 import { loadPlatformDisabled } from './middlewares/service.middleware.js';
@@ -219,6 +220,7 @@ const startServer = async () => {
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}✅`);
       startReconciliationWorker();
+      startIcchhamatiBalanceWatch();
     });
   } catch (error) {
     console.log('Failed to connect to database', error.message);
