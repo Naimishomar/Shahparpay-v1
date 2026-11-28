@@ -11,9 +11,14 @@ import { resolveTransaction } from './wallet.util.js';
  * PROCESSING row.
  */
 export const reconcileIcchhamatiPayout = async (txn) => {
-  const { finalStatus, data: row } = await fetchPayoutStatus(txn.metadata?.refid || txn.transactionId);
+  // The listing is keyed by Icchhamati's own id (MVTXN...), returned as
+  // data.transaction_id when the payout is accepted; our SETTLE/DMT reference
+  // is not searchable there. Older rows only carry it inside apiResponse.
+  const providerId = txn.metadata?.providerTxnId || txn.metadata?.apiResponse?.data?.transaction_id;
+  const { finalStatus, data: row } = await fetchPayoutStatus(providerId || txn.metadata?.refid || txn.transactionId);
   if (finalStatus !== 'SUCCESS' && finalStatus !== 'FAILED') return { finalStatus: 'PROCESSING', row };
 
+  if (row?.utr === 'NA') row.utr = null;
   if (row?.utr) await Transaction.updateOne({ _id: txn._id }, { $set: { 'metadata.utr': row.utr } });
   await resolveTransaction(txn.transactionId, finalStatus, row?.message || `Payout ${finalStatus.toLowerCase()}`, 'AEPS');
   if (txn.type === 'DMT') {

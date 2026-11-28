@@ -265,7 +265,9 @@ export const fetchPayoutStatus = async (transactionId) => {
  * locked for the next run rather than refunding a transaction that may yet be
  * delivered.
  */
-export const fetchRechargeStatus = async (txnid) => {
+const NEVER_PLACED_AFTER_MS = 24 * 60 * 60 * 1000;
+
+export const fetchRechargeStatus = async (txnid, txn) => {
   try {
     // /api/v2/bill-status answers for recharges as well as bills, and it is the
     // only status route the gateway actually serves. The published
@@ -282,6 +284,15 @@ export const fetchRechargeStatus = async (txnid) => {
       // txnid with a definite status settles it; anything else stays pending.
       const row = data?.data;
       const rowStatus = String(row?.status ?? '').trim().toUpperCase();
+      // The provider never gave this recharge an order id and, a day on, has no
+      // record of it: the create call crashed before placing it. Refund it.
+      // A placed recharge is found by its order id, so this never fails one.
+      if (
+        /recharge not found/i.test(data?.message || '') &&
+        txn && !txn.metadata?.orderId && Date.now() - new Date(txn.createdAt) > NEVER_PLACED_AFTER_MS
+      ) {
+        return { finalStatus: 'FAILED', data };
+      }
       if (row && [row.txnid, row.oid].map(String).includes(String(txnid))) {
         if (rowStatus === 'SUCCESS') return { finalStatus: 'SUCCESS', data };
         if (['FAILED', 'FAILURE', 'FAIL'].includes(rowStatus)) return { finalStatus: 'FAILED', data };

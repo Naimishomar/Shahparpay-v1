@@ -14,6 +14,11 @@ assert.equal(upiCwOutcome({ status: true, data: { txnStatus: 'PENDING' } }), 'PE
 // No answer, or a refused enquiry, is not a failure: the customer may have paid.
 assert.equal(upiCwOutcome(null), 'PENDING');
 assert.equal(upiCwOutcome({ status: false, message: 'Missing parameter(s)' }), 'PENDING');
+// MER_4118 "no transaction found": pending while the QR may still be paid, failed once long expired.
+const notFound = { status: false, data: { responseCode: 'MER_4118', txnStatus: 'PENDING' } };
+assert.equal(upiCwOutcome(notFound, new Date(Date.now() - 5 * 60 * 1000)), 'PENDING');
+assert.equal(upiCwOutcome(notFound, new Date(Date.now() - 60 * 60 * 1000)), 'FAILED');
+assert.equal(upiCwOutcome(notFound), 'PENDING');
 
 const tx = { type: 'UPI_CASH_WITHDRAWAL', amount: 500, status: 'SUCCESS', transactionId: 'UCW1', metadata: {} };
 assert.deepEqual(getWalletDeltas(tx), { main: 0, aeps: 500 });

@@ -786,7 +786,7 @@ export const checkStatus = async (req, res) => {
     }
 
     const providerTxnId = txn.metadata?.orderId || txn.metadata?.operatorTxnId || txn.transactionId;
-    const { finalStatus, data } = await fetchRechargeStatus(providerTxnId, txn.metadata?.mode);
+    const { finalStatus, data } = await fetchRechargeStatus(providerTxnId, txn);
     if (finalStatus !== 'PROCESSING') {
       await resolveTransaction(txn.transactionId, finalStatus, providerMessage(data, ''), 'MAIN');
     }

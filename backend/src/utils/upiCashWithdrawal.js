@@ -51,11 +51,19 @@ export const creditTradeInflow = async ({ transactionId, userId, amount, provide
   }
 };
 
+/** A QR lives 3 minutes; past this, "no transaction found" means it was never paid. */
+const UNPAID_QR_AFTER_MS = 30 * 60 * 1000;
+
 /** check-status data.txnStatus, as our ledger reads it. Anything unclear stays PENDING. */
-export const upiCwOutcome = (data) => {
+export const upiCwOutcome = (data, createdAt) => {
   const status = String(data?.data?.txnStatus || '').toUpperCase();
   if (status === 'SUCCESS') return 'SUCCESS';
   if (['FAILED', 'FAILURE', 'DECLINED', 'EXPIRED', 'REJECTED'].includes(status)) return 'FAILED';
+  // MER_4118: the bank has no payment against this QR. Still PENDING inside the
+  // QR's life, an expired unpaid QR once it is long gone — nothing was debited.
+  if (data?.data?.responseCode === 'MER_4118' && createdAt && Date.now() - new Date(createdAt) > UNPAID_QR_AFTER_MS) {
+    return 'FAILED';
+  }
   return 'PENDING';
 };
 
@@ -89,7 +97,7 @@ export const syncUpiCashWithdrawal = async (txn) => {
     );
     return Transaction.findById(txn._id);
   }
-  const outcome = upiCwOutcome(data);
+  const outcome = upiCwOutcome(data, txn.createdAt);
 
   if (outcome === 'SUCCESS') {
     // The QR fixed the amount; a different paid amount is not credited blind.
@@ -122,7 +130,7 @@ export const syncUpiCashWithdrawal = async (txn) => {
   } else if (outcome === 'FAILED') {
     await Transaction.updateOne(
       { _id: txn._id, status: { $in: ['PENDING', 'PROCESSING'] } },
-      { $set: { status: 'FAILED', 'metadata.gatewayMessage': data?.message || result.txnStatus } }
+      { $set: { status: 'FAILED', 'metadata.gatewayMessage': result.responseCode === 'MER_4118' ? 'QR expired unpaid' : data?.message || result.txnStatus } }
     );
   }
   return Transaction.findById(txn._id);

@@ -133,6 +133,14 @@ await withServer(reply(laravelFault), async () => {
   assert.equal((await fetchRechargeStatus('REC4', 'prepaid')).finalStatus, 'PROCESSING');
 });
 
+// "Recharge not found" fails only a recharge never given an order id, a day on.
+const dayOld = new Date(Date.now() - 25 * 60 * 60 * 1000);
+await withServer(reply({ status: 0, message: 'Recharge not found' }), async () => {
+  assert.equal((await fetchRechargeStatus('REC5', { createdAt: dayOld, metadata: {} })).finalStatus, 'FAILED');
+  assert.equal((await fetchRechargeStatus('REC5', { createdAt: new Date(), metadata: {} })).finalStatus, 'PROCESSING');
+  assert.equal((await fetchRechargeStatus('REC5', { createdAt: dayOld, metadata: { orderId: '1' } })).finalStatus, 'PROCESSING');
+});
+
 // The gateway crashes after loading the row and answers status 0 with the row
 // attached. The row's own status is the outcome; a row for another txnid, or
 // one still pending, settles nothing.

@@ -38,8 +38,11 @@ export const startReconciliationWorker = () => {
         $or: [
           { status: 'PROCESSING' },
           { status: 'PENDING', type: 'PG_COLLECTION', createdAt: { $gt: collectionWindow } },
-          // A UPI cash withdrawal QR lives 3 minutes; the bank's answer is final within the day.
-          { status: 'PENDING', type: 'UPI_CASH_WITHDRAWAL', createdAt: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+          // Past a week, one last check closes an unpaid link as expired (or credits a paid one).
+          { status: 'PENDING', type: 'PG_COLLECTION', createdAt: { $lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
+          // A UPI cash withdrawal QR lives 3 minutes; an unpaid one closes on its first
+          // check past 30 minutes, so the week only bounds a bank that never answers.
+          { status: 'PENDING', type: 'UPI_CASH_WITHDRAWAL', createdAt: { $gt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
         ],
         createdAt: { $lt: fiveMinutesAgo },
       });
@@ -143,8 +146,7 @@ export const startReconciliationWorker = () => {
           // the default below would refund the retailer for a recharge the
           // operator still goes on to deliver, so ask the provider instead.
           const providerTxnId = txn.metadata?.orderId || txn.metadata?.operatorTxnId || txn.transactionId;
-          finalStatus = (await fetchRechargeStatus(providerTxnId, txn.metadata?.mode))
-            .finalStatus;
+          finalStatus = (await fetchRechargeStatus(providerTxnId, txn)).finalStatus;
         } else if (NO_RECONCILER_TYPES.includes(txn.type)) {
           // The provider publishes no status endpoint for these, and the default
           // below would auto-FAIL them — refunding a retailer for a transfer that

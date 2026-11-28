@@ -565,7 +565,7 @@ export const initiateTransfer = async (req, res) => {
       { transactionId },
       {
         $set: {
-          'metadata.providerTxnId': data?.data?.txnid || null,
+          'metadata.providerTxnId': data?.data?.txnid || data?.data?.transaction_id || null,
           'metadata.rrn': data?.data?.rrn || null,
           'metadata.apiResponse': data,
         },
@@ -580,7 +580,7 @@ export const initiateTransfer = async (req, res) => {
       beneficiaryIfsc: String(providerIfsc || 'NA'),
       amount: totalAmount,
       status: status === 'SUCCESS' ? 'SUCCESS' : status === 'FAILED' ? 'FAILED' : 'PENDING',
-      apiReference: data?.data?.txnid || data?.data?.rrn || null,
+      apiReference: data?.data?.txnid || data?.data?.transaction_id || data?.data?.rrn || null,
       apiResponse: data,
     });
 

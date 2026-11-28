@@ -75,6 +75,21 @@ await withGateway({ status: 1, message: 'Payment Status fetched', data: { txnid:
   assert.equal(balance(), 0);
 });
 
+// --- a week-old link the gateway still calls unpaid closes as expired --------
+await withGateway({ status: 1, data: { txnid: 'OLD', status: 'pending' } }, async () => {
+  const order = newOrder('OLD');
+  order.createdAt = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+  const { transaction } = await syncCollectionTransaction(order);
+  assert.equal(transaction.status, 'FAILED');
+  assert.equal(balance(), 0);
+});
+// A week-old link with no answer from the gateway stays open.
+await withGateway({ status: 0, message: 'Server Error' }, async () => {
+  const order = newOrder('OLD2');
+  order.createdAt = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+  assert.equal((await syncCollectionTransaction(order)).transaction.status, 'PENDING');
+});
+
 // --- a paid order credits the QR wallet exactly once ------------------------
 await withGateway({ status: 1, data: { txnid: 'B', status: 'success' } }, async () => {
   const order = newOrder('B');

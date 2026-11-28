@@ -308,8 +308,14 @@ export const syncCollectionTransaction = async (txn) => {
   }
 
   // An unpaid or still-open order is not a failure: the customer may pay in a
-  // minute. Only a definite answer moves it out of PENDING.
-  if (status === 'PENDING') return { transaction: txn, providerData };
+  // minute. Only a definite answer moves it out of PENDING — except a link the
+  // gateway itself still calls unpaid a week on, which is closed as expired.
+  // Never on a non-answer, and never on a paid amount that is waiting for an admin.
+  const LINK_EXPIRES_MS = 7 * 24 * 60 * 60 * 1000;
+  const expired = status === 'PENDING' && isOk(providerData) && inner === 'PENDING'
+    && Date.now() - new Date(txn.createdAt) > LINK_EXPIRES_MS;
+  if (status === 'PENDING' && !expired) return { transaction: txn, providerData };
+  if (expired) status = 'FAILED';
 
   const claimed = await Transaction.findOneAndUpdate(
     { _id: txn._id, status: 'PENDING' },
@@ -319,6 +325,7 @@ export const syncCollectionTransaction = async (txn) => {
         'metadata.gatewayStatus': providerData?.data?.status ?? providerData?.status ?? null,
         'metadata.verifyResponse': providerData,
         'metadata.lastStatusCheckedAt': new Date(),
+        ...(expired ? { 'metadata.gatewayMessage': 'Link expired unpaid' } : {}),
       },
     },
     { new: true }

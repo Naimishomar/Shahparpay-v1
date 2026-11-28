@@ -314,7 +314,7 @@ export const initiateSettlement = async (req, res) => {
       { transactionId },
       {
         $set: {
-          'metadata.providerTxnId': data?.data?.txnid || null,
+          'metadata.providerTxnId': data?.data?.txnid || data?.data?.transaction_id || null,
           'metadata.utr': data?.data?.rrn || data?.data?.utr || null,
           'metadata.apiMessage': apiMessage,
           'metadata.apiResponse': data,
