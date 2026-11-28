@@ -32,7 +32,7 @@ import { uploadOnR2 } from '../utils/r2.js';
 import { loggableResponse } from '../utils/integrationLogger.js';
 
 // Customer OTP is required for withdrawals above this amount; at or below it, none.
-const AEPS_OTP_THRESHOLD = 5000;
+const AEPS_OTP_THRESHOLD = 4000;
 
 /**
  * Icchhamati AEPS — Fingpay behind Icchhamati's /api/v2/aeps gateway.
@@ -951,6 +951,8 @@ export const readTxnRequest = (body = {}) => {
     if (!Number.isFinite(amount) || amount < 1) return { error: 'Enter an amount.' };
     if (amount > AEPS_MAX_AMOUNT)
       return { error: `Amount cannot exceed ₹${AEPS_MAX_AMOUNT} per transaction.` };
+    if (aepsType === 'CW' && amount % 100 !== 0)
+      return { error: 'Cash withdrawal amount must be a multiple of ₹100.' };
   }
   return {
     aepsType,
@@ -961,7 +963,7 @@ export const readTxnRequest = (body = {}) => {
   };
 };
 
-/** POST /txn-otp — customer OTP, required for CW and Aadhaar Pay above ₹5,000. */
+/** POST /txn-otp — customer OTP, required for CW and Aadhaar Pay above ₹4,000. */
 export const sendTxnOtp = async (req, res) => {
   try {
     const retailer = await loadRetailer(req, res);

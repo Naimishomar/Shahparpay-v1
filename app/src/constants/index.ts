@@ -38,7 +38,7 @@ export const INDIAN_STATES = [
 ];
 
 /** AEPS withdrawals and Aadhaar Pay above this need a customer OTP first. */
-export const AEPS_OTP_THRESHOLD = 5000;
+export const AEPS_OTP_THRESHOLD = 4000;
 
 /** Icchhamati caps a single AEPS transaction at this amount. */
 export const AEPS_MAX_WITHDRAWAL = 10000;

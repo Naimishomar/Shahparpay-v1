@@ -199,7 +199,7 @@ export const AepsScreen: React.FC = () => {
   const [amount, setAmount] = useState('');
   const [pidData, setPidData] = useState<string | null>(null);
 
-  // AEPS transaction OTP — withdrawals and Aadhaar Pay above ₹5,000 only.
+  // AEPS transaction OTP — withdrawals and Aadhaar Pay above ₹4,000 only.
   const [otp, setOtp] = useState('');
   const [otpRefId, setOtpRefId] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -293,7 +293,9 @@ export const AepsScreen: React.FC = () => {
           ? 'Select the customer’s bank.'
           : spec.amount && !(amountValue >= 1 && amountValue <= AEPS_MAX_WITHDRAWAL)
             ? 'Amount must be between ₹1 and ₹10,000.'
-            : null;
+            : service === 'withdrawal' && amountValue % 100 !== 0
+              ? 'Cash withdrawal amount must be a multiple of ₹100.'
+              : null;
 
   const sortedBanks = useMemo(() => {
     // The list can carry duplicates — the same IIN more than once, sometimes

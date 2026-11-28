@@ -28,7 +28,7 @@ const OTP_SLOTS = [0, 1, 2, 3, 4, 5].map((i) => <InputOTPSlot key={i} index={i} 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const API = `${import.meta.env.VITE_BACKEND_URL}/api/aeps/icchhamati`;
-const OTP_THRESHOLD = 5000;
+const OTP_THRESHOLD = 4000;
 // Fingpay's eKYC capture must carry this WADH; transactions and 2FA must not.
 const EKYC_WADH = 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=';
 const BRAND_NAME: Record<DeviceBrand, string> = { mantra: 'Mantra', morpho: 'Morpho', startek: 'Startek' };
@@ -640,6 +640,7 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
         if (!/^[6-9]\d{9}$/.test(mobile)) return 'Enter the customer’s 10-digit mobile number.';
         if (!bankID) return 'Select the customer’s bank.';
         if (moves && !(Number(amount) >= 1 && Number(amount) <= 10000)) return 'Amount must be between ₹1 and ₹10,000.';
+        if (tab === 'CW' && Number(amount) % 100 !== 0) return 'Cash withdrawal amount must be a multiple of ₹100.';
         return null;
     };
     const base = () => ({ aepsType: tab, aadhaarNumber: aadhaar, customerMobile: mobile, bankID, bankName: bank?.bankName, amount: moves ? Number(amount) : undefined });
