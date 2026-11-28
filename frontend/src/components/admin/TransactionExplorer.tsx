@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { BUTTON, BUTTON_QUIET, FIELD, ICON_BUTTON, SERVICE_LABELS, TABLE, TD, TH, THEAD, TR, inr, inrShort, useApiGet } from '../distributor/shared';
 import { Empty, PageHeader, Panel, Skeleton, StatStrip, StatusDot } from '../distributor/ui';
 import { ALERT_ERROR } from '../landing/ui';
+import { txnRef } from "@/lib/txnRef";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -62,7 +63,7 @@ const TransactionExplorer = ({
             if (!json.success) throw new Error(json.message);
             const header = ['Date', 'Transaction ID', 'Type', 'Status', 'Amount', 'Retailer', 'Retailer ID', 'Distributor', 'Admin earned', 'Distributor earned', 'Retailer earned'];
             const lines = json.data.rows.map((t: any) => [
-                new Date(t.createdAt).toISOString(), t.transactionId, t.type, t.status, t.amount,
+                new Date(t.createdAt).toISOString(), txnRef(t), t.type, t.status, t.amount,
                 t.userId?.name, t.userId?.retailerId, t.userId?.distributorId?.name,
                 t.commissions?.adminEarned ?? 0, t.commissions?.distributorEarned ?? 0, t.commissions?.retailerEarned ?? 0,
             ].map(csvCell).join(','));
@@ -202,7 +203,8 @@ const TransactionExplorer = ({
                         </div>
                         <dl className="px-6 py-2 text-sm">
                             {[
-                                ['Transaction ID', selected.transactionId],
+                                ['Transaction ID', txnRef(selected)],
+                                ['Our reference', selected.transactionId],
                                 ['Date', new Date(selected.createdAt).toLocaleString('en-IN')],
                                 ['Retailer', selected.userId ? `${selected.userId.name} (${selected.userId.retailerId})` : '—'],
                                 ['Distributor', selected.userId?.distributorId?.name || '—'],

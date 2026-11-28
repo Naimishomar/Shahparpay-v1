@@ -26,11 +26,12 @@ import {
 
 // Accepted and held: shown as submitted, and as Pending in history until the
 // payout listing reports SUCCESS (or FAILED, which refunds).
-const pendingPayoutResponse = (res, transactionId, apiMessage) =>
+const pendingPayoutResponse = (res, transactionId, apiMessage, providerTxnId = null) =>
   res.status(202).json({
     success: true,
     pending: true,
     transactionId,
+    providerTxnId,
     message: 'Settlement submitted. It shows Pending until the bank confirms it.',
     detail: typeof apiMessage === 'string' ? apiMessage : undefined,
   });
@@ -322,7 +323,8 @@ export const initiateSettlement = async (req, res) => {
       }
     );
 
-    if (status === 'PENDING') return pendingPayoutResponse(res, transactionId, apiMessage);
+    const providerTxnId = data?.data?.transaction_id || data?.data?.txnid || null;
+    if (status === 'PENDING') return pendingPayoutResponse(res, transactionId, apiMessage, providerTxnId);
 
     // Refunds the held amount + fee when FAILED.
     await resolveTransaction(transactionId, status, apiMessage, 'AEPS');
@@ -330,7 +332,7 @@ export const initiateSettlement = async (req, res) => {
     return res.status(status === 'SUCCESS' ? 200 : 400).json({
       success: status === 'SUCCESS',
       message: apiMessage,
-      data: { ackno: data?.data?.txnid || null, transactionId, response: data?.data ?? null },
+      data: { ackno: data?.data?.txnid || null, transactionId, providerTxnId, response: data?.data ?? null },
     });
   } catch (error) {
     console.error('Settlement Error:', error);

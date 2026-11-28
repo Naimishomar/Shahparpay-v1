@@ -18,6 +18,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { txnRef } from "@/lib/txnRef";
 
 /** Six OTP boxes (animate-ui InputOTP); the OTP length is not checked here, 6 assumed. */
 const OTP_SLOTS = [0, 1, 2, 3, 4, 5].map((i) => <InputOTPSlot key={i} index={i} className="size-11 bg-background text-base font-semibold" />);
@@ -148,7 +149,7 @@ const AepsSettlement = () => {
             setReceipt({
                 status,
                 message: body?.message || '',
-                transactionId,
+                transactionId: body?.data?.providerTxnId || body?.providerTxnId || transactionId,
                 utr: body?.data?.response?.rrn || body?.data?.response?.utr || '',
                 amount: amt,
                 fee: SETTLEMENT_FEE,
@@ -456,7 +457,7 @@ const AepsSettlement = () => {
                                         </td>
                                         <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                                             <div className="flex flex-col">
-                                                <span>{tx.transactionId}</span>
+                                                <span>{txnRef(tx)}</span>
                                                 {tx.metadata?.utr && (
                                                     <span className="text-emerald-600 dark:text-emerald-400">UTR: {tx.metadata.utr}</span>
                                                 )}

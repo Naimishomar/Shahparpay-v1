@@ -4,6 +4,7 @@ import { SERVICES, aepsKycDone, aepsStepLabel, type ServiceKey } from '../../lib
 import { ChevronLeft, Edit2, RefreshCcw } from 'lucide-react';
 import { BUTTON, TABLE, TD, TH, THEAD, TR, type RetailerPerformance, ago, delta, inr, inrShort, serviceLabel, useDistributorData } from './shared';
 import { Avatar, Empty, PageHeader, Panel, RangeSwitch, Segmented, ShareBar, Skeleton, StatStrip, StatusDot, TrendChart } from './ui';
+import { txnRef } from "@/lib/txnRef";
 
 const DocTile = ({ label, number, picture }: { label: string; number?: string; picture?: string }) => (
     <div className="space-y-2">
@@ -174,7 +175,7 @@ const RetailerDetail = ({
                                     <tbody>
                                         {data.recent.map((t) => (
                                             <tr key={t._id} className={TR}>
-                                                <td className={`${TD} lp-figure text-[12px] text-muted-foreground`}>{t.transactionId}</td>
+                                                <td className={`${TD} lp-figure text-[12px] text-muted-foreground`}>{txnRef(t)}</td>
                                                 <td className={TD}>{serviceLabel(t.type)}</td>
                                                 <td className={`${TD} lp-figure text-right text-foreground`}>{inr.format(t.amount)}</td>
                                                 <td className={`${TD} lp-figure text-right`}>{t.commissions?.distributorEarned ? inr.format(t.commissions.distributorEarned) : '—'}</td>

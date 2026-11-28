@@ -4,6 +4,7 @@ import { TransactionReport, FilterGroup, PageArgs, PageResult, ReportColumn } fr
 import { Button } from '@/components/ui/Button';
 import { money, dateTime, Segmented, Toast } from '@/components/ui/Screen';
 import api from '@/services/api';
+import { txnRef } from '../transactionText';
 
 /** Transactions filtered by `type` prefix on /api/dashboard/recent-transactions. */
 /** Rows per page. Enough to fill a tall phone twice over. */
@@ -53,7 +54,7 @@ export const pagedTransactions =
   };
 
 const legacyTxnText = (i: any) =>
-  [i?.transactionId, i?.type, i?.status, i?.metadata?.utr, i?.metadata?.rrn, i?.metadata?.mobile, i?.metadata?.name, i?.metadata?.beneficiaryName, i?.metadata?.caNumber, i?.metadata?.operatorName]
+  [i?.transactionId, txnRef(i), i?.type, i?.status, i?.metadata?.utr, i?.metadata?.rrn, i?.metadata?.mobile, i?.metadata?.name, i?.metadata?.beneficiaryName, i?.metadata?.caNumber, i?.metadata?.operatorName]
     .filter(Boolean)
     .join(' ');
 
@@ -114,7 +115,7 @@ export const receiptRows = (tx: any): [string, string][] => {
   const aadhaar =
     digits.length >= 4 ? `XXXX-XXXX-${digits.slice(-4)}` : m.aadhaarLast4 ? `XXXX-XXXX-${m.aadhaarLast4}` : '';
   const rows: [string, any][] = [
-    ['Txn ID', tx?.transactionId || tx?._id],
+    ['Txn ID', txnRef(tx)],
     ['Order ID', m.orderId],
     ['RRN', m.rrn || m.bankRRN || m.utr],
     ['Provider', m.apiProvider],
@@ -252,7 +253,7 @@ export const LedgerReport: React.FC = () => (
       headers: ['S.No.', 'Transaction ID', 'Date', 'Customer', 'Mobile', 'Credit', 'Debit', 'Status'],
       row: (tx, n) => [
         n + 1,
-        tx.transactionId || tx._id || 'N/A',
+        txnRef(tx) || 'N/A',
         when(tx.createdAt),
         tx.metadata?.name || tx.metadata?.customerName || 'N/A',
         tx.metadata?.mobile || 'N/A',
@@ -290,7 +291,7 @@ export const AepsReport: React.FC = () => (
         const aadhaar = maskAadhaar(tx.metadata?.aadhaar || tx.metadata?.aadhar);
         return [
           n + 1,
-          tx.transactionId || tx._id || 'N/A',
+          txnRef(tx) || 'N/A',
           tx.type?.replace(/_/g, ' ') || 'N/A',
           when(tx.createdAt),
           tx.metadata?.name || tx.metadata?.customerName || 'N/A',
@@ -328,7 +329,7 @@ const simpleReport = (type: string, file: string, icon: string): React.FC => {
         headers: ['S.No.', 'Transaction ID', 'Date', 'Customer', 'Mobile', 'Credit', 'Debit', 'Status'],
         row: (tx, n) => [
           n + 1,
-          tx.transactionId || tx._id || 'N/A',
+          txnRef(tx) || 'N/A',
           when(tx.createdAt),
           tx.metadata?.name || tx.metadata?.customerName || 'N/A',
           tx.metadata?.mobile || 'N/A',
@@ -402,7 +403,7 @@ const serviceReport = (kind: ServiceKind): React.FC => {
         headers: ['S.No.', 'Transaction ID', 'Date', 'Service', cfg.party, cfg.number, 'Amount', 'Commission', 'Status'],
         row: (tx, n) => [
           n + 1,
-          tx.transactionId || tx._id || 'N/A',
+          txnRef(tx) || 'N/A',
           when(tx.createdAt),
           service(tx),
           operator(tx),
@@ -462,7 +463,7 @@ export const PanReport: React.FC = () => (
       headers: ['S.No.', 'Transaction ID', 'Date', 'PAN Type', 'PSA ID', 'Customer', 'Mobile', 'Amount (₹)', 'Status'],
       row: (tx, n) => [
         n + 1,
-        tx.transactionId || tx._id || 'N/A',
+        txnRef(tx) || 'N/A',
         when(tx.createdAt),
         panTypeLabel(tx.type),
         psaOrApp(tx),
@@ -512,7 +513,7 @@ export const ItrReport: React.FC = () => {
       subtitleOf={(i) => `#${i?.metadata?.application_id || 'N/A'} · ${i?.metadata?.pan_number || 'N/A'}`}
       details={[
         col('App ID', (i) => `#${i?.metadata?.application_id || 'N/A'}`),
-        col('Txn ID', (i) => NA(i?.transactionId)),
+        col('Txn ID', (i) => NA(txnRef(i))),
         col('Applicant', (i) => NA(i?.metadata?.applicant_name)),
         col('PAN', (i) => NA(i?.metadata?.pan_number)),
         col('Details', itrDetails),

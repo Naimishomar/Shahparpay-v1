@@ -16,6 +16,7 @@ import TransactionDetailModal from './TransactionDetailModal';
 import Counter from './Counter';
 import { ARRIVE } from './landing/beats';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { txnRef } from "@/lib/txnRef";
 
 const API = import.meta.env.VITE_BACKEND_URL;
 const SUPPORT_PHONE = '+91 8240039776';
@@ -208,7 +209,7 @@ const HeaderSearch = () => {
                             ) : txns.map((tx) => (
                                 <button key={tx._id || tx.transactionId} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => openTxn(tx)} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-black/5 dark:hover:bg-white/5">
                                     <div className="min-w-0 flex-1">
-                                        <p className="truncate font-mono text-xs text-foreground">{tx.transactionId}</p>
+                                        <p className="truncate font-mono text-xs text-foreground">{txnRef(tx)}</p>
                                         <p className="truncate text-xs text-muted-foreground">
                                             {String(tx.type || '').replace(/_/g, ' ')} · {new Date(tx.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
                                         </p>

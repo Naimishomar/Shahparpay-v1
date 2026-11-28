@@ -20,7 +20,7 @@ import { useAuth } from '@/context/AuthContext';
 import { REPORT_ITEMS, ReportEntry, SERVICE_METRICS } from '@/constants';
 import api from '@/services/api';
 import { pagedTransactions } from './reports';
-import { CREDIT_TYPES, typeOf, labelFor, txnTitle, txnSubtitle, txnIcon } from './transactionText';
+import { CREDIT_TYPES, typeOf, labelFor, txnTitle, txnSubtitle, txnIcon, txnRef } from './transactionText';
 
 type Period = 'day' | 'week' | 'month' | 'year';
 
@@ -120,6 +120,7 @@ const HISTORY_CHIPS = [
 const historySearch = (i: any) =>
   [
     i?.transactionId,
+    txnRef(i),
     i?.type,
     i?.status,
     txnTitle(i),
@@ -133,7 +134,7 @@ const historySearch = (i: any) =>
     .join(' ');
 
 const historyDetails = [
-  { label: 'Reference', value: (i: any) => i?.transactionId ?? '—' },
+  { label: 'Reference', value: (i: any) => txnRef(i) || '—' },
   { label: 'Type', value: (i: any) => labelFor(typeOf(i)) },
   { label: 'UTR', value: (i: any) => i?.metadata?.utr || i?.metadata?.rrn || '—' },
   {

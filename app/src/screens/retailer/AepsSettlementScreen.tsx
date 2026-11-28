@@ -24,6 +24,7 @@ import { useAsync, useAction } from '@/hooks/useAsync';
 import { bankInitials } from '@/components/aeps/BiometricCapture';
 import { StatusText } from '@/components/aeps/TransactionReceipt';
 import api from '@/services/api';
+import { txnRef } from '../transactionText';
 import { DoneBody, type PayReceipt } from './RechargeScreen';
 
 // Mirrors frontend/src/pages/AepsSettlement.tsx; the backend enforces the same.
@@ -161,7 +162,7 @@ export const AepsSettlementScreen: React.FC = () => {
         settlementReceipt({
           status: ok ? (body.pending ? 'PENDING' : 'SUCCESS') : 'FAILED',
           message: body?.message || '',
-          transactionId,
+          transactionId: body?.data?.providerTxnId || body?.providerTxnId || transactionId,
           utr: body?.data?.response?.rrn || body?.data?.response?.utr || '',
           amount: value,
           fee: SETTLEMENT_FEE,
@@ -614,7 +615,7 @@ export const AepsSettlementScreen: React.FC = () => {
                       {dateTime(txn.createdAt)}
                     </Text>
                     <Text style={styles.bankMeta} numberOfLines={1} selectable>
-                      {txn.transactionId}
+                      {txnRef(txn)}
                     </Text>
                     {!!txn.metadata?.utr && (
                       <Text style={[styles.bankMeta, { color: colors.success }]} numberOfLines={1} selectable>

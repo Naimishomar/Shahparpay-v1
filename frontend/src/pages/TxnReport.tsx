@@ -11,6 +11,7 @@ import {
     dateTimeOf, downloadCsv, downloadPdf, money, plain, rangeOf, timeOf, useDebounced,
     type Period, type Range,
 } from "../components/reports/kit"
+import { txnRef } from "@/lib/txnRef";
 
 /*
  * Every transaction report on one screen: the kind decides which transaction
@@ -171,7 +172,7 @@ const TxnReport = ({ kind }: { kind: ReportKind }) => {
                 if (!res.data.hasMore) break;
             }
             const body = all.map((tx) => [
-                dateTimeOf(tx.createdAt), tx.transactionId || tx._id, labelOf(tx), detailOf(tx),
+                dateTimeOf(tx.createdAt), txnRef(tx), labelOf(tx), detailOf(tx),
                 ...(isAdmin ? [tx.userId?.businessName || tx.userId?.name || ""] : []),
                 plain(tx.amount), plain(tx.commissions?.retailerEarned), statusOf(tx).label || statusOf(tx).s, reasonOf(tx),
             ]);
@@ -249,7 +250,7 @@ const Line = ({ tx, showOutlet, onOpen }: { tx: Tx; showOutlet: boolean; onOpen:
                 <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                     <span className="tabular-nums">{timeOf(tx.createdAt)}</span>
                     <span aria-hidden>·</span>
-                    <span className="font-mono">{tx.transactionId || tx._id}</span>
+                    <span className="font-mono">{txnRef(tx)}</span>
                     {showOutlet && tx.userId && <><span aria-hidden>·</span><span>{tx.userId.businessName || tx.userId.name}</span></>}
                     {bankBalance !== null && <><span aria-hidden>·</span><span className="tabular-nums">Bank bal {money(bankBalance)}</span></>}
                 </span>

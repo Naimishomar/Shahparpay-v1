@@ -232,7 +232,7 @@ const BBPS = () => {
                 const errorMsg = (msg && msg.trim() !== '') ? msg : "Payment Failed";
                 setReceiptData({
                     status: response.data?.data?.Status || 'FAILED',
-                    transactionId: response.data?.data?.ApiTransID || 'N/A',
+                    transactionId: response.data?.data?.orderId || response.data?.data?.transactionId || response.data?.data?.ApiTransID || 'N/A',
                     operatorRef: response.data?.data?.OperatorRef || 'N/A',
                     date: response.data?.data?.TransactionDate || new Date().toLocaleString(),
                     amount: amount,

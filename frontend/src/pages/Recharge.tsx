@@ -13,6 +13,7 @@ import Lottie from '../components/Lottie';
 import { Highlight, HighlightItem } from '../components/animate-ui/primitives/effects/highlight';
 import PortalDialog from '../components/PortalDialog';
 import { TitleText } from '../components/BlurText';
+import { txnRef } from "@/lib/txnRef";
 
 // Same black (light) / silver (dark) language as the dashboard.
 const ACTIVE_BUTTON = 'btn-primary';
@@ -210,7 +211,7 @@ const Recharge = () => {
                 // successful response is not the same as a successful recharge — the
                 // receipt must not claim SUCCESS while it is still pending.
                 setReceiptData({
-                    transactionId: resData.transactionId || resData.ackno || resData.refid || 'TXN' + Date.now(),
+                    transactionId: resData.orderId || resData.transactionId || resData.ackno || resData.refid || 'TXN' + Date.now(),
                     status: response.data.pending || String(resData.status).toUpperCase() === 'PENDING'
                         ? 'PENDING'
                         : resData.status === false || resData.response_code === 0 ? 'FAILED' : 'SUCCESS',
@@ -552,7 +553,7 @@ const Recharge = () => {
                                         <td className="px-4 py-3 whitespace-nowrap">{new Date(item.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}</td>
                                         <td className="px-4 py-3 font-medium tabular-nums">{item.metadata?.caNumber || item.metadata?.number}</td>
                                         <td className="px-4 py-3">{item.metadata?.operatorName || item.metadata?.operator}</td>
-                                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{item.transactionId}</td>
+                                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{txnRef(item)}</td>
                                         <td className="px-4 py-3 font-semibold tabular-nums">₹ {item.amount}</td>
                                         <td className="px-4 py-3 text-muted-foreground">0</td>
                                         <td className="px-4 py-3">
@@ -564,7 +565,7 @@ const Recharge = () => {
                                             <button
                                                 onClick={() => {
                                                     setReceiptData({
-                                                        transactionId: item.transactionId,
+                                                        transactionId: txnRef(item),
                                                         status: item.status,
                                                         operatorRef: item.metadata?.operatorTxnId || item.metadata?.operatorRef,
                                                         date: item.createdAt,

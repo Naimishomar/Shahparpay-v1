@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/Screen';
 import { useAsync, useAction } from '@/hooks/useAsync';
 import api from '@/services/api';
+import { txnRef } from '../transactionText';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -560,7 +561,7 @@ export const RechargeScreen: React.FC = () => {
         amount,
         number,
         operator: isDth ? dthOperator?.name || 'Unknown' : d.operatorname || d.operator || resolvedOperator,
-        transactionId: d.transactionId || d.ackno || d.refid || 'TXN' + Date.now(),
+        transactionId: d.orderId || d.transactionId || d.ackno || d.refid || 'TXN' + Date.now(),
         operatorRef: d.opr_txn_id || d.operatorid || d.operator_ref,
       })
     );
@@ -863,7 +864,7 @@ export const RechargeScreen: React.FC = () => {
                           amount: txn.amount,
                           number: txn.metadata?.caNumber,
                           operator: txn.metadata?.operatorName || txn.metadata?.operator,
-                          transactionId: txn.transactionId,
+                          transactionId: txnRef(txn),
                           operatorRef: txn.metadata?.operatorTxnId,
                           date: txn.createdAt,
                         })
@@ -882,7 +883,7 @@ export const RechargeScreen: React.FC = () => {
                         {[txn.metadata?.operatorName || txn.metadata?.operator, shortDate(txn.createdAt)].filter(Boolean).join(' · ')}
                       </Text>
                       <Text style={styles.rowMeta} numberOfLines={1} selectable>
-                        {txn.transactionId}
+                        {txnRef(txn)}
                       </Text>
                       <Text style={styles.rowLink}>Receipt</Text>
                     </View>

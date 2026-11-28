@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import logo from "../assets/logo.png"
 import ReceiptPrinter from "./ReceiptPrinter"
 import { CopyButton } from "./animate-ui/components/buttons/copy"
+import { txnRef } from "@/lib/txnRef";
 
 /** Why the gateway ended the transaction the way it did. */
 export const reasonOf = (tx: any) =>
@@ -42,7 +43,7 @@ const TransactionDetailModal = ({ tx, onClose }: { tx: any; onClose: () => void 
     if (!tx) return null;
 
     const m = tx.metadata || {};
-    const id = tx.transactionId || tx._id;
+    const id = txnRef(tx);
     const status = tx.status || "UNKNOWN";
     const aadhaar = maskAadhaar(m.aadhaar || m.aadhar) || (m.aadhaarLast4 ? `XXXX-XXXX-${m.aadhaarLast4}` : "");
     const rows: [string, any][] = [
