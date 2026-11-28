@@ -30,14 +30,14 @@ const formatAmount = (amount) => {
  * AEPS cash-withdrawal retailer commission.
  *   below ₹300     → ₹0
  *   ₹300–₹2,999    → 0.30%
- *   ₹3,000–₹7,999  → flat ₹11
- *   ₹8,000–₹10,000 → flat ₹12
+ *   ₹3,000–₹8,000  → flat ₹11
+ *   ₹8,001–₹10,000 → flat ₹12
  */
 export const getAepsWithdrawalCommission = (amount) => {
   const amt = Number(amount) || 0;
   if (amt < 300) return 0;
   if (amt < 3000) return formatAmount(amt * 0.003);
-  if (amt < 8000) return 11;
+  if (amt <= 8000) return 11;
   return 12;
 };
 
@@ -74,15 +74,14 @@ export const getAepsDepositCommission = (amount) => {
 /**
  * Micro ATM cash-withdrawal retailer commission.
  *   below ₹300     → ₹0
- *   ₹300–₹2,999    → 0.30%
- *   ₹3,000–₹10,000 → flat ₹9 (the card prints "9.00%"; read as ₹9 flat, since 9%
- *                    of ₹10,000 is ₹900 against the provider's ₹13.50)
+ *   ₹300–₹2,999    → 0.25%
+ *   ₹3,000–₹10,000 → flat ₹10
  */
 export const getMatmCommission = (amount) => {
   const amt = Number(amount) || 0;
   if (amt < 300) return 0;
-  if (amt < 3000) return formatAmount(amt * 0.003);
-  return 9;
+  if (amt < 3000) return formatAmount(amt * 0.0025);
+  return 10;
 };
 
 /**

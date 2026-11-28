@@ -28,8 +28,8 @@ import { ACCOUNT_VERIFICATION_CHARGE } from './dmt.controller.js';
 const AEPS_WITHDRAWAL_SLABS = [
   { label: 'Below ₹300', sample: 200 },
   { label: '₹300 – ₹2,999', sample: 2000 },
-  { label: '₹3,000 – ₹7,999', sample: 5000 },
-  { label: '₹8,000 – ₹10,000', sample: 10000 },
+  { label: '₹3,000 – ₹8,000', sample: 5000 },
+  { label: '₹8,001 – ₹10,000', sample: 10000 },
 ];
 
 const AEPS_DEPOSIT_SLABS = [

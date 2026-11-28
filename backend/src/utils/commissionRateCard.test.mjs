@@ -22,12 +22,12 @@ const admin = (type, retailer, amount) =>
   );
 
 // AEPS withdrawal: 0.45% = 0.05 admin + 0.10 partner + 0.30 merchant; ₹13.5 = 2 + 0.5 + 11
-// (₹3,000–₹7,999) or 1 + 0.5 + 12 (₹8,000+).
+// (₹3,000–₹8,000) or 1 + 0.5 + 12 (₹8,001+).
 assert.strictEqual(getAepsWithdrawalCommission(299), 0);
 assert.strictEqual(getAepsWithdrawalCommission(2000), 6);
 assert.strictEqual(getAepsWithdrawalCommission(3000), 11);
-assert.strictEqual(getAepsWithdrawalCommission(7999), 11);
-assert.strictEqual(getAepsWithdrawalCommission(8000), 12);
+assert.strictEqual(getAepsWithdrawalCommission(8000), 11);
+assert.strictEqual(getAepsWithdrawalCommission(8001), 12);
 assert.strictEqual(getDistributorCommission('AEPS_WITHDRAWAL', 2000), 2);
 assert.strictEqual(getDistributorCommission('AEPS_WITHDRAWAL', 5000), 0.5);
 assert.strictEqual(admin('AEPS_WITHDRAWAL', getAepsWithdrawalCommission, 2000), 1);
@@ -43,14 +43,15 @@ assert.strictEqual(getDistributorCommission('AEPS_DEPOSIT', 1000), 0.25);
 assert.strictEqual(admin('AEPS_DEPOSIT', getAepsDepositCommission, 1000), 1.95);
 assert.strictEqual(admin('AEPS_DEPOSIT', getAepsDepositCommission, 5000), 4.25);
 
-// Micro ATM: ₹13.5 = 4 admin + 0.5 partner + 9 merchant.
+// Micro ATM: ₹13.5 = 3 admin + 0.5 partner + 10 merchant; 0.25% merchant below ₹3,000.
 assert.strictEqual(getMatmCommission(299), 0);
-assert.strictEqual(getMatmCommission(400), 1.2);
-assert.strictEqual(getMatmCommission(1000), 3);
-assert.strictEqual(getMatmCommission(5000), 9);
-assert.strictEqual(admin('MATM', getMatmCommission, 5000), 4);
-assert.strictEqual(admin('MATM', getMatmCommission, 400), 0.6);
-assert.strictEqual(admin('MATM', getMatmCommission, 1000), 0.5);
+assert.strictEqual(getMatmCommission(400), 1);
+assert.strictEqual(getMatmCommission(1000), 2.5);
+assert.strictEqual(getMatmCommission(3000), 10);
+assert.strictEqual(getMatmCommission(5000), 10);
+assert.strictEqual(admin('MATM', getMatmCommission, 5000), 3);
+assert.strictEqual(admin('MATM', getMatmCommission, 400), 0.8);
+assert.strictEqual(admin('MATM', getMatmCommission, 1000), 1);
 
 // Recharge partner is a flat ₹0.20; BBPS partner ₹0.25 except FASTag and credit card.
 assert.strictEqual(getDistributorCommission('RECHARGE', 500), 0.2);
