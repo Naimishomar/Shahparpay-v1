@@ -24,7 +24,7 @@ import {
   getNoticeReasons,
   sendUserNotice,
 } from '../controllers/adminConsole.controller.js';
-import { getWallets, getPayouts, selfTransfer, getProviderUpiCwHistory } from '../controllers/adminIcchhamati.controller.js';
+import { getWallets, getWalletLedger, getPayouts, selfTransfer, getProviderUpiCwHistory } from '../controllers/adminIcchhamati.controller.js';
 import {
   getAnalytics,
   getHealth,
@@ -67,6 +67,7 @@ router.get('/console/activity', getActivity);
 // Shahparpay's own Icchhamati account: wallets, payouts sent from it, and
 // transfers between its wallets. Admin only.
 router.get('/icchhamati/wallets', getWallets);
+router.get('/icchhamati/wallets/:id/ledger', getWalletLedger);
 router.get('/icchhamati/payouts', getPayouts);
 router.get('/icchhamati/upicw/history', getProviderUpiCwHistory);
 router.post('/icchhamati/self-transfer', selfTransfer);

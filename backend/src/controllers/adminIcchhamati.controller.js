@@ -178,3 +178,46 @@ export const getProviderUpiCwHistory = async (req, res) => {
   }
 };
 
+
+/** One line of an Icchhamati wallet's statement; amounts arrive as "-₹4.00", "₹16,173.50". */
+export const toLedgerRow = (r) => ({
+  id: r.id,
+  details: r.details ?? null,
+  type: r.type === 'DR' ? 'DR' : 'CR',
+  amount: Math.abs(amountOf(r.amount)),
+  preBalance: amountOf(r.pre_balance),
+  balance: amountOf(r.balance),
+  date: r.date ?? null,
+});
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** GET /api/admin/icchhamati/wallets/:id/ledger?page&per_page&date_from&date_to */
+export const getWalletLedger = async (req, res) => {
+  if (forbid(req, res)) return;
+  const id = String(req.params.id ?? '');
+  if (!/^\d+$/.test(id)) return res.status(400).json({ success: false, message: 'Invalid wallet.' });
+  try {
+    const params = {
+      page: Math.max(1, Number(req.query.page) || 1),
+      per_page: Math.min(100, Math.max(1, Number(req.query.per_page) || 25)),
+    };
+    // Icchhamati filters only when both ends are given; one end alone means that one day.
+    const from = DAY.test(req.query.date_from) ? req.query.date_from : null;
+    const to = DAY.test(req.query.date_to) ? req.query.date_to : null;
+    if (from || to) { params.start_date = from || to; params.end_date = to || from; }
+
+    const data = await icchhamatiGet(`/api/accounts/${id}`, params);
+    if (!isOk(data)) {
+      return res.status(502).json({ success: false, message: providerMessage(data, 'Could not load the wallet statement.') });
+    }
+    const rows = Array.isArray(data.data?.recent_transactions) ? data.data.recent_transactions : [];
+    const pg = data.data?.pagination || {};
+    return res.status(200).json({
+      success: true,
+      data: { rows: rows.map(toLedgerRow), page: pg.current_page ?? params.page, lastPage: pg.last_page ?? 1, total: pg.total ?? rows.length },
+    });
+  } catch (error) {
+    return unreachable(res, 'ledger', error);
+  }
+};

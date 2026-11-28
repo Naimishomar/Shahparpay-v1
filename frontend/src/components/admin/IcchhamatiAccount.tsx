@@ -11,8 +11,85 @@ type Payout = {
     account: string | null; amount: number; charge: number; type: string | null; status: string; utr: string | null; message: string | null; createdAt: string | null;
 };
 type PayoutPage = { rows: Payout[]; page: number; lastPage: number; total: number };
+type LedgerRow = { id: number; details: string | null; type: 'CR' | 'DR'; amount: number; preBalance: number; balance: number; date: string | null };
+type LedgerPage = { rows: LedgerRow[]; page: number; lastPage: number; total: number };
 
 const LBL = 'text-[13px] text-muted-foreground';
+
+const Pager = ({ page, lastPage, onPage }: { page: number; lastPage: number; onPage: (p: number) => void }) => lastPage > 1 ? (
+    <div className="flex items-center justify-between gap-2 border-t px-5 py-3 text-[13px]">
+        <span className="text-muted-foreground">Page {page} of {lastPage}</span>
+        <div className="flex gap-2">
+            <button type="button" aria-label="Previous page" disabled={page <= 1} onClick={() => onPage(page - 1)} className={ICON_BUTTON}><ChevronLeft size={16} /></button>
+            <button type="button" aria-label="Next page" disabled={page >= lastPage} onClick={() => onPage(page + 1)} className={ICON_BUTTON}><ChevronRight size={16} /></button>
+        </div>
+    </div>
+) : null;
+
+/** Icchhamati's own statement for one of our wallets, so nobody has to open their portal to see it. */
+const WalletLedger = ({ token, wallets, nonce }: { token: string | null; wallets: IcchWallet[]; nonce: number }) => {
+    const [walletId, setWalletId] = useState<number | null>(null);
+    const [range, setRange] = useState({ date_from: '', date_to: '' });
+    const [applied, setApplied] = useState(range);
+    const [page, setPage] = useState(1);
+    const id = walletId ?? wallets.find((w) => w.isPrimary)?.id ?? wallets[0]?.id;
+    const query = new URLSearchParams({ page: String(page), per_page: '25', r: String(nonce), ...Object.fromEntries(Object.entries(applied).filter(([, v]) => v)) });
+    const ledger = useApiGet<LedgerPage>(token, id ? `/api/admin/icchhamati/wallets/${id}/ledger?${query}` : null);
+
+    return (
+        <Panel
+            title="Wallet ledger"
+            description={`Every credit and debit on Icchhamati's side${ledger.data ? ` · ${ledger.data.total} entries` : ''}`}
+            action={
+                <div className="flex gap-1 rounded-[10px] border p-1" role="tablist">
+                    {wallets.map((w) => (
+                        <button key={w.id} type="button" role="tab" aria-selected={w.id === id} onClick={() => { setWalletId(w.id); setPage(1); }}
+                            className={`h-8 rounded-[8px] px-3 text-[13px] transition-colors ${w.id === id ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                            {w.name}
+                        </button>
+                    ))}
+                </div>
+            }
+            flush
+        >
+            <form onSubmit={(e) => { e.preventDefault(); setPage(1); setApplied(range); }} className="flex flex-wrap items-center gap-2 border-b px-5 py-3">
+                <input type="date" value={range.date_from} onChange={(e) => setRange({ ...range, date_from: e.target.value })} className={`${FIELD} sm:w-40 dark:[color-scheme:dark]`} aria-label="From date" />
+                <input type="date" value={range.date_to} onChange={(e) => setRange({ ...range, date_to: e.target.value })} className={`${FIELD} sm:w-40 dark:[color-scheme:dark]`} aria-label="To date" />
+                <button className={BUTTON_QUIET}>Apply</button>
+            </form>
+
+            {ledger.error && <p className="px-5 pt-4 text-sm text-[var(--lp-danger)]">{ledger.error}</p>}
+            {ledger.loading && !ledger.data ? (
+                <div className="p-5"><Skeleton className="h-64 rounded-xl" /></div>
+            ) : !ledger.data?.rows.length ? (
+                <Empty>No entries in this range.</Empty>
+            ) : (
+                <div className="overflow-x-auto">
+                    <table className={TABLE}>
+                        <thead>
+                            <tr className={THEAD}>
+                                {['Date', 'Details', 'Opening', 'Credit', 'Debit', 'Closing'].map((h) => <th key={h} className={`${TH} ${['Date', 'Details'].includes(h) ? '' : 'text-right'}`}>{h}</th>)}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {ledger.data.rows.map((r) => (
+                                <tr key={r.id} className={TR}>
+                                    <td className={`${TD} whitespace-nowrap text-muted-foreground`}>{r.date ? new Date(r.date.replace(' ', 'T')).toLocaleString('en-IN') : '—'}</td>
+                                    <td className={`${TD} text-foreground`}>{r.details || '—'}</td>
+                                    <td className={`${TD} lp-figure text-right text-muted-foreground`}>{inr.format(r.preBalance)}</td>
+                                    <td className={`${TD} lp-figure text-right text-[var(--lp-positive)]`}>{r.type === 'CR' ? inr.format(r.amount) : ''}</td>
+                                    <td className={`${TD} lp-figure text-right text-[var(--lp-danger)]`}>{r.type === 'DR' ? inr.format(r.amount) : ''}</td>
+                                    <td className={`${TD} lp-figure text-right text-foreground`}>{inr.format(r.balance)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+            {ledger.data && <Pager page={ledger.data.page} lastPage={ledger.data.lastPage} onPage={setPage} />}
+        </Panel>
+    );
+};
 
 /**
  * Shahparpay's own Icchhamati account: the float every retailer transacts
@@ -23,6 +100,7 @@ const IcchhamatiAccount = ({ token }: { token: string | null }) => {
     const [filters, setFilters] = useState({ search: '', status: '', date_from: '', date_to: '' });
     const [applied, setApplied] = useState(filters);
     const [page, setPage] = useState(1);
+    const [nonce, setNonce] = useState(0);
     const query = new URLSearchParams({ page: String(page), per_page: '25', ...Object.fromEntries(Object.entries(applied).filter(([, v]) => v)) });
     const payouts = useApiGet<PayoutPage>(token, `/api/admin/icchhamati/payouts?${query}`);
 
@@ -50,6 +128,7 @@ const IcchhamatiAccount = ({ token }: { token: string | null }) => {
             toast.success(json.message || 'Transfer completed');
             setTransfer({ targetAccountId: '', amount: '', mpin: '', details: '' });
             wallets.reload();
+            setNonce((n) => n + 1);
         } catch (error) {
             toast.error(error instanceof Error && error.message ? error.message : 'Transfer failed');
         } finally {
@@ -65,7 +144,7 @@ const IcchhamatiAccount = ({ token }: { token: string | null }) => {
                 eyebrow="Admin only"
                 title="Icchhamati account"
                 description="The company float every retailer transacts through, the payouts sent from it, and moving money between its wallets."
-                actions={<button type="button" onClick={() => { wallets.reload(); payouts.reload(); }} className={BUTTON_QUIET}><RefreshCcw size={16} strokeWidth={1.75} /> Refresh</button>}
+                actions={<button type="button" onClick={() => { wallets.reload(); payouts.reload(); setNonce((n) => n + 1); }} className={BUTTON_QUIET}><RefreshCcw size={16} strokeWidth={1.75} /> Refresh</button>}
             />
 
             {wallets.error && <p className={ALERT_ERROR}>{wallets.error}</p>}
@@ -112,6 +191,8 @@ const IcchhamatiAccount = ({ token }: { token: string | null }) => {
                     </form>
                 </Panel>
             )}
+
+            {wallets.data && wallets.data.length > 0 && <WalletLedger token={token} wallets={wallets.data} nonce={nonce} />}
 
             <Panel title="Payouts" description={`IMPS and NEFT sent from the Icchhamati account${payouts.data ? ` · ${payouts.data.total} total` : ''}`} flush>
                 <form onSubmit={(e) => { e.preventDefault(); setPage(1); setApplied(filters); }} className="flex flex-wrap items-center gap-2 border-b px-5 py-3">
@@ -161,15 +242,7 @@ const IcchhamatiAccount = ({ token }: { token: string | null }) => {
                     </div>
                 )}
 
-                {payouts.data && payouts.data.lastPage > 1 && (
-                    <div className="flex items-center justify-between gap-2 border-t px-5 py-3 text-[13px]">
-                        <span className="text-muted-foreground">Page {payouts.data.page} of {payouts.data.lastPage}</span>
-                        <div className="flex gap-2">
-                            <button type="button" aria-label="Previous page" disabled={page <= 1} onClick={() => setPage(page - 1)} className={ICON_BUTTON}><ChevronLeft size={16} /></button>
-                            <button type="button" aria-label="Next page" disabled={page >= payouts.data.lastPage} onClick={() => setPage(page + 1)} className={ICON_BUTTON}><ChevronRight size={16} /></button>
-                        </div>
-                    </div>
-                )}
+                {payouts.data && <Pager page={payouts.data.page} lastPage={payouts.data.lastPage} onPage={setPage} />}
             </Panel>
         </div>
     );
