@@ -951,8 +951,8 @@ export const readTxnRequest = (body = {}) => {
     if (!Number.isFinite(amount) || amount < 1) return { error: 'Enter an amount.' };
     if (amount > AEPS_MAX_AMOUNT)
       return { error: `Amount cannot exceed ₹${AEPS_MAX_AMOUNT} per transaction.` };
-    if (aepsType === 'CW' && amount % 100 !== 0)
-      return { error: 'Cash withdrawal amount must be a multiple of ₹100.' };
+    if (MONEY_TYPES.includes(aepsType) && amount % 100 !== 0)
+      return { error: 'Amount must be a multiple of ₹100.' };
   }
   return {
     aepsType,

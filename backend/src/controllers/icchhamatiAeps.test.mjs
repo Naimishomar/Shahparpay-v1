@@ -163,9 +163,11 @@ assert.equal(readTxnRequest({ ...cd, amount: 500 }).aepsType, 'CD');
 assert.ok(readTxnRequest(cd).error, 'a deposit needs an amount');
 assert.ok(readTxnRequest({ ...cd, amount: 10001 }).error, 'a deposit is capped like a withdrawal');
 assert.equal(readTxnRequest({ ...cd, aepsType: 'BE', amount: 500 }).amount, undefined);
-// Cash withdrawal goes in multiples of ₹100.
+// Cash withdrawal and Aadhaar Pay go in multiples of ₹100.
 assert.equal(readTxnRequest({ ...cd, aepsType: 'CW', amount: 4100 }).amount, 4100);
 assert.ok(readTxnRequest({ ...cd, aepsType: 'CW', amount: 4150 }).error, 'withdrawal must be a multiple of 100');
+assert.ok(readTxnRequest({ ...cd, aepsType: 'M', amount: 4150 }).error, 'Aadhaar Pay must be a multiple of 100');
+assert.equal(readTxnRequest({ ...cd, aepsType: 'CD', amount: 4150 }).amount, 4150, 'deposit takes any amount');
 
 // --- services update ------------------------------------------------------
 

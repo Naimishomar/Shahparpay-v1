@@ -640,7 +640,7 @@ const TransactionPanel = ({ status, device, ensureDevice, capture, run }: Pick<S
         if (!/^[6-9]\d{9}$/.test(mobile)) return 'Enter the customer’s 10-digit mobile number.';
         if (!bankID) return 'Select the customer’s bank.';
         if (moves && !(Number(amount) >= 1 && Number(amount) <= 10000)) return 'Amount must be between ₹1 and ₹10,000.';
-        if (tab === 'CW' && Number(amount) % 100 !== 0) return 'Cash withdrawal amount must be a multiple of ₹100.';
+        if ((tab === 'CW' || tab === 'M') && Number(amount) % 100 !== 0) return 'Amount must be a multiple of ₹100.';
         return null;
     };
     const base = () => ({ aepsType: tab, aadhaarNumber: aadhaar, customerMobile: mobile, bankID, bankName: bank?.bankName, amount: moves ? Number(amount) : undefined });

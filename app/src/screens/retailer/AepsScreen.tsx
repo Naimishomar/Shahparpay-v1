@@ -293,8 +293,8 @@ export const AepsScreen: React.FC = () => {
           ? 'Select the customer’s bank.'
           : spec.amount && !(amountValue >= 1 && amountValue <= AEPS_MAX_WITHDRAWAL)
             ? 'Amount must be between ₹1 and ₹10,000.'
-            : service === 'withdrawal' && amountValue % 100 !== 0
-              ? 'Cash withdrawal amount must be a multiple of ₹100.'
+            : (service === 'withdrawal' || service === 'aadhaarpay') && amountValue % 100 !== 0
+              ? 'Amount must be a multiple of ₹100.'
               : null;
 
   const sortedBanks = useMemo(() => {
